@@ -125,9 +125,11 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     // Count queries
     long countByStatus(ProductStatus status);
-    
+
     long countByIsFeaturedTrue();
-    
+
+    long countByBrand(String brand);
+
     @Query("SELECT COUNT(DISTINCT p) FROM Product p " +
            "JOIN p.productCategories pc " +
            "WHERE pc.category.id = :categoryId AND p.status = :status")

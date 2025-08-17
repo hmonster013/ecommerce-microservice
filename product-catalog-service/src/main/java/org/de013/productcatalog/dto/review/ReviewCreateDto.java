@@ -18,6 +18,10 @@ public class ReviewCreateDto {
     @Schema(description = "Product ID", example = "1", required = true)
     private Long productId;
 
+    @NotNull(message = "User ID is required")
+    @Schema(description = "User ID", example = "1001", required = true)
+    private Long userId;
+
     @NotNull(message = "Rating is required")
     @Min(value = 1, message = "Rating must be at least 1")
     @Max(value = 5, message = "Rating must be at most 5")

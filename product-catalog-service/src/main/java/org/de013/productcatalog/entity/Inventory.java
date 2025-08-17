@@ -143,6 +143,24 @@ public class Inventory extends BaseEntity {
         }
     }
 
+    // Overloaded methods for Integer parameters
+    public void addStock(Integer quantityToAdd) {
+        if (quantityToAdd != null && quantityToAdd > 0) {
+            addStock(quantityToAdd.intValue());
+        }
+    }
+
+    public void removeStock(Integer quantityToRemove) {
+        if (quantityToRemove != null && quantityToRemove > 0) {
+            removeStock(quantityToRemove.intValue());
+        }
+    }
+
+    public boolean canFulfillOrder(Integer requestedQuantity) {
+        if (requestedQuantity == null) return false;
+        return canFulfillOrder(requestedQuantity.intValue());
+    }
+
     @Override
     public String toString() {
         return "Inventory{" +

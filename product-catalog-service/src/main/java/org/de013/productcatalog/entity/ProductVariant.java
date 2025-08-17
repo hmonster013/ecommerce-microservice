@@ -86,7 +86,14 @@ public class ProductVariant extends BaseEntity {
     }
 
     public String getFullName() {
-        return name + ": " + value;
+        if (name != null && value != null) {
+            return name + ": " + value;
+        } else if (value != null) {
+            return value;
+        } else if (name != null) {
+            return name;
+        }
+        return "";
     }
 
     @Override
