@@ -4,8 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.exception.BusinessException;
 import org.de013.common.exception.ResourceNotFoundException;
-import org.de013.userservice.dto.UserRegistrationRequest;
-import org.de013.userservice.dto.UserResponse;
+import org.de013.userservice.dto.*;
 import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
 import org.de013.userservice.repository.RoleRepository;
@@ -19,9 +18,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;

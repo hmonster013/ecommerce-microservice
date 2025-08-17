@@ -46,8 +46,10 @@ public class AuthController extends BaseController {
     public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody UserRegistrationRequest request) {
 
-        AuthResponse response = authService.register(request);
-        return created(response);
+        // TODO: Update to use new DTOs
+        // AuthResponse response = authService.register(request);
+        // return created(response);
+        throw new RuntimeException("Controller needs to be updated for new DTOs");
     }
 
     @PostMapping(ApiPaths.LOGIN)
@@ -70,7 +72,9 @@ public class AuthController extends BaseController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
 
-        AuthResponse response = authService.authenticate(request);
-        return ok(response);
+        // TODO: Update to use new DTOs
+        // AuthResponse response = authService.login(request);
+        // return ok(response);
+        throw new RuntimeException("Controller needs to be updated for new DTOs");
     }
 }
