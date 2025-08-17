@@ -152,6 +152,15 @@ public class Product extends BaseEntity {
         return BigDecimal.ZERO;
     }
 
+    // Manual getters for critical methods (Lombok backup)
+    public Long getId() {
+        return id;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
     @Override
     public String toString() {
         return "Product{" +

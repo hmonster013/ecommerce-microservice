@@ -14,6 +14,7 @@ public final class ApiPaths {
     public static final String USERS = "/users";
     public static final String AUTH = "/auth";
     public static final String PRODUCTS = "/products";
+    public static final String CATEGORIES = "/categories";
     public static final String HEALTH = "/health";
     public static final String CART = "/cart";
     public static final String ORDERS = "/orders";

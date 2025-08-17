@@ -92,6 +92,19 @@ public class Category extends BaseEntity {
         }
     }
 
+    // Manual getters for critical methods (Lombok backup)
+    public Long getId() {
+        return id;
+    }
+
+    public void setParent(Category parent) {
+        this.parent = parent;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
     @Override
     public String toString() {
         return "Category{" +

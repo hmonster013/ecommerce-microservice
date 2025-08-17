@@ -74,4 +74,9 @@ public class InventoryResponseDto {
         }
         return allowBackorder != null && allowBackorder;
     }
+
+    // Manual getters for critical methods (Lombok backup)
+    public Integer getAvailableQuantity() {
+        return availableQuantity;
+    }
 }

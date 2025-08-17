@@ -144,4 +144,52 @@ public class ProductFilterDto {
         @Schema(description = "Product count", example = "15")
         private Integer productCount;
     }
+
+    // Manual builder method (Lombok backup)
+    public static ProductFilterDtoBuilder builder() {
+        return new ProductFilterDtoBuilder();
+    }
+
+    public static class ProductFilterDtoBuilder {
+        private List<CategoryFilter> categories;
+        private List<BrandFilter> brands;
+        private PriceRange priceRange;
+        private List<RatingFilter> ratings;
+        private List<FeatureFilter> features;
+
+        public ProductFilterDtoBuilder categories(List<CategoryFilter> categories) {
+            this.categories = categories;
+            return this;
+        }
+
+        public ProductFilterDtoBuilder brands(List<BrandFilter> brands) {
+            this.brands = brands;
+            return this;
+        }
+
+        public ProductFilterDtoBuilder priceRange(PriceRange priceRange) {
+            this.priceRange = priceRange;
+            return this;
+        }
+
+        public ProductFilterDtoBuilder ratings(List<RatingFilter> ratings) {
+            this.ratings = ratings;
+            return this;
+        }
+
+        public ProductFilterDtoBuilder features(List<FeatureFilter> features) {
+            this.features = features;
+            return this;
+        }
+
+        public ProductFilterDto build() {
+            ProductFilterDto dto = new ProductFilterDto();
+            dto.categories = this.categories;
+            dto.brands = this.brands;
+            dto.priceRange = this.priceRange;
+            dto.ratings = this.ratings;
+            dto.features = this.features;
+            return dto;
+        }
+    }
 }

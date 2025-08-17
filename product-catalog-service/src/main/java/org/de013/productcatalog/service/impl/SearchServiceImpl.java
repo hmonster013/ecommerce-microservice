@@ -28,11 +28,12 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SearchServiceImpl implements SearchService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SearchServiceImpl.class);
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;

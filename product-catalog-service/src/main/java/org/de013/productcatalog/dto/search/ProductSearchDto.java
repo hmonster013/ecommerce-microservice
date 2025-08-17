@@ -125,4 +125,17 @@ public class ProductSearchDto {
         }
         return "ASC";
     }
+
+    // Manual getters for critical methods (Lombok backup)
+    public String getQuery() {
+        return query;
+    }
+
+    public Integer getPage() {
+        return page;
+    }
+
+    public Integer getSize() {
+        return size;
+    }
 }

@@ -142,4 +142,29 @@ public class SearchResultDto {
             return String.format("(%.1f s)", executionTimeMs / 1000.0);
         }
     }
+
+    // Manual getters for critical methods (Lombok backup)
+    public String getQuery() {
+        return query;
+    }
+
+    public Long getTotalResults() {
+        return totalResults;
+    }
+
+    public List<ProductSummaryDto> getProducts() {
+        return products;
+    }
+
+    public void setDidYouMean(List<String> didYouMean) {
+        this.didYouMean = didYouMean;
+    }
+
+    public void setSuggestions(List<String> suggestions) {
+        this.suggestions = suggestions;
+    }
+
+    public void setRelatedSearches(List<String> relatedSearches) {
+        this.relatedSearches = relatedSearches;
+    }
 }

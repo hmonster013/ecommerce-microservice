@@ -23,6 +23,15 @@ public enum ImageType {
         this.description = description;
     }
 
+    // Manual getters (Lombok backup)
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
     public boolean isPrimary() {
         return this == MAIN;
     }
