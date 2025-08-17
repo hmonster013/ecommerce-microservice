@@ -35,13 +35,11 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
-        ApiResponse<Object> apiResponse = ApiResponse.<Object>builder()
-                .success(false)
-                .code(JCode.UNAUTHORIZED)
-                .message(MessageConstants.UNAUTHORIZED)
-                .error("Invalid or missing authentication token")
-                .timestamp(LocalDateTime.now())
-                .build();
+        ApiResponse<Object> apiResponse = ApiResponse.error(
+                MessageConstants.UNAUTHORIZED,
+                JCode.UNAUTHORIZED,
+                HttpUtils.getFullRequestUri(request)
+        );
 
         final ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());

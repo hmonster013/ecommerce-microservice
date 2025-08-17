@@ -130,23 +130,11 @@ public final class ResponseUtil {
     // ========== Helper Methods ==========
 
     private static <T> ApiResponse<T> buildSuccessResponse(T data, String message, String code) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .code(code)
-                .message(message)
-                .data(data)
-                .timestamp(LocalDateTime.now())
-                .build();
+        return ApiResponse.success(data, message, code);
     }
 
     private static <T> ApiResponse<T> buildErrorResponse(String message, String code) {
-        return ApiResponse.<T>builder()
-                .success(false)
-                .code(code)
-                .message(message)
-                .error(message)
-                .timestamp(LocalDateTime.now())
-                .build();
+        return ApiResponse.error(message, code);
     }
 
     private static <T> ApiResponse<T> buildErrorResponse(String message, String code, Object errors) {
@@ -154,8 +142,7 @@ public final class ResponseUtil {
                 .success(false)
                 .code(code)
                 .message(message)
-                .error(message)
-                .data((T) errors)
+                .errors(errors)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

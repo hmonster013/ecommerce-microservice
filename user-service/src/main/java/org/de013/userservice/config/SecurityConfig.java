@@ -8,6 +8,7 @@ import org.de013.userservice.security.JwtAuthenticationEntryPoint;
 import org.de013.userservice.security.JwtAuthenticationFilter;
 import org.de013.userservice.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -36,13 +37,22 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final UserRepository userRepository;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final PasswordEncoder passwordEncoder;
+
+    public SecurityConfig(@Qualifier("customUserDetailsService") UserDetailsService userDetailsService,
+                         UserRepository userRepository,
+                         JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+                         PasswordEncoder passwordEncoder) {
+        this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
@@ -64,15 +74,11 @@ public class SecurityConfig {
         return authProvider;
     }
 
-    @Bean("customUserDetailsService")
-    @Primary
-    public CustomUserDetailsService customUserDetailsService() {
-        return new CustomUserDetailsService(userRepository);
-    }
+    // CustomUserDetailsService will be auto-created by Spring with @Service annotation
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtTokenProvider(), customUserDetailsService());
+        return new JwtAuthenticationFilter(jwtTokenProvider(), userDetailsService);
     }
 
     @Bean
