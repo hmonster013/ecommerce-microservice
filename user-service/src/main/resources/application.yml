@@ -23,6 +23,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+    open-in-view: false
+
+  cache:
+    type: simple
   
   flyway:
     enabled: true
@@ -52,8 +56,37 @@ management:
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:7A25F3E8B9C4D6A1E2F7B8C3D9E4F5A6B7C8D9E0F1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B1C2D3E4F5A6B7C8D9E0F1A2B3C4D5E6F7A8B9C0D1E2}
-  expiration: ${JWT_EXPIRATION:3600000}
+  secret: ${JWT_SECRET:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}
+  expiration: ${JWT_EXPIRATION:900000}  # 15 minutes
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+  issuer: ${JWT_ISSUER:ecommerce-platform}
+  algorithm: ${JWT_ALGORITHM:HS256}
+
+# Application Configuration
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+    allow-credentials: true
+
+  security:
+    password:
+      min-length: ${PASSWORD_MIN_LENGTH:8}
+      require-uppercase: ${PASSWORD_REQUIRE_UPPERCASE:true}
+      require-lowercase: ${PASSWORD_REQUIRE_LOWERCASE:true}
+      require-digit: ${PASSWORD_REQUIRE_DIGIT:true}
+      require-special-char: ${PASSWORD_REQUIRE_SPECIAL:true}
+
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      login-attempts: ${LOGIN_RATE_LIMIT:5}
+      registration-attempts: ${REGISTRATION_RATE_LIMIT:3}
+      general-requests: ${GENERAL_RATE_LIMIT:100}
+
+    session:
+      timeout: ${SESSION_TIMEOUT:1800}  # 30 minutes
+      max-concurrent: ${MAX_CONCURRENT_SESSIONS:3}
 
 # Swagger/OpenAPI Configuration
 springdoc:

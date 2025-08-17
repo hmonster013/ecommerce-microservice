@@ -48,6 +48,7 @@ public class User implements UserDetails {
     private Role role;
     
     @Column(name = "is_enabled")
+    @Builder.Default
     private boolean enabled = true;
     
     @Column(name = "created_at")
