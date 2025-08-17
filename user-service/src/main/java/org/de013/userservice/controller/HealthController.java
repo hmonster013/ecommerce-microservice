@@ -1,0 +1,36 @@
+package org.de013.userservice.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResponse;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+@RestController
+@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.HEALTH)
+@RequiredArgsConstructor
+@Tag(name = "Health Check", description = "Service health check endpoints")
+public class HealthController extends BaseController {
+
+    @GetMapping
+    @Operation(summary = "Health check", description = "Check if the service is running")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> health() {
+        Map<String, Object> healthData = Map.of(
+                "status", "UP",
+                "service", "user-service",
+                "timestamp", LocalDateTime.now(),
+                "version", "1.0.0",
+                "phase", "Phase 7 - Controller Layer Complete"
+        );
+        
+        return ok(healthData);
+    }
+}

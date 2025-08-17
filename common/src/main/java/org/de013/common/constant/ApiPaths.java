@@ -25,6 +25,8 @@ public final class ApiPaths {
     public static final String LOGIN = "/login";
     public static final String REFRESH = "/refresh";
     public static final String LOGOUT = "/logout";
+    public static final String PROFILE = "/profile";
+    public static final String CHANGE_PASSWORD = "/change-password";
     public static final String USERNAME = "/username";
     public static final String ID_PARAM = "/{id}";
     public static final String USERNAME_PARAM = "/username/{username}";

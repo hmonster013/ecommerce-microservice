@@ -13,9 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.USERS)
+@RequestMapping("/legacy" + ApiPaths.API + ApiPaths.V1 + ApiPaths.USERS)
 @RequiredArgsConstructor
-@Tag(name = "User Management", description = "User profile and management endpoints")
+@Tag(name = "User Legacy", description = "Legacy user endpoints (deprecated)")
 public class UserController extends BaseController {
 
     private final UserService userService;
