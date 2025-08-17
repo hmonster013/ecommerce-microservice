@@ -116,9 +116,37 @@ docker-compose up product-catalog-service
 - [x] Redis caching configuration
 - [x] OpenAPI documentation setup
 
-## 🔄 Next Steps (Phase 2)
-- Create core entities (Product, Category, ProductVariant, etc.)
-- Implement repository layer
+## ✅ Phase 2 Completed - Core Entities & Database Design
+- [x] **Base Entity** with audit fields (createdAt, updatedAt, createdBy, updatedBy)
+- [x] **Product Entity** with full validation, pricing, and metadata
+- [x] **Category Entity** with hierarchy support and self-referencing relationships
+- [x] **Product-Category Relationship** with Many-to-Many mapping and primary category support
+- [x] **Product Variant Entity** with variant types (SIZE, COLOR, MATERIAL, etc.)
+- [x] **Product Image Entity** with image types and display ordering
+- [x] **Inventory Entity** with stock tracking, reservations, and alerts
+- [x] **Review Entity** with rating system and moderation workflow
+- [x] **Enums**: ProductStatus, VariantType, ImageType, ReviewStatus
+- [x] **Database Migrations** (V1-V8):
+  - V1: Categories table with hierarchy
+  - V2: Products table with full-text search
+  - V3: Product-Categories junction table
+  - V4: Product variants table
+  - V5: Product images table
+  - V6: Inventory table with auto-creation trigger
+  - V7: Reviews table with moderation support
+  - V8: Sample data with realistic products and relationships
+
+### 🏗️ Entity Relationships
+- **Product** ↔ **Category** (Many-to-Many via ProductCategory)
+- **Product** → **ProductVariant** (One-to-Many)
+- **Product** → **ProductImage** (One-to-Many)
+- **Product** ↔ **Inventory** (One-to-One)
+- **Product** → **Review** (One-to-Many)
+- **Category** → **Category** (Self-referencing for hierarchy)
+
+## 🔄 Next Steps (Phase 3)
 - Create DTOs and request/response models
-- Implement service layer business logic
-- Create REST controllers
+- Implement repository layer with custom queries
+- Create service layer business logic
+- Implement REST controllers
+- Add validation and exception handling
