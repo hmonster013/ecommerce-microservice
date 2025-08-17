@@ -1,0 +1,148 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
+      forwarded:
+        enabled: false
+      routes:
+        # API Docs routes (must come before general routes)
+        - id: user-service-docs
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/users/v3/api-docs
+          filters:
+            - StripPrefix=2
+        - id: product-catalog-service-docs
+          uri: lb://product-catalog-service
+          predicates:
+            - Path=/api/products/v3/api-docs
+          filters:
+            - StripPrefix=2
+        - id: shopping-cart-service-docs
+          uri: lb://shopping-cart-service
+          predicates:
+            - Path=/api/cart/v3/api-docs
+          filters:
+            - StripPrefix=2
+        - id: order-service-docs
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/v3/api-docs
+          filters:
+            - StripPrefix=2
+        - id: payment-service-docs
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/v3/api-docs
+          filters:
+            - StripPrefix=2
+        - id: notification-service-docs
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/v3/api-docs
+          filters:
+            - StripPrefix=2
+
+        # General API routes
+        - id: user-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=1
+        - id: product-catalog-service
+          uri: lb://product-catalog-service
+          predicates:
+            - Path=/api/products/**
+          filters:
+            - StripPrefix=1
+        - id: shopping-cart-service
+          uri: lb://shopping-cart-service
+          predicates:
+            - Path=/api/cart/**
+          filters:
+            - StripPrefix=1
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - StripPrefix=1
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - StripPrefix=1
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - StripPrefix=1
+
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+    registry-fetch-interval-seconds: 30
+    initial-instance-info-replication-interval-seconds: 40
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    config-url: /v3/api-docs/swagger-config
+    disable-swagger-default-url: true
+    urls:
+      - url: /v3/api-docs
+        name: API Gateway
+      - url: /api/users/v3/api-docs
+        name: User Service
+      - url: /api/products/v3/api-docs
+        name: Product Catalog Service
+      - url: /api/cart/v3/api-docs
+        name: Shopping Cart Service
+      - url: /api/orders/v3/api-docs
+        name: Order Service
+      - url: /api/payments/v3/api-docs
+        name: Payment Service
+      - url: /api/notifications/v3/api-docs
+        name: Notification Service
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG
