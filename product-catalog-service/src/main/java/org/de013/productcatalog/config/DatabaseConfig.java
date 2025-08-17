@@ -10,9 +10,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import javax.sql.DataSource;
 import java.sql.Connection;
 
+@Slf4j
 @Configuration
 @EnableJpaAuditing
-@Slf4j
 public class DatabaseConfig {
 
     @Autowired
