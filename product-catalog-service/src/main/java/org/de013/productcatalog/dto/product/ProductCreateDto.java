@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.de013.productcatalog.entity.enums.ProductStatus;
+import org.de013.productcatalog.validation.ValidPrice;
+import org.de013.productcatalog.validation.ValidSku;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,14 +33,12 @@ public class ProductCreateDto {
     private String shortDescription;
 
     @NotBlank(message = "SKU is required")
-    @Size(max = 100, message = "SKU must not exceed 100 characters")
-    @Pattern(regexp = "^[A-Z0-9-_]+$", message = "SKU must contain only uppercase letters, numbers, hyphens, and underscores")
-    @Schema(description = "Product SKU", example = "IPHONE-15-PRO-128", required = true)
+    @ValidSku(message = "SKU must be 3-4 uppercase letters followed by 4-6 digits (e.g., ABC1234)")
+    @Schema(description = "Product SKU", example = "PROD1234", required = true)
     private String sku;
 
     @NotNull(message = "Price is required")
-    @DecimalMin(value = "0.01", message = "Price must be greater than 0")
-    @Digits(integer = 8, fraction = 2, message = "Price must have at most 8 integer digits and 2 decimal places")
+    @ValidPrice(min = 0.01, max = 999999.99, message = "Price must be between $0.01 and $999,999.99")
     @Schema(description = "Product price", example = "999.00", required = true)
     private BigDecimal price;
 

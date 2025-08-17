@@ -11,6 +11,7 @@ import org.de013.productcatalog.repository.CategoryRepository;
 import org.de013.productcatalog.repository.ProductCategoryRepository;
 import org.de013.productcatalog.service.CategoryService;
 import org.de013.productcatalog.util.EntityMapper;
+import org.de013.productcatalog.util.SlugUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -230,21 +231,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public String generateSlug(String name) {
-        if (!StringUtils.hasText(name)) {
-            return "";
-        }
-        
-        // Normalize and convert to lowercase
-        String normalized = Normalizer.normalize(name, Normalizer.Form.NFD);
-        
-        // Remove diacritical marks and convert to slug format
-        return normalized
-                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
-                .toLowerCase()
-                .replaceAll("[^a-z0-9\\s-]", "")
-                .replaceAll("\\s+", "-")
-                .replaceAll("-+", "-")
-                .replaceAll("^-|-$", "");
+        return SlugUtils.generateSlug(name);
     }
 
     @Override
@@ -254,16 +241,13 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public String generateUniqueSlug(String name, Long excludeCategoryId) {
-        String baseSlug = generateSlug(name);
-        String slug = baseSlug;
-        int counter = 1;
-        
-        while (!isSlugUnique(slug, excludeCategoryId)) {
-            slug = baseSlug + "-" + counter;
-            counter++;
-        }
-        
-        return slug;
+        return SlugUtils.generateUniqueSlug(name, slug -> {
+            if (excludeCategoryId != null) {
+                return categoryRepository.existsBySlugAndIdNot(slug, excludeCategoryId);
+            } else {
+                return categoryRepository.existsBySlug(slug);
+            }
+        });
     }
 
     @Override

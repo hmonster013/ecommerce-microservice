@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import org.de013.productcatalog.validation.ValidSlug;
 
 @Getter
 @Setter
@@ -22,8 +23,7 @@ public class CategoryCreateDto {
     @Schema(description = "Category description", example = "Mobile phones and accessories")
     private String description;
 
-    @Size(max = 255, message = "Category slug must not exceed 255 characters")
-    @Pattern(regexp = "^[a-z0-9-]+$", message = "Slug must contain only lowercase letters, numbers, and hyphens")
+    @ValidSlug(allowNull = true, message = "Slug must contain only lowercase letters, numbers, and hyphens")
     @Schema(description = "Category slug (auto-generated if not provided)", example = "smartphones")
     private String slug;
 
@@ -39,12 +39,5 @@ public class CategoryCreateDto {
     @Builder.Default
     private Boolean isActive = true;
 
-    // Validation method
-    @AssertTrue(message = "Slug must be unique and follow naming conventions")
-    public boolean isSlugValid() {
-        if (slug == null || slug.trim().isEmpty()) {
-            return true; // Will be auto-generated
-        }
-        return slug.matches("^[a-z0-9-]+$") && !slug.startsWith("-") && !slug.endsWith("-");
-    }
+
 }
