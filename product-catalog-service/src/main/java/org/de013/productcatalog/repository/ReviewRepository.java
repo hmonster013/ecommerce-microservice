@@ -38,10 +38,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByUserIdAndStatus(Long userId, ReviewStatus status);
 
     // Approved reviews (public)
-    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND r.status = 'APPROVED' ORDER BY r.createdAt DESC")
+    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.status = 'APPROVED' ORDER BY r.createdAt DESC")
     List<Review> findApprovedByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND r.status = 'APPROVED' ORDER BY r.createdAt DESC")
+    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.status = 'APPROVED' ORDER BY r.createdAt DESC")
     Page<Review> findApprovedByProductId(@Param("productId") Long productId, Pageable pageable);
 
     // Rating-based queries
@@ -53,9 +53,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     
     List<Review> findByProductIdAndRatingLessThanEqual(Long productId, Integer maxRating);
 
-    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND r.rating BETWEEN :minRating AND :maxRating AND r.status = 'APPROVED'")
-    List<Review> findByProductIdAndRatingRange(@Param("productId") Long productId, 
-                                              @Param("minRating") Integer minRating, 
+    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.rating BETWEEN :minRating AND :maxRating AND r.status = 'APPROVED'")
+    List<Review> findByProductIdAndRatingRange(@Param("productId") Long productId,
+                                              @Param("minRating") Integer minRating,
                                               @Param("maxRating") Integer maxRating);
 
     // Verified purchase queries
@@ -64,14 +64,14 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByProductIdAndVerifiedPurchaseTrueAndStatus(Long productId, ReviewStatus status);
 
     // Helpful reviews
-    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND r.status = 'APPROVED' ORDER BY r.helpfulCount DESC")
+    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.status = 'APPROVED' ORDER BY r.helpfulCount DESC")
     List<Review> findMostHelpfulByProductId(@Param("productId") Long productId, Pageable pageable);
 
-    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND r.helpfulCount > :minHelpful AND r.status = 'APPROVED'")
+    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.helpfulCount > :minHelpful AND r.status = 'APPROVED'")
     List<Review> findHelpfulByProductId(@Param("productId") Long productId, @Param("minHelpful") Integer minHelpful);
 
     // Recent reviews
-    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND r.status = 'APPROVED' ORDER BY r.createdAt DESC")
+    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.status = 'APPROVED' ORDER BY r.createdAt DESC")
     List<Review> findRecentByProductId(@Param("productId") Long productId, Pageable pageable);
 
     @Query("SELECT r FROM Review r WHERE r.status = 'APPROVED' AND r.createdAt >= :since ORDER BY r.createdAt DESC")
@@ -85,38 +85,38 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Page<Review> findReviewsNeedingModeration(Pageable pageable);
 
     // Search reviews
-    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND " +
+    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND " +
            "(LOWER(r.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(r.comment) LIKE LOWER(CONCAT('%', :query, '%'))) AND r.status = 'APPROVED'")
     List<Review> searchByProductIdAndQuery(@Param("productId") Long productId, @Param("query") String query);
 
     // Rating aggregation queries
-    @Query("SELECT AVG(CAST(r.rating AS double)) FROM Review r WHERE r.productId = :productId AND r.status = 'APPROVED'")
+    @Query("SELECT AVG(CAST(r.rating AS double)) FROM Review r WHERE r.product.id = :productId AND r.status = 'APPROVED'")
     Optional<Double> findAverageRatingByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT r.rating, COUNT(r) FROM Review r WHERE r.productId = :productId AND r.status = 'APPROVED' GROUP BY r.rating ORDER BY r.rating DESC")
+    @Query("SELECT r.rating, COUNT(r) FROM Review r WHERE r.product.id = :productId AND r.status = 'APPROVED' GROUP BY r.rating ORDER BY r.rating DESC")
     List<Object[]> findRatingDistributionByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT COUNT(r) FROM Review r WHERE r.productId = :productId AND r.status = 'APPROVED'")
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.product.id = :productId AND r.status = 'APPROVED'")
     long countApprovedByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT COUNT(r) FROM Review r WHERE r.productId = :productId AND r.status = 'APPROVED' AND r.verifiedPurchase = true")
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.product.id = :productId AND r.status = 'APPROVED' AND r.verifiedPurchase = true")
     long countVerifiedByProductId(@Param("productId") Long productId);
 
     // Review statistics
-    @Query("SELECT COUNT(r) FROM Review r WHERE r.productId = :productId AND r.rating >= 4 AND r.status = 'APPROVED'")
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.product.id = :productId AND r.rating >= 4 AND r.status = 'APPROVED'")
     long countPositiveReviewsByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT COUNT(r) FROM Review r WHERE r.productId = :productId AND r.rating <= 2 AND r.status = 'APPROVED'")
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.product.id = :productId AND r.rating <= 2 AND r.status = 'APPROVED'")
     long countNegativeReviewsByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT COUNT(r) FROM Review r WHERE r.productId = :productId AND r.rating = 3 AND r.status = 'APPROVED'")
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.product.id = :productId AND r.rating = 3 AND r.status = 'APPROVED'")
     long countNeutralReviewsByProductId(@Param("productId") Long productId);
 
     // Multiple products rating aggregation
-    @Query("SELECT r.productId, AVG(CAST(r.rating AS double)), COUNT(r) FROM Review r " +
-           "WHERE r.productId IN :productIds AND r.status = 'APPROVED' " +
-           "GROUP BY r.productId")
+    @Query("SELECT r.product.id, AVG(CAST(r.rating AS double)), COUNT(r) FROM Review r " +
+           "WHERE r.product.id IN :productIds AND r.status = 'APPROVED' " +
+           "GROUP BY r.product.id")
     List<Object[]> findRatingStatsByProductIds(@Param("productIds") List<Long> productIds);
 
     // User review history
@@ -128,7 +128,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     boolean existsByProductIdAndUserId(Long productId, Long userId);
 
     // Time-based queries
-    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND r.createdAt >= :since AND r.status = 'APPROVED'")
+    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.createdAt >= :since AND r.status = 'APPROVED'")
     List<Review> findByProductIdSince(@Param("productId") Long productId, @Param("since") LocalDateTime since);
 
     @Query("SELECT r FROM Review r WHERE r.createdAt BETWEEN :start AND :end AND r.status = 'APPROVED'")
@@ -171,16 +171,16 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Page<Object[]> findTopReviewers(@Param("minReviews") Integer minReviews, Pageable pageable);
 
     // Product review summary
-    @Query("SELECT r.productId, COUNT(r) as total_reviews, AVG(CAST(r.rating AS double)) as avg_rating, " +
+    @Query("SELECT r.product.id, COUNT(r) as total_reviews, AVG(CAST(r.rating AS double)) as avg_rating, " +
            "SUM(CASE WHEN r.verifiedPurchase = true THEN 1 ELSE 0 END) as verified_reviews " +
-           "FROM Review r WHERE r.productId IN :productIds AND r.status = 'APPROVED' " +
-           "GROUP BY r.productId")
+           "FROM Review r WHERE r.product.id IN :productIds AND r.status = 'APPROVED' " +
+           "GROUP BY r.product.id")
     List<Object[]> findReviewSummaryByProductIds(@Param("productIds") List<Long> productIds);
 
     // Reviews by rating for multiple products
-    @Query("SELECT r.productId, r.rating, COUNT(r) FROM Review r " +
-           "WHERE r.productId IN :productIds AND r.status = 'APPROVED' " +
-           "GROUP BY r.productId, r.rating " +
-           "ORDER BY r.productId, r.rating DESC")
+    @Query("SELECT r.product.id, r.rating, COUNT(r) FROM Review r " +
+           "WHERE r.product.id IN :productIds AND r.status = 'APPROVED' " +
+           "GROUP BY r.product.id, r.rating " +
+           "ORDER BY r.product.id, r.rating DESC")
     List<Object[]> findRatingDistributionByProductIds(@Param("productIds") List<Long> productIds);
 }
