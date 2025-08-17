@@ -8,6 +8,8 @@ import org.de013.productcatalog.dto.search.ProductSearchDto;
 import org.de013.productcatalog.dto.search.SearchResultDto;
 import org.de013.productcatalog.entity.*;
 import org.de013.productcatalog.entity.enums.ProductStatus;
+import org.de013.productcatalog.exception.DuplicateSkuException;
+import org.de013.productcatalog.exception.ProductNotFoundException;
 import org.de013.productcatalog.repository.*;
 import org.de013.productcatalog.repository.specification.ProductSpecification;
 import org.de013.productcatalog.service.ProductService;
@@ -22,6 +24,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -270,7 +273,7 @@ public class ProductServiceImpl implements ProductService {
     // Helper methods
     private Product findProductById(Long id) {
         return productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + id));
+                .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
     private PageResponse<ProductSummaryDto> mapToPageResponse(Page<Product> products) {
@@ -320,15 +323,39 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
-    // Validation and helper methods will be implemented in next part
+    // Validation methods
     @Override
     public void validateProductData(ProductCreateDto createDto) {
-        // TODO: Implement validation logic
+        log.debug("Validating product data for SKU: {}", createDto.getSku());
+
+        // Check for duplicate SKU
+        if (productRepository.existsBySku(createDto.getSku())) {
+            throw new DuplicateSkuException(createDto.getSku());
+        }
+
+        // Basic price validation
+        if (createDto.getPrice() != null && createDto.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Product price must be greater than zero");
+        }
     }
 
     @Override
     public void validateProductData(ProductUpdateDto updateDto, Long productId) {
-        // TODO: Implement validation logic
+        log.debug("Validating product update data for ID: {}", productId);
+
+        // Check for duplicate SKU (excluding current product)
+        if (updateDto.getSku() != null) {
+            productRepository.findBySku(updateDto.getSku())
+                    .filter(product -> !product.getId().equals(productId))
+                    .ifPresent(product -> {
+                        throw new DuplicateSkuException(updateDto.getSku(), product.getId());
+                    });
+        }
+
+        // Basic price validation
+        if (updateDto.getPrice() != null && updateDto.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Product price must be greater than zero");
+        }
     }
 
     private void createProductCategoryRelationships(Product product, List<Long> categoryIds, Long primaryCategoryId) {

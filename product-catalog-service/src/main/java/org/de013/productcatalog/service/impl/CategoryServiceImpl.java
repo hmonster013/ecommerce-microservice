@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.category.*;
 import org.de013.productcatalog.entity.Category;
+import org.de013.productcatalog.exception.CategoryNotFoundException;
+import org.de013.productcatalog.exception.InvalidCategoryHierarchyException;
 import org.de013.productcatalog.repository.CategoryRepository;
 import org.de013.productcatalog.repository.ProductCategoryRepository;
 import org.de013.productcatalog.service.CategoryService;
@@ -105,7 +107,15 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = findCategoryById(id);
         
         if (!canBeDeleted(id)) {
-            throw new RuntimeException("Category cannot be deleted as it has children or products");
+            long childCount = categoryRepository.countByParentIdAndIsActiveTrue(id);
+            long productCount = productCategoryRepository.countByCategoryId(id);
+
+            if (childCount > 0) {
+                throw InvalidCategoryHierarchyException.cannotDeleteWithChildren(id, (int) childCount);
+            }
+            if (productCount > 0) {
+                throw InvalidCategoryHierarchyException.cannotDeleteWithProducts(id, (int) productCount);
+            }
         }
         
         categoryRepository.delete(category);
@@ -128,7 +138,7 @@ public class CategoryServiceImpl implements CategoryService {
         log.debug("Getting category by slug: {}", slug);
         
         Category category = categoryRepository.findBySlug(slug)
-                .orElseThrow(() -> new RuntimeException("Category not found with slug: " + slug));
+                .orElseThrow(() -> new CategoryNotFoundException(slug));
         
         return entityMapper.toCategoryResponseDto(category);
     }
@@ -315,7 +325,7 @@ public class CategoryServiceImpl implements CategoryService {
     // Helper methods
     private Category findCategoryById(Long id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with ID: " + id));
+                .orElseThrow(() -> new CategoryNotFoundException(id));
     }
 
     private CategoryTreeDto buildCategoryTreeRecursive(Category category) {
