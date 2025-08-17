@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResponse;
 import org.de013.userservice.dto.AuthResponse;
 import org.de013.userservice.dto.LoginRequest;
@@ -17,14 +19,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.AUTH)
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "User authentication and registration endpoints")
-public class AuthController {
+public class AuthController extends BaseController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
+    @PostMapping(ApiPaths.REGISTER)
     @Operation(
             summary = "Register a new user",
             description = "Create a new user account with the provided information"
@@ -43,13 +45,12 @@ public class AuthController {
     })
     public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody UserRegistrationRequest request) {
-        
+
         AuthResponse response = authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("User registered successfully", response));
+        return created(response);
     }
 
-    @PostMapping("/login")
+    @PostMapping(ApiPaths.LOGIN)
     @Operation(
             summary = "User login",
             description = "Authenticate user and return JWT token"
@@ -68,8 +69,8 @@ public class AuthController {
     })
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
-        
+
         AuthResponse response = authService.authenticate(request);
-        return ResponseEntity.ok(ApiResponse.success("Login successful", response));
+        return ok(response);
     }
 }

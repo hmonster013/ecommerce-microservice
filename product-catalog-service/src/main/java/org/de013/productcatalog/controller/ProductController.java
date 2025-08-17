@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResponse;
 import org.de013.common.dto.PageResponse;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +19,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/products")
+@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.PRODUCTS)
 @RequiredArgsConstructor
 @Tag(name = "Product Management", description = "Product catalog management endpoints")
-public class ProductController {
+public class ProductController extends BaseController {
 
     @GetMapping
     @Operation(
@@ -66,10 +68,10 @@ public class ProductController {
                 .empty(false)
                 .build();
         
-        return ResponseEntity.ok(ApiResponse.success(pageResponse));
+        return ok(pageResponse);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(ApiPaths.ID_PARAM)
     @Operation(
             summary = "Get product by ID",
             description = "Retrieve product details by product ID"

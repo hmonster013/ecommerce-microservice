@@ -2,6 +2,8 @@ package org.de013.productcatalog.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,9 +14,9 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/health")
+@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.HEALTH)
 @Tag(name = "Health Check", description = "Service health check endpoints")
-public class HealthController {
+public class HealthController extends BaseController {
 
     @GetMapping
     @Operation(summary = "Health check", description = "Check if the service is running")
@@ -25,7 +27,7 @@ public class HealthController {
                 "timestamp", LocalDateTime.now(),
                 "version", "1.0.0"
         );
-        
-        return ResponseEntity.ok(ApiResponse.success("Service is healthy", healthData));
+
+        return ok(healthData);
     }
 }
