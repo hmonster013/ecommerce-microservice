@@ -4,9 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.de013.userservice.entity.Role;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -20,7 +20,7 @@ public class UserResponse {
     private String lastName;
     private String phone;
     private String address;
-    private Role role;
+    private List<String> roles;
     private boolean enabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

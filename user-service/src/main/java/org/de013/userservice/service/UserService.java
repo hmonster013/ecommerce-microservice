@@ -8,6 +8,7 @@ import org.de013.userservice.dto.UserRegistrationRequest;
 import org.de013.userservice.dto.UserResponse;
 import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
+import org.de013.userservice.repository.RoleRepository;
 import org.de013.userservice.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,8 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class UserService implements UserDetailsService {
-    
+
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     
     @Override
@@ -43,7 +45,11 @@ public class UserService implements UserDetailsService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Email already exists: " + request.getEmail());
         }
-        
+
+        // Get default CUSTOMER role
+        Role customerRole = roleRepository.findByName("CUSTOMER")
+                .orElseThrow(() -> new BusinessException("Default CUSTOMER role not found"));
+
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
@@ -52,9 +58,11 @@ public class UserService implements UserDetailsService {
                 .lastName(request.getLastName())
                 .phone(request.getPhone())
                 .address(request.getAddress())
-                .role(Role.CUSTOMER)
                 .enabled(true)
                 .build();
+
+        // Add default role
+        user.getRoles().add(customerRole);
         
         User savedUser = userRepository.save(user);
         log.info("User registered successfully: {}", savedUser.getUsername());
@@ -127,7 +135,7 @@ public class UserService implements UserDetailsService {
                 .lastName(user.getLastName())
                 .phone(user.getPhone())
                 .address(user.getAddress())
-                .role(user.getRole())
+                .roles(user.getRoles().stream().map(Role::getName).toList())
                 .enabled(user.isEnabled())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())

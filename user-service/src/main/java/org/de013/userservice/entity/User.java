@@ -11,7 +11,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
@@ -43,19 +46,43 @@ public class User implements UserDetails {
     private String phone;
     
     private String address;
-    
-    @Enumerated(EnumType.STRING)
-    private Role role;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
+
+    @Column(name = "account_non_expired")
+    @Builder.Default
+    private boolean accountNonExpired = true;
+
+    @Column(name = "account_non_locked")
+    @Builder.Default
+    private boolean accountNonLocked = true;
+
+    @Column(name = "credentials_non_expired")
+    @Builder.Default
+    private boolean credentialsNonExpired = true;
     
     @Column(name = "is_enabled")
     @Builder.Default
     private boolean enabled = true;
-    
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-    
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "created_by")
+    private String createdBy;
+
+    @Column(name = "updated_by")
+    private String updatedBy;
     
     @PrePersist
     protected void onCreate() {
@@ -70,7 +97,19 @@ public class User implements UserDetails {
     
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        Set<GrantedAuthority> authorities = new HashSet<>();
+
+        // Add role authorities
+        for (Role role : roles) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+
+            // Add permission authorities
+            for (Permission permission : role.getPermissions()) {
+                authorities.add(new SimpleGrantedAuthority(permission.getName()));
+            }
+        }
+
+        return authorities;
     }
     
     @Override
@@ -85,17 +124,17 @@ public class User implements UserDetails {
     
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return accountNonExpired;
     }
-    
+
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return accountNonLocked;
     }
-    
+
     @Override
     public boolean isCredentialsNonExpired() {
-        return true;
+        return credentialsNonExpired;
     }
     
     @Override
