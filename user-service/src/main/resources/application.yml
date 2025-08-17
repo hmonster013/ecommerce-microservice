@@ -91,13 +91,24 @@ app:
 # Swagger/OpenAPI Configuration
 springdoc:
   api-docs:
+    path: /v3/api-docs
     enabled: true
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
-    tags-sorter: alpha
-    operations-sorter: alpha
-  show-actuator: true
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    displayRequestDuration: true
+    docExpansion: none
+    defaultModelsExpandDepth: 1
+    defaultModelExpandDepth: 1
+  show-actuator: false
+  group-configs:
+    - group: 'user-service'
+      display-name: 'User Service API'
+      paths-to-match: '/api/**'
 
 logging:
   level:
