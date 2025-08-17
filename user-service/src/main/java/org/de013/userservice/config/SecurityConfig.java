@@ -1,6 +1,9 @@
 package org.de013.userservice.config;
 
 import lombok.RequiredArgsConstructor;
+import org.de013.common.constant.ApiPaths;
+import org.de013.userservice.repository.UserRepository;
+import org.de013.userservice.security.CustomUserDetailsService;
 import org.de013.userservice.security.JwtAuthenticationEntryPoint;
 import org.de013.userservice.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +38,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final PasswordEncoder passwordEncoder;
@@ -57,6 +61,11 @@ public class SecurityConfig {
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
+    }
+
+    @Bean
+    public CustomUserDetailsService customUserDetailsService() {
+        return new CustomUserDetailsService(userRepository);
     }
 
     @Bean
@@ -90,7 +99,7 @@ public class SecurityConfig {
                 // Authorization Rules
                 .authorizeHttpRequests(authz -> authz
                         // Public endpoints
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(ApiPaths.API + ApiPaths.V1 + ApiPaths.AUTH + "/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
 
