@@ -2,18 +2,23 @@ package org.de013.shoppingcart.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.shoppingcart.client.ProductCatalogFeignClient;
+import org.de013.shoppingcart.client.UserServiceFeignClient;
 import org.de013.shoppingcart.dto.ProductInfo;
 import org.de013.shoppingcart.dto.response.CartValidationDto;
 import org.de013.shoppingcart.entity.Cart;
 import org.de013.shoppingcart.entity.CartItem;
+import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.repository.jpa.CartItemRepository;
 import org.de013.shoppingcart.repository.jpa.CartRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -28,6 +33,27 @@ public class CartValidationService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductCatalogClient productCatalogClient;
+    private final ProductCatalogFeignClient productCatalogFeignClient;
+    private final UserServiceFeignClient userServiceFeignClient;
+
+    // Configuration values
+    @Value("${shopping-cart.validation.max-items-per-cart:100}")
+    private int maxItemsPerCart;
+
+    @Value("${shopping-cart.validation.max-quantity-per-item:99}")
+    private int maxQuantityPerItem;
+
+    @Value("${shopping-cart.validation.max-cart-value:10000.00}")
+    private BigDecimal maxCartValue;
+
+    @Value("${shopping-cart.validation.min-item-price:0.01}")
+    private BigDecimal minItemPrice;
+
+    @Value("${shopping-cart.validation.price-change-threshold:0.01}")
+    private BigDecimal priceChangeThreshold;
+
+    @Value("${shopping-cart.validation.cart-expiry-hours:24}")
+    private int cartExpiryHours;
     private final PricingService pricingService;
 
     // Validation constants
