@@ -2,6 +2,7 @@ package org.de013.shoppingcart.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.shoppingcart.client.UserServiceFeignClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ import java.util.Map;
 @Slf4j
 public class UserServiceClient {
 
+    private final UserServiceFeignClient userServiceFeignClient;
     private final RestTemplate restTemplate;
 
     @Value("${app.services.user-service.url:http://localhost:8080}")

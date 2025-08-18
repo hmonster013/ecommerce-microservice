@@ -2,6 +2,7 @@ package org.de013.shoppingcart.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.shoppingcart.client.ProductCatalogFeignClient;
 import org.de013.shoppingcart.dto.ProductInfo;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -25,6 +26,7 @@ import java.util.Optional;
 @Slf4j
 public class ProductCatalogClient {
 
+    private final ProductCatalogFeignClient productCatalogFeignClient;
     private final RestTemplate restTemplate;
 
     @Value("${app.services.product-catalog.url:http://localhost:8081}")
@@ -42,27 +44,20 @@ public class ProductCatalogClient {
     public ProductInfo getProductInfo(String productId) {
         try {
             log.debug("Fetching product info for product: {}", productId);
-            
-            String url = productCatalogServiceUrl + "/api/products/" + productId;
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                return mapToProductInfo(response.getBody());
+
+            // Use Feign client for primary call
+            ProductInfo productInfo = productCatalogFeignClient.getProductById(productId);
+
+            if (productInfo != null && !"UNAVAILABLE".equals(productInfo.getStatus())) {
+                return productInfo;
             }
-            
-            log.warn("Product not found: {}", productId);
+
+            log.warn("Product not found or unavailable: {}", productId);
             return null;
-            
-        } catch (HttpClientErrorException e) {
-            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                log.warn("Product not found: {}", productId);
-                return null;
-            }
-            log.error("Error fetching product info for {}: {}", productId, e.getMessage());
-            throw new RuntimeException("Failed to fetch product information", e);
+
         } catch (Exception e) {
-            log.error("Unexpected error fetching product info for {}: {}", productId, e.getMessage(), e);
-            throw new RuntimeException("Failed to fetch product information", e);
+            log.error("Error fetching product info for {}: {}", productId, e.getMessage(), e);
+            return null;
         }
     }
 
