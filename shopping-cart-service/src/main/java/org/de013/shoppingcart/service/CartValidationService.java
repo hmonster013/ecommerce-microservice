@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,6 +62,127 @@ public class CartValidationService {
     private static final int MAX_QUANTITY_PER_ITEM = 99;
     private static final BigDecimal MAX_CART_VALUE = new BigDecimal("10000.00");
     private static final BigDecimal MIN_ITEM_PRICE = new BigDecimal("0.01");
+
+    // ==================== QUANTITY LIMITS ENFORCEMENT ====================
+
+    /**
+     * Enforce quantity limits for cart item
+     */
+    public Map<String, Object> enforceQuantityLimits(Long cartId, Long itemId, Integer requestedQuantity) {
+        try {
+            log.debug("Enforcing quantity limits for cart: {} item: {} quantity: {}", cartId, itemId, requestedQuantity);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("cartId", cartId);
+            result.put("itemId", itemId);
+            result.put("requestedQuantity", requestedQuantity);
+            result.put("timestamp", LocalDateTime.now());
+
+            List<String> violations = new ArrayList<>();
+
+            // Check minimum quantity
+            if (requestedQuantity <= 0) {
+                violations.add("Quantity must be greater than 0");
+                result.put("valid", false);
+                result.put("violations", violations);
+                return result;
+            }
+
+            // Check maximum quantity per item
+            if (requestedQuantity > maxQuantityPerItem) {
+                violations.add("Quantity exceeds maximum allowed per item: " + maxQuantityPerItem);
+            }
+
+            // Get cart to check total items
+            Optional<Cart> cartOpt = cartRepository.findById(cartId);
+            if (cartOpt.isPresent()) {
+                Cart cart = cartOpt.get();
+
+                // Check maximum items per cart
+                if (cart.getCartItems().size() >= maxItemsPerCart) {
+                    violations.add("Cart exceeds maximum number of items: " + maxItemsPerCart);
+                }
+
+                // Check if adding this quantity would exceed cart value limit
+                BigDecimal currentCartValue = cart.getTotalAmount() != null ? cart.getTotalAmount() : BigDecimal.ZERO;
+
+                // Find the item to get its price
+                CartItem targetItem = cart.getCartItems().stream()
+                    .filter(item -> item.getId().equals(itemId))
+                    .findFirst()
+                    .orElse(null);
+
+                if (targetItem != null) {
+                    BigDecimal itemValue = targetItem.getUnitPrice().multiply(BigDecimal.valueOf(requestedQuantity));
+                    BigDecimal projectedCartValue = currentCartValue.add(itemValue);
+
+                    if (projectedCartValue.compareTo(maxCartValue) > 0) {
+                        violations.add("Adding this quantity would exceed maximum cart value: $" + maxCartValue);
+                    }
+
+                    // Check product-specific quantity limits
+                    Map<String, Object> productLimits = checkProductQuantityLimits(targetItem.getProductId(), requestedQuantity);
+                    if (!Boolean.TRUE.equals(productLimits.get("valid"))) {
+                        @SuppressWarnings("unchecked")
+                        List<String> productViolations = (List<String>) productLimits.get("violations");
+                        violations.addAll(productViolations);
+                    }
+                }
+            }
+
+            result.put("valid", violations.isEmpty());
+            result.put("violations", violations);
+            result.put("maxQuantityPerItem", maxQuantityPerItem);
+            result.put("maxItemsPerCart", maxItemsPerCart);
+            result.put("maxCartValue", maxCartValue);
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("Error enforcing quantity limits: {}", e.getMessage(), e);
+            return Map.of(
+                "cartId", cartId,
+                "itemId", itemId,
+                "valid", false,
+                "error", e.getMessage()
+            );
+        }
+    }
+
+    /**
+     * Check product-specific quantity limits
+     */
+    private Map<String, Object> checkProductQuantityLimits(String productId, Integer requestedQuantity) {
+        try {
+            // Check with product catalog for product-specific limits
+            Map<String, Object> productInfo = productCatalogFeignClient.validateProduct(productId);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("productId", productId);
+            result.put("valid", true);
+            result.put("violations", new ArrayList<String>());
+
+            if (Boolean.TRUE.equals(productInfo.get("fallback"))) {
+                // If product service is unavailable, use default limits
+                return result;
+            }
+
+            // Check if product has specific quantity limits
+            Integer maxQuantityPerOrder = (Integer) productInfo.get("maxQuantityPerOrder");
+            if (maxQuantityPerOrder != null && requestedQuantity > maxQuantityPerOrder) {
+                @SuppressWarnings("unchecked")
+                List<String> violations = (List<String>) result.get("violations");
+                violations.add("Quantity exceeds product-specific limit: " + maxQuantityPerOrder);
+                result.put("valid", false);
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            log.warn("Error checking product quantity limits for {}: {}", productId, e.getMessage());
+            return Map.of("productId", productId, "valid", true, "violations", List.of());
+        }
+    }
 
     // ==================== CART VALIDATION ====================
 

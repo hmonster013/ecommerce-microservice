@@ -28,6 +28,8 @@ public class DynamicPricingService {
 
     private final ProductCatalogFeignClient productCatalogFeignClient;
     private final UserServiceFeignClient userServiceFeignClient;
+    private final TaxCalculationService taxCalculationService;
+    private final ShippingCostService shippingCostService;
 
     // Configuration values
     @Value("${shopping-cart.pricing.bulk-discount-threshold:5}")
@@ -77,16 +79,25 @@ public class DynamicPricingService {
             Map<String, Object> promotionalDiscounts = calculatePromotionalDiscounts(cart);
             result.put("promotionalDiscounts", promotionalDiscounts);
             
-            // Calculate final pricing
-            Map<String, Object> finalPricing = calculateFinalPricing(
-                basePricing, bulkDiscounts, loyaltyDiscounts, promotionalDiscounts);
+            // Calculate tax
+            Map<String, Object> taxCalculation = taxCalculationService.calculateCartTax(cart);
+            result.put("taxCalculation", taxCalculation);
+
+            // Calculate shipping
+            Map<String, Object> shippingCalculation = shippingCostService.calculateShippingCosts(cart);
+            result.put("shippingCalculation", shippingCalculation);
+
+            // Calculate final pricing including tax and shipping
+            Map<String, Object> finalPricing = calculateFinalPricingWithTaxAndShipping(
+                basePricing, bulkDiscounts, loyaltyDiscounts, promotionalDiscounts,
+                taxCalculation, shippingCalculation);
             result.put("finalPricing", finalPricing);
-            
+
             // Calculate savings
             BigDecimal originalTotal = (BigDecimal) basePricing.get("total");
-            BigDecimal finalTotal = (BigDecimal) finalPricing.get("total");
-            BigDecimal totalSavings = originalTotal.subtract(finalTotal);
-            
+            BigDecimal finalTotal = (BigDecimal) finalPricing.get("grandTotal");
+            BigDecimal totalSavings = originalTotal.subtract((BigDecimal) finalPricing.get("subtotalAfterDiscounts"));
+
             result.put("totalSavings", totalSavings);
             result.put("savingsPercent", calculateSavingsPercent(originalTotal, totalSavings));
             
@@ -340,24 +351,24 @@ public class DynamicPricingService {
             Map<String, Object> bulkDiscounts,
             Map<String, Object> loyaltyDiscounts,
             Map<String, Object> promotionalDiscounts) {
-        
+
         Map<String, Object> result = new HashMap<>();
-        
+
         BigDecimal subtotal = (BigDecimal) basePricing.get("subtotal");
         BigDecimal totalDiscounts = BigDecimal.ZERO;
-        
+
         // Sum all discounts
         totalDiscounts = totalDiscounts.add((BigDecimal) bulkDiscounts.get("discountAmount"));
         totalDiscounts = totalDiscounts.add((BigDecimal) loyaltyDiscounts.get("discountAmount"));
         totalDiscounts = totalDiscounts.add((BigDecimal) promotionalDiscounts.get("discountAmount"));
-        
+
         BigDecimal finalTotal = subtotal.subtract(totalDiscounts);
-        
+
         // Ensure final total is not negative
         if (finalTotal.compareTo(BigDecimal.ZERO) < 0) {
             finalTotal = BigDecimal.ZERO;
         }
-        
+
         result.put("subtotal", subtotal);
         result.put("totalDiscounts", totalDiscounts);
         result.put("total", finalTotal);
@@ -366,7 +377,87 @@ public class DynamicPricingService {
             "loyalty", loyaltyDiscounts.get("discountAmount"),
             "promotional", promotionalDiscounts.get("discountAmount")
         ));
-        
+
+        return result;
+    }
+
+    /**
+     * Calculate final pricing including tax and shipping
+     */
+    private Map<String, Object> calculateFinalPricingWithTaxAndShipping(
+            Map<String, Object> basePricing,
+            Map<String, Object> bulkDiscounts,
+            Map<String, Object> loyaltyDiscounts,
+            Map<String, Object> promotionalDiscounts,
+            Map<String, Object> taxCalculation,
+            Map<String, Object> shippingCalculation) {
+
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            BigDecimal subtotal = (BigDecimal) basePricing.get("subtotal");
+            BigDecimal totalDiscounts = BigDecimal.ZERO;
+
+            // Sum all discounts
+            totalDiscounts = totalDiscounts.add((BigDecimal) bulkDiscounts.get("discountAmount"));
+            totalDiscounts = totalDiscounts.add((BigDecimal) loyaltyDiscounts.get("discountAmount"));
+            totalDiscounts = totalDiscounts.add((BigDecimal) promotionalDiscounts.get("discountAmount"));
+
+            BigDecimal subtotalAfterDiscounts = subtotal.subtract(totalDiscounts);
+
+            // Ensure subtotal is not negative
+            if (subtotalAfterDiscounts.compareTo(BigDecimal.ZERO) < 0) {
+                subtotalAfterDiscounts = BigDecimal.ZERO;
+            }
+
+            // Get tax amount
+            BigDecimal taxAmount = BigDecimal.ZERO;
+            if (taxCalculation.containsKey("finalTax")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> finalTax = (Map<String, Object>) taxCalculation.get("finalTax");
+                taxAmount = (BigDecimal) finalTax.getOrDefault("totalTaxAmount", BigDecimal.ZERO);
+            }
+
+            // Get shipping amount (use recommended option)
+            BigDecimal shippingAmount = BigDecimal.ZERO;
+            if (shippingCalculation.containsKey("recommendedOption")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> recommendedOption = (Map<String, Object>) shippingCalculation.get("recommendedOption");
+                shippingAmount = (BigDecimal) recommendedOption.getOrDefault("cost", BigDecimal.ZERO);
+            }
+
+            // Calculate grand total
+            BigDecimal grandTotal = subtotalAfterDiscounts.add(taxAmount).add(shippingAmount);
+
+            result.put("subtotal", subtotal);
+            result.put("totalDiscounts", totalDiscounts);
+            result.put("subtotalAfterDiscounts", subtotalAfterDiscounts);
+            result.put("taxAmount", taxAmount);
+            result.put("shippingAmount", shippingAmount);
+            result.put("grandTotal", grandTotal);
+
+            result.put("discountBreakdown", Map.of(
+                "bulk", bulkDiscounts.get("discountAmount"),
+                "loyalty", loyaltyDiscounts.get("discountAmount"),
+                "promotional", promotionalDiscounts.get("discountAmount")
+            ));
+
+            // Calculate effective rates
+            if (subtotal.compareTo(BigDecimal.ZERO) > 0) {
+                double discountRate = totalDiscounts.divide(subtotal, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+                double taxRate = taxAmount.divide(subtotalAfterDiscounts, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+
+                result.put("effectiveDiscountRate", discountRate);
+                result.put("effectiveTaxRate", taxRate);
+            }
+
+        } catch (Exception e) {
+            log.error("Error calculating final pricing with tax and shipping: {}", e.getMessage());
+            result.put("error", e.getMessage());
+        }
+
         return result;
     }
 
