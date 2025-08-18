@@ -15,6 +15,7 @@ import org.de013.productcatalog.repository.specification.ProductSpecification;
 import org.de013.productcatalog.service.ProductService;
 import org.de013.productcatalog.util.EntityMapper;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -85,7 +86,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "products", key = "#id")
+    @CachePut(value = "products", key = "#id")
+    @CacheEvict(value = {"featuredProducts", "popularProducts", "searchResults"}, allEntries = true)
     public ProductResponseDto updateProduct(Long id, ProductUpdateDto updateDto) {
         log.info("Updating product with ID: {}", id);
         

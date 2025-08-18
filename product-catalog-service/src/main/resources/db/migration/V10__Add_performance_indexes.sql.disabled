@@ -1,0 +1,130 @@
+-- Performance optimization indexes for Product Catalog Service
+-- V10: Add comprehensive indexing strategy for better query performance
+
+-- Product table indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_status ON products(status);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_featured ON products(is_featured) WHERE is_featured = true;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_brand ON products(brand);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_price ON products(price);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_created_at ON products(created_at);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_updated_at ON products(updated_at);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_sku_unique ON products(sku);
+
+-- Composite indexes for common query patterns
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_status_featured ON products(status, is_featured);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_status_created ON products(status, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_status_price ON products(status, price);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_brand_status ON products(brand, status);
+
+-- Full-text search indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_name_gin ON products USING gin(to_tsvector('english', name));
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_description_gin ON products USING gin(to_tsvector('english', description));
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_search_gin ON products USING gin(
+    to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(brand, ''))
+);
+
+-- Category table indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_parent_id ON categories(parent_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_slug_unique ON categories(slug);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_active ON categories(is_active) WHERE is_active = true;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_display_order ON categories(display_order);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_level ON categories(level);
+
+-- Composite indexes for category hierarchy
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_parent_active ON categories(parent_id, is_active);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_parent_order ON categories(parent_id, display_order);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_active_order ON categories(is_active, display_order) WHERE is_active = true;
+
+-- Product-Category relationship indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_categories_product ON product_categories(product_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_categories_category ON product_categories(category_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_categories_primary ON product_categories(is_primary) WHERE is_primary = true;
+
+-- Composite indexes for product-category queries
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_categories_cat_primary ON product_categories(category_id, is_primary);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_categories_prod_primary ON product_categories(product_id, is_primary);
+
+-- Inventory table indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_product_id ON inventory(product_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_available_qty ON inventory(available_quantity);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_reserved_qty ON inventory(reserved_quantity);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_location ON inventory(warehouse_location);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_updated_at ON inventory(updated_at);
+
+-- Composite indexes for inventory queries
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_product_available ON inventory(product_id, available_quantity);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_location_available ON inventory(warehouse_location, available_quantity);
+
+-- Review table indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_product_id ON reviews(product_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_rating ON reviews(rating);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_status ON reviews(status);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_created_at ON reviews(created_at);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_reviewer_email ON reviews(reviewer_email);
+
+-- Composite indexes for review queries
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_product_status ON reviews(product_id, status);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_product_rating ON reviews(product_id, rating);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_status_created ON reviews(status, created_at DESC);
+
+-- Product Image indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_images_product_id ON product_images(product_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_images_type ON product_images(image_type);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_images_display_order ON product_images(display_order);
+
+-- Composite indexes for image queries
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_images_product_order ON product_images(product_id, display_order);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_product_images_product_type ON product_images(product_id, image_type);
+
+-- Search Analytics indexes (already created in V9 but adding performance optimizations)
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_search_analytics_query_result ON search_analytics(normalized_query, result_count);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_search_analytics_date_clicks ON search_analytics(search_date, had_clicks);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_search_analytics_session_query ON search_analytics(user_session_id, normalized_query);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_search_analytics_source_date ON search_analytics(search_source, search_date);
+
+-- Partial indexes for better performance on filtered queries
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_active_featured ON products(id, created_at)
+    WHERE status = 'ACTIVE' AND is_featured = true;
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_active_recent ON products(id, created_at DESC) 
+    WHERE status = 'ACTIVE' AND created_at > CURRENT_DATE - INTERVAL '30 days';
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_active_root ON categories(id, display_order) 
+    WHERE is_active = true AND parent_id IS NULL;
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_low_stock ON inventory(product_id, available_quantity) 
+    WHERE available_quantity <= reorder_level;
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_approved_recent ON reviews(product_id, rating, created_at DESC) 
+    WHERE status = 'APPROVED' AND created_at > CURRENT_DATE - INTERVAL '90 days';
+
+-- Expression indexes for common calculations
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_total_stock ON inventory((available_quantity + reserved_quantity));
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_name_lower ON products(lower(name));
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_name_lower ON categories(lower(name));
+
+-- Indexes for JSON columns (if any are added in the future)
+-- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_metadata_gin ON products USING gin(metadata);
+
+-- Update table statistics for better query planning
+ANALYZE products;
+ANALYZE categories;
+ANALYZE product_categories;
+ANALYZE inventory;
+ANALYZE reviews;
+ANALYZE product_images;
+ANALYZE search_analytics;
+
+-- Add comments for documentation
+COMMENT ON INDEX idx_products_status IS 'Index for filtering products by status';
+COMMENT ON INDEX idx_products_featured IS 'Partial index for featured products only';
+COMMENT ON INDEX idx_products_search_gin IS 'Full-text search index for products';
+COMMENT ON INDEX idx_categories_parent_active IS 'Composite index for category hierarchy queries';
+COMMENT ON INDEX idx_product_categories_cat_primary IS 'Index for finding primary category relationships';
+COMMENT ON INDEX idx_inventory_product_available IS 'Index for stock availability queries';
+COMMENT ON INDEX idx_reviews_product_status IS 'Index for approved product reviews';
+
+-- Create database statistics for query optimization
+CREATE STATISTICS IF NOT EXISTS stats_products_status_brand ON status, brand FROM products;
+CREATE STATISTICS IF NOT EXISTS stats_products_price_category ON price, (SELECT category_id FROM product_categories WHERE product_categories.product_id = products.id LIMIT 1) FROM products;
+CREATE STATISTICS IF NOT EXISTS stats_categories_parent_level ON parent_id, level FROM categories;
