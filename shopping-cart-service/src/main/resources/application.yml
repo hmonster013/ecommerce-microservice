@@ -4,16 +4,56 @@ server:
 spring:
   application:
     name: shopping-cart-service
-  
+  profiles:
+    active: dev
+
+  # Database Configuration (H2 for development)
+  datasource:
+    url: jdbc:h2:mem:cartdb
+    username: sa
+    password: password
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  # Redis Configuration
   redis:
     host: localhost
     port: 6379
     timeout: 2000ms
+    database: 2
     lettuce:
       pool:
-        max-active: 8
+        max-active: 20
         max-idle: 8
-        min-idle: 0
+        min-idle: 2
+        max-wait: -1ms
+
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
 
 eureka:
   client:
@@ -53,6 +93,77 @@ springdoc:
     operations-sorter: alpha
   show-actuator: true
 
+# Shopping Cart Specific Configuration
+shopping-cart:
+  cache:
+    ttl:
+      active-cart: 86400 # 24 hours
+      guest-cart: 3600   # 1 hour
+      session-cart: 1800 # 30 minutes
+  validation:
+    max-items-per-cart: 100
+    max-quantity-per-item: 99
+  pricing:
+    currency: USD
+    tax-rate: 0.08
+
 logging:
   level:
     org.de013.shoppingcart: DEBUG
+    org.springframework.data.redis: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:mem:cartdb
+    username: sa
+    password: password
+    driver-class-name: org.h2.Driver
+  redis:
+    host: localhost
+    port: 6379
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ecommerce_cart}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+
+---
+# Test Profile
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
