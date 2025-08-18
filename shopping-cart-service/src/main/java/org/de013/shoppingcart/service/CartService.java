@@ -44,6 +44,9 @@ public class CartService {
     private final CartValidationService validationService;
     private final CartMergeService mergeService;
     private final CartItemService cartItemService;
+    private final CacheFallbackService cacheFallbackService;
+    private final CacheInvalidationService cacheInvalidationService;
+    private final RedisHealthService redisHealthService;
 
     // ==================== CART CREATION & RETRIEVAL ====================
 
@@ -70,26 +73,29 @@ public class CartService {
     }
 
     /**
-     * Get active cart for user or session
+     * Get active cart for user or session with Redis fallback
      */
     public Optional<CartResponseDto> getActiveCart(String userId, String sessionId) {
         try {
-            // First try Redis for fast access
-            Optional<RedisCart> redisCart = getRedisCart(userId, sessionId);
-            if (redisCart.isPresent()) {
-                return Optional.of(convertToResponseDto(redisCart.get()));
+            // Use fallback service for Redis-Database integration
+            Optional<Cart> cart;
+
+            if (userId != null) {
+                cart = cacheFallbackService.getUserCartWithFallback(userId);
+            } else if (sessionId != null) {
+                cart = cacheFallbackService.getSessionCartWithFallback(sessionId);
+            } else {
+                return Optional.empty();
             }
-            
-            // Fallback to database
-            Optional<Cart> dbCart = getDatabaseCart(userId, sessionId);
-            if (dbCart.isPresent()) {
-                // Sync to Redis for future fast access
-                syncCartToRedis(dbCart.get());
-                return Optional.of(convertToResponseDto(dbCart.get()));
+
+            if (cart.isPresent()) {
+                // Update last activity
+                updateLastActivity(cart.get().getId());
+                return Optional.of(convertToResponseDto(cart.get()));
             }
-            
+
             return Optional.empty();
-            
+
         } catch (Exception e) {
             log.error("Error getting active cart: {}", e.getMessage(), e);
             return Optional.empty();

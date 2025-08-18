@@ -144,4 +144,53 @@ public class RedisConfig {
     public LettuceConnectionFactory lettuceConnectionFactory() {
         return new LettuceConnectionFactory();
     }
+
+    /**
+     * Configure Redis Message Listener Container for pub/sub
+     */
+    @Bean
+    public org.springframework.data.redis.listener.RedisMessageListenerContainer redisMessageListenerContainer(
+            RedisConnectionFactory connectionFactory) {
+        org.springframework.data.redis.listener.RedisMessageListenerContainer container =
+            new org.springframework.data.redis.listener.RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        return container;
+    }
+
+    /**
+     * Configure Redis Script for atomic operations
+     */
+    @Bean
+    public org.springframework.data.redis.core.script.DefaultRedisScript<Long> cartLockScript() {
+        org.springframework.data.redis.core.script.DefaultRedisScript<Long> script =
+            new org.springframework.data.redis.core.script.DefaultRedisScript<>();
+        script.setScriptText(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+            "return redis.call('del', KEYS[1]) " +
+            "else " +
+            "return 0 " +
+            "end"
+        );
+        script.setResultType(Long.class);
+        return script;
+    }
+
+    /**
+     * Configure Redis Script for cart TTL extension
+     */
+    @Bean
+    public org.springframework.data.redis.core.script.DefaultRedisScript<Boolean> extendTtlScript() {
+        org.springframework.data.redis.core.script.DefaultRedisScript<Boolean> script =
+            new org.springframework.data.redis.core.script.DefaultRedisScript<>();
+        script.setScriptText(
+            "if redis.call('exists', KEYS[1]) == 1 then " +
+            "redis.call('expire', KEYS[1], ARGV[1]) " +
+            "return true " +
+            "else " +
+            "return false " +
+            "end"
+        );
+        script.setResultType(Boolean.class);
+        return script;
+    }
 }
