@@ -95,17 +95,36 @@ springdoc:
 
 # Shopping Cart Specific Configuration
 shopping-cart:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+      expiration: ${JWT_EXPIRATION:86400000}
+      issuer: ${JWT_ISSUER:shopping-cart-service}
   cache:
     ttl:
       active-cart: 86400 # 24 hours
       guest-cart: 3600   # 1 hour
       session-cart: 1800 # 30 minutes
+    caffeine:
+      max-size: ${CACHE_CAFFEINE_MAX_SIZE:10000}
+      expire-after-write: ${CACHE_CAFFEINE_EXPIRE:300}
+    redis:
+      default-ttl: ${CACHE_REDIS_TTL:3600}
   validation:
     max-items-per-cart: 100
     max-quantity-per-item: 99
   pricing:
     currency: USD
     tax-rate: 0.08
+  performance:
+    monitoring:
+      enabled: ${PERFORMANCE_MONITORING_ENABLED:true}
+    database:
+      batch-size: ${DB_BATCH_SIZE:50}
+      query-timeout: ${DB_QUERY_TIMEOUT:30}
+    cache-warming:
+      enabled: ${CACHE_WARMING_ENABLED:true}
+      startup-delay: ${CACHE_WARMING_STARTUP_DELAY:5000}
 
 logging:
   level:
