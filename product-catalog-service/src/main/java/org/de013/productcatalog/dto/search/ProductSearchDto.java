@@ -8,6 +8,7 @@ import lombok.*;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -47,6 +48,24 @@ public class ProductSearchDto {
 
     @Schema(description = "Only products in stock", example = "true")
     private Boolean inStockOnly;
+
+    @Schema(description = "Filter by stock availability", example = "true")
+    private Boolean inStock;
+
+    @Schema(description = "Only featured products", example = "false")
+    private Boolean featured;
+
+    @Schema(description = "Only products on sale", example = "false")
+    private Boolean onSale;
+
+    @Schema(description = "Created after this date")
+    private LocalDateTime createdAfter;
+
+    @Schema(description = "Created before this date")
+    private LocalDateTime createdBefore;
+
+    @Schema(description = "Sort criteria", example = "price_asc")
+    private String sort;
 
     @Schema(description = "Only products on sale", example = "false")
     private Boolean onSaleOnly;

@@ -22,6 +22,21 @@ public class SearchResultDto {
     @Schema(description = "Total results found", example = "150")
     private Long totalResults;
 
+    @Schema(description = "Total pages available", example = "8")
+    private Integer totalPages;
+
+    @Schema(description = "Current page number", example = "0")
+    private Integer currentPage;
+
+    @Schema(description = "Page size", example = "20")
+    private Integer pageSize;
+
+    @Schema(description = "Has next page", example = "true")
+    private Boolean hasNext;
+
+    @Schema(description = "Has previous page", example = "false")
+    private Boolean hasPrevious;
+
     @Schema(description = "Search execution time in milliseconds", example = "45")
     private Long executionTimeMs;
 
