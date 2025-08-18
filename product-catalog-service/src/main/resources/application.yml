@@ -72,6 +72,22 @@ spring:
     validate-on-migrate: true
     mixed: true  # Allow mixed transactional and non-transactional statements
 
+# OpenAPI/Swagger Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: none
+    display-request-duration: true
+  show-actuator: false
+  packages-to-scan: org.de013.productcatalog.controller
+
 eureka:
   client:
     service-url:
@@ -94,13 +110,7 @@ management:
     health:
       show-details: always
 
-# Swagger/OpenAPI Configuration
-springdoc:
-  api-docs:
-    enabled: true
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
+# Swagger/OpenAPI Configuration merged above
     tags-sorter: alpha
     operations-sorter: alpha
   show-actuator: true

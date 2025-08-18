@@ -2,6 +2,9 @@ package org.de013.productcatalog.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -104,16 +107,121 @@ public class ProductController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(product));
     }
 
-    @Operation(summary = "Create new product", description = "Create a new product (Admin only)")
+    @Operation(
+            summary = "Create new product",
+            description = """
+                    Create a new product in the catalog. This endpoint allows administrators to add new products
+                    with complete product information including name, description, pricing, categories, and variants.
+
+                    **Features:**
+                    - Automatic SKU validation and uniqueness check
+                    - Category assignment and validation
+                    - Product variant support
+                    - Image upload and management
+                    - Inventory initialization
+                    - Cache invalidation for optimal performance
+
+                    **Business Rules:**
+                    - SKU must be unique across all products
+                    - At least one category must be assigned
+                    - Price must be positive
+                    - Product name must be unique within category
+                    """)
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Product created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid product data"),
-        @ApiResponse(responseCode = "403", description = "Access denied")
+        @ApiResponse(
+                responseCode = "201",
+                description = "Product created successfully",
+                content = @Content(
+                        mediaType = "application/json",
+                        schema = @Schema(implementation = ProductResponseDto.class),
+                        examples = @ExampleObject(
+                                name = "Product Created",
+                                value = """
+                                        {
+                                          "success": true,
+                                          "message": "Product created successfully",
+                                          "data": {
+                                            "id": 1,
+                                            "name": "Premium Wireless Headphones",
+                                            "description": "High-quality wireless headphones with noise cancellation",
+                                            "sku": "WH-001",
+                                            "price": 299.99,
+                                            "brand": "TechBrand",
+                                            "status": "ACTIVE",
+                                            "featured": false,
+                                            "categories": [
+                                              {
+                                                "id": 1,
+                                                "name": "Electronics",
+                                                "slug": "electronics"
+                                              }
+                                            ],
+                                            "createdAt": "2024-01-15T10:30:00Z",
+                                            "updatedAt": "2024-01-15T10:30:00Z"
+                                          }
+                                        }
+                                        """))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Invalid product data - validation errors",
+                content = @Content(
+                        mediaType = "application/json",
+                        examples = @ExampleObject(
+                                name = "Validation Error",
+                                value = """
+                                        {
+                                          "success": false,
+                                          "message": "Validation failed",
+                                          "errors": [
+                                            {
+                                              "field": "sku",
+                                              "message": "SKU already exists"
+                                            },
+                                            {
+                                              "field": "price",
+                                              "message": "Price must be positive"
+                                            }
+                                          ]
+                                        }
+                                        """))),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Access denied - Admin role required",
+                content = @Content(
+                        mediaType = "application/json",
+                        examples = @ExampleObject(
+                                name = "Access Denied",
+                                value = """
+                                        {
+                                          "success": false,
+                                          "message": "Access denied",
+                                          "error": "Insufficient privileges"
+                                        }
+                                        """)))
     })
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductResponseDto>> createProduct(
-            @Parameter(description = "Product creation data", required = true)
+            @Parameter(
+                    description = "Product creation data with all required fields",
+                    required = true,
+                    example = """
+                            {
+                              "name": "Premium Wireless Headphones",
+                              "description": "High-quality wireless headphones with active noise cancellation and 30-hour battery life",
+                              "sku": "WH-001",
+                              "price": 299.99,
+                              "brand": "TechBrand",
+                              "categoryIds": [1, 2],
+                              "featured": false,
+                              "tags": ["wireless", "noise-cancellation", "premium"],
+                              "specifications": {
+                                "battery_life": "30 hours",
+                                "connectivity": "Bluetooth 5.0",
+                                "weight": "250g"
+                              }
+                            }
+                            """)
             @Valid @RequestBody ProductCreateDto createDto) {
 
         log.info("Creating new product with SKU: {}", createDto.getSku());

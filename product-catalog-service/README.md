@@ -325,6 +325,213 @@ docker-compose up product-catalog-service
 - **Database Optimization**: Indexing strategy and query performance tuning
 - **Memory Management**: Efficient serialization and resource utilization
 
+## ✅ Phase 12 Completed - Documentation & API
+- [x] **Comprehensive API Documentation**: Complete Swagger/OpenAPI documentation
+  - Detailed endpoint descriptions with examples
+  - Request/response schemas and examples
+  - Authentication and authorization documentation
+  - Error handling and status codes
+- [x] **Interactive API Explorer**: Swagger UI with try-it-out functionality
+  - Live API testing interface
+  - Request/response examples
+  - Parameter validation and testing
+  - Authentication token support
+- [x] **Developer Documentation**: Comprehensive guides and examples
+  - API usage examples and tutorials
+  - Search parameter documentation
+  - Performance optimization guides
+  - Caching strategy documentation
+- [x] **Service Documentation**: Complete service overview and setup guides
+  - Architecture documentation
+  - Configuration guides
+  - Deployment instructions
+  - Troubleshooting guides
+
+### 📚 API Documentation Features
+- **Swagger UI**: Interactive API documentation at `/swagger-ui.html`
+- **OpenAPI Spec**: Machine-readable API specification at `/api-docs`
+- **Live Testing**: Try-it-out functionality for all endpoints
+- **Authentication**: JWT token support for protected endpoints
+- **Examples**: Comprehensive request/response examples
+- **Error Handling**: Detailed error codes and messages
+
+## 📖 Documentation Links
+
+### 📋 API Documentation
+- **Swagger UI**: http://localhost:8082/swagger-ui.html
+- **OpenAPI JSON**: http://localhost:8082/api-docs
+- **API Guide**: [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
+
+### 🚀 Quick Start Guides
+- **Setup Guide**: See [Installation](#-installation) section below
+- **API Usage**: See [API Usage Examples](#-api-usage-examples) section below
+- **Search Guide**: See [Advanced Search](#-advanced-search) section below
+
+## 🚀 API Usage Examples
+
+### 🔍 Advanced Search Examples
+
+#### Basic Product Search
+```bash
+# Search for wireless products
+curl -X GET "http://localhost:8082/api/v1/products/search?query=wireless&size=10" \
+  -H "accept: application/json"
+```
+
+#### Advanced Search with Filters
+```bash
+# Search with price range, category, and rating filters
+curl -X GET "http://localhost:8082/api/v1/products/search?query=headphones&categoryId=1&minPrice=50&maxPrice=500&minRating=4.0&sortBy=price&sortDir=asc&page=0&size=20" \
+  -H "accept: application/json"
+```
+
+#### Search Suggestions
+```bash
+# Get autocomplete suggestions
+curl -X GET "http://localhost:8082/api/v1/products/search/suggestions?query=wirel&limit=5" \
+  -H "accept: application/json"
+```
+
+### 🛍️ Product Management Examples
+
+#### Get All Products
+```bash
+# Get paginated products
+curl -X GET "http://localhost:8082/api/v1/products?page=0&size=20&sort=name,asc" \
+  -H "accept: application/json"
+```
+
+#### Get Product by ID
+```bash
+# Get specific product
+curl -X GET "http://localhost:8082/api/v1/products/1" \
+  -H "accept: application/json"
+```
+
+#### Create Product (Admin)
+```bash
+# Create new product
+curl -X POST "http://localhost:8082/api/v1/products" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "name": "Premium Wireless Headphones",
+    "description": "High-quality wireless headphones with active noise cancellation",
+    "sku": "WH-001",
+    "price": 299.99,
+    "brand": "TechBrand",
+    "categoryIds": [1, 2],
+    "featured": false,
+    "tags": ["wireless", "noise-cancellation", "premium"]
+  }'
+```
+
+### 📂 Category Management Examples
+
+#### Get Category Tree
+```bash
+# Get hierarchical category structure
+curl -X GET "http://localhost:8082/api/v1/categories/tree" \
+  -H "accept: application/json"
+```
+
+#### Get Products by Category
+```bash
+# Get products in specific category
+curl -X GET "http://localhost:8082/api/v1/products/category/1?page=0&size=20" \
+  -H "accept: application/json"
+```
+
+### 📦 Inventory Examples
+
+#### Check Product Availability
+```bash
+# Get product inventory status
+curl -X GET "http://localhost:8082/api/v1/inventory/product/1" \
+  -H "accept: application/json"
+```
+
+#### Update Inventory (Admin)
+```bash
+# Update product stock
+curl -X PUT "http://localhost:8082/api/v1/inventory/product/1" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "availableQuantity": 100,
+    "reservedQuantity": 5,
+    "reorderLevel": 10,
+    "warehouseLocation": "A-1-B"
+  }'
+```
+
+### ⭐ Review Examples
+
+#### Get Product Reviews
+```bash
+# Get reviews for a product
+curl -X GET "http://localhost:8082/api/v1/reviews/product/1?page=0&size=10" \
+  -H "accept: application/json"
+```
+
+#### Create Review (User)
+```bash
+# Submit product review
+curl -X POST "http://localhost:8082/api/v1/reviews/product/1" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_USER_TOKEN" \
+  -d '{
+    "rating": 5,
+    "title": "Excellent product!",
+    "comment": "Great quality and fast delivery. Highly recommended!",
+    "reviewerName": "John Doe",
+    "reviewerEmail": "john.doe@example.com"
+  }'
+```
+
+## 🔧 Installation
+
+### Prerequisites
+- Java 17 or higher
+- Maven 3.6+
+- PostgreSQL 12+
+- Redis 6.0+
+- Eureka Server (for service discovery)
+
+### Setup Steps
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/de013/ecommerce-microservice.git
+cd ecommerce-microservice/product-catalog-service
+```
+
+2. **Configure database**
+```bash
+# Create PostgreSQL database
+createdb product_catalog_db
+
+# Update application.yml with your database credentials
+```
+
+3. **Start Redis server**
+```bash
+redis-server
+```
+
+4. **Run the service**
+```bash
+./mvnw spring-boot:run
+```
+
+5. **Access Swagger UI**
+```
+http://localhost:8082/swagger-ui.html
+```
+
 ## 🔄 Next Steps (Optional Enhancements)
 - Add comprehensive integration tests
 - Implement API rate limiting and throttling
