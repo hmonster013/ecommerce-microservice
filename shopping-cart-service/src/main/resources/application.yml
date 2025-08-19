@@ -7,12 +7,11 @@ spring:
   profiles:
     active: dev
 
-  # Database Configuration (H2 for development)
   datasource:
-    url: jdbc:h2:mem:cartdb
-    username: sa
-    password: password
-    driver-class-name: org.h2.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shopping_cart_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -21,44 +20,37 @@ spring:
       max-lifetime: 1200000
       leak-detection-threshold: 60000
 
-  # JPA Configuration
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        use_sql_comments: true
-        jdbc:
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
+    open-in-view: false
 
   # Redis Configuration
-  redis:
-    host: localhost
-    port: 6379
-    timeout: 2000ms
-    database: 2
-    lettuce:
-      pool:
-        max-active: 20
-        max-idle: 8
-        min-idle: 2
-        max-wait: -1ms
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 2000
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: 2000ms
 
-  # Cache Configuration
   cache:
     type: redis
-    redis:
-      time-to-live: 3600000
 
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
     fetch-registry: true
     register-with-eureka: true
   instance:
@@ -74,115 +66,64 @@ management:
     health:
       show-details: always
 
-# Feign Configuration
-feign:
-  client:
-    config:
-      default:
-        connectTimeout: 5000
-        readTimeout: 5000
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}
+  expiration: ${JWT_EXPIRATION:900000}  # 15 minutes
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+  issuer: ${JWT_ISSUER:ecommerce-platform}
+  algorithm: ${JWT_ALGORITHM:HS256}
 
-# Swagger/OpenAPI Configuration
-springdoc:
-  api-docs:
-    enabled: true
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
-    tags-sorter: alpha
-    operations-sorter: alpha
-  show-actuator: true
+# Application Configuration
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+    allow-credentials: true
+
+  security:
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      general-requests: ${GENERAL_RATE_LIMIT:100}
 
 # Shopping Cart Specific Configuration
 shopping-cart:
-  security:
-    jwt:
-      secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
-      expiration: ${JWT_EXPIRATION:86400000}
-      issuer: ${JWT_ISSUER:shopping-cart-service}
   cache:
     ttl:
       active-cart: 86400 # 24 hours
       guest-cart: 3600   # 1 hour
       session-cart: 1800 # 30 minutes
-    caffeine:
-      max-size: ${CACHE_CAFFEINE_MAX_SIZE:10000}
-      expire-after-write: ${CACHE_CAFFEINE_EXPIRE:300}
-    redis:
-      default-ttl: ${CACHE_REDIS_TTL:3600}
   validation:
     max-items-per-cart: 100
     max-quantity-per-item: 99
   pricing:
     currency: USD
     tax-rate: 0.08
-  performance:
-    monitoring:
-      enabled: ${PERFORMANCE_MONITORING_ENABLED:true}
-    database:
-      batch-size: ${DB_BATCH_SIZE:50}
-      query-timeout: ${DB_QUERY_TIMEOUT:30}
-    cache-warming:
-      enabled: ${CACHE_WARMING_ENABLED:true}
-      startup-delay: ${CACHE_WARMING_STARTUP_DELAY:5000}
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    displayRequestDuration: true
+    docExpansion: none
+    defaultModelsExpandDepth: 1
+    defaultModelExpandDepth: 1
+  show-actuator: false
+  group-configs:
+    - group: 'shopping-cart-service'
+      display-name: 'Shopping Cart Service API'
+      paths-to-match: '/api/**'
 
 logging:
   level:
     org.de013.shoppingcart: DEBUG
     org.springframework.data.redis: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-
----
-# Development Profile
-spring:
-  config:
-    activate:
-      on-profile: dev
-  datasource:
-    url: jdbc:h2:mem:cartdb
-    username: sa
-    password: password
-    driver-class-name: org.h2.Driver
-  redis:
-    host: localhost
-    port: 6379
-  jpa:
-    show-sql: true
-    hibernate:
-      ddl-auto: update
-
----
-# Production Profile
-spring:
-  config:
-    activate:
-      on-profile: prod
-  datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ecommerce_cart}
-    username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:postgres}
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
-  jpa:
-    show-sql: false
-    hibernate:
-      ddl-auto: validate
-
----
-# Test Profile
-spring:
-  config:
-    activate:
-      on-profile: test
-  datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: password
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    database-platform: org.hibernate.dialect.H2Dialect

@@ -1,16 +1,32 @@
 server:
   port: 8084
+  servlet:
+    context-path: /api/v1
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
 
 spring:
   application:
     name: order-service
-  
+  profiles:
+    active: dev
+
+  # Database Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/order_service_db
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
-  
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      leak-detection-threshold: 60000
+      pool-name: OrderServiceHikariCP
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -19,41 +35,158 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-  
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        batch_versioned_data: true
+        connection:
+          provider_disables_autocommit: true
+    open-in-view: false
+
+  # Redis Configuration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+        shutdown-timeout: 100ms
+
+  # RabbitMQ Configuration
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+    connection-timeout: 60000
+    listener:
+      simple:
+        acknowledge-mode: manual
+        concurrency: 5
+        max-concurrency: 10
+        prefetch: 10
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          max-interval: 10000
+          multiplier: 2
+    template:
+      retry:
+        enabled: true
+        initial-interval: 1000
+        max-attempts: 3
+        max-interval: 10000
+        multiplier: 2
+
+  # Flyway Configuration
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+    validate-on-migrate: true
+    clean-disabled: true
 
+  # Security Configuration
+  security:
+    jwt:
+      secret: ${JWT_SECRET:mySecretKey}
+      expiration: 86400000 # 24 hours
+      refresh-expiration: 604800000 # 7 days
+
+# Eureka Configuration
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
     fetch-registry: true
     register-with-eureka: true
+    registry-fetch-interval-seconds: 30
+    healthcheck:
+      enabled: true
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+    metadata-map:
+      version: ${project.version:1.0.0}
+      environment: ${spring.profiles.active}
 
+# Management & Monitoring Configuration
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus,env,configprops,beans,mappings
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      show-components: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active}
+  health:
+    redis:
+      enabled: true
+    rabbit:
+      enabled: true
+    db:
+      enabled: true
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
 
 # Swagger/OpenAPI Configuration
 springdoc:
   api-docs:
     enabled: true
+    path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
     tags-sorter: alpha
     operations-sorter: alpha
+    display-request-duration: true
+    display-operation-id: true
   show-actuator: true
+  info:
+    title: Order Service API
+    description: Comprehensive order management microservice for e-commerce platform
+    version: 1.0.0
+    contact:
+      name: Development Team
+      email: dev@de013.org
+  servers:
+    - url: http://localhost:8084/api/v1
+      description: Development server
 
 # Feign Configuration
 feign:
@@ -62,7 +195,180 @@ feign:
       default:
         connectTimeout: 5000
         readTimeout: 5000
+        loggerLevel: basic
+      user-service:
+        connectTimeout: 3000
+        readTimeout: 3000
+      product-catalog-service:
+        connectTimeout: 3000
+        readTimeout: 3000
+      shopping-cart-service:
+        connectTimeout: 3000
+        readTimeout: 3000
+      payment-service:
+        connectTimeout: 10000
+        readTimeout: 10000
+      notification-service:
+        connectTimeout: 2000
+        readTimeout: 2000
+  compression:
+    request:
+      enabled: true
+    response:
+      enabled: true
+  hystrix:
+    enabled: false
+
+# Logging Configuration
+logging:
+  level:
+    org.de013.orderservice: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    feign: DEBUG
+    com.zaxxer.hikari: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/order-service.log
+    max-size: 10MB
+    max-history: 30
+
+# Application Specific Configuration
+app:
+  order:
+    # Order Processing Configuration
+    processing:
+      timeout: 300000 # 5 minutes
+      retry-attempts: 3
+      retry-delay: 5000
+      batch-size: 100
+
+    # Order Validation Configuration
+    validation:
+      max-items-per-order: 50
+      max-order-value: 10000.00
+      min-order-value: 0.01
+      allow-backorders: true
+      stock-validation-enabled: true
+      price-validation-enabled: true
+
+    # Order Status Configuration
+    status:
+      auto-confirm-timeout: 1800000 # 30 minutes
+      auto-cancel-timeout: 86400000 # 24 hours
+      shipping-timeout: 604800000 # 7 days
+
+    # Cache Configuration
+    cache:
+      order-ttl: 3600 # 1 hour
+      user-orders-ttl: 1800 # 30 minutes
+      analytics-ttl: 7200 # 2 hours
+      enabled: true
+
+    # Messaging Configuration
+    messaging:
+      exchange: order.exchange
+      routing-key-prefix: order
+      dead-letter-exchange: order.dlx
+      retry-attempts: 3
+      retry-delay: 5000
+
+    # Analytics Configuration
+    analytics:
+      enabled: true
+      batch-size: 1000
+      flush-interval: 60000 # 1 minute
+      retention-days: 90
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/order_service_db
+    username: postgres
+    password: password
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
 logging:
   level:
     org.de013.orderservice: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+
+---
+# Staging Profile
+spring:
+  config:
+    activate:
+      on-profile: staging
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:order_service_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+logging:
+  level:
+    org.de013.orderservice: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      ssl: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    ssl:
+      enabled: true
+
+logging:
+  level:
+    org.de013.orderservice: WARN
+    org.springframework.security: ERROR
+    org.hibernate.SQL: ERROR
+    root: WARN
+  file:
+    name: /var/log/order-service/order-service.log
