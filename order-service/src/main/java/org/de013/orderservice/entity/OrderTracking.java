@@ -21,12 +21,12 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "order_tracking", indexes = {
-    @Index(name = "idx_order_id", columnList = "order_id"),
-    @Index(name = "idx_tracking_status", columnList = "tracking_status"),
-    @Index(name = "idx_order_status", columnList = "order_id, tracking_status"),
-    @Index(name = "idx_timestamp", columnList = "timestamp"),
-    @Index(name = "idx_tracking_number", columnList = "tracking_number"),
-    @Index(name = "idx_carrier", columnList = "carrier")
+    @Index(name = "idx_order_tracking_order_id", columnList = "order_id"),
+    @Index(name = "idx_order_tracking_tracking_status", columnList = "tracking_status"),
+    @Index(name = "idx_order_tracking_order_status", columnList = "order_id, tracking_status"),
+    @Index(name = "idx_order_tracking_timestamp", columnList = "timestamp"),
+    @Index(name = "idx_order_tracking_tracking_number", columnList = "tracking_number"),
+    @Index(name = "idx_order_tracking_carrier", columnList = "carrier")
 })
 @SQLDelete(sql = "UPDATE order_tracking SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")

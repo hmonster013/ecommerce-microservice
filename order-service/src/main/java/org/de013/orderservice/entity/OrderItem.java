@@ -22,10 +22,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "order_items", indexes = {
-    @Index(name = "idx_order_id", columnList = "order_id"),
-    @Index(name = "idx_product_id", columnList = "product_id"),
-    @Index(name = "idx_order_product", columnList = "order_id, product_id"),
-    @Index(name = "idx_sku", columnList = "sku")
+    @Index(name = "idx_order_items_order_id", columnList = "order_id"),
+    @Index(name = "idx_order_items_product_id", columnList = "product_id"),
+    @Index(name = "idx_order_items_order_product", columnList = "order_id, product_id"),
+    @Index(name = "idx_order_items_sku", columnList = "sku")
 })
 @SQLDelete(sql = "UPDATE order_items SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")

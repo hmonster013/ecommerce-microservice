@@ -23,12 +23,12 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "order_shipping", indexes = {
-    @Index(name = "idx_order_id", columnList = "order_id"),
-    @Index(name = "idx_tracking_number", columnList = "tracking_number"),
-    @Index(name = "idx_carrier", columnList = "carrier"),
-    @Index(name = "idx_shipping_method", columnList = "shipping_method"),
-    @Index(name = "idx_shipped_at", columnList = "shipped_at"),
-    @Index(name = "idx_delivery_date", columnList = "estimated_delivery_date")
+    @Index(name = "idx_order_shipping_order_id", columnList = "order_id"),
+    @Index(name = "idx_order_shipping_tracking_number", columnList = "tracking_number"),
+    @Index(name = "idx_order_shipping_carrier", columnList = "carrier"),
+    @Index(name = "idx_order_shipping_shipping_method", columnList = "shipping_method"),
+    @Index(name = "idx_order_shipping_shipped_at", columnList = "shipped_at"),
+    @Index(name = "idx_order_shipping_delivery_date", columnList = "estimated_delivery_date")
 })
 @SQLDelete(sql = "UPDATE order_shipping SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")

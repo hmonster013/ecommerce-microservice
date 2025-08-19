@@ -23,13 +23,13 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "order_payments", indexes = {
-    @Index(name = "idx_order_id", columnList = "order_id"),
-    @Index(name = "idx_payment_id", columnList = "payment_id"),
-    @Index(name = "idx_payment_status", columnList = "payment_status"),
-    @Index(name = "idx_payment_method", columnList = "payment_method"),
-    @Index(name = "idx_transaction_id", columnList = "transaction_id"),
-    @Index(name = "idx_order_status", columnList = "order_id, payment_status"),
-    @Index(name = "idx_processed_at", columnList = "processed_at")
+    @Index(name = "idx_order_payments_order_id", columnList = "order_id"),
+    @Index(name = "idx_order_payments_payment_id", columnList = "payment_id"),
+    @Index(name = "idx_order_payments_payment_status", columnList = "payment_status"),
+    @Index(name = "idx_order_payments_payment_method", columnList = "payment_method"),
+    @Index(name = "idx_order_payments_transaction_id", columnList = "transaction_id"),
+    @Index(name = "idx_order_payments_order_status", columnList = "order_id, payment_status"),
+    @Index(name = "idx_order_payments_processed_at", columnList = "processed_at")
 })
 @SQLDelete(sql = "UPDATE order_payments SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")

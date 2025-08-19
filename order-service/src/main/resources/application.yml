@@ -11,13 +11,13 @@ spring:
   application:
     name: order-service
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5432/order_service_db
-    username: postgres
-    password: password
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/order_service_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -62,10 +62,10 @@ spring:
 
   # RabbitMQ Configuration
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
     virtual-host: /
     connection-timeout: 60000
     listener:
@@ -107,7 +107,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
     fetch-registry: true
     register-with-eureka: true
     registry-fetch-interval-seconds: 30
@@ -303,6 +303,27 @@ spring:
     port: 5672
     username: guest
     password: guest
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+  flyway:
+    enabled: false
+  cloud:
+    discovery:
+      enabled: false
+
+# Disable Eureka and non-critical health checks for local dev
+eureka:
+  client:
+    enabled: false
+
+management:
+  health:
+    rabbit:
+      enabled: false
+    redis:
+      enabled: false
 
 logging:
   level:
