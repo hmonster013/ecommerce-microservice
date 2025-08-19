@@ -72,6 +72,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> listOrdersByUser(Long userId, Pageable pageable) {
+        return orderRepository.findByUserId(userId, pageable).map(orderMapper::toResponse);
+    }
+
+    @Override
     @Transactional
     public OrderResponse updateOrder(Long id, UpdateOrderRequest request) {
         if (request == null || request.getOrderId() == null || !request.getOrderId().equals(id)) {

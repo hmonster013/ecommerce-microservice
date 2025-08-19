@@ -12,6 +12,7 @@ public interface OrderService {
     OrderResponse getOrderById(Long id);
     OrderResponse getOrderByNumber(String orderNumber);
     Page<OrderResponse> listOrders(Pageable pageable);
+    Page<OrderResponse> listOrdersByUser(Long userId, Pageable pageable);
     OrderResponse updateOrder(Long id, UpdateOrderRequest request);
     OrderResponse cancelOrder(Long id, CancelOrderRequest request);
     void deleteOrder(Long id);
