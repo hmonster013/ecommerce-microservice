@@ -26,6 +26,8 @@ public class OrderTrackingServiceImpl implements OrderTrackingService {
     private final OrderRepository orderRepository;
     private final OrderTrackingRepository trackingRepository;
     private final OrderStateMachine stateMachine;
+    private final org.de013.orderservice.service.integration.OrderEventPublisher eventPublisher;
+
     private final OrderMapper mapper;
 
     @Override
@@ -45,6 +47,8 @@ public class OrderTrackingServiceImpl implements OrderTrackingService {
                 .build();
         trackingRepository.save(tr);
         orderRepository.save(order);
+        // Publish status changed
+        publishStatusChanged(order, targetStatus, note);
         return mapper.toResponse(order);
     }
 
@@ -66,6 +70,7 @@ public class OrderTrackingServiceImpl implements OrderTrackingService {
                 .build();
         trackingRepository.save(tr);
         orderRepository.save(order);
+        publishShipped(order, trackingNumber, carrier);
         return mapper.toResponse(order);
     }
 
@@ -85,6 +90,7 @@ public class OrderTrackingServiceImpl implements OrderTrackingService {
                 .build();
         trackingRepository.save(tr);
         orderRepository.save(order);
+        publishDelivered(order);
         return mapper.toResponse(order);
     }
     private TrackingStatus mapFromOrderStatus(OrderStatus status) {
@@ -100,6 +106,35 @@ public class OrderTrackingServiceImpl implements OrderTrackingService {
             case REFUNDED -> RETURNED;
             case FAILED, ON_HOLD, PARTIALLY_SHIPPED, PARTIALLY_DELIVERED, RETURNING, RETURNED -> ON_HOLD;
         };
+    }
+
+    private void publishStatusChanged(Order order, OrderStatus to, String reason) {
+        eventPublisher.publishOrderStatusChanged(org.de013.orderservice.dto.event.OrderEvents.OrderStatusChangedEvent.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .previousStatus(null) // previous can be added if we load it earlier
+                .newStatus(to.name())
+                .changedAt(java.time.LocalDateTime.now())
+                .reason(reason)
+                .build());
+    }
+
+    private void publishShipped(Order order, String trackingNumber, String carrier) {
+        eventPublisher.publishOrderShipped(org.de013.orderservice.dto.event.OrderEvents.OrderShippedEvent.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .trackingNumber(trackingNumber)
+                .carrier(carrier)
+                .shippedAt(java.time.LocalDateTime.now())
+                .build());
+    }
+
+    private void publishDelivered(Order order) {
+        eventPublisher.publishOrderDelivered(org.de013.orderservice.dto.event.OrderEvents.OrderDeliveredEvent.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .deliveredAt(java.time.LocalDateTime.now())
+                .build());
     }
 
 }

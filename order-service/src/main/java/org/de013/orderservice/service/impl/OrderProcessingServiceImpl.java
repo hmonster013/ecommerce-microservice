@@ -34,6 +34,8 @@ public class OrderProcessingServiceImpl implements OrderProcessingService {
     private final ShippingIntegrationService shippingIntegrationService;
     private final NotificationIntegrationService notificationIntegrationService;
     private final OrderProcessingQueue processingQueue;
+    private final org.de013.orderservice.service.integration.AsyncTaskPublisher asyncTaskPublisher;
+    private final org.de013.orderservice.service.integration.OrderEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -41,8 +43,17 @@ public class OrderProcessingServiceImpl implements OrderProcessingService {
         validationService.validateCreate(request);
         // Compute prices before calling payment/inventory/shipping
         OrderResponse created = orderService.createOrder(request);
-        // Integration side-effects can be orchestrated asynchronously if needed
+        // Integration side-effects: async task & event
         processingQueue.enqueue("place", created.getOrderNumber());
+        asyncTaskPublisher.sendOrderProcessing(created.getOrderNumber());
+        eventPublisher.publishOrderStatusChanged(org.de013.orderservice.dto.event.OrderEvents.OrderStatusChangedEvent.builder()
+                .orderId(created.getId())
+                .orderNumber(created.getOrderNumber())
+                .previousStatus("NEW")
+                .newStatus("PENDING")
+                .changedAt(LocalDateTime.now())
+                .reason("Order placed")
+                .build());
         return created;
     }
 

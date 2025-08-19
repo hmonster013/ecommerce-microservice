@@ -30,6 +30,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderPricingService pricingService;
     private final OrderStateMachine orderStateMachine;
     private final OrderMapper orderMapper;
+    private final org.de013.orderservice.service.integration.OrderEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -48,6 +49,16 @@ public class OrderServiceImpl implements OrderService {
 
         pricingService.computeTotals(order);
         order = orderRepository.save(order);
+
+        // Publish OrderCreatedEvent
+        eventPublisher.publishOrderCreated(org.de013.orderservice.dto.event.OrderEvents.OrderCreatedEvent.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .userId(order.getUserId())
+                .currency(order.getTotalAmount() != null ? order.getTotalAmount().getCurrency() : null)
+                .createdAt(order.getCreatedAt())
+                .build());
+
         return orderMapper.toResponse(order);
     }
 
@@ -102,6 +113,12 @@ public class OrderServiceImpl implements OrderService {
         order.cancel(request.getReason());
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
+        eventPublisher.publishOrderCancelled(org.de013.orderservice.dto.event.OrderEvents.OrderCancelledEvent.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .reason(request != null ? request.getReason() : null)
+                .cancelledAt(order.getCancelledAt())
+                .build());
         return orderMapper.toResponse(order);
     }
 
