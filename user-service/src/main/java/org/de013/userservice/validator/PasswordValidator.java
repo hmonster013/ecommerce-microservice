@@ -22,43 +22,43 @@ public class PasswordValidator implements ConstraintValidator<ValidPassword, Str
         
         // Check basic length
         if (password.length() < 8) {
-            addConstraintViolation(context, "Password must be at least 8 characters long");
+            addConstraintViolation(context, "password.tooShort");
             return false;
         }
-        
+
         // Check maximum length
         if (password.length() > 128) {
-            addConstraintViolation(context, "Password must not exceed 128 characters");
+            addConstraintViolation(context, "password.tooLong");
             return false;
         }
-        
+
         // Check for at least one lowercase letter
         if (!password.matches(".*[a-z].*")) {
-            addConstraintViolation(context, "Password must contain at least one lowercase letter");
+            addConstraintViolation(context, "password.noLowercase");
             return false;
         }
-        
+
         // Check for at least one uppercase letter
         if (!password.matches(".*[A-Z].*")) {
-            addConstraintViolation(context, "Password must contain at least one uppercase letter");
+            addConstraintViolation(context, "password.noUppercase");
             return false;
         }
-        
+
         // Check for at least one digit
         if (!password.matches(".*\\d.*")) {
-            addConstraintViolation(context, "Password must contain at least one digit");
+            addConstraintViolation(context, "password.noDigit");
             return false;
         }
-        
+
         // Check for at least one special character
         if (!password.matches(".*[@$!%*?&].*")) {
-            addConstraintViolation(context, "Password must contain at least one special character (@$!%*?&)");
+            addConstraintViolation(context, "password.noSpecialChar");
             return false;
         }
-        
+
         // Check for common weak passwords
         if (isCommonPassword(password)) {
-            addConstraintViolation(context, "Password is too common. Please choose a stronger password");
+            addConstraintViolation(context, "password.tooCommon");
             return false;
         }
         

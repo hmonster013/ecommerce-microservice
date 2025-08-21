@@ -15,7 +15,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidPassword {
 
-    String message() default "Password does not meet security requirements";
+    String message() default "{password.default}";
 
     Class<?>[] groups() default {};
 

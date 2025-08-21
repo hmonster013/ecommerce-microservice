@@ -50,8 +50,12 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
         String cleanPhone = phone.replaceAll("[\\s\\-\\(\\)]", "");
         
         // Check length limits
-        if (cleanPhone.length() < 7 || cleanPhone.length() > 17) {
-            addConstraintViolation(context, "Phone number must be between 7 and 17 digits");
+        if (cleanPhone.length() < 7) {
+            addConstraintViolation(context, "phone.tooShort");
+            return false;
+        }
+        if (cleanPhone.length() > 17) {
+            addConstraintViolation(context, "phone.tooLong");
             return false;
         }
         
@@ -65,25 +69,25 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
             // Check international format first
             if (cleanPhone.startsWith("+")) {
                 if (!INTERNATIONAL_PATTERN.matcher(cleanPhone).matches()) {
-                    addConstraintViolation(context, "Invalid international phone number format");
+                    addConstraintViolation(context, "phone.invalidFormat");
                     return false;
                 }
             } else {
                 // Check general format
                 if (!GENERAL_PATTERN.matcher(cleanPhone).matches()) {
-                    addConstraintViolation(context, "Invalid phone number format");
+                    addConstraintViolation(context, "phone.format");
                     return false;
                 }
             }
         } else {
             // Only allow local format
             if (cleanPhone.startsWith("+")) {
-                addConstraintViolation(context, "International phone numbers are not allowed");
+                addConstraintViolation(context, "phone.internationalNotAllowed");
                 return false;
             }
-            
+
             if (!GENERAL_PATTERN.matcher(cleanPhone).matches()) {
-                addConstraintViolation(context, "Invalid phone number format");
+                addConstraintViolation(context, "phone.format");
                 return false;
             }
         }
@@ -100,7 +104,7 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
             default:
                 // Fallback to general validation
                 if (!GENERAL_PATTERN.matcher(phone).matches()) {
-                    addConstraintViolation(context, "Invalid phone number format for country: " + countryCode);
+                    addConstraintViolation(context, "phone.invalidCountry");
                     return false;
                 }
                 return true;
@@ -109,7 +113,7 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
     
     private boolean validateVietnamesePhone(String phone, ConstraintValidatorContext context) {
         if (!VN_MOBILE_PATTERN.matcher(phone).matches()) {
-            addConstraintViolation(context, "Invalid Vietnamese phone number format");
+            addConstraintViolation(context, "phone.invalidVietnamese");
             return false;
         }
         return true;
@@ -117,7 +121,7 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
     
     private boolean validateUSPhone(String phone, ConstraintValidatorContext context) {
         if (!US_PATTERN.matcher(phone).matches()) {
-            addConstraintViolation(context, "Invalid US phone number format");
+            addConstraintViolation(context, "phone.invalidUS");
             return false;
         }
         return true;
