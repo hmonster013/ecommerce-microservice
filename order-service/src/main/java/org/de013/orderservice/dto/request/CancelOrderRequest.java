@@ -24,49 +24,49 @@ public class CancelOrderRequest {
     /**
      * ID of the order to cancel
      */
-    @NotNull(message = "Order ID is required")
-    @Positive(message = "Order ID must be positive")
+    @NotNull(message = "{order.id.required}")
+    @Positive(message = "{order.id.positive}")
     private Long orderId;
     
     /**
      * Reason for cancellation
      */
-    @NotBlank(message = "Cancellation reason is required")
-    @Size(max = 500, message = "Cancellation reason must not exceed 500 characters")
+    @NotBlank(message = "{cancellation.reason.required}")
+    @Size(max = 500, message = "{cancellation.reason.size}")
     private String reason;
     
     /**
      * Detailed cancellation reason category
      */
-    @NotBlank(message = "Reason category is required")
-    @Pattern(regexp = "^(CUSTOMER_REQUEST|PAYMENT_FAILED|OUT_OF_STOCK|SHIPPING_ISSUE|FRAUD_DETECTED|SYSTEM_ERROR|BUSINESS_DECISION|OTHER)$", 
-             message = "Invalid reason category")
+    @NotBlank(message = "{field.required}")
+    @Pattern(regexp = "^(CUSTOMER_REQUEST|PAYMENT_FAILED|OUT_OF_STOCK|SHIPPING_ISSUE|FRAUD_DETECTED|SYSTEM_ERROR|BUSINESS_DECISION|OTHER)$",
+             message = "{field.invalid.format}")
     private String reasonCategory;
     
     /**
      * Whether customer requested refund
      */
-    @NotNull(message = "Refund requested flag is required")
+    @NotNull(message = "{field.required}")
     private Boolean refundRequested;
     
     /**
      * Refund method preference
      */
-    @Pattern(regexp = "^(ORIGINAL_PAYMENT|STORE_CREDIT|BANK_TRANSFER|CHECK|OTHER)$", 
-             message = "Invalid refund method")
+    @Pattern(regexp = "^(ORIGINAL_PAYMENT|STORE_CREDIT|BANK_TRANSFER|CHECK|OTHER)$",
+             message = "{field.invalid.format}")
     private String refundMethod;
     
     /**
      * Partial refund amount (if not full refund)
      */
-    @DecimalMin(value = "0.0", message = "Refund amount must be non-negative")
+    @DecimalMin(value = "0.0", message = "{field.non-negative}")
     private BigDecimal partialRefundAmount;
     
     /**
      * Currency for partial refund
      */
-    @Size(min = 3, max = 3, message = "Currency must be 3 characters")
-    @Pattern(regexp = "^[A-Z]{3}$", message = "Currency must be uppercase letters")
+    @Size(min = 3, max = 3, message = "{currency.size}")
+    @Pattern(regexp = "^[A-Z]{3}$", message = "{currency.format}")
     private String refundCurrency;
     
     /**
@@ -89,7 +89,7 @@ public class CancelOrderRequest {
     /**
      * User ID who is cancelling the order
      */
-    @Positive(message = "Cancelled by user ID must be positive")
+    @Positive(message = "{user.id.positive}")
     private Long cancelledByUserId;
     
     /**
@@ -101,13 +101,13 @@ public class CancelOrderRequest {
     /**
      * Internal notes for the cancellation
      */
-    @Size(max = 1000, message = "Internal notes must not exceed 1000 characters")
+    @Size(max = 1000, message = "{internal.notes.size}")
     private String internalNotes;
     
     /**
      * Customer communication notes
      */
-    @Size(max = 1000, message = "Customer notes must not exceed 1000 characters")
+    @Size(max = 1000, message = "{customer.notes.size}")
     private String customerNotes;
     
     /**
@@ -144,20 +144,20 @@ public class CancelOrderRequest {
         /**
          * ID of the order item to cancel
          */
-        @NotNull(message = "Order item ID is required")
-        @Positive(message = "Order item ID must be positive")
+        @NotNull(message = "{order.item.id.required}")
+        @Positive(message = "{order.item.id.positive}")
         private Long orderItemId;
         
         /**
          * Quantity to cancel (if partial cancellation)
          */
-        @Positive(message = "Cancel quantity must be positive")
+        @Positive(message = "{order.item.quantity.positive}")
         private Integer cancelQuantity;
         
         /**
          * Reason for cancelling this specific item
          */
-        @Size(max = 500, message = "Item cancellation reason must not exceed 500 characters")
+        @Size(max = 500, message = "{cancellation.reason.size}")
         private String itemCancelReason;
         
         /**
@@ -169,7 +169,7 @@ public class CancelOrderRequest {
         /**
          * Refund amount for this item
          */
-        @DecimalMin(value = "0.0", message = "Item refund amount must be non-negative")
+        @DecimalMin(value = "0.0", message = "{field.non-negative}")
         private BigDecimal itemRefundAmount;
     }
     
@@ -185,28 +185,28 @@ public class CancelOrderRequest {
         /**
          * Type of compensation
          */
-        @NotBlank(message = "Compensation type is required")
-        @Pattern(regexp = "^(STORE_CREDIT|DISCOUNT_COUPON|FREE_SHIPPING|GIFT_CARD|CASH_REFUND|PRODUCT_REPLACEMENT|OTHER)$", 
-                 message = "Invalid compensation type")
+        @NotBlank(message = "{field.required}")
+        @Pattern(regexp = "^(STORE_CREDIT|DISCOUNT_COUPON|FREE_SHIPPING|GIFT_CARD|CASH_REFUND|PRODUCT_REPLACEMENT|OTHER)$",
+                 message = "{field.invalid.format}")
         private String type;
         
         /**
          * Compensation amount
          */
-        @DecimalMin(value = "0.0", message = "Compensation amount must be non-negative")
+        @DecimalMin(value = "0.0", message = "{field.non-negative}")
         private BigDecimal amount;
         
         /**
          * Compensation currency
          */
-        @Size(min = 3, max = 3, message = "Currency must be 3 characters")
-        @Pattern(regexp = "^[A-Z]{3}$", message = "Currency must be uppercase letters")
+        @Size(min = 3, max = 3, message = "{currency.size}")
+        @Pattern(regexp = "^[A-Z]{3}$", message = "{currency.format}")
         private String currency;
         
         /**
          * Compensation description
          */
-        @Size(max = 500, message = "Compensation description must not exceed 500 characters")
+        @Size(max = 500, message = "{field.size.max}")
         private String description;
         
         /**
@@ -217,7 +217,7 @@ public class CancelOrderRequest {
         /**
          * Compensation code (for coupons, gift cards)
          */
-        @Size(max = 50, message = "Compensation code must not exceed 50 characters")
+        @Size(max = 50, message = "{field.size.max}")
         private String compensationCode;
         
         /**

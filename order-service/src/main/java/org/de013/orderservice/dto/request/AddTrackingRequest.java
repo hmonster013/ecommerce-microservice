@@ -24,51 +24,51 @@ public class AddTrackingRequest {
     /**
      * ID of the order to add tracking for
      */
-    @NotNull(message = "Order ID is required")
-    @Positive(message = "Order ID must be positive")
+    @NotNull(message = "{order.id.required}")
+    @Positive(message = "{order.id.positive}")
     private Long orderId;
     
     /**
      * Tracking status
      */
-    @NotNull(message = "Tracking status is required")
+    @NotNull(message = "{tracking.status.required}")
     private TrackingStatus trackingStatus;
     
     /**
      * Location where the status update occurred
      */
-    @Size(max = 500, message = "Location must not exceed 500 characters")
+    @Size(max = 500, message = "{tracking.location.size}")
     private String location;
     
     /**
      * Detailed location information
      */
-    @Size(max = 1000, message = "Location details must not exceed 1000 characters")
+    @Size(max = 1000, message = "{tracking.location.details.size}")
     private String locationDetails;
     
     /**
      * City where the status update occurred
      */
-    @Size(max = 100, message = "City must not exceed 100 characters")
+    @Size(max = 100, message = "{tracking.city.size}")
     private String city;
     
     /**
      * State/Province where the status update occurred
      */
-    @Size(max = 100, message = "State must not exceed 100 characters")
+    @Size(max = 100, message = "{tracking.state.size}")
     private String state;
     
     /**
      * Country where the status update occurred
      */
-    @Size(min = 2, max = 3, message = "Country code must be 2-3 characters")
-    @Pattern(regexp = "^[A-Z]{2,3}$", message = "Country code must be uppercase letters")
+    @Size(min = 2, max = 3, message = "{tracking.country.code.size}")
+    @Pattern(regexp = "^[A-Z]{2,3}$", message = "{tracking.country.code.format}")
     private String country;
     
     /**
      * Postal code where the status update occurred
      */
-    @Size(max = 20, message = "Postal code must not exceed 20 characters")
+    @Size(max = 20, message = "{tracking.postal.code.size}")
     private String postalCode;
     
     /**
@@ -79,25 +79,25 @@ public class AddTrackingRequest {
     /**
      * Additional notes for this tracking update
      */
-    @Size(max = 2000, message = "Notes must not exceed 2000 characters")
+    @Size(max = 2000, message = "{tracking.notes.size}")
     private String notes;
     
     /**
      * Tracking number from shipping carrier
      */
-    @Size(max = 100, message = "Tracking number must not exceed 100 characters")
+    @Size(max = 100, message = "{tracking.number.size}")
     private String trackingNumber;
     
     /**
      * Shipping carrier name
      */
-    @Size(max = 100, message = "Carrier must not exceed 100 characters")
+    @Size(max = 100, message = "{tracking.carrier.size}")
     private String carrier;
     
     /**
      * Carrier service type
      */
-    @Size(max = 100, message = "Carrier service must not exceed 100 characters")
+    @Size(max = 100, message = "{tracking.carrier.service.size}")
     private String carrierService;
     
     /**
@@ -113,19 +113,19 @@ public class AddTrackingRequest {
     /**
      * Delivery attempt number (for failed delivery attempts)
      */
-    @Min(value = 0, message = "Delivery attempt must be non-negative")
+    @Min(value = 0, message = "{delivery.attempt.non-negative}")
     private Integer deliveryAttempt;
     
     /**
      * Reason for failed delivery (if applicable)
      */
-    @Size(max = 500, message = "Delivery failure reason must not exceed 500 characters")
+    @Size(max = 500, message = "{delivery.failure.reason.size}")
     private String deliveryFailureReason;
     
     /**
      * Name of person who received the package (if delivered)
      */
-    @Size(max = 200, message = "Received by must not exceed 200 characters")
+    @Size(max = 200, message = "{received.by.size}")
     private String receivedBy;
     
     /**
@@ -143,7 +143,7 @@ public class AddTrackingRequest {
     /**
      * Photo proof of delivery URL
      */
-    @Size(max = 1000, message = "Proof of delivery URL must not exceed 1000 characters")
+    @Size(max = 1000, message = "{pod.url.size}")
     private String proofOfDeliveryUrl;
     
     /**
@@ -155,26 +155,26 @@ public class AddTrackingRequest {
     /**
      * Source of the tracking update
      */
-    @Size(max = 20, message = "Update source must not exceed 20 characters")
+    @Size(max = 20, message = "{update.source.size}")
     @Builder.Default
     private String updateSource = "MANUAL";
     
     /**
      * User ID who created this tracking update (if manual)
      */
-    @Positive(message = "Updated by user ID must be positive")
+    @Positive(message = "{updated.by.user.id.positive}")
     private Long updatedByUserId;
     
     /**
      * External tracking ID from carrier system
      */
-    @Size(max = 200, message = "External tracking ID must not exceed 200 characters")
+    @Size(max = 200, message = "{external.tracking.id.size}")
     private String externalTrackingId;
     
     /**
      * Additional metadata in JSON format
      */
-    @Size(max = 2000, message = "Metadata must not exceed 2000 characters")
+    @Size(max = 2000, message = "{metadata.size}")
     private String metadata;
     
     /**
@@ -186,8 +186,8 @@ public class AddTrackingRequest {
     /**
      * Priority level of this tracking update
      */
-    @Min(value = 1, message = "Priority level must be at least 1")
-    @Max(value = 5, message = "Priority level must be at most 5")
+    @Min(value = 1, message = "{priority.level.range}")
+    @Max(value = 5, message = "{priority.level.range}")
     @Builder.Default
     private Integer priorityLevel = 3;
     
@@ -232,13 +232,13 @@ public class AddTrackingRequest {
         /**
          * Custom email template to use
          */
-        @Size(max = 100, message = "Email template must not exceed 100 characters")
+        @Size(max = 100, message = "{notification.template.size}")
         private String emailTemplate;
         
         /**
          * Custom SMS template to use
          */
-        @Size(max = 100, message = "SMS template must not exceed 100 characters")
+        @Size(max = 100, message = "{notification.template.size}")
         private String smsTemplate;
         
         /**
