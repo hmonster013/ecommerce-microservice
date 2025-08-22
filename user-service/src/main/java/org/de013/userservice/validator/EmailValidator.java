@@ -51,20 +51,20 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
         
         // Check length limits
         if (email.length() > MAX_EMAIL_LENGTH) {
-            addConstraintViolation(context, "Email address is too long (maximum " + MAX_EMAIL_LENGTH + " characters)");
+            addConstraintViolation(context, "email.tooLong");
             return false;
         }
-        
+
         // Check basic format
         if (!EMAIL_PATTERN.matcher(email).matches()) {
-            addConstraintViolation(context, "Invalid email format");
+            addConstraintViolation(context, "email.format");
             return false;
         }
-        
+
         // Split email into local and domain parts
         String[] parts = email.split("@");
         if (parts.length != 2) {
-            addConstraintViolation(context, "Invalid email format");
+            addConstraintViolation(context, "email.format");
             return false;
         }
         
@@ -83,13 +83,13 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
         
         // Check for blocked domains
         if (BLOCKED_DOMAINS.contains(domain)) {
-            addConstraintViolation(context, "Email domain is not allowed");
+            addConstraintViolation(context, "email.blocked");
             return false;
         }
-        
+
         // Check for disposable domains if not allowed
         if (!allowDisposable && DISPOSABLE_DOMAINS.contains(domain)) {
-            addConstraintViolation(context, "Disposable email addresses are not allowed");
+            addConstraintViolation(context, "email.disposable");
             return false;
         }
         
@@ -99,82 +99,90 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
     private boolean isValidLocalPart(String localPart, ConstraintValidatorContext context) {
         // Check length
         if (localPart.length() > MAX_LOCAL_PART_LENGTH) {
-            addConstraintViolation(context, "Email local part is too long (maximum " + MAX_LOCAL_PART_LENGTH + " characters)");
+            addConstraintViolation(context, "email.localPartTooLong");
             return false;
         }
-        
+
         // Check for empty local part
         if (localPart.isEmpty()) {
-            addConstraintViolation(context, "Email local part cannot be empty");
+            addConstraintViolation(context, "email.domainRequired");
             return false;
         }
-        
+
         // Check for consecutive dots
         if (localPart.contains("..")) {
-            addConstraintViolation(context, "Email cannot contain consecutive dots");
+            addConstraintViolation(context, "email.consecutiveDots");
             return false;
         }
-        
+
         // Check for dots at start or end
         if (localPart.startsWith(".") || localPart.endsWith(".")) {
-            addConstraintViolation(context, "Email cannot start or end with a dot");
+            if (localPart.startsWith(".")) {
+                addConstraintViolation(context, "email.invalidStart");
+            } else {
+                addConstraintViolation(context, "email.invalidEnd");
+            }
             return false;
         }
-        
+
         // Check for invalid characters (basic check)
         if (!localPart.matches("[a-zA-Z0-9._%+-]+")) {
-            addConstraintViolation(context, "Email contains invalid characters");
+            addConstraintViolation(context, "email.invalidCharacters");
             return false;
         }
-        
+
         return true;
     }
     
     private boolean isValidDomain(String domain, ConstraintValidatorContext context) {
         // Check for empty domain
         if (domain.isEmpty()) {
-            addConstraintViolation(context, "Email domain cannot be empty");
+            addConstraintViolation(context, "email.domainRequired");
             return false;
         }
-        
+
         // Check domain length
         if (domain.length() > 253) {
-            addConstraintViolation(context, "Email domain is too long");
+            addConstraintViolation(context, "email.domainTooLong");
             return false;
         }
-        
+
         // Check for consecutive dots
         if (domain.contains("..")) {
-            addConstraintViolation(context, "Email domain cannot contain consecutive dots");
+            addConstraintViolation(context, "email.consecutiveDots");
             return false;
         }
-        
+
         // Check for dots at start or end
         if (domain.startsWith(".") || domain.endsWith(".")) {
-            addConstraintViolation(context, "Email domain cannot start or end with a dot");
+            if (domain.startsWith(".")) {
+                addConstraintViolation(context, "email.invalidStart");
+            } else {
+                addConstraintViolation(context, "email.invalidEnd");
+            }
             return false;
         }
-        
+
         // Check for valid domain format
         if (!domain.matches("[a-zA-Z0-9.-]+")) {
-            addConstraintViolation(context, "Email domain contains invalid characters");
+            addConstraintViolation(context, "email.invalidCharacters");
             return false;
         }
-        
+
         // Check for at least one dot (TLD requirement)
         if (!domain.contains(".")) {
-            addConstraintViolation(context, "Email domain must contain a valid TLD");
+            addConstraintViolation(context, "email.tldRequired");
             return false;
         }
-        
+
         // Check TLD length (at least 2 characters)
         String[] domainParts = domain.split("\\.");
         String tld = domainParts[domainParts.length - 1];
         if (tld.length() < 2) {
-            addConstraintViolation(context, "Email domain TLD must be at least 2 characters");
+            addConstraintViolation(context, "email.tldTooShort");
             return false;
         }
-        
+
         return true;
     }
     

@@ -26,10 +26,10 @@ public class Permission {
     private String description;
     
     @Column(name = "resource")
-    private String resource; // e.g., "USER", "PRODUCT", "ORDER"
+    private String resource;
     
     @Column(name = "action")
-    private String action; // e.g., "CREATE", "READ", "UPDATE", "DELETE"
+    private String action;
     
     @Column(name = "is_active")
     @Builder.Default

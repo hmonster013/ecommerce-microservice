@@ -31,5 +31,6 @@ public final class ApiPaths {
     public static final String USERNAME = "/username";
     public static final String ID_PARAM = "/{id}";
     public static final String USERNAME_PARAM = "/username/{username}";
+    public static final String LEGACY = "/legacy";
 }
 

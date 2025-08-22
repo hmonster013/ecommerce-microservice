@@ -43,61 +43,61 @@ public class NameValidator implements ConstraintValidator<ValidName, String> {
         name = ValidationUtils.normalizeWhitespace(name);
         
         // Check length
-        if (!ValidationUtils.isLengthValid(name, min, max)) {
-            addConstraintViolation(context, 
-                String.format("Name must be between %d and %d characters long", min, max));
+        if (name.length() < min) {
+            addConstraintViolation(context, "validation.tooShort");
             return false;
         }
-        
+        if (name.length() > max) {
+            addConstraintViolation(context, "validation.tooLong");
+            return false;
+        }
+
         // Check for empty after trimming
         if (name.trim().isEmpty()) {
-            addConstraintViolation(context, "Name cannot be empty");
+            addConstraintViolation(context, "fullName.required");
             return false;
         }
         
         // Check pattern based on special character allowance
         Pattern pattern = allowSpecialChars ? NAME_WITH_SPECIAL_PATTERN : NAME_SIMPLE_PATTERN;
         if (!pattern.matcher(name).matches()) {
-            String message = allowSpecialChars 
-                ? "Name contains invalid characters. Only letters, spaces, apostrophes, and hyphens are allowed"
-                : "Name contains invalid characters. Only letters and spaces are allowed";
-            addConstraintViolation(context, message);
+            addConstraintViolation(context, "fullName.invalid");
             return false;
         }
         
         // Check for consecutive spaces
         if (name.contains("  ")) {
-            addConstraintViolation(context, "Name cannot contain consecutive spaces");
+            addConstraintViolation(context, "fullName.invalid");
             return false;
         }
-        
+
         // Check for leading/trailing spaces
         if (!name.equals(name.trim())) {
-            addConstraintViolation(context, "Name cannot start or end with spaces");
+            addConstraintViolation(context, "fullName.invalid");
             return false;
         }
-        
+
         // Check for only spaces
         if (name.trim().isEmpty()) {
-            addConstraintViolation(context, "Name cannot contain only spaces");
+            addConstraintViolation(context, "fullName.required");
             return false;
         }
-        
+
         // Check for security issues
         if (ValidationUtils.containsSqlInjection(name) || ValidationUtils.containsXss(name)) {
-            addConstraintViolation(context, "Name contains potentially harmful content");
+            addConstraintViolation(context, "security.suspicious");
             return false;
         }
-        
+
         // Check for profanity
         if (ValidationUtils.containsProfanity(name)) {
-            addConstraintViolation(context, "Name contains inappropriate content");
+            addConstraintViolation(context, "security.profanity");
             return false;
         }
-        
+
         // Check for numeric-only names
         if (ValidationUtils.isNumeric(name.replaceAll("\\s", ""))) {
-            addConstraintViolation(context, "Name cannot contain only numbers");
+            addConstraintViolation(context, "fullName.invalid");
             return false;
         }
         
