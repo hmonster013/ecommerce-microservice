@@ -28,8 +28,8 @@ public class UpdateOrderRequest {
     /**
      * ID of the order to update
      */
-    @NotNull(message = "Order ID is required")
-    @Positive(message = "Order ID must be positive")
+    @NotNull(message = "{order.id.required}")
+    @Positive(message = "{order.id.positive}")
     private Long orderId;
     
     /**
@@ -52,13 +52,13 @@ public class UpdateOrderRequest {
     /**
      * Updated customer notes
      */
-    @Size(max = 2000, message = "Customer notes must not exceed 2000 characters")
+    @Size(max = 2000, message = "{customer.notes.size}")
     private String customerNotes;
     
     /**
      * Updated internal notes
      */
-    @Size(max = 2000, message = "Internal notes must not exceed 2000 characters")
+    @Size(max = 2000, message = "{internal.notes.size}")
     private String internalNotes;
     
     /**
@@ -74,8 +74,8 @@ public class UpdateOrderRequest {
     /**
      * Updated priority level (1-5)
      */
-    @Min(value = 1, message = "Priority level must be at least 1")
-    @Max(value = 5, message = "Priority level must be at most 5")
+    @Min(value = 1, message = "{priority.level.range}")
+    @Max(value = 5, message = "{priority.level.range}")
     private Integer priorityLevel;
     
     /**
@@ -91,19 +91,19 @@ public class UpdateOrderRequest {
     /**
      * Updated gift message
      */
-    @Size(max = 1000, message = "Gift message must not exceed 1000 characters")
+    @Size(max = 1000, message = "{gift.message.size}")
     private String giftMessage;
     
     /**
      * Updated shipping method
      */
-    @Size(max = 50, message = "Shipping method must not exceed 50 characters")
+    @Size(max = 50, message = "{field.size.max}")
     private String shippingMethod;
     
     /**
      * Updated delivery instructions
      */
-    @Size(max = 1000, message = "Delivery instructions must not exceed 1000 characters")
+    @Size(max = 1000, message = "{delivery.instructions.size}")
     private String deliveryInstructions;
     
     /**
@@ -124,7 +124,7 @@ public class UpdateOrderRequest {
     /**
      * Updated insurance value
      */
-    @DecimalMin(value = "0.0", message = "Insurance value must be non-negative")
+    @DecimalMin(value = "0.0", message = "{insurance.value.non-negative}")
     private BigDecimal insuranceValue;
     
     /**
@@ -136,13 +136,13 @@ public class UpdateOrderRequest {
     /**
      * Reason for the update (for audit purposes)
      */
-    @Size(max = 500, message = "Update reason must not exceed 500 characters")
+    @Size(max = 500, message = "{update.reason.size}")
     private String updateReason;
     
     /**
      * User ID who is making the update
      */
-    @Positive(message = "Updated by user ID must be positive")
+    @Positive(message = "{updated.by.user.id.positive}")
     private Long updatedByUserId;
     
     /**
@@ -168,32 +168,32 @@ public class UpdateOrderRequest {
         /**
          * ID of the order item to update
          */
-        @NotNull(message = "Order item ID is required")
-        @Positive(message = "Order item ID must be positive")
+        @NotNull(message = "{order.item.id.required}")
+        @Positive(message = "{order.item.id.positive}")
         private Long orderItemId;
         
         /**
          * Updated quantity
          */
-        @Positive(message = "Quantity must be positive")
+        @Positive(message = "{order.item.quantity.positive}")
         private Integer quantity;
         
         /**
          * Updated unit price
          */
-        @DecimalMin(value = "0.0", message = "Unit price must be non-negative")
+        @DecimalMin(value = "0.0", message = "{order.item.price.non-negative}")
         private BigDecimal unitPrice;
         
         /**
          * Updated discount amount
          */
-        @DecimalMin(value = "0.0", message = "Discount amount must be non-negative")
+        @DecimalMin(value = "0.0", message = "{order.item.discount.non-negative}")
         private BigDecimal discountAmount;
         
         /**
          * Updated special instructions
          */
-        @Size(max = 1000, message = "Special instructions must not exceed 1000 characters")
+        @Size(max = 1000, message = "{order.item.instructions.size}")
         private String specialInstructions;
         
         /**
@@ -204,13 +204,13 @@ public class UpdateOrderRequest {
         /**
          * Updated gift wrap type
          */
-        @Size(max = 100, message = "Gift wrap type must not exceed 100 characters")
+        @Size(max = 100, message = "{order.item.gift.wrap.size}")
         private String giftWrapType;
         
         /**
          * Updated gift message for this item
          */
-        @Size(max = 500, message = "Gift message must not exceed 500 characters")
+        @Size(max = 500, message = "{order.item.gift.message.size}")
         private String giftMessage;
         
         /**
@@ -221,8 +221,8 @@ public class UpdateOrderRequest {
         /**
          * Action to perform on this item (UPDATE, REMOVE)
          */
-        @NotBlank(message = "Action is required")
-        @Pattern(regexp = "^(UPDATE|REMOVE)$", message = "Action must be UPDATE or REMOVE")
+        @NotBlank(message = "{order.item.action.required}")
+        @Pattern(regexp = "^(UPDATE|REMOVE)$", message = "{order.item.action.format}")
         private String action;
     }
     
@@ -238,25 +238,25 @@ public class UpdateOrderRequest {
         /**
          * Updated shipping method
          */
-        @Size(max = 50, message = "Shipping method must not exceed 50 characters")
+        @Size(max = 50, message = "{field.size.max}")
         private String shippingMethod;
         
         /**
          * Updated carrier
          */
-        @Size(max = 100, message = "Carrier must not exceed 100 characters")
+        @Size(max = 100, message = "{shipping.carrier.size}")
         private String carrier;
         
         /**
          * Updated carrier service
          */
-        @Size(max = 100, message = "Carrier service must not exceed 100 characters")
+        @Size(max = 100, message = "{shipping.carrier.service.size}")
         private String carrierService;
         
         /**
          * Updated tracking number
          */
-        @Size(max = 100, message = "Tracking number must not exceed 100 characters")
+        @Size(max = 100, message = "{shipping.tracking.number.size}")
         private String trackingNumber;
         
         /**
@@ -267,7 +267,7 @@ public class UpdateOrderRequest {
         /**
          * Updated special instructions
          */
-        @Size(max = 2000, message = "Special instructions must not exceed 2000 characters")
+        @Size(max = 2000, message = "{shipping.instructions.size}")
         private String specialInstructions;
         
         /**
@@ -288,7 +288,7 @@ public class UpdateOrderRequest {
         /**
          * Updated insurance value
          */
-        @DecimalMin(value = "0.0", message = "Insurance value must be non-negative")
+        @DecimalMin(value = "0.0", message = "{insurance.value.non-negative}")
         private BigDecimal insuranceValue;
     }
     

@@ -26,52 +26,52 @@ public class ProcessRefundRequest {
     /**
      * ID of the order to refund
      */
-    @NotNull(message = "Order ID is required")
-    @Positive(message = "Order ID must be positive")
+    @NotNull(message = "{order.id.required}")
+    @Positive(message = "{order.id.positive}")
     private Long orderId;
     
     /**
      * ID of the payment to refund
      */
-    @Positive(message = "Payment ID must be positive")
+    @Positive(message = "{field.positive}")
     private Long paymentId;
     
     /**
      * Refund amount
      */
-    @NotNull(message = "Refund amount is required")
-    @DecimalMin(value = "0.01", message = "Refund amount must be greater than 0")
+    @NotNull(message = "{field.required}")
+    @DecimalMin(value = "0.01", message = "{refund.amount.positive}")
     private BigDecimal refundAmount;
     
     /**
      * Refund currency
      */
-    @NotBlank(message = "Refund currency is required")
-    @Size(min = 3, max = 3, message = "Currency must be 3 characters")
-    @Pattern(regexp = "^[A-Z]{3}$", message = "Currency must be uppercase letters")
+    @NotBlank(message = "{currency.required}")
+    @Size(min = 3, max = 3, message = "{currency.size}")
+    @Pattern(regexp = "^[A-Z]{3}$", message = "{currency.format}")
     private String refundCurrency;
     
     /**
      * Reason for the refund
      */
-    @NotBlank(message = "Refund reason is required")
-    @Size(max = 1000, message = "Refund reason must not exceed 1000 characters")
+    @NotBlank(message = "{refund.reason.required}")
+    @Size(max = 1000, message = "{refund.reason.size}")
     private String refundReason;
     
     /**
      * Refund reason category
      */
-    @NotBlank(message = "Refund reason category is required")
-    @Pattern(regexp = "^(CUSTOMER_REQUEST|DEFECTIVE_PRODUCT|WRONG_ITEM|DAMAGED_SHIPPING|LATE_DELIVERY|CANCELLED_ORDER|DUPLICATE_CHARGE|FRAUD_PROTECTION|GOODWILL|OTHER)$", 
-             message = "Invalid refund reason category")
+    @NotBlank(message = "{field.required}")
+    @Pattern(regexp = "^(CUSTOMER_REQUEST|DEFECTIVE_PRODUCT|WRONG_ITEM|DAMAGED_SHIPPING|LATE_DELIVERY|CANCELLED_ORDER|DUPLICATE_CHARGE|FRAUD_PROTECTION|GOODWILL|OTHER)$",
+             message = "{field.invalid.format}")
     private String refundReasonCategory;
     
     /**
      * Refund method
      */
-    @NotBlank(message = "Refund method is required")
-    @Pattern(regexp = "^(ORIGINAL_PAYMENT|STORE_CREDIT|BANK_TRANSFER|CHECK|GIFT_CARD|OTHER)$", 
-             message = "Invalid refund method")
+    @NotBlank(message = "{field.required}")
+    @Pattern(regexp = "^(ORIGINAL_PAYMENT|STORE_CREDIT|BANK_TRANSFER|CHECK|GIFT_CARD|OTHER)$",
+             message = "{field.invalid.format}")
     private String refundMethod;
     
     /**
@@ -95,8 +95,8 @@ public class ProcessRefundRequest {
     /**
      * User ID who is processing the refund
      */
-    @NotNull(message = "Processed by user ID is required")
-    @Positive(message = "Processed by user ID must be positive")
+    @NotNull(message = "{user.id.required}")
+    @Positive(message = "{user.id.positive}")
     private Long processedByUserId;
     
     /**
@@ -108,13 +108,13 @@ public class ProcessRefundRequest {
     /**
      * Internal notes for the refund
      */
-    @Size(max = 2000, message = "Internal notes must not exceed 2000 characters")
+    @Size(max = 2000, message = "{internal.notes.size}")
     private String internalNotes;
     
     /**
      * Customer communication notes
      */
-    @Size(max = 1000, message = "Customer notes must not exceed 1000 characters")
+    @Size(max = 1000, message = "{customer.notes.size}")
     private String customerNotes;
     
     /**
@@ -126,16 +126,16 @@ public class ProcessRefundRequest {
     /**
      * Expected refund processing time in days
      */
-    @Min(value = 1, message = "Processing time must be at least 1 day")
-    @Max(value = 30, message = "Processing time must not exceed 30 days")
+    @Min(value = 1, message = "{field.size.range}")
+    @Max(value = 30, message = "{field.size.range}")
     @Builder.Default
     private Integer expectedProcessingDays = 5;
     
     /**
      * Refund processing priority
      */
-    @Min(value = 1, message = "Priority must be at least 1")
-    @Max(value = 5, message = "Priority must not exceed 5")
+    @Min(value = 1, message = "{priority.level.range}")
+    @Max(value = 5, message = "{priority.level.range}")
     @Builder.Default
     private Integer priority = 3;
     
@@ -148,13 +148,13 @@ public class ProcessRefundRequest {
     /**
      * Restocking fee amount (if applicable)
      */
-    @DecimalMin(value = "0.0", message = "Restocking fee must be non-negative")
+    @DecimalMin(value = "0.0", message = "{field.non-negative}")
     private BigDecimal restockingFee;
     
     /**
      * Return shipping cost to deduct from refund
      */
-    @DecimalMin(value = "0.0", message = "Return shipping cost must be non-negative")
+    @DecimalMin(value = "0.0", message = "{field.non-negative}")
     private BigDecimal returnShippingCost;
     
     /**
@@ -186,28 +186,28 @@ public class ProcessRefundRequest {
         /**
          * ID of the order item to refund
          */
-        @NotNull(message = "Order item ID is required")
-        @Positive(message = "Order item ID must be positive")
+        @NotNull(message = "{refund.item.id.required}")
+        @Positive(message = "{refund.item.id.positive}")
         private Long orderItemId;
         
         /**
          * Quantity to refund
          */
-        @NotNull(message = "Refund quantity is required")
-        @Positive(message = "Refund quantity must be positive")
+        @NotNull(message = "{field.required}")
+        @Positive(message = "{refund.item.quantity.positive}")
         private Integer refundQuantity;
         
         /**
          * Refund amount for this item
          */
-        @NotNull(message = "Item refund amount is required")
-        @DecimalMin(value = "0.01", message = "Item refund amount must be greater than 0")
+        @NotNull(message = "{field.required}")
+        @DecimalMin(value = "0.01", message = "{refund.amount.positive}")
         private BigDecimal itemRefundAmount;
         
         /**
          * Reason for refunding this specific item
          */
-        @Size(max = 500, message = "Item refund reason must not exceed 500 characters")
+        @Size(max = 500, message = "{refund.reason.size}")
         private String itemRefundReason;
         
         /**
@@ -219,14 +219,14 @@ public class ProcessRefundRequest {
         /**
          * Condition of returned item
          */
-        @Pattern(regexp = "^(NEW|LIKE_NEW|GOOD|FAIR|POOR|DAMAGED|DEFECTIVE)$", 
-                 message = "Invalid item condition")
+        @Pattern(regexp = "^(NEW|LIKE_NEW|GOOD|FAIR|POOR|DAMAGED|DEFECTIVE)$",
+                 message = "{field.invalid.format}")
         private String itemCondition;
         
         /**
          * Item inspection notes
          */
-        @Size(max = 1000, message = "Inspection notes must not exceed 1000 characters")
+        @Size(max = 1000, message = "{internal.notes.size}")
         private String inspectionNotes;
     }
     
@@ -242,22 +242,22 @@ public class ProcessRefundRequest {
         /**
          * Fee type
          */
-        @NotBlank(message = "Fee type is required")
-        @Pattern(regexp = "^(RESTOCKING|RETURN_SHIPPING|PROCESSING|HANDLING|INSPECTION|OTHER)$", 
-                 message = "Invalid fee type")
+        @NotBlank(message = "{field.required}")
+        @Pattern(regexp = "^(RESTOCKING|RETURN_SHIPPING|PROCESSING|HANDLING|INSPECTION|OTHER)$",
+                 message = "{field.invalid.format}")
         private String feeType;
         
         /**
          * Fee amount
          */
-        @NotNull(message = "Fee amount is required")
-        @DecimalMin(value = "0.0", message = "Fee amount must be non-negative")
+        @NotNull(message = "{field.required}")
+        @DecimalMin(value = "0.0", message = "{field.non-negative}")
         private BigDecimal feeAmount;
         
         /**
          * Fee description
          */
-        @Size(max = 200, message = "Fee description must not exceed 200 characters")
+        @Size(max = 200, message = "{field.size.max}")
         private String feeDescription;
         
         /**
@@ -285,14 +285,14 @@ public class ProcessRefundRequest {
         /**
          * Approval status
          */
-        @Pattern(regexp = "^(PENDING|APPROVED|REJECTED|AUTO_APPROVED)$", 
-                 message = "Invalid approval status")
+        @Pattern(regexp = "^(PENDING|APPROVED|REJECTED|AUTO_APPROVED)$",
+                 message = "{field.invalid.format}")
         private String approvalStatus;
         
         /**
          * User ID who approved the refund
          */
-        @Positive(message = "Approved by user ID must be positive")
+        @Positive(message = "{user.id.positive}")
         private Long approvedByUserId;
         
         /**
@@ -303,13 +303,13 @@ public class ProcessRefundRequest {
         /**
          * Approval notes
          */
-        @Size(max = 1000, message = "Approval notes must not exceed 1000 characters")
+        @Size(max = 1000, message = "{internal.notes.size}")
         private String approvalNotes;
         
         /**
          * Approval threshold amount
          */
-        @DecimalMin(value = "0.0", message = "Approval threshold must be non-negative")
+        @DecimalMin(value = "0.0", message = "{field.non-negative}")
         private BigDecimal approvalThreshold;
     }
     

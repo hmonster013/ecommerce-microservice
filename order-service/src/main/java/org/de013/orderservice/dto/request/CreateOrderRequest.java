@@ -28,28 +28,28 @@ public class CreateOrderRequest {
     /**
      * ID of the user placing the order
      */
-    @NotNull(message = "User ID is required")
-    @Positive(message = "User ID must be positive")
+    @NotNull(message = "{user.id.required}")
+    @Positive(message = "{user.id.positive}")
     private Long userId;
     
     /**
      * ID of the shopping cart to convert to order
      */
-    @NotNull(message = "Cart ID is required")
-    @Positive(message = "Cart ID must be positive")
+    @NotNull(message = "{cart.id.required}")
+    @Positive(message = "{cart.id.positive}")
     private Long cartId;
     
     /**
      * Type of order being placed
      */
-    @NotNull(message = "Order type is required")
+    @NotNull(message = "{order.type.required}")
     private OrderType orderType;
     
     /**
      * Shipping address for the order
      */
     @Valid
-    @NotNull(message = "Shipping address is required")
+    @NotNull(message = "{shipping.address.required}")
     private Address shippingAddress;
     
     /**
@@ -62,28 +62,28 @@ public class CreateOrderRequest {
      * Payment method information
      */
     @Valid
-    @NotNull(message = "Payment method is required")
+    @NotNull(message = "{payment.method.required}")
     private PaymentMethodDto paymentMethod;
     
     /**
      * Shipping method preference
      */
-    @NotBlank(message = "Shipping method is required")
-    @Size(max = 50, message = "Shipping method must not exceed 50 characters")
+    @NotBlank(message = "{shipping.method.required}")
+    @Size(max = 50, message = "{field.size.max}")
     private String shippingMethod;
     
     /**
      * Currency for the order
      */
-    @NotBlank(message = "Currency is required")
-    @Size(min = 3, max = 3, message = "Currency must be 3 characters")
-    @Pattern(regexp = "^[A-Z]{3}$", message = "Currency must be uppercase letters")
+    @NotBlank(message = "{currency.required}")
+    @Size(min = 3, max = 3, message = "{currency.size}")
+    @Pattern(regexp = "^[A-Z]{3}$", message = "{currency.format}")
     private String currency;
     
     /**
      * Customer notes for the order
      */
-    @Size(max = 2000, message = "Customer notes must not exceed 2000 characters")
+    @Size(max = 2000, message = "{customer.notes.size}")
     private String customerNotes;
     
     /**
@@ -95,7 +95,7 @@ public class CreateOrderRequest {
     /**
      * Gift message if this is a gift order
      */
-    @Size(max = 1000, message = "Gift message must not exceed 1000 characters")
+    @Size(max = 1000, message = "{gift.message.size}")
     private String giftMessage;
     
     /**
@@ -106,7 +106,7 @@ public class CreateOrderRequest {
     /**
      * Special delivery instructions
      */
-    @Size(max = 1000, message = "Delivery instructions must not exceed 1000 characters")
+    @Size(max = 1000, message = "{delivery.instructions.size}")
     private String deliveryInstructions;
     
     /**
@@ -130,32 +130,32 @@ public class CreateOrderRequest {
     /**
      * Insurance value if purchasing insurance
      */
-    @DecimalMin(value = "0.0", message = "Insurance value must be non-negative")
+    @DecimalMin(value = "0.0", message = "{insurance.value.non-negative}")
     private BigDecimal insuranceValue;
     
     /**
      * Promotional code to apply
      */
-    @Size(max = 50, message = "Promo code must not exceed 50 characters")
+    @Size(max = 50, message = "{promo.code.size}")
     private String promoCode;
     
     /**
      * Source of the order (WEB, MOBILE, API, etc.)
      */
-    @Size(max = 20, message = "Order source must not exceed 20 characters")
+    @Size(max = 20, message = "{order.source.size}")
     @Builder.Default
     private String orderSource = "WEB";
     
     /**
      * Customer IP address for fraud detection
      */
-    @Size(max = 45, message = "Customer IP must not exceed 45 characters")
+    @Size(max = 45, message = "{customer.ip.size}")
     private String customerIp;
     
     /**
      * Customer user agent for fraud detection
      */
-    @Size(max = 1000, message = "Customer user agent must not exceed 1000 characters")
+    @Size(max = 1000, message = "{customer.user-agent.size}")
     private String customerUserAgent;
     
     /**
@@ -187,14 +187,14 @@ public class CreateOrderRequest {
         /**
          * Payment method type (CREDIT_CARD, DEBIT_CARD, PAYPAL, etc.)
          */
-        @NotBlank(message = "Payment method type is required")
-        @Size(max = 50, message = "Payment method type must not exceed 50 characters")
+        @NotBlank(message = "{payment.type.required}")
+        @Size(max = 50, message = "{payment.type.size}")
         private String type;
         
         /**
          * Payment token from payment gateway
          */
-        @Size(max = 200, message = "Payment token must not exceed 200 characters")
+        @Size(max = 200, message = "{payment.token.size}")
         private String token;
         
         /**
@@ -245,43 +245,43 @@ public class CreateOrderRequest {
         /**
          * Cardholder name
          */
-        @NotBlank(message = "Cardholder name is required")
-        @Size(max = 100, message = "Cardholder name must not exceed 100 characters")
+        @NotBlank(message = "{card.holder.name.required}")
+        @Size(max = 100, message = "{card.holder.name.size}")
         private String cardholderName;
         
         /**
          * Card number (will be tokenized)
          */
-        @NotBlank(message = "Card number is required")
-        @Pattern(regexp = "^[0-9]{13,19}$", message = "Invalid card number format")
+        @NotBlank(message = "{card.number.required}")
+        @Pattern(regexp = "^[0-9]{13,19}$", message = "{card.number.format}")
         private String cardNumber;
         
         /**
          * Expiry month (1-12)
          */
-        @NotNull(message = "Expiry month is required")
-        @Min(value = 1, message = "Expiry month must be between 1 and 12")
-        @Max(value = 12, message = "Expiry month must be between 1 and 12")
+        @NotNull(message = "{card.expiry.month.required}")
+        @Min(value = 1, message = "{card.expiry.month.range}")
+        @Max(value = 12, message = "{card.expiry.month.range}")
         private Integer expiryMonth;
         
         /**
          * Expiry year (YYYY)
          */
-        @NotNull(message = "Expiry year is required")
-        @Min(value = 2024, message = "Expiry year must be current year or later")
+        @NotNull(message = "{card.expiry.year.required}")
+        @Min(value = 2024, message = "{card.expiry.year.min}")
         private Integer expiryYear;
         
         /**
          * CVV/CVC code
          */
-        @NotBlank(message = "CVV is required")
-        @Pattern(regexp = "^[0-9]{3,4}$", message = "CVV must be 3 or 4 digits")
+        @NotBlank(message = "{card.cvv.required}")
+        @Pattern(regexp = "^[0-9]{3,4}$", message = "{card.cvv.format}")
         private String cvv;
         
         /**
          * Card brand (VISA, MASTERCARD, AMEX, etc.)
          */
-        @Size(max = 20, message = "Card brand must not exceed 20 characters")
+        @Size(max = 20, message = "{card.brand.size}")
         private String cardBrand;
     }
     
@@ -297,21 +297,21 @@ public class CreateOrderRequest {
         /**
          * PayPal email address
          */
-        @NotBlank(message = "PayPal email is required")
-        @Email(message = "Invalid PayPal email format")
-        @Size(max = 255, message = "PayPal email must not exceed 255 characters")
+        @NotBlank(message = "{paypal.email.required}")
+        @Email(message = "{paypal.email.format}")
+        @Size(max = 255, message = "{paypal.email.size}")
         private String email;
         
         /**
          * PayPal payer ID
          */
-        @Size(max = 100, message = "PayPal payer ID must not exceed 100 characters")
+        @Size(max = 100, message = "{paypal.payer.id.size}")
         private String payerId;
         
         /**
          * PayPal payment ID
          */
-        @Size(max = 100, message = "PayPal payment ID must not exceed 100 characters")
+        @Size(max = 100, message = "{paypal.payment.id.size}")
         private String paymentId;
     }
     
@@ -327,40 +327,40 @@ public class CreateOrderRequest {
         /**
          * Bank name
          */
-        @NotBlank(message = "Bank name is required")
-        @Size(max = 100, message = "Bank name must not exceed 100 characters")
+        @NotBlank(message = "{bank.name.required}")
+        @Size(max = 100, message = "{bank.name.size}")
         private String bankName;
         
         /**
          * Account holder name
          */
-        @NotBlank(message = "Account holder name is required")
-        @Size(max = 100, message = "Account holder name must not exceed 100 characters")
+        @NotBlank(message = "{bank.account.holder.required}")
+        @Size(max = 100, message = "{bank.account.holder.size}")
         private String accountHolderName;
         
         /**
          * Account number (masked)
          */
-        @NotBlank(message = "Account number is required")
-        @Size(max = 50, message = "Account number must not exceed 50 characters")
+        @NotBlank(message = "{bank.account.number.required}")
+        @Size(max = 50, message = "{bank.account.number.size}")
         private String accountNumber;
         
         /**
          * Routing number
          */
-        @Size(max = 20, message = "Routing number must not exceed 20 characters")
+        @Size(max = 20, message = "{bank.routing.number.size}")
         private String routingNumber;
         
         /**
          * IBAN (for international transfers)
          */
-        @Size(max = 34, message = "IBAN must not exceed 34 characters")
+        @Size(max = 34, message = "{bank.iban.size}")
         private String iban;
         
         /**
          * SWIFT code (for international transfers)
          */
-        @Size(max = 11, message = "SWIFT code must not exceed 11 characters")
+        @Size(max = 11, message = "{bank.swift.code.size}")
         private String swiftCode;
     }
     
@@ -376,31 +376,31 @@ public class CreateOrderRequest {
         /**
          * 3D Secure version (1.0, 2.0, 2.1, 2.2)
          */
-        @Size(max = 10, message = "3D Secure version must not exceed 10 characters")
+        @Size(max = 10, message = "{3ds.version.size}")
         private String version;
         
         /**
          * Authentication response
          */
-        @Size(max = 1, message = "Authentication response must be 1 character")
+        @Size(max = 1, message = "{3ds.auth.response.size}")
         private String authenticationResponse;
         
         /**
          * Transaction ID
          */
-        @Size(max = 100, message = "Transaction ID must not exceed 100 characters")
+        @Size(max = 100, message = "{3ds.transaction.id.size}")
         private String transactionId;
         
         /**
          * Cavv (Cardholder Authentication Verification Value)
          */
-        @Size(max = 100, message = "CAVV must not exceed 100 characters")
+        @Size(max = 100, message = "{3ds.cavv.size}")
         private String cavv;
         
         /**
          * ECI (Electronic Commerce Indicator)
          */
-        @Size(max = 2, message = "ECI must not exceed 2 characters")
+        @Size(max = 2, message = "{3ds.eci.size}")
         private String eci;
     }
     
