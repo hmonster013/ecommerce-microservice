@@ -39,8 +39,8 @@ public class ProductSearchDto {
     private BigDecimal maxPrice;
 
     @Schema(description = "Minimum rating", example = "4.0")
-    @Min(value = 1, message = "Minimum rating must be at least 1")
-    @Max(value = 5, message = "Minimum rating must be at most 5")
+    @Min(value = 1, message = "{review.rating.invalid}")
+    @Max(value = 5, message = "{review.rating.invalid}")
     private Double minRating;
 
     @Schema(description = "Only featured products", example = "false")
@@ -100,13 +100,13 @@ public class ProductSearchDto {
     private String sortDirection;
 
     @Schema(description = "Page number (0-based)", example = "0")
-    @Min(value = 0, message = "Page number must be non-negative")
+    @Min(value = 0, message = "{search.page.invalid}")
     @Builder.Default
     private Integer page = 0;
 
     @Schema(description = "Page size", example = "20")
-    @Min(value = 1, message = "Page size must be at least 1")
-    @Max(value = 100, message = "Page size must be at most 100")
+    @Min(value = 1, message = "{search.size.invalid}")
+    @Max(value = 100, message = "{search.size.invalid}")
     @Builder.Default
     private Integer size = 20;
 

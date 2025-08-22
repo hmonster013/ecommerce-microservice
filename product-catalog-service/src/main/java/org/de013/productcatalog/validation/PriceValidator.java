@@ -39,36 +39,31 @@ public class PriceValidator implements ConstraintValidator<ValidPrice, BigDecima
 
         // Check if price is positive
         if (price.compareTo(BigDecimal.ZERO) <= 0) {
-            addCustomMessage(context, "Price must be greater than zero");
+            addCustomMessage(context, "{ValidPrice.negative}");
             return false;
         }
 
         // Check minimum value
-        BigDecimal minPrice = BigDecimal.valueOf(min);
-        if (price.compareTo(minPrice) < 0) {
-            addCustomMessage(context, 
-                String.format("Price must be at least %s", minPrice.toPlainString()));
+        if (price.compareTo(BigDecimal.valueOf(min)) < 0) {
+            addCustomMessage(context, "{ValidPrice.too.small}");
             return false;
         }
 
         // Check maximum value
-        BigDecimal maxPrice = BigDecimal.valueOf(max);
-        if (price.compareTo(maxPrice) > 0) {
-            addCustomMessage(context, 
-                String.format("Price cannot exceed %s", maxPrice.toPlainString()));
+        if (price.compareTo(BigDecimal.valueOf(max)) > 0) {
+            addCustomMessage(context, "{ValidPrice.too.large}");
             return false;
         }
 
         // Check decimal places
         if (getDecimalPlaces(price) > maxDecimalPlaces) {
-            addCustomMessage(context, 
-                String.format("Price cannot have more than %d decimal places", maxDecimalPlaces));
+            addCustomMessage(context, "{ValidPrice.too.many.decimals}");
             return false;
         }
 
         // Business rule: Check for suspicious pricing patterns
         if (isSuspiciousPrice(price)) {
-            addCustomMessage(context, "Price appears to be invalid or suspicious");
+            addCustomMessage(context, "{ValidPrice.suspicious}");
             return false;
         }
 

@@ -14,35 +14,35 @@ import lombok.*;
 @Schema(description = "Review creation request")
 public class ReviewCreateDto {
 
-    @NotNull(message = "Product ID is required")
+    @NotNull(message = "{review.product.required}")
     @Schema(description = "Product ID", example = "1", required = true)
     private Long productId;
 
-    @NotNull(message = "User ID is required")
+    @NotNull(message = "{field.required}")
     @Schema(description = "User ID", example = "1001", required = true)
     private Long userId;
 
-    @NotNull(message = "Rating is required")
-    @Min(value = 1, message = "Rating must be at least 1")
-    @Max(value = 5, message = "Rating must be at most 5")
+    @NotNull(message = "{review.rating.required}")
+    @Min(value = 1, message = "{review.rating.invalid}")
+    @Max(value = 5, message = "{review.rating.invalid}")
     @Schema(description = "Rating (1-5)", example = "5", required = true)
     private Integer rating;
 
-    @Size(max = 255, message = "Title must not exceed 255 characters")
+    @Size(max = 255, message = "{review.title.too.long}")
     @Schema(description = "Review title", example = "Amazing phone!")
     private String title;
 
-    @NotBlank(message = "Comment is required")
-    @Size(max = 2000, message = "Comment must not exceed 2000 characters")
+    @NotBlank(message = "{review.comment.required}")
+    @Size(max = 2000, message = "{review.comment.too.long}")
     @Schema(description = "Review comment", example = "The iPhone 15 Pro exceeded my expectations...", required = true)
     private String comment;
 
-    @Size(max = 255, message = "Reviewer name must not exceed 255 characters")
+    @Size(max = 255, message = "{review.reviewer.name.too.long}")
     @Schema(description = "Reviewer name", example = "John D.")
     private String reviewerName;
 
-    @Email(message = "Reviewer email must be valid")
-    @Size(max = 255, message = "Reviewer email must not exceed 255 characters")
+    @Email(message = "{review.reviewer.email.invalid}")
+    @Size(max = 255, message = "{field.too.long}")
     @Schema(description = "Reviewer email", example = "john.doe@example.com")
     private String reviewerEmail;
 
