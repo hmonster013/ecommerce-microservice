@@ -19,9 +19,9 @@ import lombok.*;
 public class ApplyCouponDto {
 
     @Schema(description = "Coupon code to apply", example = "SAVE20", required = true)
-    @NotBlank(message = "Coupon code is required")
-    @Size(min = 3, max = 50, message = "Coupon code must be between 3 and 50 characters")
-    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "Coupon code can only contain uppercase letters, numbers, underscores, and hyphens")
+    @NotBlank(message = "{coupon.code.required}")
+    @Size(min = 3, max = 50, message = "{coupon.code.size}")
+    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "{coupon.code.format}")
     @JsonProperty("coupon_code")
     private String couponCode;
 
@@ -30,12 +30,12 @@ public class ApplyCouponDto {
     private Long cartId;
 
     @Schema(description = "User ID (for authenticated users)", example = "user-123e4567-e89b-12d3-a456-426614174000")
-    @Size(max = 36, message = "User ID must not exceed 36 characters")
+    @Size(max = 36, message = "{user.id.size}")
     @JsonProperty("user_id")
     private String userId;
 
     @Schema(description = "Session ID (for guest users)", example = "sess-123e4567-e89b-12d3-a456-426614174000")
-    @Size(max = 100, message = "Session ID must not exceed 100 characters")
+    @Size(max = 100, message = "{session.id.size}")
     @JsonProperty("session_id")
     private String sessionId;
 
@@ -55,8 +55,8 @@ public class ApplyCouponDto {
     private Boolean validateCoupon = true;
 
     @Schema(description = "Customer email for coupon validation", example = "customer@example.com")
-    @Email(message = "Invalid email format")
-    @Size(max = 255, message = "Email must not exceed 255 characters")
+    @Email(message = "{email.invalid}")
+    @Size(max = 255, message = "{email.size}")
     @JsonProperty("customer_email")
     private String customerEmail;
 
@@ -66,19 +66,19 @@ public class ApplyCouponDto {
     private String source = "WEB";
 
     @Schema(description = "Campaign ID associated with the coupon", example = "campaign-123")
-    @Size(max = 100, message = "Campaign ID must not exceed 100 characters")
+    @Size(max = 100, message = "{campaign.id.size}")
     @JsonProperty("campaign_id")
     private String campaignId;
 
     @Schema(description = "Referrer URL where coupon was found", example = "https://example.com/promo")
-    @Size(max = 1000, message = "Referrer URL must not exceed 1000 characters")
+    @Size(max = 1000, message = "{referrer.url.size}")
     @JsonProperty("referrer_url")
     private String referrerUrl;
 
     /**
      * Validate that either userId or sessionId is provided
      */
-    @AssertTrue(message = "Either user ID or session ID must be provided")
+    @AssertTrue(message = "{user.or.session.required}")
     public boolean isValidUserOrSession() {
         return (userId != null && !userId.trim().isEmpty()) || 
                (sessionId != null && !sessionId.trim().isEmpty());
@@ -87,7 +87,7 @@ public class ApplyCouponDto {
     /**
      * Validate that cart identification is provided
      */
-    @AssertTrue(message = "Either cart ID or user/session identification must be provided")
+    @AssertTrue(message = "{cart.identification.required}")
     public boolean hasValidCartIdentification() {
         return cartId != null || 
                (userId != null && !userId.trim().isEmpty()) || 
