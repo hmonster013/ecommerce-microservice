@@ -15,16 +15,16 @@ import org.de013.productcatalog.entity.enums.ReviewStatus;
 @Schema(description = "Review update request")
 public class ReviewUpdateDto {
 
-    @Min(value = 1, message = "Rating must be at least 1")
-    @Max(value = 5, message = "Rating must be at most 5")
+    @Min(value = 1, message = "{review.rating.invalid}")
+    @Max(value = 5, message = "{review.rating.invalid}")
     @Schema(description = "Rating (1-5)", example = "5")
     private Integer rating;
 
-    @Size(max = 255, message = "Title must not exceed 255 characters")
+    @Size(max = 255, message = "{review.title.too.long}")
     @Schema(description = "Review title", example = "Amazing phone!")
     private String title;
 
-    @Size(max = 2000, message = "Comment must not exceed 2000 characters")
+    @Size(max = 2000, message = "{review.comment.too.long}")
     @Schema(description = "Review comment", example = "The iPhone 15 Pro exceeded my expectations...")
     private String comment;
 

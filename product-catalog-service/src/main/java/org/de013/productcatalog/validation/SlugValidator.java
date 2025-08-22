@@ -41,47 +41,43 @@ public class SlugValidator implements ConstraintValidator<ValidSlug, String> {
 
         // Handle empty strings
         if (slug.trim().isEmpty()) {
-            addCustomMessage(context, "Slug cannot be empty");
+            addCustomMessage(context, "{ValidSlug.empty}");
             return false;
         }
 
         // Check length constraints
         if (slug.length() < minLength) {
-            addCustomMessage(context, 
-                String.format("Slug must be at least %d characters long", minLength));
+            addCustomMessage(context, "{ValidSlug.too.short}");
             return false;
         }
 
         if (slug.length() > maxLength) {
-            addCustomMessage(context, 
-                String.format("Slug cannot exceed %d characters", maxLength));
+            addCustomMessage(context, "{ValidSlug.too.long}");
             return false;
         }
 
         // Check pattern (lowercase letters, numbers, hyphens only)
         if (!SLUG_PATTERN.matcher(slug).matches()) {
-            addCustomMessage(context, 
-                "Slug must contain only lowercase letters, numbers, and hyphens. Cannot start or end with hyphen");
+            addCustomMessage(context, "{ValidSlug.invalid.format}");
             return false;
         }
 
         // Check for reserved slugs
         if (isReservedSlug(slug)) {
-            addCustomMessage(context, 
-                String.format("'%s' is a reserved slug and cannot be used", slug));
+            addCustomMessage(context, "{ValidSlug.reserved}");
             return false;
         }
 
         // Check for consecutive hyphens
         if (slug.contains("--")) {
-            addCustomMessage(context, "Slug cannot contain consecutive hyphens");
+            addCustomMessage(context, "{ValidSlug.consecutive.hyphens}");
             return false;
         }
 
         // Check for too many hyphens (business rule)
         long hyphenCount = slug.chars().filter(ch -> ch == '-').count();
         if (hyphenCount > 5) {
-            addCustomMessage(context, "Slug cannot contain more than 5 hyphens");
+            addCustomMessage(context, "{ValidSlug.too.many.hyphens}");
             return false;
         }
 

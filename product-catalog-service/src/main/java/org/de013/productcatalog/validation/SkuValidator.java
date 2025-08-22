@@ -33,28 +33,25 @@ public class SkuValidator implements ConstraintValidator<ValidSku, String> {
 
         // Handle empty strings
         if (sku.trim().isEmpty()) {
-            addCustomMessage(context, "SKU cannot be empty");
+            addCustomMessage(context, "{ValidSku.empty}");
             return false;
         }
 
         // Validate pattern
         if (!pattern.matcher(sku).matches()) {
-            addCustomMessage(context, 
-                String.format("SKU '%s' does not match required format. Expected: 3-4 uppercase letters followed by 4-6 digits", sku));
+            addCustomMessage(context, "{ValidSku.invalid.format}");
             return false;
         }
 
         // Additional business rules
         if (sku.length() < 7 || sku.length() > 10) {
-            addCustomMessage(context, 
-                String.format("SKU '%s' length must be between 7-10 characters", sku));
+            addCustomMessage(context, "{ValidSku.invalid.length}");
             return false;
         }
 
         // Check for reserved prefixes (business rule)
         if (isReservedPrefix(sku)) {
-            addCustomMessage(context, 
-                String.format("SKU '%s' uses a reserved prefix", sku));
+            addCustomMessage(context, "{ValidSku.reserved.prefix}");
             return false;
         }
 

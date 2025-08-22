@@ -15,22 +15,22 @@ import org.de013.productcatalog.validation.ValidSlug;
 @Schema(description = "Category creation request")
 public class CategoryCreateDto {
 
-    @NotBlank(message = "Category name is required")
-    @Size(max = 255, message = "Category name must not exceed 255 characters")
+    @NotBlank(message = "{category.name.required}")
+    @Size(max = 255, message = "{category.name.too.long}")
     @Schema(description = "Category name", example = "Smartphones", required = true)
     private String name;
 
     @Schema(description = "Category description", example = "Mobile phones and accessories")
     private String description;
 
-    @ValidSlug(allowNull = true, message = "Slug must contain only lowercase letters, numbers, and hyphens")
+    @ValidSlug(allowNull = true, message = "{ValidSlug.message}")
     @Schema(description = "Category slug (auto-generated if not provided)", example = "smartphones")
     private String slug;
 
     @Schema(description = "Parent category ID", example = "1")
     private Long parentId;
 
-    @Min(value = 0, message = "Display order must be non-negative")
+    @Min(value = 0, message = "{category.display.order.invalid}")
     @Schema(description = "Display order", example = "1")
     @Builder.Default
     private Integer displayOrder = 0;
