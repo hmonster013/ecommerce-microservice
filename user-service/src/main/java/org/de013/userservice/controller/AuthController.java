@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.constant.ApiPaths;
@@ -109,11 +110,13 @@ public class AuthController extends BaseController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             )
     })
-    public ResponseEntity<ApiResponse<String>> logout(Authentication authentication) {
-        // Extract token from Authorization header
-        // In a real implementation, you might want to get the token from the request
-        // For now, we'll use a placeholder
-        authService.logout("placeholder-token");
+    public ResponseEntity<ApiResponse<String>> logout(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            String token = bearerToken.substring(7);
+            authService.logout(token);
+        }
+
         return ok("Logout successful");
     }
 }

@@ -12,7 +12,7 @@ import org.de013.common.dto.ApiResponse;
 import org.de013.userservice.dto.*;
 import org.de013.userservice.service.AuthService;
 import org.de013.userservice.service.UserManagementService;
-import org.springframework.data.domain.Page;
+import org.de013.common.dto.PageResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.USERS)
 @RequiredArgsConstructor
 @Tag(name = "User Management", description = "User profile and administration endpoints")
-@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "Bearer Authentication")
 public class UserManagementController extends BaseController {
 
     private final UserManagementService userManagementService;
@@ -78,28 +78,28 @@ public class UserManagementController extends BaseController {
     @GetMapping
     @Operation(summary = "Get all users (Admin only)", description = "Retrieve all users with pagination")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
+    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getAllUsers(
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        
-        Page<UserResponse> users = userManagementService.getAllUsers(pageable);
+
+        PageResponse<UserResponse> users = userManagementService.getAllUsers(pageable);
         return ok(users);
     }
 
-    @GetMapping("/search")
+    @GetMapping(ApiPaths.SEARCH)
     @Operation(summary = "Search users (Admin only)", description = "Search users by keyword")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<UserResponse>>> searchUsers(
+    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> searchUsers(
             @Parameter(description = "Search keyword", required = true)
             @RequestParam String keyword,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        
-        Page<UserResponse> users = userManagementService.searchUsers(keyword, pageable);
+
+        PageResponse<UserResponse> users = userManagementService.searchUsers(keyword, pageable);
         return ok(users);
     }
 
     // ========== User Status Management (Admin only) ==========
 
-    @PutMapping("/{id}/enable")
+    @PutMapping(ApiPaths.ID_PARAM + ApiPaths.ENABLE)
     @Operation(summary = "Enable user (Admin only)", description = "Enable user account")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> enableUser(@PathVariable Long id) {
@@ -107,7 +107,7 @@ public class UserManagementController extends BaseController {
         return ok("User enabled successfully");
     }
 
-    @PutMapping("/{id}/disable")
+    @PutMapping(ApiPaths.ID_PARAM + ApiPaths.DISABLE)
     @Operation(summary = "Disable user (Admin only)", description = "Disable user account")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> disableUser(@PathVariable Long id) {
@@ -115,7 +115,7 @@ public class UserManagementController extends BaseController {
         return ok("User disabled successfully");
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping(ApiPaths.ID_PARAM)
     @Operation(summary = "Delete user (Admin only)", description = "Delete user account")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long id) {

@@ -7,6 +7,7 @@ import org.de013.userservice.security.CustomUserDetailsService;
 import org.de013.userservice.security.JwtAuthenticationEntryPoint;
 import org.de013.userservice.security.JwtAuthenticationFilter;
 import org.de013.userservice.security.JwtTokenProvider;
+import org.de013.userservice.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -43,15 +44,18 @@ public class SecurityConfig {
     private final UserRepository userRepository;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final PasswordEncoder passwordEncoder;
+    private final TokenBlacklistService tokenBlacklistService;
 
     public SecurityConfig(@Qualifier("customUserDetailsService") UserDetailsService userDetailsService,
-                         UserRepository userRepository,
-                         JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-                         PasswordEncoder passwordEncoder) {
+                          UserRepository userRepository,
+                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+                          PasswordEncoder passwordEncoder,
+                          TokenBlacklistService tokenBlacklistService) {
         this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.passwordEncoder = passwordEncoder;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @Value("${app.cors.allowed-origins}")
@@ -78,7 +82,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtTokenProvider(), userDetailsService);
+        return new JwtAuthenticationFilter(jwtTokenProvider(), userDetailsService, tokenBlacklistService);
     }
 
     @Bean

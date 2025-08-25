@@ -8,6 +8,7 @@ import org.de013.userservice.entity.User;
 import org.de013.common.exception.BusinessException;
 import org.de013.userservice.security.JwtTokenProvider;
 import org.de013.userservice.service.AuthService;
+import org.de013.userservice.service.TokenBlacklistService;
 import org.de013.userservice.service.UserManagementService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -32,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     public AuthResponse register(UserRegistrationDto request) {
@@ -145,8 +147,8 @@ public class AuthServiceImpl implements AuthService {
             // Extract username from token for logging
             String username = jwtTokenProvider.getUsernameFromToken(token);
             
-            // TODO: Implement token blacklisting/invalidation
-            // For now, we'll just log the logout event
+            // Blacklist the token to invalidate it
+            tokenBlacklistService.blacklistToken(token, jwtTokenProvider.getExpirationDateFromToken(token).toInstant());
             
             logAuthenticationEvent("LOGOUT_SUCCESS", username, null);
             log.info("User logged out successfully: {}", username);

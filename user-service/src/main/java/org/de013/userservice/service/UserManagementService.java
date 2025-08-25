@@ -1,5 +1,6 @@
 package org.de013.userservice.service;
 
+import org.de013.common.dto.PageResponse;
 import org.de013.userservice.dto.*;
 import org.de013.userservice.entity.User;
 import org.springframework.data.domain.Page;
@@ -98,7 +99,7 @@ public interface UserManagementService {
      * @param pageable Pagination parameters
      * @return Page of user responses
      */
-    Page<UserResponse> getAllUsers(Pageable pageable);
+    PageResponse<UserResponse> getAllUsers(Pageable pageable);
 
     /**
      * Search users by keyword
@@ -106,7 +107,7 @@ public interface UserManagementService {
      * @param pageable Pagination parameters
      * @return Page of user responses
      */
-    Page<UserResponse> searchUsers(String keyword, Pageable pageable);
+    PageResponse<UserResponse> searchUsers(String keyword, Pageable pageable);
 
     /**
      * Get users by role
@@ -128,7 +129,7 @@ public interface UserManagementService {
      * @param pageable Pagination parameters
      * @return Page of user responses
      */
-    Page<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    PageResponse<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
     // ========== User Status Management ==========
 

@@ -22,7 +22,7 @@ public class UserController extends BaseController {
 
     @GetMapping(ApiPaths.ID_PARAM)
     @Operation(summary = "Get user by ID", description = "Retrieve user information by user ID")
-    public ResponseEntity<ApiResponse<UserResponse>> getUserById(
+    public ResponseEntity<ApiResponse<UserResponse>> getUserById (
             @Parameter(description = "User ID", required = true)
             @PathVariable Long id) {
 

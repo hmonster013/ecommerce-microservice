@@ -7,6 +7,7 @@ import org.de013.common.exception.ResourceNotFoundException;
 import org.de013.userservice.dto.*;
 import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
+import org.de013.userservice.mapper.UserMapper;
 import org.de013.userservice.repository.RoleRepository;
 import org.de013.userservice.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -32,7 +33,8 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    
+    private final UserMapper userMapper;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
@@ -72,24 +74,24 @@ public class UserService implements UserDetailsService {
         User savedUser = userRepository.save(user);
         log.info("User registered successfully: {}", savedUser.getUsername());
         
-        return mapToUserResponse(savedUser);
+        return userMapper.convertToUserResponse(savedUser);
     }
     
     public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
-        return mapToUserResponse(user);
+        return userMapper.convertToUserResponse(user);
     }
     
     public UserResponse getUserByUsername(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
-        return mapToUserResponse(user);
+        return userMapper.convertToUserResponse(user);
     }
     
     public Page<UserResponse> getAllUsers(Pageable pageable) {
         return userRepository.findAll(pageable)
-                .map(this::mapToUserResponse);
+                .map(userMapper::convertToUserResponse);
     }
     
     @Transactional
@@ -120,7 +122,7 @@ public class UserService implements UserDetailsService {
         }
         
         User updatedUser = userRepository.save(user);
-        return mapToUserResponse(updatedUser);
+        return userMapper.convertToUserResponse(updatedUser);
     }
     
     @Transactional
@@ -129,21 +131,5 @@ public class UserService implements UserDetailsService {
             throw new ResourceNotFoundException("User", "id", id);
         }
         userRepository.deleteById(id);
-    }
-    
-    private UserResponse mapToUserResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .phone(user.getPhone())
-                .address(user.getAddress())
-                .roles(user.getRoles().stream().map(Role::getName).toList())
-                .enabled(user.isEnabled())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
     }
 }

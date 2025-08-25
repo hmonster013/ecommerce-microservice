@@ -35,7 +35,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <springdoc.version>2.2.0</springdoc.version>
+        <springdoc.version>2.5.0</springdoc.version>
     </properties>
     <dependencyManagement>
         <dependencies>
