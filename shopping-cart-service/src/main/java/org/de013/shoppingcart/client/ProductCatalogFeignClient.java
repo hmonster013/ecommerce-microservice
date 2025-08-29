@@ -13,7 +13,7 @@ import java.util.Map;
  */
 @FeignClient(
     name = "product-catalog-service",
-    path = "/api/v1/products",
+    path = "/products", // Service-to-service calls use internal paths
     fallback = ProductCatalogFallback.class
 )
 public interface ProductCatalogFeignClient {

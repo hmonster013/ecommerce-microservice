@@ -13,7 +13,7 @@ import org.de013.productcatalog.entity.enums.ReviewStatus;
 import org.de013.productcatalog.repository.ProductRepository;
 import org.de013.productcatalog.repository.ReviewRepository;
 import org.de013.productcatalog.service.ReviewService;
-import org.de013.productcatalog.util.EntityMapper;
+import org.de013.productcatalog.mapper.ReviewMapper;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -36,7 +36,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
-    private final EntityMapper entityMapper;
+    private final ReviewMapper reviewMapper;
 
     @Override
     @Transactional
@@ -72,7 +72,7 @@ public class ReviewServiceImpl implements ReviewService {
         clearProductReviewCache(createDto.getProductId());
         
         log.info("Review created successfully with ID: {}", review.getId());
-        return entityMapper.toReviewResponseDto(review);
+        return reviewMapper.toReviewResponseDto(review);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class ReviewServiceImpl implements ReviewService {
         clearProductReviewCache(review.getProduct().getId());
         
         log.info("Review updated successfully with ID: {}", id);
-        return entityMapper.toReviewResponseDto(review);
+        return reviewMapper.toReviewResponseDto(review);
     }
 
     @Override
@@ -118,7 +118,7 @@ public class ReviewServiceImpl implements ReviewService {
         log.debug("Getting review by ID: {}", id);
         
         Review review = findReviewById(id);
-        return entityMapper.toReviewResponseDto(review);
+        return reviewMapper.toReviewResponseDto(review);
     }
 
     @Override
@@ -173,7 +173,7 @@ public class ReviewServiceImpl implements ReviewService {
         List<Review> reviews = reviewsPage.getContent();
         
         return reviews.stream()
-                .map(entityMapper::toReviewResponseDto)
+                .map(reviewMapper::toReviewResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -186,7 +186,7 @@ public class ReviewServiceImpl implements ReviewService {
         List<Review> reviews = reviewRepository.findMostHelpfulByProductId(productId, pageable);
         
         return reviews.stream()
-                .map(entityMapper::toReviewResponseDto)
+                .map(reviewMapper::toReviewResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -215,7 +215,7 @@ public class ReviewServiceImpl implements ReviewService {
         clearProductReviewCache(review.getProduct().getId());
         
         log.info("Review approved successfully with ID: {}", id);
-        return entityMapper.toReviewResponseDto(review);
+        return reviewMapper.toReviewResponseDto(review);
     }
 
     @Override
@@ -236,7 +236,7 @@ public class ReviewServiceImpl implements ReviewService {
         clearProductReviewCache(review.getProduct().getId());
         
         log.info("Review rejected successfully with ID: {}", id);
-        return entityMapper.toReviewResponseDto(review);
+        return reviewMapper.toReviewResponseDto(review);
     }
 
     @Override
@@ -254,7 +254,7 @@ public class ReviewServiceImpl implements ReviewService {
         review = reviewRepository.save(review);
         
         log.info("Review flagged successfully with ID: {}", id);
-        return entityMapper.toReviewResponseDto(review);
+        return reviewMapper.toReviewResponseDto(review);
     }
 
     @Override
@@ -273,7 +273,7 @@ public class ReviewServiceImpl implements ReviewService {
         
         log.info("Bulk moderation completed for {} reviews", reviewIds.size());
         return reviews.stream()
-                .map(entityMapper::toReviewResponseDto)
+                .map(reviewMapper::toReviewResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -349,7 +349,7 @@ public class ReviewServiceImpl implements ReviewService {
         log.debug("Getting user review for product ID: {} and user ID: {}", productId, userId);
         
         Optional<Review> review = reviewRepository.findByProductIdAndUserId(productId, userId);
-        return review.map(entityMapper::toReviewResponseDto);
+        return review.map(reviewMapper::toReviewResponseDto);
     }
 
     @Override
@@ -367,7 +367,7 @@ public class ReviewServiceImpl implements ReviewService {
         clearReviewCache(reviewId);
         
         Review review = findReviewById(reviewId);
-        return entityMapper.toReviewResponseDto(review);
+        return reviewMapper.toReviewResponseDto(review);
     }
 
     @Override
@@ -379,7 +379,7 @@ public class ReviewServiceImpl implements ReviewService {
         clearReviewCache(reviewId);
         
         Review review = findReviewById(reviewId);
-        return entityMapper.toReviewResponseDto(review);
+        return reviewMapper.toReviewResponseDto(review);
     }
 
     // Helper methods
@@ -395,7 +395,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     private PageResponse<ReviewResponseDto> mapToPageResponse(Page<Review> reviews) {
         List<ReviewResponseDto> content = reviews.getContent().stream()
-                .map(entityMapper::toReviewResponseDto)
+                .map(reviewMapper::toReviewResponseDto)
                 .collect(Collectors.toList());
         
         return PageResponse.<ReviewResponseDto>builder()

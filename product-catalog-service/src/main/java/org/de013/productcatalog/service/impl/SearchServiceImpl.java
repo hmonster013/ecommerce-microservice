@@ -13,7 +13,7 @@ import org.de013.productcatalog.repository.CategoryRepository;
 import org.de013.productcatalog.repository.ProductRepository;
 import org.de013.productcatalog.repository.specification.ProductSpecification;
 import org.de013.productcatalog.service.SearchService;
-import org.de013.productcatalog.util.EntityMapper;
+import org.de013.productcatalog.mapper.ProductMapper;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,7 +37,7 @@ public class SearchServiceImpl implements SearchService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
-    private final EntityMapper entityMapper;
+    private final ProductMapper productMapper;
 
     @Override
     @Cacheable(value = "search_results", key = "#searchDto.hashCode()")
@@ -59,7 +59,7 @@ public class SearchServiceImpl implements SearchService {
         
         // Map to DTOs
         List<ProductSummaryDto> productDtos = products.getContent().stream()
-                .map(entityMapper::toProductSummaryDto)
+                .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
         
         // Build search result
@@ -340,7 +340,7 @@ public class SearchServiceImpl implements SearchService {
 
     private PageResponse<ProductSummaryDto> mapToPageResponse(Page<Product> products) {
         List<ProductSummaryDto> content = products.getContent().stream()
-                .map(entityMapper::toProductSummaryDto)
+                .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
         
         return PageResponse.<ProductSummaryDto>builder()

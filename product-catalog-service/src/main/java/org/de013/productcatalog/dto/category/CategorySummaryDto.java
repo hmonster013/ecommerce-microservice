@@ -1,8 +1,11 @@
 package org.de013.productcatalog.dto.category;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+
+import java.io.Serializable;
 
 @Getter
 @Setter
@@ -10,8 +13,11 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Category summary for listings")
-public class CategorySummaryDto {
+public class CategorySummaryDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Schema(description = "Category ID", example = "1")
     private Long id;

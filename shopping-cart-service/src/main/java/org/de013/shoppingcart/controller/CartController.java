@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.security.UserContext;
+import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.ApplyCouponDto;
 import org.de013.shoppingcart.dto.request.CartCheckoutDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
@@ -20,6 +22,7 @@ import org.de013.shoppingcart.service.CartValidationService;
 import org.de013.shoppingcart.service.PricingService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -30,7 +33,7 @@ import java.util.Optional;
  * Provides endpoints for cart management including CRUD operations, coupon management, and checkout preparation
  */
 @RestController
-@RequestMapping("/api/v1/carts")
+@RequestMapping("/carts") // Gateway routes /api/v1/cart/** to /cart/**
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Cart Management", description = "APIs for shopping cart operations")
@@ -52,27 +55,36 @@ public class CartController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
+    // Allow both authenticated users and guests with sessionId
     public ResponseEntity<CartResponseDto> getOrCreateCart(
-            @Parameter(description = "User ID for authenticated users") 
-            @RequestParam(required = false) String userId,
-            @Parameter(description = "Session ID for guest users") 
+            @Parameter(description = "Session ID for guest users (optional if user is authenticated)")
             @RequestParam(required = false) String sessionId) {
-        
+
         try {
-            log.debug("Getting or creating cart for user: {}, session: {}", userId, sessionId);
-            
+            // Get user context from API Gateway headers
+            UserContext userContext = UserContextHolder.getCurrentUser();
+            String userId = null;
+
+            if (userContext != null) {
+                userId = String.valueOf(userContext.getUserId());
+                log.debug("Getting or creating cart for authenticated user: {} (ID: {})",
+                         userContext.getUsername(), userId);
+            } else {
+                log.debug("Getting or creating cart for guest session: {}", sessionId);
+            }
+
             if (userId == null && sessionId == null) {
                 return ResponseEntity.badRequest().build();
             }
-            
+
             CartResponseDto cart = cartService.getOrCreateCart(userId, sessionId);
-            
+
             // Return 201 if cart was just created, 200 if existing
-            HttpStatus status = cart.getCreatedAt().equals(cart.getUpdatedAt()) ? 
+            HttpStatus status = cart.getCreatedAt().equals(cart.getUpdatedAt()) ?
                 HttpStatus.CREATED : HttpStatus.OK;
-            
+
             return ResponseEntity.status(status).body(cart);
-            
+
         } catch (Exception e) {
             log.error("Error getting or creating cart: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

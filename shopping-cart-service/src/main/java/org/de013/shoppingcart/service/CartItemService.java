@@ -2,6 +2,8 @@ package org.de013.shoppingcart.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.security.UserContext;
+import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.ProductInfo;
 import org.de013.shoppingcart.dto.request.AddToCartDto;
 import org.de013.shoppingcart.dto.request.RemoveFromCartDto;
@@ -95,8 +97,10 @@ public class CartItemService {
             updateRedisCart(cartId);
             
             // Record analytics
+            UserContext userContext = UserContextHolder.getCurrentUser();
+            String userId = userContext != null ? String.valueOf(userContext.getUserId()) : null;
             recordItemAnalytics(CartAnalytics.createItemAddedEvent(
-                cartId, request.getUserId(), request.getSessionId(), 
+                cartId, userId, request.getSessionId(),
                 request.getProductId(), request.getQuantity(), cartItem.getUnitPrice()));
             
             log.info("Added item {} to cart {}, quantity: {}", 

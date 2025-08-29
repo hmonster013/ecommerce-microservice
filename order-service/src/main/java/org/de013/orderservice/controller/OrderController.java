@@ -1,6 +1,9 @@
 package org.de013.orderservice.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.de013.common.security.UserContext;
+import org.de013.common.security.UserContextHolder;
 import org.de013.orderservice.dto.request.CancelOrderRequest;
 import org.de013.orderservice.dto.request.CreateOrderRequest;
 import org.de013.orderservice.dto.request.UpdateOrderRequest;
@@ -12,11 +15,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/orders") // Gateway routes /api/v1/orders/** to /orders/**
 @RequiredArgsConstructor
+@Slf4j
 public class OrderController {
 
     private final OrderService orderService;
@@ -24,34 +29,59 @@ public class OrderController {
     private final OrderSearchRepository orderSearchRepository;
 
     @PostMapping
+    @PreAuthorize("@orderSecurity.isAuthenticated()")
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse create(@RequestBody CreateOrderRequest request) {
+        // Get current user context from headers set by API Gateway
+        UserContext userContext = UserContextHolder.getCurrentUser();
+        if (userContext != null) {
+            log.info("Creating order for user: {} (ID: {})", userContext.getUsername(), userContext.getUserId());
+            // You can set userId in request if needed
+            // request.setUserId(userContext.getUserId());
+        }
         return processingService.placeOrder(request);
     }
 
     @GetMapping("/{orderId}")
+    @PreAuthorize("@orderSecurity.canAccessOrder(#orderId)")
     public OrderResponse get(@PathVariable Long orderId) {
+        log.debug("Getting order {}", orderId);
         return orderService.getOrderById(orderId);
     }
 
     @PutMapping("/{orderId}")
+    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
     public OrderResponse update(@PathVariable Long orderId, @RequestBody UpdateOrderRequest request) {
+        log.debug("Updating order {}", orderId);
         return orderService.updateOrder(orderId, request);
     }
 
     @DeleteMapping("/{orderId}")
+    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancel(@PathVariable Long orderId, @RequestBody(required = false) CancelOrderRequest request) {
+        log.debug("Cancelling order {}", orderId);
         CancelOrderRequest req = request != null ? request : new CancelOrderRequest();
         orderService.cancelOrder(orderId, req);
     }
 
     @GetMapping("/user/{userId}")
+    @PreAuthorize("@orderSecurity.canAccessUserOrders(#userId)")
     public Page<OrderResponse> listByUser(@PathVariable Long userId, Pageable pageable) {
+        log.debug("Getting orders for user {}", userId);
         return orderService.listOrdersByUser(userId, pageable);
     }
 
+    @GetMapping("/my-orders")
+    @PreAuthorize("@orderSecurity.isAuthenticated()")
+    public Page<OrderResponse> getMyOrders(Pageable pageable) {
+        UserContext userContext = UserContextHolder.requireAuthenticated();
+        log.info("User {} requesting their orders", userContext.getUsername());
+        return orderService.listOrdersByUser(userContext.getUserId(), pageable);
+    }
+
     @GetMapping("/search")
+    @PreAuthorize("@orderSecurity.isAdmin()")
     public Page<OrderResponse> search(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Long userId,

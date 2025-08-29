@@ -23,7 +23,7 @@ import java.util.Map;
  * Provides endpoints for comprehensive cart and item validation
  */
 @RestController
-@RequestMapping("/api/v1/validation")
+@RequestMapping("/validation") // Gateway routes /api/v1/cart/** to /cart/**
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Cart Validation", description = "APIs for cart and item validation")

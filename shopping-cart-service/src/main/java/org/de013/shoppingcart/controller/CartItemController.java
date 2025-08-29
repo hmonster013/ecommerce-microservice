@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.security.UserContext;
+import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.AddToCartDto;
 import org.de013.shoppingcart.dto.request.RemoveFromCartDto;
 import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
@@ -29,7 +31,7 @@ import java.util.Map;
  * Provides endpoints for managing items within shopping carts
  */
 @RestController
-@RequestMapping("/api/v1/cart-items")
+@RequestMapping("/cart-items") // Gateway routes /api/v1/cart/** to /cart/**
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Cart Items", description = "APIs for cart item management")
@@ -57,16 +59,28 @@ public class CartItemController {
         
         try {
             log.debug("Adding item {} to cart", request.getProductId());
-            
+
+            // Get user context from API Gateway headers
+            UserContext userContext = UserContextHolder.getCurrentUser();
+            String userId = null;
+
+            if (userContext != null) {
+                userId = String.valueOf(userContext.getUserId());
+                log.debug("Adding item for authenticated user: {} (ID: {})",
+                         userContext.getUsername(), userId);
+            } else {
+                log.debug("Adding item for guest session: {}", request.getSessionId());
+            }
+
             // Get or create cart first
-            CartResponseDto cart = cartService.getOrCreateCart(request.getUserId(), request.getSessionId());
-            
+            CartResponseDto cart = cartService.getOrCreateCart(userId, request.getSessionId());
+
             // Add item to cart
             CartItemResponseDto cartItem = cartItemService.addItemToCart(cart.getCartId(), request);
-            
+
             // Update cart totals
             cartService.updateCartTotals(cart.getCartId());
-            
+
             return ResponseEntity.status(HttpStatus.CREATED).body(cartItem);
             
         } catch (RuntimeException e) {

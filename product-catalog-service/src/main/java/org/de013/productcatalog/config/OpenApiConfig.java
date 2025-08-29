@@ -1,9 +1,12 @@
 package org.de013.productcatalog.config;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,13 +74,10 @@ public class OpenApiConfig {
                 .servers(List.of(
                         new Server()
                                 .url("http://localhost:" + serverPort)
-                                .description("Development Server"),
+                                .description("Direct Service Access (Development)"),
                         new Server()
-                                .url("http://localhost:8080")
-                                .description("API Gateway"),
-                        new Server()
-                                .url("https://api.de013.org")
-                                .description("Production Server")))
+                                .url("http://localhost:8080/api/v1/productsv")
+                                .description("API Gateway (Development)")))
                 .tags(List.of(
                         new Tag()
                                 .name("Products")
@@ -93,15 +93,33 @@ public class OpenApiConfig {
                                 .description("Inventory management operations - Stock tracking and availability"),
                         new Tag()
                                 .name("Reviews")
-                                .description("Review management operations - Customer reviews and ratings"),
-                        new Tag()
-                                .name("Analytics")
-                                .description("Search analytics and business intelligence operations"),
-                        new Tag()
-                                .name("Cache")
-                                .description("Cache management operations - Performance optimization"),
-                        new Tag()
-                                .name("Health")
-                                .description("Health check and monitoring operations")));
+                                .description("Review management operations - Customer reviews and ratings")))
+                .addSecurityItem(securityRequirement())
+                .components(securityComponents());
+    }
+
+    private SecurityRequirement securityRequirement() {
+        return new SecurityRequirement()
+                .addList("Bearer Authentication");
+    }
+
+    private Components securityComponents() {
+        return new Components()
+                .addSecuritySchemes("Bearer Authentication", securityScheme());
+    }
+
+    private SecurityScheme securityScheme() {
+        return new SecurityScheme()
+                .name("Bearer Authentication")
+                .type(SecurityScheme.Type.HTTP)
+                .scheme("bearer")
+                .bearerFormat("JWT")
+                .description("""
+                    JWT Authorization header using the Bearer scheme.
+
+                    Enter 'Bearer' [space] and then your token in the text input below.
+
+                    Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    """);
     }
 }

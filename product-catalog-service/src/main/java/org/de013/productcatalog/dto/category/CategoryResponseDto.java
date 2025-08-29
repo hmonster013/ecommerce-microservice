@@ -1,10 +1,12 @@
 package org.de013.productcatalog.dto.category;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -14,8 +16,11 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Category response")
-public class CategoryResponseDto {
+public class CategoryResponseDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Schema(description = "Category ID", example = "1")
     private Long id;
@@ -76,7 +81,9 @@ public class CategoryResponseDto {
     @AllArgsConstructor
     @Builder
     @Schema(description = "Category breadcrumb")
-    public static class CategoryBreadcrumb {
+    public static class CategoryBreadcrumb implements Serializable {
+
+        private static final long serialVersionUID = 1L;
         
         @Schema(description = "Category ID", example = "1")
         private Long id;

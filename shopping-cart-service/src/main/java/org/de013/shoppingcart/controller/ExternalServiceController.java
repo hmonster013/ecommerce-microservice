@@ -21,7 +21,7 @@ import java.util.Map;
  * Provides endpoints for external service integration and webhooks
  */
 @RestController
-@RequestMapping("/api/v1/external")
+@RequestMapping("/external") // Gateway routes /api/v1/cart/** to /cart/**
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "External Service Integration", description = "APIs for external service integration and webhooks")

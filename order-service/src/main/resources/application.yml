@@ -13,6 +13,11 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+  # Enable ANSI colors in console output
+  output:
+    ansi:
+      enabled: always
+
   # Database Configuration
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/order_service_db}
@@ -96,12 +101,8 @@ spring:
     validate-on-migrate: true
     clean-disabled: true
 
-  # Security Configuration
-  security:
-    jwt:
-      secret: ${JWT_SECRET:mySecretKey}
-      expiration: 86400000 # 24 hours
-      refresh-expiration: 604800000 # 7 days
+  # Authentication handled by API Gateway
+  # No JWT configuration needed in microservices
 
 # Eureka Configuration
 eureka:
@@ -185,8 +186,10 @@ springdoc:
       name: Development Team
       email: dev@de013.org
   servers:
-    - url: http://localhost:8084/api/v1
-      description: Development server
+    - url: http://localhost:8084
+      description: Direct Service Access (Development)
+    - url: http://localhost:8080/api/v1/orders
+      description: API Gateway (Development)
 
 # Feign Configuration
 feign:

@@ -6,9 +6,11 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.de013.common.config.SwaggerConfig;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @SpringBootApplication
 @EnableDiscoveryClient
+@EnableJpaAuditing
 @ComponentScan(
     basePackages = {"org.de013.userservice", "org.de013.common"},
     excludeFilters = @ComponentScan.Filter(

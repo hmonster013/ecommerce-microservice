@@ -21,10 +21,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.USERS)
+@RequestMapping(ApiPaths.USERS)
 @RequiredArgsConstructor
 @Tag(name = "User Management", description = "User profile and administration endpoints")
-@SecurityRequirement(name = "Bearer Authentication")
 public class UserManagementController extends BaseController {
 
     private final UserManagementService userManagementService;
@@ -44,10 +43,10 @@ public class UserManagementController extends BaseController {
     @Operation(summary = "Update user profile", description = "Update current user's profile information")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserProfile(
             Authentication authentication,
-            @Valid @RequestBody UserUpdateDto request) {
-        
+            @Valid @RequestBody UserUpdateDto updateRequest) {
+
         String username = authentication.getName();
-        UserResponse updatedUser = userManagementService.updateUserProfile(username, request);
+        UserResponse updatedUser = userManagementService.updateUserProfile(username, updateRequest);
         return ok(updatedUser);
     }
 
@@ -55,10 +54,10 @@ public class UserManagementController extends BaseController {
     @Operation(summary = "Change password", description = "Change current user's password")
     public ResponseEntity<ApiResponse<String>> changePassword(
             Authentication authentication,
-            @Valid @RequestBody ChangePasswordDto request) {
-        
+            @Valid @RequestBody ChangePasswordDto changePasswordRequest) {
+
         String username = authentication.getName();
-        authService.changePassword(request, username);
+        authService.changePassword(changePasswordRequest, username);
         return ok("Password changed successfully");
     }
 
@@ -70,7 +69,7 @@ public class UserManagementController extends BaseController {
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(
             @Parameter(description = "User ID", required = true)
             @PathVariable Long id) {
-        
+
         UserResponse user = userManagementService.getUserById(id);
         return ok(user);
     }

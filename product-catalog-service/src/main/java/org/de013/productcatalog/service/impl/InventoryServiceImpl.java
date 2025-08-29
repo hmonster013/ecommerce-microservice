@@ -11,7 +11,7 @@ import org.de013.productcatalog.entity.Product;
 import org.de013.productcatalog.repository.InventoryRepository;
 import org.de013.productcatalog.repository.ProductRepository;
 import org.de013.productcatalog.service.InventoryService;
-import org.de013.productcatalog.util.EntityMapper;
+import org.de013.productcatalog.mapper.InventoryMapper;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -30,7 +30,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
-    private final EntityMapper entityMapper;
+    private final InventoryMapper inventoryMapper;
 
     @Override
     @Cacheable(value = "inventory", key = "#productId")
@@ -38,7 +38,7 @@ public class InventoryServiceImpl implements InventoryService {
         log.debug("Getting inventory for product ID: {}", productId);
         
         Inventory inventory = findInventoryByProductId(productId);
-        return entityMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryResponseDto(inventory);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = inventoryRepository.save(inventory);
         
         log.info("Inventory updated successfully for product ID: {}", productId);
-        return entityMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryResponseDto(inventory);
     }
 
     @Override
@@ -84,7 +84,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = inventoryRepository.save(inventory);
         
         log.info("Inventory created successfully for product ID: {}", productId);
-        return entityMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryResponseDto(inventory);
     }
 
     @Override
@@ -93,7 +93,7 @@ public class InventoryServiceImpl implements InventoryService {
         
         List<Inventory> inventories = inventoryRepository.findInStockInventories();
         return inventories.stream()
-                .map(entityMapper::toInventoryResponseDto)
+                .map(inventoryMapper::toInventoryResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -111,7 +111,7 @@ public class InventoryServiceImpl implements InventoryService {
         
         List<Inventory> inventories = inventoryRepository.findOutOfStockInventories();
         return inventories.stream()
-                .map(entityMapper::toInventoryResponseDto)
+                .map(inventoryMapper::toInventoryResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -129,7 +129,7 @@ public class InventoryServiceImpl implements InventoryService {
         
         List<Inventory> inventories = inventoryRepository.findLowStockInventories();
         return inventories.stream()
-                .map(entityMapper::toInventoryResponseDto)
+                .map(inventoryMapper::toInventoryResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -197,7 +197,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = inventoryRepository.save(inventory);
         
         log.info("Added {} stock to product ID: {}, new quantity: {}", quantity, productId, inventory.getQuantity());
-        return entityMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryResponseDto(inventory);
     }
 
     @Override
@@ -216,7 +216,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = inventoryRepository.save(inventory);
         
         log.info("Removed {} stock from product ID: {}, new quantity: {}", quantity, productId, inventory.getQuantity());
-        return entityMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryResponseDto(inventory);
     }
 
     @Override
@@ -236,7 +236,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = inventoryRepository.save(inventory);
         
         log.info("Adjusted stock by {} for product ID: {}, new quantity: {}", adjustment, productId, inventory.getQuantity());
-        return entityMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryResponseDto(inventory);
     }
 
     @Override
@@ -255,7 +255,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = inventoryRepository.save(inventory);
         
         log.info("Set stock to {} for product ID: {}", quantity, productId);
-        return entityMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryResponseDto(inventory);
     }
 
     @Override
@@ -348,7 +348,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     private PageResponse<InventoryResponseDto> mapToPageResponse(Page<Inventory> inventories) {
         List<InventoryResponseDto> content = inventories.getContent().stream()
-                .map(entityMapper::toInventoryResponseDto)
+                .map(inventoryMapper::toInventoryResponseDto)
                 .collect(Collectors.toList());
         
         return PageResponse.<InventoryResponseDto>builder()

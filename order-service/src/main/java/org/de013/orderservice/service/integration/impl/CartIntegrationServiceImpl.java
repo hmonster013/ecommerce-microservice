@@ -25,7 +25,7 @@ public class CartIntegrationServiceImpl implements CartIntegrationService {
                 .userId(userId)
                 .cartId(cart.getCartId())
                 .orderType(OrderType.STANDARD)
-                .shippingAddress(Address.builder().country("US").city("Unknown").line1("TBD").postalCode("00000").build())
+                .shippingAddress(Address.builder().country("US").city("Unknown").streetAddress("TBD").postalCode("00000").build())
                 .billingAddress(null)
                 .paymentMethod(CreateOrderRequest.PaymentMethodDto.builder().type("CASH_ON_DELIVERY").authorizeOnly(true).build())
                 .shippingMethod("STANDARD")

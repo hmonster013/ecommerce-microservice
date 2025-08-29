@@ -7,6 +7,11 @@ spring:
   profiles:
     active: dev
 
+  # Enable ANSI colors in console output
+  output:
+    ansi:
+      enabled: always
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shopping_cart_db}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
@@ -66,21 +71,11 @@ management:
     health:
       show-details: always
 
-# JWT Configuration
-jwt:
-  secret: ${JWT_SECRET:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}
-  expiration: ${JWT_EXPIRATION:900000}  # 15 minutes
-  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
-  issuer: ${JWT_ISSUER:ecommerce-platform}
-  algorithm: ${JWT_ALGORITHM:HS256}
+# Authentication and CORS handled by API Gateway
+# No JWT or CORS configuration needed in microservices
 
 # Application Configuration
 app:
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
-    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
-    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
-    allow-credentials: true
 
   security:
     rate-limit:
@@ -119,9 +114,14 @@ springdoc:
     defaultModelExpandDepth: 1
   show-actuator: false
   group-configs:
-    - group: 'shopping-cart-service'
-      display-name: 'Shopping Cart Service API'
-      paths-to-match: '/api/**'
+    - group: 'shopping-cart-service-v1'
+      display-name: 'Shopping Cart Service API (v1)'
+      paths-to-match:
+        - '/carts/**'
+        - '/cart-items/**'
+        - '/validation/**'
+        - '/external/**'
+        - '/health/**'
 
 logging:
   level:

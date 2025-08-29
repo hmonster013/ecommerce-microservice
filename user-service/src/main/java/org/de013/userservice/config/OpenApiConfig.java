@@ -86,13 +86,10 @@ public class OpenApiConfig {
         return List.of(
                 new Server()
                         .url("http://localhost:" + serverPort)
-                        .description("Local Development Server"),
+                        .description("Direct Service Access (Development)"),
                 new Server()
-                        .url("http://localhost:8080/api/users")
-                        .description("API Gateway (Local)"),
-                new Server()
-                        .url("https://api.de013.org/users")
-                        .description("Production Server")
+                        .url("http://localhost:8080/api/v1/usersv")
+                        .description("API Gateway (Development)")
         );
     }
 

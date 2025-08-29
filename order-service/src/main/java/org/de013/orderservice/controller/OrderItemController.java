@@ -7,7 +7,7 @@ import org.de013.orderservice.service.OrderRefundService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/orders") // Gateway routes /api/v1/orders/** to /orders/**
 @RequiredArgsConstructor
 public class OrderItemController {
 

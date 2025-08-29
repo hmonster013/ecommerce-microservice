@@ -63,12 +63,7 @@ public class AddToCartDto {
     @JsonProperty("gift_wrap_type")
     private String giftWrapType;
 
-    @Schema(description = "User ID (for authenticated users)", example = "user-123e4567-e89b-12d3-a456-426614174000")
-    @Size(max = 36, message = "{user.id.size}")
-    @JsonProperty("user_id")
-    private String userId;
-
-    @Schema(description = "Session ID (for guest users)", example = "sess-123e4567-e89b-12d3-a456-426614174000")
+    @Schema(description = "Session ID (for guest users only - authenticated users don't need this)", example = "sess-123e4567-e89b-12d3-a456-426614174000")
     @Size(max = 100, message = "{session.id.size}")
     @JsonProperty("session_id")
     private String sessionId;
@@ -84,15 +79,6 @@ public class AddToCartDto {
     private Boolean replaceExisting = false;
 
     /**
-     * Validate that either userId or sessionId is provided
-     */
-    @AssertTrue(message = "{user.or.session.required}")
-    public boolean isValidUserOrSession() {
-        return (userId != null && !userId.trim().isEmpty()) || 
-               (sessionId != null && !sessionId.trim().isEmpty());
-    }
-
-    /**
      * Validate gift message is provided when item is marked as gift
      */
     @AssertTrue(message = "{gift.message.required}")
@@ -104,24 +90,9 @@ public class AddToCartDto {
     }
 
     /**
-     * Check if this is for an authenticated user
-     */
-    public boolean isAuthenticatedUser() {
-        return userId != null && !userId.trim().isEmpty();
-    }
-
-    /**
      * Check if this is for a guest session
      */
     public boolean isGuestSession() {
-        return sessionId != null && !sessionId.trim().isEmpty() && 
-               (userId == null || userId.trim().isEmpty());
-    }
-
-    /**
-     * Get the identifier (userId or sessionId)
-     */
-    public String getIdentifier() {
-        return isAuthenticatedUser() ? userId : sessionId;
+        return sessionId != null && !sessionId.trim().isEmpty();
     }
 }

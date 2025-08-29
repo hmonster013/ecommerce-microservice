@@ -4,7 +4,12 @@ server:
 spring:
   application:
     name: notification-service
-  
+
+  # Enable ANSI colors in console output
+  output:
+    ansi:
+      enabled: always
+
   datasource:
     url: jdbc:postgresql://localhost:5432/notification_service_db
     username: postgres

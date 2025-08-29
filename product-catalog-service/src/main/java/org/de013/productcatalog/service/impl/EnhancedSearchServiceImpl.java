@@ -12,7 +12,7 @@ import org.de013.productcatalog.repository.ProductRepository;
 import org.de013.productcatalog.repository.SearchAnalyticsRepository;
 import org.de013.productcatalog.repository.specification.AdvancedProductSpecification;
 import org.de013.productcatalog.service.EnhancedSearchService;
-import org.de013.productcatalog.util.EntityMapper;
+import org.de013.productcatalog.mapper.ProductMapper;
 import org.de013.productcatalog.util.SearchUtils;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -41,7 +41,7 @@ public class EnhancedSearchServiceImpl implements EnhancedSearchService {
 
     private final ProductRepository productRepository;
     private final SearchAnalyticsRepository searchAnalyticsRepository;
-    private final EntityMapper entityMapper;
+    private final ProductMapper productMapper;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -64,7 +64,7 @@ public class EnhancedSearchServiceImpl implements EnhancedSearchService {
             
             // Convert to DTOs
             List<ProductSummaryDto> productDtos = productPage.getContent().stream()
-                    .map(entityMapper::toProductSummaryDto)
+                    .map(productMapper::toProductSummaryDto)
                     .collect(Collectors.toList());
             
             // Build search result

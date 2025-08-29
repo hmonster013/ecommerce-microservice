@@ -4,7 +4,12 @@ server:
 spring:
   application:
     name: payment-service
-  
+
+  # Enable ANSI colors in console output
+  output:
+    ansi:
+      enabled: always
+
   datasource:
     url: jdbc:postgresql://localhost:5432/payment_service_db
     username: postgres

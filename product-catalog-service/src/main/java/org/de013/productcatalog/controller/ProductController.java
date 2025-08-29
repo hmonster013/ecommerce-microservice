@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.*;
@@ -31,7 +32,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.PRODUCTS)
+@RequestMapping(ApiPaths.PRODUCTS)
 @RequiredArgsConstructor
 @Tag(name = "Products", description = "Product management API")
 public class ProductController {
@@ -96,7 +97,7 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "Product found"),
         @ApiResponse(responseCode = "404", description = "Product not found")
     })
-    @GetMapping("/sku/{sku}")
+    @GetMapping(ApiPaths.SKU_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductDetailDto>> getProductBySku(
             @Parameter(description = "Product SKU", required = true)
             @PathVariable String sku) {
@@ -253,7 +254,7 @@ public class ProductController {
     }
 
     @Operation(summary = "Get featured products")
-    @GetMapping("/featured")
+    @GetMapping(ApiPaths.FEATURED)
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<ProductSummaryDto>>> getFeaturedProducts(
             @RequestParam(required = false, defaultValue = "10") Integer limit,
             @RequestParam(required = false) Long categoryId) {
@@ -266,7 +267,7 @@ public class ProductController {
     }
 
     @Operation(summary = "Search products")
-    @PostMapping("/search")
+    @PostMapping(ApiPaths.SEARCH)
     public ResponseEntity<org.de013.common.dto.ApiResponse<SearchResultDto>> searchProducts(
             @Valid @RequestBody ProductSearchDto searchDto) {
         log.info("Searching products with criteria: {}", searchDto);
@@ -275,7 +276,7 @@ public class ProductController {
     }
 
     @Operation(summary = "Simple product search")
-    @GetMapping("/search")
+    @GetMapping(ApiPaths.SEARCH)
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<ProductSummaryDto>>> simpleSearch(
             @RequestParam String q,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {

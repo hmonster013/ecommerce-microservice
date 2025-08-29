@@ -35,5 +35,41 @@ public final class ApiPaths {
     public static final String SEARCH = "/search";
     public static final String ENABLE = "/enable";
     public static final String DISABLE = "/disable";
+
+    // Product Catalog specific endpoints
+    public static final String SLUG = "/slug";
+    public static final String SLUG_PARAM = "/slug/{slug}";
+    public static final String SKU = "/sku";
+    public static final String SKU_PARAM = "/sku/{sku}";
+    public static final String TREE = "/tree";
+    public static final String ROOT = "/root";
+    public static final String CHILDREN = "/children";
+    public static final String PATH = "/path";
+    public static final String FEATURED = "/featured";
+    public static final String ACTIVE = "/active";
+    public static final String MOVE = "/move";
+    public static final String REVIEWS = "/reviews";
+    public static final String INVENTORY = "/inventory";
+    public static final String LOW_STOCK = "/low-stock";
+    public static final String OUT_OF_STOCK = "/out-of-stock";
+    public static final String ALERTS = "/alerts";
+    public static final String REORDER = "/reorder";
+    public static final String ADD = "/add";
+    public static final String REMOVE = "/remove";
+    public static final String SET = "/set";
+    public static final String ADJUST = "/adjust";
+    public static final String RESERVE = "/reserve";
+    public static final String RELEASE = "/release";
+    public static final String FULFILL = "/fulfill";
+    public static final String STATS = "/stats";
+    public static final String CHECK = "/check";
+    public static final String MODERATE = "/moderate";
+    public static final String MODERATION = "/moderation";
+    public static final String BULK = "/bulk";
+    public static final String HELPFUL = "/helpful";
+    public static final String NOT_HELPFUL = "/not-helpful";
+    public static final String SUGGESTIONS = "/suggestions";
+    public static final String SUMMARY = "/summary";
+    public static final String RECENT = "/recent";
 }
 

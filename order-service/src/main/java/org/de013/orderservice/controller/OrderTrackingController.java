@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/orders") // Gateway routes /api/v1/orders/** to /orders/**
 @RequiredArgsConstructor
 public class OrderTrackingController {
 

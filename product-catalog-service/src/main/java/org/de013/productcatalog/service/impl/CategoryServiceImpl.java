@@ -10,7 +10,7 @@ import org.de013.productcatalog.exception.InvalidCategoryHierarchyException;
 import org.de013.productcatalog.repository.CategoryRepository;
 import org.de013.productcatalog.repository.ProductCategoryRepository;
 import org.de013.productcatalog.service.CategoryService;
-import org.de013.productcatalog.util.EntityMapper;
+import org.de013.productcatalog.mapper.CategoryMapper;
 import org.de013.productcatalog.util.SlugUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -35,7 +35,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ProductCategoryRepository productCategoryRepository;
-    private final EntityMapper entityMapper;
+    private final CategoryMapper categoryMapper;
 
     @Override
     @Transactional
@@ -75,7 +75,7 @@ public class CategoryServiceImpl implements CategoryService {
         category = categoryRepository.save(category);
         
         log.info("Category created successfully with ID: {}", category.getId());
-        return entityMapper.toCategoryResponseDto(category);
+        return categoryMapper.toCategoryResponseDto(category);
     }
 
     @Override
@@ -99,7 +99,7 @@ public class CategoryServiceImpl implements CategoryService {
         category = categoryRepository.save(category);
         
         log.info("Category updated successfully with ID: {}", id);
-        return entityMapper.toCategoryResponseDto(category);
+        return categoryMapper.toCategoryResponseDto(category);
     }
 
     @Override
@@ -133,7 +133,7 @@ public class CategoryServiceImpl implements CategoryService {
         log.debug("Getting category by ID: {}", id);
         
         Category category = findCategoryById(id);
-        return entityMapper.toCategoryResponseDto(category);
+        return categoryMapper.toCategoryResponseDto(category);
     }
 
     @Override
@@ -144,7 +144,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findBySlug(slug)
                 .orElseThrow(() -> new CategoryNotFoundException(slug));
         
-        return entityMapper.toCategoryResponseDto(category);
+        return categoryMapper.toCategoryResponseDto(category);
     }
 
     @Override
@@ -154,7 +154,7 @@ public class CategoryServiceImpl implements CategoryService {
         
         Page<Category> categories = categoryRepository.findAll(pageable);
         List<CategoryResponseDto> content = categories.getContent().stream()
-                .map(entityMapper::toCategoryResponseDto)
+                .map(categoryMapper::toCategoryResponseDto)
                 .collect(Collectors.toList());
         
         return PageResponse.<CategoryResponseDto>builder()
@@ -176,7 +176,7 @@ public class CategoryServiceImpl implements CategoryService {
         
         List<Category> categories = categoryRepository.findByIsActiveTrue();
         return categories.stream()
-                .map(entityMapper::toCategorySummaryDto)
+                .map(categoryMapper::toCategorySummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -187,7 +187,7 @@ public class CategoryServiceImpl implements CategoryService {
         
         List<Category> categories = categoryRepository.findByIsActiveTrueOrderByDisplayOrderAsc();
         return categories.stream()
-                .map(entityMapper::toCategorySummaryDto)
+                .map(categoryMapper::toCategorySummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -218,7 +218,7 @@ public class CategoryServiceImpl implements CategoryService {
         
         List<Category> categories = categoryRepository.findByParentIsNullAndIsActiveTrueOrderByDisplayOrderAsc();
         return categories.stream()
-                .map(entityMapper::toCategorySummaryDto)
+                .map(categoryMapper::toCategorySummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -229,7 +229,7 @@ public class CategoryServiceImpl implements CategoryService {
         
         List<Category> categories = categoryRepository.findByParentIdAndIsActiveTrueOrderByDisplayOrderAsc(parentId);
         return categories.stream()
-                .map(entityMapper::toCategorySummaryDto)
+                .map(categoryMapper::toCategorySummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -317,7 +317,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     private CategoryTreeDto buildCategoryTreeRecursive(Category category) {
-        CategoryTreeDto treeDto = entityMapper.toCategoryTreeDto(category);
+        CategoryTreeDto treeDto = categoryMapper.toCategoryTreeDto(category);
         
         List<Category> children = categoryRepository.findChildCategories(category.getId());
         if (!children.isEmpty()) {
@@ -334,7 +334,7 @@ public class CategoryServiceImpl implements CategoryService {
         // TODO: Implement tree building from flat list
         return categories.stream()
                 .filter(c -> c.getParent() == null)
-                .map(entityMapper::toCategoryTreeDto)
+                .map(categoryMapper::toCategoryTreeDto)
                 .collect(Collectors.toList());
     }
 

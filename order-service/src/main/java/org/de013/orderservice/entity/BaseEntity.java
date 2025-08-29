@@ -1,4 +1,4 @@
-package org.de013.common.entity;
+package org.de013.orderservice.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

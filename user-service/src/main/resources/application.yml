@@ -7,6 +7,11 @@ spring:
   profiles:
     active: dev
 
+  # Enable ANSI colors in console output
+  output:
+    ansi:
+      enabled: always
+
   cloud:
     compatibility-verifier:
       enabled: false
@@ -85,13 +90,8 @@ jwt:
   algorithm: ${JWT_ALGORITHM:HS256}
 
 # Application Configuration
+# CORS handled by API Gateway
 app:
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
-    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
-    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
-    allow-credentials: true
-
   security:
     password:
       min-length: ${PASSWORD_MIN_LENGTH:8}
@@ -128,9 +128,16 @@ springdoc:
     defaultModelExpandDepth: 1
   show-actuator: false
   group-configs:
-    - group: 'user-service'
-      display-name: 'User Service API'
-      paths-to-match: '/api/**'
+    - group: 'user-service-v1'
+      display-name: 'User Service API (v1)'
+      paths-to-match:
+        - '/users/**'
+        - '/auth/**'
+        - '/health/**'
+    - group: 'user-service-legacy'
+      display-name: 'User Service API (Legacy)'
+      paths-to-match:
+        - '/legacy/**'
 
 logging:
   level:

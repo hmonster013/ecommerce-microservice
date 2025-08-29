@@ -5,7 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "payment-service", path = "/api/v1/payments")
+@FeignClient(name = "payment-service", path = "/payments") // Service-to-service calls use internal paths
 public interface PaymentServiceClient {
 
     @PostMapping("/authorize")

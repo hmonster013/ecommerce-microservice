@@ -13,7 +13,7 @@ import org.de013.productcatalog.exception.ProductNotFoundException;
 import org.de013.productcatalog.repository.*;
 import org.de013.productcatalog.repository.specification.ProductSpecification;
 import org.de013.productcatalog.service.ProductService;
-import org.de013.productcatalog.util.EntityMapper;
+import org.de013.productcatalog.mapper.ProductMapper;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -40,7 +40,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final InventoryRepository inventoryRepository;
-    private final EntityMapper entityMapper;
+    private final ProductMapper productMapper;
 
     @Override
     @Transactional
@@ -81,7 +81,7 @@ public class ProductServiceImpl implements ProductService {
         }
         
         log.info("Product created successfully with ID: {}", product.getId());
-        return entityMapper.toProductResponseDto(product);
+        return productMapper.toProductResponseDto(product);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class ProductServiceImpl implements ProductService {
         product = productRepository.save(product);
         
         log.info("Product updated successfully with ID: {}", id);
-        return entityMapper.toProductResponseDto(product);
+        return productMapper.toProductResponseDto(product);
     }
 
     @Override
@@ -126,7 +126,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Getting product by ID: {}", id);
         
         Product product = findProductById(id);
-        return entityMapper.toProductDetailDto(product);
+        return productMapper.toProductDetailDto(product);
     }
 
     @Override
@@ -137,7 +137,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findBySku(sku)
                 .orElseThrow(() -> new RuntimeException("Product not found with SKU: " + sku));
         
-        return entityMapper.toProductDetailDto(product);
+        return productMapper.toProductDetailDto(product);
     }
 
     @Override
@@ -190,7 +190,7 @@ public class ProductServiceImpl implements ProductService {
         
         List<Product> products = productRepository.findByIsFeaturedTrue();
         return products.stream()
-                .map(entityMapper::toProductSummaryDto)
+                .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -203,7 +203,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> products = productRepository.findByIsFeaturedTrue(pageable);
         
         return products.getContent().stream()
-                .map(entityMapper::toProductSummaryDto)
+                .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -214,7 +214,7 @@ public class ProductServiceImpl implements ProductService {
         
         List<Product> products = productRepository.findFeaturedByCategoryId(categoryId, ProductStatus.ACTIVE);
         return products.stream()
-                .map(entityMapper::toProductSummaryDto)
+                .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -226,7 +226,7 @@ public class ProductServiceImpl implements ProductService {
         List<Product> products = productRepository.findFeaturedByCategoryId(categoryId, ProductStatus.ACTIVE);
         return products.stream()
                 .limit(limit)
-                .map(entityMapper::toProductSummaryDto)
+                .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -244,7 +244,7 @@ public class ProductServiceImpl implements ProductService {
         long executionTime = System.currentTimeMillis() - startTime;
         
         List<ProductSummaryDto> productDtos = products.getContent().stream()
-                .map(entityMapper::toProductSummaryDto)
+                .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
         
         return SearchResultDto.builder()
@@ -280,7 +280,7 @@ public class ProductServiceImpl implements ProductService {
 
     private PageResponse<ProductSummaryDto> mapToPageResponse(Page<Product> products) {
         List<ProductSummaryDto> content = products.getContent().stream()
-                .map(entityMapper::toProductSummaryDto)
+                .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
         
         return PageResponse.<ProductSummaryDto>builder()

@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: eureka-server
+
+  output:
+    ansi:
+      enabled: always
+
   cloud:
     compatibility-verifier:
       enabled: false

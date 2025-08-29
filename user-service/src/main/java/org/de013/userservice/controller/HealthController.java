@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.HEALTH)
+@RequestMapping(ApiPaths.HEALTH)
 @RequiredArgsConstructor
 @Tag(name = "Health Check", description = "Service health check endpoints")
 public class HealthController extends BaseController {

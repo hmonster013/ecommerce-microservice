@@ -3,7 +3,6 @@ package org.de013.orderservice.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
-import org.de013.common.entity.BaseEntity;
 import org.de013.orderservice.entity.enums.TrackingStatus;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;

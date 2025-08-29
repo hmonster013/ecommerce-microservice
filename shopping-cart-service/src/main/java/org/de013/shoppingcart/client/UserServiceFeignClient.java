@@ -12,7 +12,7 @@ import java.util.Map;
  */
 @FeignClient(
     name = "user-service",
-    path = "/api/v1/users",
+    path = "/users", // Service-to-service calls use internal paths
     fallback = UserServiceFallback.class
 )
 public interface UserServiceFeignClient {

@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
-import org.de013.common.entity.BaseEntity;
 import org.de013.orderservice.entity.enums.PaymentStatus;
 import org.de013.orderservice.entity.valueobject.Money;
 import org.hibernate.annotations.SQLDelete;

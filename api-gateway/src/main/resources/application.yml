@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: api-gateway
+
+  # Enable ANSI colors in console output
+  output:
+    ansi:
+      enabled: always
+
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
@@ -15,84 +21,128 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: false
+          enabled: true
           lower-case-service-id: true
+          predicates:
+            - name: Path
+              args:
+                pattern: "'/api/' + serviceId + '/**'"
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 2
       forwarded:
         enabled: false
       routes:
         # API Docs routes (must come before general routes)
-        - id: user-service-docs
+        - id: user-service-docs-v1
           uri: http://localhost:8081
           predicates:
-            - Path=/api/users/v3/api-docs
+            - Path=/api/v1/usersv/v3/api-docs
           filters:
-            - StripPrefix=2
-        - id: product-catalog-service-docs
-          uri: lb://product-catalog-service
+            - StripPrefix=3
+        - id: product-catalog-service-docs-v1
+          uri: http://localhost:8082
           predicates:
-            - Path=/api/products/v3/api-docs
+            - Path=/api/v1/productsv/v3/api-docs
           filters:
-            - StripPrefix=2
-        - id: shopping-cart-service-docs
-          uri: lb://shopping-cart-service
+            - StripPrefix=3
+        - id: shopping-cart-service-docs-v1
+          uri: http://localhost:8083
           predicates:
-            - Path=/api/cart/v3/api-docs
+            - Path=/api/v1/cartsv/v3/api-docs
           filters:
-            - StripPrefix=2
-        - id: order-service-docs
-          uri: lb://order-service
+            - StripPrefix=3
+        - id: order-service-docs-v1
+          uri: http://localhost:8084
           predicates:
-            - Path=/api/orders/v3/api-docs
+            - Path=/api/v1/ordersv/v3/api-docs
           filters:
-            - StripPrefix=2
-        - id: payment-service-docs
-          uri: lb://payment-service
+            - StripPrefix=3
+        - id: payment-service-docs-v1
+          uri: http://localhost:8085
           predicates:
-            - Path=/api/payments/v3/api-docs
+            - Path=/api/v1/paymentsv/v3/api-docs
           filters:
-            - StripPrefix=2
-        - id: notification-service-docs
-          uri: lb://notification-service
+            - StripPrefix=3
+        - id: notification-service-docs-v1
+          uri: http://localhost:8086
           predicates:
-            - Path=/api/notifications/v3/api-docs
+            - Path=/api/v1/notificationsv/v3/api-docs
+          filters:
+            - StripPrefix=3
+
+        # Manual routes for critical services
+        - id: user-service-manual
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/user-service/**
           filters:
             - StripPrefix=2
 
-        # General API routes
-        - id: user-service
+        # ==================== VERSION 1 ROUTES ====================
+        # New versioned endpoints - /api/v1/{service}/**
+        - id: user-service-v1
           uri: http://localhost:8081
           predicates:
-            - Path=/api/users/**
+            - Path=/api/v1/usersv/**
           filters:
-            - StripPrefix=1
-        - id: product-catalog-service
-          uri: lb://product-catalog-service
+            - StripPrefix=3
+        - id: product-catalog-service-v1
+          uri: http://localhost:8082
           predicates:
-            - Path=/api/products/**
+            - Path=/api/v1/productsv/**
           filters:
-            - StripPrefix=1
+            - RewritePath=/api/v1/productsv/(?<segment>.*), /$\{segment}
+        - id: shopping-cart-service-v1
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/cartsv/**
+          filters:
+            - StripPrefix=3
+        - id: order-service-v1
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/ordersv/**
+          filters:
+            - StripPrefix=3
+        - id: payment-service-v1
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/v1/paymentsv/**
+          filters:
+            - StripPrefix=3
+        - id: notification-service-v1
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/v1/notificationsv/**
+          filters:
+            - StripPrefix=3
+
+        # ==================== LEGACY ROUTES ====================
+        # Keep existing routes for backward compatibility
         - id: shopping-cart-service
-          uri: lb://shopping-cart-service
+          uri: http://localhost:8083
           predicates:
-            - Path=/api/cart/**
+            - Path=/api/cartsv/**
           filters:
             - StripPrefix=1
         - id: order-service
-          uri: lb://order-service
+          uri: http://localhost:8084
           predicates:
-            - Path=/api/orders/**
+            - Path=/api/ordersv/**
           filters:
             - StripPrefix=1
         - id: payment-service
-          uri: lb://payment-service
+          uri: http://localhost:8085
           predicates:
-            - Path=/api/payments/**
+            - Path=/api/paymentsv/**
           filters:
             - StripPrefix=1
         - id: notification-service
-          uri: lb://notification-service
+          uri: http://localhost:8086
           predicates:
-            - Path=/api/notifications/**
+            - Path=/api/notificationsv/**
           filters:
             - StripPrefix=1
 
@@ -131,23 +181,31 @@ springdoc:
     path: /swagger-ui.html
     config-url: /v3/api-docs/swagger-config
     disable-swagger-default-url: true
+
     urls:
       - url: /v3/api-docs
         name: API Gateway
-      - url: /api/users/v3/api-docs
-        name: User Service
-      - url: /api/products/v3/api-docs
-        name: Product Catalog Service
-      - url: /api/cart/v3/api-docs
-        name: Shopping Cart Service
-      - url: /api/orders/v3/api-docs
-        name: Order Service
-      - url: /api/payments/v3/api-docs
-        name: Payment Service
-      - url: /api/notifications/v3/api-docs
-        name: Notification Service
+      # Version 1 APIs
+      - url: /api/v1/usersv/v3/api-docs
+        name: User Service (v1)
+      - url: /api/v1/productsv/v3/api-docs
+        name: Product Catalog Service (v1)
+      - url: /api/v1/cartsv/v3/api-docs
+        name: Shopping Cart Service (v1)
+      - url: /api/v1/ordersv/v3/api-docs
+        name: Order Service (v1)
+      - url: /api/v1/paymentsv/v3/api-docs
+        name: Payment Service (v1)
+      - url: /api/v1/notificationsv/v3/api-docs
+        name: Notification Service (v1)
+
+# JWT Configuration (must match user-service configuration)
+jwt:
+  secret: ${JWT_SECRET:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}
+  issuer: ${JWT_ISSUER:ecommerce-platform}
 
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
     reactor.netty.http.client: DEBUG
+    org.de013.apigateway.security: DEBUG
