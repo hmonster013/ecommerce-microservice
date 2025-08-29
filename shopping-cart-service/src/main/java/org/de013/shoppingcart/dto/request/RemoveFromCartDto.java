@@ -1,5 +1,6 @@
 package org.de013.shoppingcart.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -72,18 +73,20 @@ public class RemoveFromCartDto {
     /**
      * Validate that either userId or sessionId is provided
      */
+    @JsonIgnore
     @AssertTrue(message = "Either user ID or session ID must be provided")
     public boolean isValidUserOrSession() {
-        return (userId != null && !userId.trim().isEmpty()) || 
+        return (userId != null && !userId.trim().isEmpty()) ||
                (sessionId != null && !sessionId.trim().isEmpty());
     }
 
     /**
      * Validate removal criteria
      */
+    @JsonIgnore
     @AssertTrue(message = "Either item ID, product ID, or item IDs list must be provided")
     public boolean hasValidRemovalCriteria() {
-        return itemId != null || 
+        return itemId != null ||
                (productId != null && !productId.trim().isEmpty()) ||
                (itemIds != null && !itemIds.isEmpty()) ||
                "ALL".equals(removalType);
@@ -92,6 +95,7 @@ public class RemoveFromCartDto {
     /**
      * Validate bulk removal
      */
+    @JsonIgnore
     @AssertTrue(message = "Item IDs list is required for bulk removal")
     public boolean isValidBulkRemoval() {
         if ("BULK".equals(removalType)) {
@@ -103,6 +107,7 @@ public class RemoveFromCartDto {
     /**
      * Validate remove all confirmation
      */
+    @JsonIgnore
     @AssertTrue(message = "Confirmation is required to remove all items")
     public boolean isValidRemoveAllConfirmation() {
         if ("ALL".equals(removalType)) {
@@ -114,6 +119,7 @@ public class RemoveFromCartDto {
     /**
      * Check if this is for an authenticated user
      */
+    @JsonIgnore
     public boolean isAuthenticatedUser() {
         return userId != null && !userId.trim().isEmpty();
     }
@@ -121,14 +127,16 @@ public class RemoveFromCartDto {
     /**
      * Check if this is for a guest session
      */
+    @JsonIgnore
     public boolean isGuestSession() {
-        return sessionId != null && !sessionId.trim().isEmpty() && 
+        return sessionId != null && !sessionId.trim().isEmpty() &&
                (userId == null || userId.trim().isEmpty());
     }
 
     /**
      * Get the identifier (userId or sessionId)
      */
+    @JsonIgnore
     public String getIdentifier() {
         return isAuthenticatedUser() ? userId : sessionId;
     }
@@ -136,6 +144,7 @@ public class RemoveFromCartDto {
     /**
      * Check if this is a single item removal
      */
+    @JsonIgnore
     public boolean isSingleRemoval() {
         return "SINGLE".equals(removalType) && itemId != null;
     }
@@ -143,6 +152,7 @@ public class RemoveFromCartDto {
     /**
      * Check if this is a bulk removal
      */
+    @JsonIgnore
     public boolean isBulkRemoval() {
         return "BULK".equals(removalType) && itemIds != null && !itemIds.isEmpty();
     }
@@ -150,6 +160,7 @@ public class RemoveFromCartDto {
     /**
      * Check if this is remove all items
      */
+    @JsonIgnore
     public boolean isRemoveAll() {
         return "ALL".equals(removalType);
     }
@@ -157,6 +168,7 @@ public class RemoveFromCartDto {
     /**
      * Check if this is removal by product
      */
+    @JsonIgnore
     public boolean isByProduct() {
         return "BY_PRODUCT".equals(removalType) && productId != null;
     }

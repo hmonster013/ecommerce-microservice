@@ -17,6 +17,8 @@ public final class ApiPaths {
     public static final String CATEGORIES = "/categories";
     public static final String HEALTH = "/health";
     public static final String CART = "/cart";
+    public static final String CARTS = "/carts";
+    public static final String CART_ITEMS = "/cart-items";
     public static final String ORDERS = "/orders";
     public static final String PAYMENTS = "/payments";
     public static final String NOTIFICATIONS = "/notifications";
@@ -30,11 +32,24 @@ public final class ApiPaths {
     public static final String CHANGE_PASSWORD = "/change-password";
     public static final String USERNAME = "/username";
     public static final String ID_PARAM = "/{id}";
+    public static final String CART_ID_PARAM = "/{cartId}";
+    public static final String ITEM_ID_PARAM = "/{itemId}";
+    public static final String PRODUCT_ID_PARAM = "/{productId}";
     public static final String USERNAME_PARAM = "/username/{username}";
     public static final String LEGACY = "/legacy";
     public static final String SEARCH = "/search";
     public static final String ENABLE = "/enable";
     public static final String DISABLE = "/disable";
+
+    // Cart specific endpoints
+    public static final String VALIDATE = "/validate";
+    public static final String ACTIVITY = "/activity";
+    public static final String QUANTITY = "/quantity";
+    public static final String GIFT = "/gift";
+    public static final String CLEAR = "/clear";
+    public static final String COUPON = "/coupon";
+    public static final String CHECKOUT = "/checkout";
+    public static final String PREPARE = "/prepare";
 
     // Product Catalog specific endpoints
     public static final String SLUG = "/slug";

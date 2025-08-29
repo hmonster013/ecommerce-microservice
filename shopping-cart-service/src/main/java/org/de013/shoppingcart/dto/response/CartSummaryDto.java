@@ -1,6 +1,7 @@
 package org.de013.shoppingcart.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -226,6 +227,7 @@ public class CartSummaryDto {
     /**
      * Get total discount amount (including loyalty discount)
      */
+    @JsonIgnore
     public BigDecimal getTotalDiscountAmount() {
         BigDecimal total = discountAmount != null ? discountAmount : BigDecimal.ZERO;
         if (loyaltyDiscountAmount != null) {
@@ -237,6 +239,7 @@ public class CartSummaryDto {
     /**
      * Get discount percentage based on original total
      */
+    @JsonIgnore
     public BigDecimal getDiscountPercentage() {
         if (originalTotal != null && originalTotal.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal totalDiscount = getTotalDiscountAmount();
@@ -249,6 +252,7 @@ public class CartSummaryDto {
     /**
      * Check if cart qualifies for free shipping
      */
+    @JsonIgnore
     public boolean qualifiesForFreeShipping() {
         return Boolean.TRUE.equals(isFreeShippingEligible);
     }
@@ -256,6 +260,7 @@ public class CartSummaryDto {
     /**
      * Check if cart has any discounts applied
      */
+    @JsonIgnore
     public boolean hasDiscounts() {
         return getTotalDiscountAmount().compareTo(BigDecimal.ZERO) > 0;
     }
@@ -263,6 +268,7 @@ public class CartSummaryDto {
     /**
      * Get effective shipping cost (considering free shipping)
      */
+    @JsonIgnore
     public BigDecimal getEffectiveShippingCost() {
         if (qualifiesForFreeShipping()) {
             return BigDecimal.ZERO;
@@ -273,6 +279,7 @@ public class CartSummaryDto {
     /**
      * Calculate total fees (handling + insurance)
      */
+    @JsonIgnore
     public BigDecimal getTotalFees() {
         BigDecimal total = BigDecimal.ZERO;
         if (handlingFee != null) {

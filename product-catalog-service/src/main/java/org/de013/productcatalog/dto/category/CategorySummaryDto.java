@@ -1,6 +1,7 @@
 package org.de013.productcatalog.dto.category;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -50,14 +51,17 @@ public class CategorySummaryDto implements Serializable {
     private Boolean hasChildren;
 
     // Helper methods
+    @JsonIgnore
     public boolean isRootCategory() {
         return parentId == null;
     }
 
+    @JsonIgnore
     public String getDisplayName() {
         return name;
     }
 
+    @JsonIgnore
     public String getFullPath() {
         if (parentName != null) {
             return parentName + " > " + name;

@@ -78,19 +78,7 @@ public class OpenApiConfig {
                                 .description("Core shopping cart operations - create, read, update, delete carts"),
                         new Tag()
                                 .name("Cart Items")
-                                .description("Cart item management - add, update, remove items from cart"),
-                        new Tag()
-                                .name("Cart Validation")
-                                .description("Cart validation operations - validate products, prices, and availability"),
-                        new Tag()
-                                .name("Cart Operations")
-                                .description("Advanced cart operations - merge, checkout preparation, bulk operations"),
-                        new Tag()
-                                .name("Session Management")
-                                .description("Guest session and cart transfer operations"),
-                        new Tag()
-                                .name("Health & Monitoring")
-                                .description("Service health checks and monitoring endpoints")
+                                .description("Cart item management - add, update, remove items from cart")
                 ))
                 .addSecurityItem(securityRequirement())
                 .components(securityComponents());

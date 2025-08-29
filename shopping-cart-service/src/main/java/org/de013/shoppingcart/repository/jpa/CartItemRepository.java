@@ -173,17 +173,7 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     @Query("UPDATE CartItem ci SET ci.priceChanged = false, ci.updatedAt = :currentTime WHERE ci.cart.id = :cartId")
     int resetPriceChangeFlags(@Param("cartId") Long cartId, @Param("currentTime") LocalDateTime currentTime);
 
-    // ==================== ANALYTICS QUERIES ====================
 
-    /**
-     * Get popular products (most added to carts)
-     */
-    @Query("SELECT ci.productId, ci.productName, COUNT(ci), SUM(ci.quantity) " +
-           "FROM CartItem ci WHERE ci.addedAt BETWEEN :startDate AND :endDate AND ci.deleted = false " +
-           "GROUP BY ci.productId, ci.productName ORDER BY COUNT(ci) DESC")
-    List<Object[]> getPopularProducts(@Param("startDate") LocalDateTime startDate, 
-                                     @Param("endDate") LocalDateTime endDate, 
-                                     Pageable pageable);
 
     /**
      * Get category performance

@@ -1,5 +1,6 @@
 package org.de013.shoppingcart.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -81,6 +82,7 @@ public class AddToCartDto {
     /**
      * Validate gift message is provided when item is marked as gift
      */
+    @JsonIgnore
     @AssertTrue(message = "{gift.message.required}")
     public boolean isValidGiftMessage() {
         if (Boolean.TRUE.equals(isGift)) {
@@ -92,6 +94,7 @@ public class AddToCartDto {
     /**
      * Check if this is for a guest session
      */
+    @JsonIgnore
     public boolean isGuestSession() {
         return sessionId != null && !sessionId.trim().isEmpty();
     }

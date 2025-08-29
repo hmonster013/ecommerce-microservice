@@ -1,5 +1,6 @@
 package org.de013.shoppingcart.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -78,25 +79,28 @@ public class ApplyCouponDto {
     /**
      * Validate that either userId or sessionId is provided
      */
+    @JsonIgnore
     @AssertTrue(message = "{user.or.session.required}")
     public boolean isValidUserOrSession() {
-        return (userId != null && !userId.trim().isEmpty()) || 
+        return (userId != null && !userId.trim().isEmpty()) ||
                (sessionId != null && !sessionId.trim().isEmpty());
     }
 
     /**
      * Validate that cart identification is provided
      */
+    @JsonIgnore
     @AssertTrue(message = "{cart.identification.required}")
     public boolean hasValidCartIdentification() {
-        return cartId != null || 
-               (userId != null && !userId.trim().isEmpty()) || 
+        return cartId != null ||
+               (userId != null && !userId.trim().isEmpty()) ||
                (sessionId != null && !sessionId.trim().isEmpty());
     }
 
     /**
      * Check if this is for an authenticated user
      */
+    @JsonIgnore
     public boolean isAuthenticatedUser() {
         return userId != null && !userId.trim().isEmpty();
     }
@@ -104,14 +108,16 @@ public class ApplyCouponDto {
     /**
      * Check if this is for a guest session
      */
+    @JsonIgnore
     public boolean isGuestSession() {
-        return sessionId != null && !sessionId.trim().isEmpty() && 
+        return sessionId != null && !sessionId.trim().isEmpty() &&
                (userId == null || userId.trim().isEmpty());
     }
 
     /**
      * Get the identifier (userId or sessionId)
      */
+    @JsonIgnore
     public String getIdentifier() {
         return isAuthenticatedUser() ? userId : sessionId;
     }
@@ -119,6 +125,7 @@ public class ApplyCouponDto {
     /**
      * Get normalized coupon code (uppercase, trimmed)
      */
+    @JsonIgnore
     public String getNormalizedCouponCode() {
         return couponCode != null ? couponCode.trim().toUpperCase() : null;
     }
@@ -126,6 +133,7 @@ public class ApplyCouponDto {
     /**
      * Check if coupon should be validated before applying
      */
+    @JsonIgnore
     public boolean shouldValidateCoupon() {
         return Boolean.TRUE.equals(validateCoupon);
     }

@@ -28,8 +28,7 @@ import java.util.concurrent.CompletableFuture;
 public class CartExpirationService {
 
     private final CartRepository cartRepository;
-    private final ProductAvailabilityService productAvailabilityService;
-    private final CacheInvalidationService cacheInvalidationService;
+
 
     // Configuration values for different cart types
     @Value("${shopping-cart.expiration.guest-cart-hours:2}")
@@ -172,12 +171,8 @@ public class CartExpirationService {
             log.debug("Processing expired cart: {} (type: {}, status: {})", 
                      cart.getId(), cart.getCartType(), cart.getStatus());
             
-            // Release any stock reservations
-            try {
-                productAvailabilityService.releaseCartStock(cart);
-            } catch (Exception e) {
-                log.warn("Error releasing stock for expired cart {}: {}", cart.getId(), e.getMessage());
-            }
+            // Stock reservation removed for basic functionality
+            log.debug("Processing expired cart {} without stock reservation release", cart.getId());
             
             // Update cart status based on type and current status
             CartStatus newStatus = determineExpiredCartStatus(cart);
@@ -191,9 +186,6 @@ public class CartExpirationService {
             }
             
             cartRepository.save(cart);
-            
-            // Invalidate caches
-            cacheInvalidationService.invalidateCartCaches(cart.getId());
             
             log.info("Processed expired cart {}: status changed to {}", cart.getId(), newStatus);
             
@@ -245,9 +237,6 @@ public class CartExpirationService {
             
             cartRepository.save(cart);
             
-            // Invalidate caches
-            cacheInvalidationService.invalidateCartCaches(cartId);
-            
             Map<String, Object> result = new HashMap<>();
             result.put("cartId", cartId);
             result.put("success", true);
@@ -289,9 +278,6 @@ public class CartExpirationService {
             cart.setExpiresAt(calculateExpirationTime(cart));
             
             cartRepository.save(cart);
-            
-            // Invalidate caches
-            cacheInvalidationService.invalidateCartCaches(cartId);
             
             Map<String, Object> result = new HashMap<>();
             result.put("cartId", cartId);
@@ -397,7 +383,6 @@ public class CartExpirationService {
             for (Cart cart : oldDeletedCarts) {
                 try {
                     cartRepository.delete(cart);
-                    cacheInvalidationService.invalidateCartCaches(cart.getId());
                 } catch (Exception e) {
                     log.error("Error deleting old cart {}: {}", cart.getId(), e.getMessage());
                 }

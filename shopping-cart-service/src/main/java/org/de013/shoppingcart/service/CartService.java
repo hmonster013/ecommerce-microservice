@@ -6,13 +6,12 @@ import org.de013.shoppingcart.dto.request.AddToCartDto;
 import org.de013.shoppingcart.dto.request.ApplyCouponDto;
 import org.de013.shoppingcart.dto.request.CartCheckoutDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
-import org.de013.shoppingcart.dto.response.CartValidationDto;
 import org.de013.shoppingcart.entity.Cart;
-import org.de013.shoppingcart.entity.CartAnalytics;
+
 import org.de013.shoppingcart.entity.RedisCart;
 import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.entity.enums.CartType;
-import org.de013.shoppingcart.repository.jpa.CartAnalyticsRepository;
+
 import org.de013.shoppingcart.repository.jpa.CartRepository;
 import org.de013.shoppingcart.repository.redis.RedisCartOperations;
 import org.de013.shoppingcart.repository.redis.RedisCartRepository;
@@ -40,13 +39,10 @@ public class CartService {
     private final RedisCartRepository redisCartRepository;
     private final RedisCartOperations redisCartOperations;
     private final RedisCartSessionManager sessionManager;
-    private final CartAnalyticsRepository analyticsRepository;
-    private final CartValidationService validationService;
+
+
     private final CartMergeService mergeService;
     private final CartItemService cartItemService;
-    private final CacheFallbackService cacheFallbackService;
-    private final CacheInvalidationService cacheInvalidationService;
-    private final RedisHealthService redisHealthService;
 
     // ==================== CART CREATION & RETRIEVAL ====================
 
@@ -81,9 +77,9 @@ public class CartService {
             Optional<Cart> cart;
 
             if (userId != null) {
-                cart = cacheFallbackService.getUserCartWithFallback(userId);
+                cart = cartRepository.findByUserIdAndStatus(userId, CartStatus.ACTIVE);
             } else if (sessionId != null) {
-                cart = cacheFallbackService.getSessionCartWithFallback(sessionId);
+                cart = cartRepository.findBySessionIdAndStatus(sessionId, CartStatus.ACTIVE);
             } else {
                 return Optional.empty();
             }
@@ -142,8 +138,7 @@ public class CartService {
                 sessionManager.createGuestSession();
             }
             
-            // Record analytics
-            recordCartAnalytics(CartAnalytics.createCartCreatedEvent(cart.getId(), userId, sessionId));
+            // Analytics removed for basic functionality
             
             log.info("Created new cart {} for user: {}, session: {}", cart.getId(), userId, sessionId);
             return convertToResponseDto(cart);
@@ -361,9 +356,7 @@ public class CartService {
                 redisCartOperations.deleteCart("session_cart:" + sessionId);
             }
             
-            // Record analytics
-            recordCartAnalytics(CartAnalytics.createCartAbandonedEvent(
-                cart.getCartId(), userId, sessionId, cart.getTotalAmount(), cart.getItemCount()));
+            // Analytics removed for basic functionality
             
             log.info("Deleted cart {}", cart.getCartId());
             return true;
@@ -453,11 +446,5 @@ public class CartService {
         return BigDecimal.ZERO;
     }
 
-    private void recordCartAnalytics(CartAnalytics analytics) {
-        try {
-            analyticsRepository.save(analytics);
-        } catch (Exception e) {
-            log.error("Error recording cart analytics: {}", e.getMessage(), e);
-        }
-    }
+
 }

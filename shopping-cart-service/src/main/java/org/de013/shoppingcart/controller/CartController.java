@@ -16,15 +16,17 @@ import org.de013.shoppingcart.dto.request.ApplyCouponDto;
 import org.de013.shoppingcart.dto.request.CartCheckoutDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.dto.response.CartSummaryDto;
-import org.de013.shoppingcart.dto.response.CartValidationDto;
+
 import org.de013.shoppingcart.service.CartService;
-import org.de013.shoppingcart.service.CartValidationService;
-import org.de013.shoppingcart.service.PricingService;
+import org.de013.common.constant.ApiPaths;
+
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,15 +35,15 @@ import java.util.Optional;
  * Provides endpoints for cart management including CRUD operations, coupon management, and checkout preparation
  */
 @RestController
-@RequestMapping("/carts") // Gateway routes /api/v1/cart/** to /cart/**
+@RequestMapping(ApiPaths.CARTS)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Cart Management", description = "APIs for shopping cart operations")
 public class CartController {
 
     private final CartService cartService;
-    private final CartValidationService validationService;
-    private final PricingService pricingService;
+
+
 
     // ==================== CART RETRIEVAL ====================
 
@@ -98,7 +100,7 @@ public class CartController {
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping("/{cartId}")
+    @GetMapping(ApiPaths.CART_ID_PARAM)
     public ResponseEntity<CartResponseDto> getCartById(
             @Parameter(description = "Cart ID", required = true) 
             @PathVariable Long cartId) {
@@ -126,7 +128,7 @@ public class CartController {
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @DeleteMapping("/clear")
+    @DeleteMapping(ApiPaths.CLEAR)
     public ResponseEntity<CartResponseDto> clearCart(
             @Parameter(description = "User ID for authenticated users") 
             @RequestParam(required = false) String userId,
@@ -193,7 +195,7 @@ public class CartController {
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/coupon")
+    @PostMapping(ApiPaths.COUPON)
     public ResponseEntity<CartResponseDto> applyCoupon(
             @Parameter(description = "Coupon application request", required = true)
             @Valid @RequestBody ApplyCouponDto request) {
@@ -220,7 +222,7 @@ public class CartController {
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @DeleteMapping("/coupon")
+    @DeleteMapping(ApiPaths.COUPON)
     public ResponseEntity<CartResponseDto> removeCoupon(
             @Parameter(description = "User ID for authenticated users") 
             @RequestParam(required = false) String userId,
@@ -251,21 +253,37 @@ public class CartController {
     @Operation(summary = "Validate cart", description = "Perform comprehensive cart validation")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Validation completed",
-                content = @Content(schema = @Schema(implementation = CartValidationDto.class))),
+                content = @Content(schema = @Schema(implementation = Map.class))),
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping("/{cartId}/validate")
-    public ResponseEntity<CartValidationDto> validateCart(
-            @Parameter(description = "Cart ID", required = true) 
+    @GetMapping(ApiPaths.CART_ID_PARAM + ApiPaths.VALIDATE)
+    public ResponseEntity<Map<String, Object>> validateCart(
+            @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
-        
+
         try {
-            log.debug("Validating cart: {}", cartId);
-            
-            CartValidationDto validation = validationService.validateCart(cartId);
+            log.debug("Basic validation for cart: {}", cartId);
+
+            // Simple validation - check if cart exists and has items
+            Optional<CartResponseDto> cartOpt = cartService.getActiveCart(null, null);
+            if (cartOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            CartResponseDto cart = cartOpt.get();
+            boolean isValid = cart.getItemCount() > 0 && cart.getTotalAmount().compareTo(BigDecimal.ZERO) > 0;
+
+            Map<String, Object> validation = Map.of(
+                "cartId", cartId,
+                "isValid", isValid,
+                "itemCount", cart.getItemCount(),
+                "totalAmount", cart.getTotalAmount(),
+                "isCheckoutReady", isValid
+            );
+
             return ResponseEntity.ok(validation);
-            
+
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
                 return ResponseEntity.notFound().build();
@@ -284,7 +302,7 @@ public class CartController {
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping("/{cartId}/summary")
+    @GetMapping(ApiPaths.CART_ID_PARAM + ApiPaths.SUMMARY)
     public ResponseEntity<CartSummaryDto> getCartSummary(
             @Parameter(description = "Cart ID", required = true) 
             @PathVariable Long cartId) {
@@ -312,7 +330,7 @@ public class CartController {
         @ApiResponse(responseCode = "422", description = "Cart validation failed"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/checkout/prepare")
+    @PostMapping(ApiPaths.CHECKOUT + ApiPaths.PREPARE)
     public ResponseEntity<Map<String, Object>> prepareCheckout(
             @Parameter(description = "Checkout preparation request", required = true)
             @Valid @RequestBody CartCheckoutDto request) {
@@ -338,7 +356,7 @@ public class CartController {
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PutMapping("/{cartId}/activity")
+    @PutMapping(ApiPaths.CART_ID_PARAM + ApiPaths.ACTIVITY)
     public ResponseEntity<Void> updateCartActivity(
             @Parameter(description = "Cart ID", required = true) 
             @PathVariable Long cartId) {

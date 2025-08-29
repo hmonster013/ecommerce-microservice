@@ -53,24 +53,7 @@ public class CartSecurityService {
         return canAccessCart(userId); // Same logic for now
     }
 
-    /**
-     * Check if current user can access cart analytics
-     * - Only admins can access analytics
-     */
-    public boolean canAccessAnalytics() {
-        UserContext userContext = UserContextHolder.getCurrentUser();
-        if (userContext == null) {
-            log.debug("No user context found, denying access to analytics");
-            return false;
-        }
 
-        boolean canAccess = userContext.isAdmin();
-        log.debug("User {} {} access cart analytics (admin: {})", 
-                userContext.getUsername(), 
-                canAccess ? "can" : "cannot", 
-                canAccess);
-        return canAccess;
-    }
 
     /**
      * Check if current user can access external services

@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.search;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -111,14 +112,17 @@ public class ProductSearchDto {
     private Integer size = 20;
 
     // Helper methods
+    @JsonIgnore
     public boolean hasQuery() {
         return query != null && !query.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasPriceRange() {
         return minPrice != null || maxPrice != null;
     }
 
+    @JsonIgnore
     public boolean hasFilters() {
         return (categoryIds != null && !categoryIds.isEmpty()) ||
                (brands != null && !brands.isEmpty()) ||

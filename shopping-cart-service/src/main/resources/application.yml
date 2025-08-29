@@ -119,8 +119,6 @@ springdoc:
       paths-to-match:
         - '/carts/**'
         - '/cart-items/**'
-        - '/validation/**'
-        - '/external/**'
         - '/health/**'
 
 logging:

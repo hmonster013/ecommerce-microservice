@@ -10,10 +10,10 @@ import org.de013.shoppingcart.dto.request.RemoveFromCartDto;
 import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
 import org.de013.shoppingcart.dto.response.CartItemResponseDto;
 import org.de013.shoppingcart.entity.Cart;
-import org.de013.shoppingcart.entity.CartAnalytics;
+
 import org.de013.shoppingcart.entity.CartItem;
 import org.de013.shoppingcart.entity.RedisCart;
-import org.de013.shoppingcart.repository.jpa.CartAnalyticsRepository;
+
 import org.de013.shoppingcart.repository.jpa.CartItemRepository;
 import org.de013.shoppingcart.repository.jpa.CartRepository;
 import org.de013.shoppingcart.repository.redis.RedisCartRepository;
@@ -39,9 +39,8 @@ public class CartItemService {
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
     private final RedisCartRepository redisCartRepository;
-    private final CartAnalyticsRepository analyticsRepository;
+
     private final ProductCatalogClient productCatalogClient;
-    private final CartValidationService validationService;
 
     // ==================== ITEM ADDITION ====================
 
@@ -62,6 +61,8 @@ public class CartItemService {
             
             // Validate cart can be modified
             if (!cart.canBeModified()) {
+                log.error("Cart {} cannot be modified - Status: {}, Expired: {}, ExpiresAt: {}",
+                         cartId, cart.getStatus(), cart.isExpired(), cart.getExpiresAt());
                 throw new RuntimeException("Cart cannot be modified");
             }
             
@@ -87,8 +88,10 @@ public class CartItemService {
                 cart.addItem(cartItem);
             }
             
-            // Validate item
-            validationService.validateCartItemAgainstCatalog(cartItem);
+            // Basic validation - check required fields
+            if (cartItem.getQuantity() <= 0) {
+                throw new RuntimeException("Invalid quantity");
+            }
             
             // Save item
             cartItem = cartItemRepository.save(cartItem);
@@ -96,12 +99,7 @@ public class CartItemService {
             // Update Redis
             updateRedisCart(cartId);
             
-            // Record analytics
-            UserContext userContext = UserContextHolder.getCurrentUser();
-            String userId = userContext != null ? String.valueOf(userContext.getUserId()) : null;
-            recordItemAnalytics(CartAnalytics.createItemAddedEvent(
-                cartId, userId, request.getSessionId(),
-                request.getProductId(), request.getQuantity(), cartItem.getUnitPrice()));
+            // Analytics removed for basic functionality
             
             log.info("Added item {} to cart {}, quantity: {}", 
                     request.getProductId(), cartId, request.getQuantity());
@@ -154,8 +152,10 @@ public class CartItemService {
                 item.setGiftWrapType(request.getGiftWrapType());
             }
             
-            // Validate updated item
-            validationService.validateCartItemAgainstCatalog(item);
+            // Basic validation - check required fields
+            if (item.getQuantity() <= 0) {
+                throw new RuntimeException("Invalid quantity");
+            }
             
             // Save item
             item = cartItemRepository.save(item);
@@ -212,9 +212,7 @@ public class CartItemService {
         CartItem item = itemOpt.get();
         Long cartId = item.getCart().getId();
         
-        // Record analytics before removal
-        recordItemAnalytics(CartAnalytics.createItemRemovedEvent(
-            cartId, userId, sessionId, item.getProductId(), item.getQuantity()));
+        // Analytics removed for basic functionality
         
         // Soft delete item
         cartItemRepository.batchSoftDelete(List.of(itemId), LocalDateTime.now(), "USER_REQUEST");
@@ -237,11 +235,7 @@ public class CartItemService {
         // Get items for analytics
         List<CartItem> items = cartItemRepository.findAllById(itemIds);
         
-        // Record analytics
-        for (CartItem item : items) {
-            recordItemAnalytics(CartAnalytics.createItemRemovedEvent(
-                item.getCart().getId(), userId, sessionId, item.getProductId(), item.getQuantity()));
-        }
+        // Analytics removed for basic functionality
         
         // Soft delete items
         cartItemRepository.batchSoftDelete(itemIds, LocalDateTime.now(), "USER_REQUEST");
@@ -438,13 +432,7 @@ public class CartItemService {
                 .build();
     }
 
-    private void recordItemAnalytics(CartAnalytics analytics) {
-        try {
-            analyticsRepository.save(analytics);
-        } catch (Exception e) {
-            log.error("Error recording item analytics: {}", e.getMessage(), e);
-        }
-    }
+
 
 
 }

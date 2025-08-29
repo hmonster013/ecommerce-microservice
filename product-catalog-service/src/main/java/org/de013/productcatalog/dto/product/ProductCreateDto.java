@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.product;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -109,6 +110,7 @@ public class ProductCreateDto {
     private Integer minStockLevel = 0;
 
     // Validation methods
+    @JsonIgnore
     @AssertTrue(message = "Primary category must be included in category list")
     public boolean isPrimaryCategoryValid() {
         if (primaryCategoryId == null) {
@@ -117,6 +119,7 @@ public class ProductCreateDto {
         return categoryIds != null && categoryIds.contains(primaryCategoryId);
     }
 
+    @JsonIgnore
     @AssertTrue(message = "Compare price must be greater than or equal to price")
     public boolean isComparePriceValid() {
         if (comparePrice == null || price == null) {

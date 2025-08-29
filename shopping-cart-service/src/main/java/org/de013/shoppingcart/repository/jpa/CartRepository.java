@@ -101,44 +101,11 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     @Query("SELECT COUNT(c) FROM Cart c WHERE c.userId = :userId AND c.status = :status AND c.deleted = false")
     long countActiveCartsByUser(@Param("userId") String userId, @Param("status") CartStatus status);
 
-    /**
-     * Get cart statistics by date range
-     */
-    @Query("SELECT c.status, COUNT(c), AVG(c.totalAmount), SUM(c.totalAmount) " +
-           "FROM Cart c WHERE c.createdAt BETWEEN :startDate AND :endDate AND c.deleted = false " +
-           "GROUP BY c.status")
-    List<Object[]> getCartStatisticsByDateRange(@Param("startDate") LocalDateTime startDate, 
-                                               @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * Get cart conversion metrics
-     */
-    @Query("SELECT " +
-           "COUNT(CASE WHEN c.status = 'ACTIVE' THEN 1 END) as activeCarts, " +
-           "COUNT(CASE WHEN c.status = 'CONVERTED' THEN 1 END) as convertedCarts, " +
-           "COUNT(CASE WHEN c.status = 'ABANDONED' THEN 1 END) as abandonedCarts, " +
-           "AVG(CASE WHEN c.status = 'CONVERTED' THEN c.totalAmount END) as avgOrderValue " +
-           "FROM Cart c WHERE c.createdAt BETWEEN :startDate AND :endDate AND c.deleted = false")
-    Object[] getCartConversionMetrics(@Param("startDate") LocalDateTime startDate, 
-                                     @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * Find high-value abandoned carts
-     */
-    @Query("SELECT c FROM Cart c WHERE c.status = :status AND c.totalAmount >= :minValue AND c.lastActivityAt >= :cutoffTime AND c.deleted = false ORDER BY c.totalAmount DESC")
-    List<Cart> findHighValueAbandonedCarts(@Param("status") CartStatus status, 
-                                          @Param("minValue") BigDecimal minValue, 
-                                          @Param("cutoffTime") LocalDateTime cutoffTime, 
-                                          Pageable pageable);
 
-    /**
-     * Get average cart value by cart type
-     */
-    @Query("SELECT c.cartType, COUNT(c), AVG(c.totalAmount), AVG(c.itemCount) " +
-           "FROM Cart c WHERE c.createdAt BETWEEN :startDate AND :endDate AND c.deleted = false " +
-           "GROUP BY c.cartType")
-    List<Object[]> getCartMetricsByType(@Param("startDate") LocalDateTime startDate, 
-                                       @Param("endDate") LocalDateTime endDate);
+
+
 
     // ==================== BUSINESS LOGIC QUERIES ====================
 

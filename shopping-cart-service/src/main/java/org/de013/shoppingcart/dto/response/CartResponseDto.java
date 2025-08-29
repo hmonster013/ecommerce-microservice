@@ -10,6 +10,7 @@ import org.de013.shoppingcart.entity.enums.CartType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DTO for cart response
@@ -136,7 +137,7 @@ public class CartResponseDto {
 
     @Schema(description = "Cart validation status")
     @JsonProperty("validation_status")
-    private CartValidationDto validationStatus;
+    private Map<String, Object> validationStatus;
 
     @Schema(description = "Recommended products based on cart contents")
     @JsonProperty("recommended_products")

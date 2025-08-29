@@ -44,12 +44,22 @@ public class RedisConfig {
     /**
      * Configure ObjectMapper for Redis serialization
      */
-    @Bean
-    @Primary
+    @Bean("redisObjectMapper")
     public ObjectMapper redisObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         mapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        mapper.registerModule(new JavaTimeModule());
+        return mapper;
+    }
+
+    /**
+     * Configure ObjectMapper for HTTP requests (without type information)
+     */
+    @Bean
+    @Primary
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         return mapper;
     }
@@ -112,7 +122,7 @@ public class RedisConfig {
                 .serializeKeysWith(org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair
                         .fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair
-                        .fromSerializer(new GenericJackson2JsonRedisSerializer(redisObjectMapper())));
+                        .fromSerializer(new Jackson2JsonRedisSerializer<>(redisObjectMapper(), Object.class)));
 
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
         

@@ -1,5 +1,6 @@
 package org.de013.shoppingcart.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -88,6 +89,7 @@ public class UpdateCartItemDto {
     /**
      * Validate gift message when gift status is true
      */
+    @JsonIgnore
     @AssertTrue(message = "{gift.message.required}")
     public boolean isValidGiftMessage() {
         if (Boolean.TRUE.equals(isGift)) {
@@ -99,15 +101,17 @@ public class UpdateCartItemDto {
     /**
      * Validate that at least one field is being updated
      */
+    @JsonIgnore
     @AssertTrue(message = "{update.field.required}")
     public boolean hasUpdateFields() {
-        return quantity != null || unitPrice != null || specialInstructions != null || 
+        return quantity != null || unitPrice != null || specialInstructions != null ||
                isGift != null || giftMessage != null || giftWrapType != null;
     }
 
     /**
      * Check if this is for an authenticated user
      */
+    @JsonIgnore
     public boolean isAuthenticatedUser() {
         return userId != null && !userId.trim().isEmpty();
     }

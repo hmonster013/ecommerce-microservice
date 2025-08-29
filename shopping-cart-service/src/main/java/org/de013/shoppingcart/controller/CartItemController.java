@@ -19,6 +19,7 @@ import org.de013.shoppingcart.dto.response.CartItemResponseDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.service.CartItemService;
 import org.de013.shoppingcart.service.CartService;
+import org.de013.common.constant.ApiPaths;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,7 @@ import java.util.Map;
  * Provides endpoints for managing items within shopping carts
  */
 @RestController
-@RequestMapping("/cart-items") // Gateway routes /api/v1/cart/** to /cart/**
+@RequestMapping(ApiPaths.CART_ITEMS) // Gateway routes /api/v1/cart/** to /cart/**
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Cart Items", description = "APIs for cart item management")
@@ -107,7 +108,7 @@ public class CartItemController {
         @ApiResponse(responseCode = "422", description = "Validation failed"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PutMapping("/{itemId}")
+    @PutMapping(ApiPaths.ITEM_ID_PARAM)
     public ResponseEntity<CartItemResponseDto> updateCartItem(
             @Parameter(description = "Cart item ID", required = true) 
             @PathVariable Long itemId,
@@ -149,7 +150,7 @@ public class CartItemController {
         @ApiResponse(responseCode = "404", description = "Cart item not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PatchMapping("/{itemId}/quantity")
+    @PatchMapping(ApiPaths.ITEM_ID_PARAM + ApiPaths.QUANTITY)
     public ResponseEntity<CartItemResponseDto> updateItemQuantity(
             @Parameter(description = "Cart item ID", required = true) 
             @PathVariable Long itemId,
@@ -188,7 +189,7 @@ public class CartItemController {
         @ApiResponse(responseCode = "404", description = "Cart item not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @DeleteMapping("/{itemId}")
+    @DeleteMapping(ApiPaths.ITEM_ID_PARAM)
     public ResponseEntity<Void> removeCartItem(
             @Parameter(description = "Cart item ID", required = true) 
             @PathVariable Long itemId) {
@@ -217,7 +218,7 @@ public class CartItemController {
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @DeleteMapping("/bulk")
+    @DeleteMapping(ApiPaths.BULK)
     public ResponseEntity<Void> removeMultipleItems(
             @Parameter(description = "Bulk removal request", required = true)
             @Valid @RequestBody RemoveFromCartDto request) {
@@ -244,7 +245,7 @@ public class CartItemController {
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping("/cart/{cartId}")
+    @GetMapping(ApiPaths.CART + ApiPaths.CART_ID_PARAM)
     public ResponseEntity<List<CartItemResponseDto>> getCartItems(
             @Parameter(description = "Cart ID", required = true) 
             @PathVariable Long cartId) {
@@ -268,7 +269,7 @@ public class CartItemController {
         @ApiResponse(responseCode = "404", description = "Item not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping("/{itemId}")
+    @GetMapping(ApiPaths.ITEM_ID_PARAM)
     public ResponseEntity<CartItemResponseDto> getCartItemById(
             @Parameter(description = "Cart item ID", required = true) 
             @PathVariable Long itemId) {
@@ -319,7 +320,7 @@ public class CartItemController {
         @ApiResponse(responseCode = "404", description = "Item not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PatchMapping("/{itemId}/gift")
+    @PatchMapping(ApiPaths.ITEM_ID_PARAM + ApiPaths.GIFT)
     public ResponseEntity<CartItemResponseDto> updateGiftOptions(
             @Parameter(description = "Cart item ID", required = true) 
             @PathVariable Long itemId,

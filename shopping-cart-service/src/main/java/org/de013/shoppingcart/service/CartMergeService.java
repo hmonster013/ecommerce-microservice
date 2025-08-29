@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.entity.Cart;
-import org.de013.shoppingcart.entity.CartAnalytics;
+
 import org.de013.shoppingcart.entity.CartItem;
 import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.entity.enums.CartType;
-import org.de013.shoppingcart.repository.jpa.CartAnalyticsRepository;
+
 import org.de013.shoppingcart.repository.jpa.CartItemRepository;
 import org.de013.shoppingcart.repository.jpa.CartRepository;
 import org.de013.shoppingcart.repository.redis.RedisCartSessionManager;
@@ -34,9 +34,8 @@ public class CartMergeService {
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final CartAnalyticsRepository analyticsRepository;
+
     private final RedisCartSessionManager sessionManager;
-    private final CartValidationService validationService;
 
     // ==================== MAIN MERGE OPERATIONS ====================
 
@@ -72,8 +71,7 @@ public class CartMergeService {
             // Update Redis session
             sessionManager.migrateGuestCartToUser(sessionId, userId);
             
-            // Record analytics
-            recordMergeAnalytics(guestCart, resultCart, userId, sessionId);
+            // Analytics removed for basic functionality
             
             log.info("Successfully merged guest cart {} to user cart {} for user {}", 
                     guestCart.getId(), resultCart.getId(), userId);
@@ -346,26 +344,7 @@ public class CartMergeService {
         cartRepository.save(cart);
     }
 
-    private void recordMergeAnalytics(Cart sourceCart, Cart targetCart, String userId, String sessionId) {
-        try {
-            CartAnalytics analytics = CartAnalytics.builder()
-                    .cartId(targetCart.getId())
-                    .userId(userId)
-                    .sessionId(sessionId)
-                    .eventType("CART_MERGED")
-                    .eventTimestamp(LocalDateTime.now())
-                    .cartTotalBefore(sourceCart.getTotalAmount())
-                    .cartTotalAfter(targetCart.getTotalAmount())
-                    .itemCountBefore(sourceCart.getItemCount())
-                    .itemCountAfter(targetCart.getItemCount())
-                    .additionalData("{\"sourceCartId\":" + sourceCart.getId() + "}")
-                    .build();
-            
-            analyticsRepository.save(analytics);
-        } catch (Exception e) {
-            log.error("Error recording merge analytics: {}", e.getMessage(), e);
-        }
-    }
+
 
     private CartResponseDto convertToResponseDto(Cart cart) {
         return CartResponseDto.builder()

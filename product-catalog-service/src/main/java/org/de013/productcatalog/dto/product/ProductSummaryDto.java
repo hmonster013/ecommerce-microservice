@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.product;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -95,10 +96,12 @@ public class ProductSummaryDto {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean isAvailable() {
         return status == ProductStatus.ACTIVE && (inStock == null || inStock);
     }
 
+    @JsonIgnore
     public boolean isOnSale() {
         return pricing != null && pricing.getOnSale() != null && pricing.getOnSale();
     }

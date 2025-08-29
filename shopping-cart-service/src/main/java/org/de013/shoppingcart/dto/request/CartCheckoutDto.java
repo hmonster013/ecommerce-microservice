@@ -1,5 +1,6 @@
 package org.de013.shoppingcart.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -182,25 +183,28 @@ public class CartCheckoutDto {
     /**
      * Validate that either userId or sessionId is provided
      */
+    @JsonIgnore
     @AssertTrue(message = "Either user ID or session ID must be provided")
     public boolean isValidUserOrSession() {
-        return (userId != null && !userId.trim().isEmpty()) || 
+        return (userId != null && !userId.trim().isEmpty()) ||
                (sessionId != null && !sessionId.trim().isEmpty());
     }
 
     /**
      * Validate that cart identification is provided
      */
+    @JsonIgnore
     @AssertTrue(message = "Either cart ID or user/session identification must be provided")
     public boolean hasValidCartIdentification() {
-        return cartId != null || 
-               (userId != null && !userId.trim().isEmpty()) || 
+        return cartId != null ||
+               (userId != null && !userId.trim().isEmpty()) ||
                (sessionId != null && !sessionId.trim().isEmpty());
     }
 
     /**
      * Validate billing address when not using same address
      */
+    @JsonIgnore
     @AssertTrue(message = "Billing address is required when not using same billing address")
     public boolean isValidBillingAddress() {
         if (Boolean.FALSE.equals(sameBillingAddress)) {
@@ -212,6 +216,7 @@ public class CartCheckoutDto {
     /**
      * Check if this is for an authenticated user
      */
+    @JsonIgnore
     public boolean isAuthenticatedUser() {
         return userId != null && !userId.trim().isEmpty();
     }
@@ -219,14 +224,16 @@ public class CartCheckoutDto {
     /**
      * Check if this is for a guest session
      */
+    @JsonIgnore
     public boolean isGuestSession() {
-        return sessionId != null && !sessionId.trim().isEmpty() && 
+        return sessionId != null && !sessionId.trim().isEmpty() &&
                (userId == null || userId.trim().isEmpty());
     }
 
     /**
      * Get the identifier (userId or sessionId)
      */
+    @JsonIgnore
     public String getIdentifier() {
         return isAuthenticatedUser() ? userId : sessionId;
     }

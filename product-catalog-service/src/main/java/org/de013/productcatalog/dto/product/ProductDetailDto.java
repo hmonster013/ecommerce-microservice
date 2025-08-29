@@ -1,6 +1,8 @@
 package org.de013.productcatalog.dto.product;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -183,14 +185,20 @@ public class ProductDetailDto {
         private String group;
     }
 
+    // Computed fields for backward compatibility
+    @Schema(description = "Whether the product is available for purchase", example = "true")
+    private Boolean available;
+
     // Helper methods
+    @JsonIgnore
     public boolean isAvailable() {
-        return status == ProductStatus.ACTIVE && 
-               inventory != null && 
-               inventory.getAvailableQuantity() != null && 
+        return status == ProductStatus.ACTIVE &&
+               inventory != null &&
+               inventory.getAvailableQuantity() != null &&
                inventory.getAvailableQuantity() > 0;
     }
 
+    @JsonIgnore
     public boolean isOnSale() {
         return pricing != null && pricing.getOnSale() != null && pricing.getOnSale();
     }

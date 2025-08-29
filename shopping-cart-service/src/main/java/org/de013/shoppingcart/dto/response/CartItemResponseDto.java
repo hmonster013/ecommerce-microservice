@@ -1,6 +1,7 @@
 package org.de013.shoppingcart.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -200,6 +201,7 @@ public class CartItemResponseDto {
     /**
      * Check if item has any validation issues
      */
+    @JsonIgnore
     public boolean hasValidationIssues() {
         return validationMessages != null && !validationMessages.isEmpty();
     }
@@ -207,6 +209,7 @@ public class CartItemResponseDto {
     /**
      * Check if item is on sale
      */
+    @JsonIgnore
     public boolean isOnSale() {
         return discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0;
     }
@@ -214,14 +217,16 @@ public class CartItemResponseDto {
     /**
      * Check if item has gift options
      */
+    @JsonIgnore
     public boolean hasGiftOptions() {
-        return Boolean.TRUE.equals(isGift) && 
+        return Boolean.TRUE.equals(isGift) &&
                (giftMessage != null || giftWrapType != null);
     }
 
     /**
      * Get effective price (unit price after discount)
      */
+    @JsonIgnore
     public BigDecimal getEffectivePrice() {
         if (unitPrice == null) {
             return BigDecimal.ZERO;

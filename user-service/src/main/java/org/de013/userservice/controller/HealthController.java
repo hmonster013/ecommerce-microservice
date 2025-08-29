@@ -27,8 +27,7 @@ public class HealthController extends BaseController {
                 "status", "UP",
                 "service", "user-service",
                 "timestamp", LocalDateTime.now(),
-                "version", "1.0.0",
-                "phase", "Phase 7 - Controller Layer Complete"
+                "version", "1.0.0"
         );
         
         return ok(healthData);

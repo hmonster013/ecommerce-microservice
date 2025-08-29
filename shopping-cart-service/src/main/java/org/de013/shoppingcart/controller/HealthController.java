@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
-@RequestMapping(ApiPaths.HEALTH) // Gateway routes /api/v1/cart/** to /cart/**
+@RequestMapping(ApiPaths.HEALTH)
 @Tag(name = "Health Check", description = "Service health check endpoints")
 public class HealthController extends BaseController {
 
