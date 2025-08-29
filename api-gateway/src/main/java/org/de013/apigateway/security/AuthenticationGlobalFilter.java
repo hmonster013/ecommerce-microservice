@@ -31,17 +31,17 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
             "/actuator/info",
             "/swagger-ui",
             "/v3/api-docs",
-            "/api/users/v3/api-docs",
+            "/api/usersv/v3/api-docs",
             "/api/productsv/v3/api-docs",
-            "/api/cart/v3/api-docs",
-            "/api/orders/v3/api-docs",
-            "/api/payments/v3/api-docs",
-            "/api/notifications/v3/api-docs",
+            "/api/cartsv/v3/api-docs",
+            "/api/ordersv/v3/api-docs",
+            "/api/paymentsv/v3/api-docs",
+            "/api/notificationsv/v3/api-docs",
             "/swagger-resources",
             "/webjars",
 
             // Authentication endpoints
-            "/api/v1/users/auth",
+            "/api/v1/usersv/auth",
             "/api/user-service/auth",
 
             // Product Catalog Service - Public endpoints
@@ -68,7 +68,14 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
             "/api/v1/productsv/search/suggestions",       // GET search suggestions
 
             // HealthController - Public endpoint
-            "/api/v1/productsv/health"                    // GET health check
+            "/api/v1/productsv/health",                   // GET health check
+
+            // Other services - Health checks and public endpoints
+            "/api/v1/usersv/health",                      // User service health
+            "/api/v1/cartsv/health",                      // Cart service health
+            "/api/v1/ordersv/health",                     // Order service health
+            "/api/v1/paymentsv/health",                   // Payment service health
+            "/api/v1/notificationsv/health"               // Notification service health
     );
 
     @Override

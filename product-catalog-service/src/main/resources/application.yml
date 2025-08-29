@@ -115,10 +115,7 @@ management:
     health:
       show-details: always
 
-# Swagger/OpenAPI Configuration merged above
-    tags-sorter: alpha
-    operations-sorter: alpha
-  show-actuator: true
+
 
 logging:
   level:
