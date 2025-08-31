@@ -1,6 +1,7 @@
 package org.de013.shoppingcart.client;
 
-import org.de013.shoppingcart.dto.ProductInfo;
+import org.de013.common.dto.ProductDetailDto;
+import org.de013.common.dto.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,19 +25,19 @@ public interface ProductCatalogFeignClient {
      * Get product information by ID
      */
     @GetMapping("/{productId}")
-    ProductInfo getProductById(@PathVariable("productId") String productId);
+    ApiResponse<ProductDetailDto> getProductById(@PathVariable("productId") String productId);
 
     /**
      * Get multiple products by IDs
      */
     @PostMapping("/batch")
-    Map<String, ProductInfo> getProductsByIds(@RequestBody List<String> productIds);
+    Map<String, ProductDetailDto> getProductsByIds(@RequestBody List<String> productIds);
 
     /**
      * Get product by SKU
      */
     @GetMapping("/sku/{sku}")
-    ProductInfo getProductBySku(@PathVariable("sku") String sku);
+    ProductDetailDto getProductBySku(@PathVariable("sku") String sku);
 
     // ==================== PRICING & AVAILABILITY ====================
 
@@ -143,7 +144,7 @@ public interface ProductCatalogFeignClient {
      * Get products by category
      */
     @GetMapping("/category/{categoryId}")
-    List<ProductInfo> getProductsByCategory(
+    List<ProductDetailDto> getProductsByCategory(
             @PathVariable("categoryId") String categoryId,
             @RequestParam(value = "page", defaultValue = "0") Integer page,
             @RequestParam(value = "size", defaultValue = "20") Integer size);
@@ -152,7 +153,7 @@ public interface ProductCatalogFeignClient {
      * Search products
      */
     @GetMapping("/search")
-    List<ProductInfo> searchProducts(
+    List<ProductDetailDto> searchProducts(
             @RequestParam("query") String query,
             @RequestParam(value = "page", defaultValue = "0") Integer page,
             @RequestParam(value = "size", defaultValue = "20") Integer size);
@@ -179,7 +180,7 @@ public interface ProductCatalogFeignClient {
      * Get related products
      */
     @GetMapping("/{productId}/related")
-    List<ProductInfo> getRelatedProducts(
+    List<ProductDetailDto> getRelatedProducts(
             @PathVariable("productId") String productId,
             @RequestParam(value = "limit", defaultValue = "5") Integer limit);
 
@@ -187,7 +188,7 @@ public interface ProductCatalogFeignClient {
      * Get frequently bought together
      */
     @GetMapping("/{productId}/frequently-bought-together")
-    List<ProductInfo> getFrequentlyBoughtTogether(
+    List<ProductDetailDto> getFrequentlyBoughtTogether(
             @PathVariable("productId") String productId,
             @RequestParam(value = "limit", defaultValue = "3") Integer limit);
 

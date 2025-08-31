@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
-import org.de013.shoppingcart.dto.ProductInfo;
+import org.de013.common.dto.ProductDetailDto;
 import org.de013.shoppingcart.dto.request.AddToCartDto;
 import org.de013.shoppingcart.dto.request.RemoveFromCartDto;
 import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
@@ -66,11 +66,19 @@ public class CartItemService {
                 throw new RuntimeException("Cart cannot be modified");
             }
             
+            // Debug logging
+            log.debug("Request unit price: {}", request.getUnitPrice());
+            log.debug("Request details: productId={}, quantity={}, variantId={}",
+                     request.getProductId(), request.getQuantity(), request.getVariantId());
+
             // Get product information
-            ProductInfo productInfo = productCatalogClient.getProductInfo(request.getProductId());
+            ProductDetailDto productInfo = productCatalogClient.getProductInfo(request.getProductId());
             if (productInfo == null) {
                 throw new RuntimeException("Product not found");
             }
+
+            log.debug("Product info - current price: {}, original price: {}",
+                     productInfo.getCurrentPrice(), productInfo.getOriginalPrice());
             
             // Check if item already exists
             Optional<CartItem> existingItem = cartItemRepository.findByCartIdAndProductIdAndVariantId(
@@ -349,7 +357,13 @@ public class CartItemService {
 
     // ==================== HELPER METHODS ====================
 
-    private CartItem createNewCartItem(Cart cart, AddToCartDto request, ProductInfo productInfo) {
+    private CartItem createNewCartItem(Cart cart, AddToCartDto request, ProductDetailDto productInfo) {
+        BigDecimal finalUnitPrice = request.getUnitPrice() != null ? request.getUnitPrice() :
+                                   (productInfo.getCurrentPrice() != null ? productInfo.getCurrentPrice() : BigDecimal.ZERO);
+
+        log.debug("Creating cart item - request.unitPrice: {}, productInfo.currentPrice: {}, final unitPrice: {}",
+                 request.getUnitPrice(), productInfo.getCurrentPrice(), finalUnitPrice);
+
         return CartItem.builder()
                 .cart(cart)
                 .productId(request.getProductId())
@@ -360,7 +374,7 @@ public class CartItemService {
                 .categoryId(productInfo.getCategoryId())
                 .categoryName(productInfo.getCategoryName())
                 .quantity(request.getQuantity())
-                .unitPrice(request.getUnitPrice() != null ? request.getUnitPrice() : productInfo.getPrice())
+                .unitPrice(finalUnitPrice)
                 .originalPrice(productInfo.getOriginalPrice())
                 .currency("USD")
                 .variantId(request.getVariantId())

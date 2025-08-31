@@ -15,7 +15,7 @@ import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.ApplyCouponDto;
 import org.de013.shoppingcart.dto.request.CartCheckoutDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
-import org.de013.shoppingcart.dto.response.CartSummaryDto;
+
 
 import org.de013.shoppingcart.service.CartService;
 import org.de013.common.constant.ApiPaths;
@@ -293,32 +293,7 @@ public class CartController {
         }
     }
 
-    // ==================== CART SUMMARY & PRICING ====================
 
-    @Operation(summary = "Get cart summary", description = "Get detailed cart summary with pricing breakdown")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cart summary retrieved",
-                content = @Content(schema = @Schema(implementation = CartSummaryDto.class))),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping(ApiPaths.CART_ID_PARAM + ApiPaths.SUMMARY)
-    public ResponseEntity<CartSummaryDto> getCartSummary(
-            @Parameter(description = "Cart ID", required = true) 
-            @PathVariable Long cartId) {
-        
-        try {
-            log.debug("Getting cart summary for cart: {}", cartId);
-            
-            // This would be implemented in CartService
-            // For now, return a placeholder response
-            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-            
-        } catch (Exception e) {
-            log.error("Error getting cart summary for {}: {}", cartId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
 
     // ==================== CHECKOUT PREPARATION ====================
 

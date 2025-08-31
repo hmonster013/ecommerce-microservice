@@ -1,7 +1,8 @@
 package org.de013.shoppingcart.client;
 
 import lombok.extern.slf4j.Slf4j;
-import org.de013.shoppingcart.dto.ProductInfo;
+import org.de013.common.dto.ProductDetailDto;
+import org.de013.common.dto.ApiResponse;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -20,25 +21,26 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     // ==================== PRODUCT INFORMATION ====================
 
     @Override
-    public ProductInfo getProductById(String productId) {
+    public ApiResponse<ProductDetailDto> getProductById(String productId) {
         log.warn("Product Catalog Service unavailable, using fallback for product: {}", productId);
-        return createFallbackProductInfo(productId);
+        ProductDetailDto fallbackProduct = createFallbackProductDetail(productId);
+        return ApiResponse.success(fallbackProduct);
     }
 
     @Override
-    public Map<String, ProductInfo> getProductsByIds(List<String> productIds) {
+    public Map<String, ProductDetailDto> getProductsByIds(List<String> productIds) {
         log.warn("Product Catalog Service unavailable, using fallback for {} products", productIds.size());
-        Map<String, ProductInfo> result = new HashMap<>();
+        Map<String, ProductDetailDto> result = new HashMap<>();
         for (String productId : productIds) {
-            result.put(productId, createFallbackProductInfo(productId));
+            result.put(productId, createFallbackProductDetail(productId));
         }
         return result;
     }
 
     @Override
-    public ProductInfo getProductBySku(String sku) {
+    public ProductDetailDto getProductBySku(String sku) {
         log.warn("Product Catalog Service unavailable, using fallback for SKU: {}", sku);
-        return createFallbackProductInfo("unknown-" + sku);
+        return createFallbackProductDetail("unknown-" + sku);
     }
 
     // ==================== PRICING & AVAILABILITY ====================
@@ -198,13 +200,13 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     // ==================== CATEGORY & SEARCH ====================
 
     @Override
-    public List<ProductInfo> getProductsByCategory(String categoryId, Integer page, Integer size) {
+    public List<ProductDetailDto> getProductsByCategory(String categoryId, Integer page, Integer size) {
         log.warn("Product Catalog Service unavailable, returning empty category products for: {}", categoryId);
         return List.of();
     }
 
     @Override
-    public List<ProductInfo> searchProducts(String query, Integer page, Integer size) {
+    public List<ProductDetailDto> searchProducts(String query, Integer page, Integer size) {
         log.warn("Product Catalog Service unavailable, returning empty search results for: {}", query);
         return List.of();
     }
@@ -231,13 +233,13 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     // ==================== PRODUCT RECOMMENDATIONS ====================
 
     @Override
-    public List<ProductInfo> getRelatedProducts(String productId, Integer limit) {
+    public List<ProductDetailDto> getRelatedProducts(String productId, Integer limit) {
         log.warn("Product Catalog Service unavailable, returning empty related products for: {}", productId);
         return List.of();
     }
 
     @Override
-    public List<ProductInfo> getFrequentlyBoughtTogether(String productId, Integer limit) {
+    public List<ProductDetailDto> getFrequentlyBoughtTogether(String productId, Integer limit) {
         log.warn("Product Catalog Service unavailable, returning empty frequently bought together for: {}", productId);
         return List.of();
     }
@@ -299,17 +301,26 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     // ==================== HELPER METHODS ====================
 
     /**
-     * Create fallback product info
+     * Create fallback product detail
      */
-    private ProductInfo createFallbackProductInfo(String productId) {
-        return ProductInfo.builder()
+    private ProductDetailDto createFallbackProductDetail(String productId) {
+        return ProductDetailDto.builder()
+                .id(Long.parseLong(productId.replaceAll("\\D", "1"))) // Extract numbers or default to 1
                 .sku(productId)
                 .name("Product Unavailable")
                 .description("Product information is currently unavailable")
                 .price(BigDecimal.ZERO)
-                .originalPrice(BigDecimal.ZERO)
-                .stockQuantity(0)
+                .comparePrice(BigDecimal.ZERO)
                 .status("UNAVAILABLE")
+                .inventory(ProductDetailDto.InventoryResponseDto.builder()
+                        .availableQuantity(0)
+                        .inStock(false)
+                        .build())
+                .pricing(ProductDetailDto.PricingInfo.builder()
+                        .currentPrice(BigDecimal.ZERO)
+                        .originalPrice(BigDecimal.ZERO)
+                        .onSale(false)
+                        .build())
                 .build();
     }
 }

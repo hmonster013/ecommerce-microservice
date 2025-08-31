@@ -104,9 +104,6 @@ public class CartResponseDto {
     @Schema(description = "List of items in the cart")
     private List<CartItemResponseDto> items;
 
-    @Schema(description = "Cart summary with detailed pricing")
-    private CartSummaryDto summary;
-
     @Schema(description = "Whether cart is empty", example = "false")
     @JsonProperty("is_empty")
     private Boolean isEmpty;
@@ -139,89 +136,8 @@ public class CartResponseDto {
     @JsonProperty("validation_status")
     private Map<String, Object> validationStatus;
 
-    @Schema(description = "Recommended products based on cart contents")
-    @JsonProperty("recommended_products")
-    private List<String> recommendedProducts;
 
-    @Schema(description = "Applied promotions and discounts")
-    @JsonProperty("applied_promotions")
-    private List<PromotionDto> appliedPromotions;
 
-    @Schema(description = "Available shipping methods")
-    @JsonProperty("available_shipping_methods")
-    private List<ShippingMethodDto> availableShippingMethods;
-
-    @Schema(description = "Estimated delivery date", example = "2024-01-05T00:00:00")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    @JsonProperty("estimated_delivery_date")
-    private LocalDateTime estimatedDeliveryDate;
-
-    /**
-     * Nested DTO for promotion information
-     */
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    @ToString
-    @EqualsAndHashCode
-    @Schema(description = "Applied promotion information")
-    public static class PromotionDto {
-
-        @Schema(description = "Promotion ID", example = "promo-123")
-        @JsonProperty("promotion_id")
-        private String promotionId;
-
-        @Schema(description = "Promotion code", example = "SAVE20")
-        private String code;
-
-        @Schema(description = "Promotion description", example = "20% off all items")
-        private String description;
-
-        @Schema(description = "Discount amount", example = "20.00")
-        @JsonProperty("discount_amount")
-        private BigDecimal discountAmount;
-
-        @Schema(description = "Discount type", example = "PERCENTAGE")
-        @JsonProperty("discount_type")
-        private String discountType;
-    }
-
-    /**
-     * Nested DTO for shipping method information
-     */
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    @ToString
-    @EqualsAndHashCode
-    @Schema(description = "Available shipping method")
-    public static class ShippingMethodDto {
-
-        @Schema(description = "Shipping method ID", example = "standard")
-        @JsonProperty("method_id")
-        private String methodId;
-
-        @Schema(description = "Shipping method name", example = "Standard Shipping")
-        private String name;
-
-        @Schema(description = "Shipping description", example = "5-7 business days")
-        private String description;
-
-        @Schema(description = "Shipping cost", example = "9.99")
-        private BigDecimal cost;
-
-        @Schema(description = "Estimated delivery days", example = "7")
-        @JsonProperty("estimated_days")
-        private Integer estimatedDays;
-
-        @Schema(description = "Whether this method is recommended", example = "true")
-        @JsonProperty("is_recommended")
-        private Boolean isRecommended;
-    }
 
     /**
      * Calculate time until expiration in seconds
@@ -254,10 +170,5 @@ public class CartResponseDto {
         return discountAmount;
     }
 
-    /**
-     * Check if cart has applied promotions
-     */
-    public boolean hasPromotions() {
-        return appliedPromotions != null && !appliedPromotions.isEmpty();
-    }
+
 }

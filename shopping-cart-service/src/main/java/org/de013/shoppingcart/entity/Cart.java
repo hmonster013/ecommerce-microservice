@@ -139,10 +139,11 @@ public class Cart extends BaseEntity {
     public void updateCartTotals() {
         this.itemCount = cartItems.size();
         this.totalQuantity = cartItems.stream()
-                .mapToInt(CartItem::getQuantity)
+                .mapToInt(item -> item.getQuantity() != null ? item.getQuantity() : 0)
                 .sum();
         this.subtotal = cartItems.stream()
                 .map(CartItem::getTotalPrice)
+                .filter(price -> price != null) // Filter out null prices
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Calculate total (subtotal + tax + shipping - discount)

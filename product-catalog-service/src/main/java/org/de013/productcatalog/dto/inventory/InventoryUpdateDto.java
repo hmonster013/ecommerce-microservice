@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.inventory;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
@@ -51,6 +52,7 @@ public class InventoryUpdateDto {
     private String supplierSku;
 
     // Helper method to check if any field is set
+    @JsonIgnore
     public boolean hasUpdates() {
         return quantity != null || reservedQuantity != null || minStockLevel != null ||
                maxStockLevel != null || reorderPoint != null || reorderQuantity != null ||

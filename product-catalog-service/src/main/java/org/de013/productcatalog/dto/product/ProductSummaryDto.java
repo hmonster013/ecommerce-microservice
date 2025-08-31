@@ -106,6 +106,7 @@ public class ProductSummaryDto {
         return pricing != null && pricing.getOnSale() != null && pricing.getOnSale();
     }
 
+    @JsonIgnore
     public String getDisplayPrice() {
         if (price == null) {
             return "N/A";
@@ -113,6 +114,7 @@ public class ProductSummaryDto {
         return "$" + price.toString();
     }
 
+    @JsonIgnore
     public String getDisplayComparePrice() {
         if (comparePrice == null) {
             return null;

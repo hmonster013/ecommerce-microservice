@@ -1,15 +1,11 @@
-package org.de013.productcatalog.dto.product;
+package org.de013.common.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
-import org.de013.productcatalog.dto.category.CategorySummaryDto;
-import org.de013.productcatalog.dto.inventory.InventoryResponseDto;
-import org.de013.productcatalog.dto.review.ReviewSummaryDto;
-import org.de013.productcatalog.entity.enums.ProductStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,6 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Detailed product information")
 public class ProductDetailDto {
 
@@ -55,7 +52,7 @@ public class ProductDetailDto {
     private String dimensions;
 
     @Schema(description = "Product status", example = "ACTIVE")
-    private ProductStatus status;
+    private String status;
 
     @Schema(description = "Is featured product", example = "true")
     private Boolean isFeatured;
@@ -84,20 +81,8 @@ public class ProductDetailDto {
     @Schema(description = "Product images")
     private List<ProductImageDto> images;
 
-    @Schema(description = "Product variants grouped by type")
-    private List<ProductVariantGroupDto> variantGroups;
-
     @Schema(description = "Inventory information")
     private InventoryResponseDto inventory;
-
-    @Schema(description = "Review summary")
-    private ReviewSummaryDto reviewSummary;
-
-    @Schema(description = "Recent reviews")
-    private List<org.de013.productcatalog.dto.review.ReviewResponseDto> recentReviews;
-
-    @Schema(description = "Related products")
-    private List<ProductSummaryDto> relatedProducts;
 
     @Schema(description = "Pricing information")
     private PricingInfo pricing;
@@ -116,30 +101,75 @@ public class ProductDetailDto {
     @Schema(description = "Last update timestamp", example = "2024-01-15 10:30:00")
     private LocalDateTime updatedAt;
 
+    // Computed fields for backward compatibility
+    @Schema(description = "Whether the product is available for purchase", example = "true")
+    private Boolean available;
+
+    // Nested DTOs
     @Getter
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @Schema(description = "Category summary")
+    public static class CategorySummaryDto {
+        private Long id;
+        private String name;
+        private String slug;
+        private String description;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @Schema(description = "Product image")
+    public static class ProductImageDto {
+        private Long id;
+        private String imageUrl;
+        private String altText;
+        private String imageType;
+        private Integer sortOrder;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @Schema(description = "Inventory information")
+    public static class InventoryResponseDto {
+        private Integer totalQuantity;
+        private Integer availableQuantity;
+        private Integer reservedQuantity;
+        private Integer reorderLevel;
+        private Integer maxOrderQuantity;
+        private Boolean trackInventory;
+        private String availabilityStatus;
+        private Boolean inStock;
+        private Boolean allowBackorder;
+        private Boolean lowStock;
+        private Boolean needsReorder;
+        private String stockStatus;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Schema(description = "Pricing information")
     public static class PricingInfo {
-        
-        @Schema(description = "Current price", example = "999.00")
         private BigDecimal currentPrice;
-        
-        @Schema(description = "Original price", example = "1099.00")
         private BigDecimal originalPrice;
-        
-        @Schema(description = "Discount amount", example = "100.00")
         private BigDecimal discountAmount;
-        
-        @Schema(description = "Discount percentage", example = "9.09")
         private BigDecimal discountPercentage;
-        
-        @Schema(description = "Is on sale", example = "true")
         private Boolean onSale;
-        
-        @Schema(description = "Savings text", example = "Save $100.00 (9%)")
         private String savingsText;
     }
 
@@ -148,22 +178,13 @@ public class ProductDetailDto {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Schema(description = "Shipping information")
     public static class ShippingInfo {
-        
-        @Schema(description = "Requires shipping", example = "true")
         private Boolean requiresShipping;
-        
-        @Schema(description = "Weight in kg", example = "0.187")
         private BigDecimal weight;
-        
-        @Schema(description = "Dimensions", example = "14.7 x 7.1 x 0.8 cm")
         private String dimensions;
-        
-        @Schema(description = "Estimated delivery time", example = "2-3 business days")
         private String estimatedDelivery;
-        
-        @Schema(description = "Free shipping eligible", example = "true")
         private Boolean freeShippingEligible;
     }
 
@@ -172,27 +193,18 @@ public class ProductDetailDto {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Schema(description = "Product specification")
     public static class ProductSpecification {
-        
-        @Schema(description = "Specification name", example = "Display")
         private String name;
-        
-        @Schema(description = "Specification value", example = "6.1-inch Super Retina XDR")
         private String value;
-        
-        @Schema(description = "Specification group", example = "Display & Design")
         private String group;
     }
-
-    // Computed fields for backward compatibility
-    @Schema(description = "Whether the product is available for purchase", example = "true")
-    private Boolean available;
 
     // Helper methods
     @JsonIgnore
     public boolean isAvailable() {
-        return status == ProductStatus.ACTIVE &&
+        return "ACTIVE".equals(status) &&
                inventory != null &&
                inventory.getAvailableQuantity() != null &&
                inventory.getAvailableQuantity() > 0;
@@ -212,5 +224,37 @@ public class ProductDetailDto {
                 .filter(img -> "MAIN".equals(img.getImageType()))
                 .findFirst()
                 .orElse(images.get(0));
+    }
+
+    // Backward compatibility methods for Shopping Cart Service
+    @JsonIgnore
+    public String getImageUrl() {
+        ProductImageDto mainImage = getMainImage();
+        return mainImage != null ? mainImage.getImageUrl() : null;
+    }
+
+    @JsonIgnore
+    public String getCategoryId() {
+        return primaryCategory != null ? primaryCategory.getId().toString() : null;
+    }
+
+    @JsonIgnore
+    public String getCategoryName() {
+        return primaryCategory != null ? primaryCategory.getName() : null;
+    }
+
+    @JsonIgnore
+    public BigDecimal getCurrentPrice() {
+        return pricing != null ? pricing.getCurrentPrice() : price;
+    }
+
+    @JsonIgnore
+    public BigDecimal getOriginalPrice() {
+        return pricing != null ? pricing.getOriginalPrice() : comparePrice;
+    }
+
+    @JsonIgnore
+    public Integer getStockQuantity() {
+        return inventory != null ? inventory.getAvailableQuantity() : 0;
     }
 }

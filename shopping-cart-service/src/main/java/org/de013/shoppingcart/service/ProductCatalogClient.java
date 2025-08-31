@@ -3,7 +3,8 @@ package org.de013.shoppingcart.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.shoppingcart.client.ProductCatalogFeignClient;
-import org.de013.shoppingcart.dto.ProductInfo;
+import org.de013.common.dto.ProductDetailDto;
+import org.de013.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
@@ -15,7 +16,6 @@ import org.springframework.web.client.HttpClientErrorException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Product Catalog Client
@@ -41,15 +41,18 @@ public class ProductCatalogClient {
      * Get product information by ID
      */
     @Cacheable(value = "productInfo", key = "#productId", unless = "#result == null")
-    public ProductInfo getProductInfo(String productId) {
+    public ProductDetailDto getProductInfo(String productId) {
         try {
             log.debug("Fetching product info for product: {}", productId);
 
             // Use Feign client for primary call
-            ProductInfo productInfo = productCatalogFeignClient.getProductById(productId);
+            ApiResponse<ProductDetailDto> response = productCatalogFeignClient.getProductById(productId);
 
-            if (productInfo != null && !"UNAVAILABLE".equals(productInfo.getStatus())) {
-                return productInfo;
+            if (response != null && response.isSuccess() && response.getData() != null) {
+                ProductDetailDto productInfo = response.getData();
+                if (!"UNAVAILABLE".equals(productInfo.getStatus())) {
+                    return productInfo;
+                }
             }
 
             log.warn("Product not found or unavailable: {}", productId);
@@ -64,31 +67,14 @@ public class ProductCatalogClient {
     /**
      * Get multiple products information
      */
-    public Map<String, ProductInfo> getProductsInfo(List<String> productIds) {
+    public Map<String, ProductDetailDto> getProductsInfo(List<String> productIds) {
         try {
             log.debug("Fetching product info for {} products", productIds.size());
-            
-            String url = productCatalogServiceUrl + "/api/products/batch";
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, productIds, Map.class);
-            
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
-                Map<String, ProductInfo> result = new java.util.HashMap<>();
-                
-                for (Map.Entry<String, Object> entry : responseBody.entrySet()) {
-                    if (entry.getValue() instanceof Map) {
-                        ProductInfo productInfo = mapToProductInfo((Map<String, Object>) entry.getValue());
-                        if (productInfo != null) {
-                            result.put(entry.getKey(), productInfo);
-                        }
-                    }
-                }
-                
-                return result;
-            }
-            
-            return new java.util.HashMap<>();
-            
+
+            // Use Feign client for batch call
+            Map<String, ProductDetailDto> result = productCatalogFeignClient.getProductsByIds(productIds);
+            return result != null ? result : new java.util.HashMap<>();
+
         } catch (Exception e) {
             log.error("Error fetching multiple products info: {}", e.getMessage(), e);
             return new java.util.HashMap<>();
@@ -238,7 +224,7 @@ public class ProductCatalogClient {
      */
     public boolean validateProduct(String productId) {
         try {
-            ProductInfo productInfo = getProductInfo(productId);
+            ProductDetailDto productInfo = getProductInfo(productId);
             return productInfo != null && "ACTIVE".equals(productInfo.getStatus());
         } catch (Exception e) {
             log.error("Error validating product {}: {}", productId, e.getMessage(), e);
@@ -272,26 +258,7 @@ public class ProductCatalogClient {
 
     // ==================== HELPER METHODS ====================
 
-    private ProductInfo mapToProductInfo(Map<String, Object> productData) {
-        try {
-            return ProductInfo.builder()
-                    .sku(getStringValue(productData, "sku"))
-                    .name(getStringValue(productData, "name"))
-                    .description(getStringValue(productData, "description"))
-                    .imageUrl(getStringValue(productData, "imageUrl"))
-                    .categoryId(getStringValue(productData, "categoryId"))
-                    .categoryName(getStringValue(productData, "categoryName"))
-                    .price(getBigDecimalValue(productData, "price"))
-                    .originalPrice(getBigDecimalValue(productData, "originalPrice"))
-                    .stockQuantity(getIntegerValue(productData, "stockQuantity"))
-                    .status(getStringValue(productData, "status"))
-                    .build();
-            
-        } catch (Exception e) {
-            log.error("Error mapping product data: {}", e.getMessage(), e);
-            return null;
-        }
-    }
+
 
     private PricingInfo mapToPricingInfo(Map<String, Object> pricingData) {
         return PricingInfo.builder()

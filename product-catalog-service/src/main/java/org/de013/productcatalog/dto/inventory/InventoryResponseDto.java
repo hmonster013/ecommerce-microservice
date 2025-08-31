@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.inventory;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -65,6 +66,7 @@ public class InventoryResponseDto {
     private String stockStatus;
 
     // Helper methods
+    @JsonIgnore
     public boolean canFulfillOrder(int requestedQuantity) {
         if (!trackInventory) {
             return true;
