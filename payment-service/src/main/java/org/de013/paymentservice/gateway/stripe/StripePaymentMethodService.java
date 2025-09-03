@@ -28,8 +28,15 @@ public class StripePaymentMethodService {
      */
     public StripePaymentMethodResponse createPaymentMethod(StripePaymentMethodRequest request) throws Exception {
         try {
-            PaymentMethodCreateParams.Builder paramsBuilder = PaymentMethodCreateParams.builder()
-                    .setType(PaymentMethodCreateParams.Type.valueOf(request.getType().toUpperCase()));
+            PaymentMethodCreateParams.Builder paramsBuilder = PaymentMethodCreateParams.builder();
+
+            // Set type based on request type
+            switch (request.getType().toLowerCase()) {
+                case "card" -> paramsBuilder.setType(PaymentMethodCreateParams.Type.CARD);
+                case "us_bank_account" -> paramsBuilder.setType(PaymentMethodCreateParams.Type.US_BANK_ACCOUNT);
+                case "sepa_debit" -> paramsBuilder.setType(PaymentMethodCreateParams.Type.SEPA_DEBIT);
+                default -> paramsBuilder.setType(PaymentMethodCreateParams.Type.CARD);
+            }
 
             // Add card details if provided
             if (request.isCardPaymentMethod() && request.hasCardDetails()) {
@@ -136,7 +143,12 @@ public class StripePaymentMethodService {
                     .setCustomer(customerId);
             
             if (type != null) {
-                paramsBuilder.setType(PaymentMethodListParams.Type.valueOf(type.toUpperCase()));
+                switch (type.toLowerCase()) {
+                    case "card" -> paramsBuilder.setType(PaymentMethodListParams.Type.CARD);
+                    case "us_bank_account" -> paramsBuilder.setType(PaymentMethodListParams.Type.US_BANK_ACCOUNT);
+                    case "sepa_debit" -> paramsBuilder.setType(PaymentMethodListParams.Type.SEPA_DEBIT);
+                    default -> paramsBuilder.setType(PaymentMethodListParams.Type.CARD);
+                }
             }
 
             PaymentMethodCollection paymentMethods = PaymentMethod.list(paramsBuilder.build());
@@ -199,7 +211,8 @@ public class StripePaymentMethodService {
                     .expYear(Math.toIntExact(paymentMethod.getCard().getExpYear()))
                     .funding(paymentMethod.getCard().getFunding())
                     .last4(paymentMethod.getCard().getLast4())
-                    .network(paymentMethod.getCard().getNetwork())
+                    .network(paymentMethod.getCard().getNetworks() != null ?
+                            paymentMethod.getCard().getNetworks().getPreferred() : null)
                     .checks(checks)
                     .wallet(paymentMethod.getCard().getWallet() != null ? 
                             paymentMethod.getCard().getWallet().getType() : null)

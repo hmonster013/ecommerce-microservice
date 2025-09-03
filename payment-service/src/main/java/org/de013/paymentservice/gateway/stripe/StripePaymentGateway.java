@@ -3,7 +3,7 @@ package org.de013.paymentservice.gateway.stripe;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;
-import com.stripe.net.Webhook;
+
 import com.stripe.param.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +12,7 @@ import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.paymentmethod.CreatePaymentMethodRequest;
 import org.de013.paymentservice.dto.refund.RefundRequest;
 import org.de013.paymentservice.dto.stripe.*;
+import org.de013.paymentservice.dto.payment.StripeWebhookRequest;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.PaymentMethod;
 import org.de013.paymentservice.entity.Refund;
@@ -345,7 +346,12 @@ public class StripePaymentGateway implements PaymentGateway {
             }
 
             if (reason != null) {
-                paramsBuilder.setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER);
+                // Map reason to Stripe reason enum
+                switch (reason.toLowerCase()) {
+                    case "duplicate" -> paramsBuilder.setReason(RefundCreateParams.Reason.DUPLICATE);
+                    case "fraudulent" -> paramsBuilder.setReason(RefundCreateParams.Reason.FRAUDULENT);
+                    default -> paramsBuilder.setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER);
+                }
             }
 
             com.stripe.model.Refund refund = com.stripe.model.Refund.create(paramsBuilder.build());

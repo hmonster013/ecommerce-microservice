@@ -207,8 +207,28 @@ public class StripeWebhookService {
     private void handleChargeDisputeCreated(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
         log.info("Charge dispute created for payment intent: {}", paymentIntentId);
-        
+
         // TODO: Handle dispute creation logic
         // TODO: Send notification to admin
+    }
+
+    /**
+     * Get webhook endpoint secret
+     */
+    public String getWebhookSecret() {
+        return config.getGateways().getStripe().getWebhookSecret();
+    }
+
+    /**
+     * Validate webhook event type
+     */
+    public boolean isValidEventType(String eventType) {
+        return eventType != null && (
+                eventType.startsWith("payment_intent.") ||
+                eventType.startsWith("payment_method.") ||
+                eventType.startsWith("customer.") ||
+                eventType.startsWith("charge.") ||
+                eventType.contains("refund")
+        );
     }
 }
