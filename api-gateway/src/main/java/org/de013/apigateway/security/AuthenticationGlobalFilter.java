@@ -8,6 +8,7 @@ import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -102,25 +103,32 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
                 if (jwtUtil.validateToken(token)) {
                     UserContext userContext = extractUserContext(token);
 
-                    // Add user context headers for downstream services
-                    ServerHttpRequest modifiedRequest = request.mutate()
-                            .header("X-User-Id", String.valueOf(userContext.getUserId()))
-                            .header("X-User-Username", userContext.getUsername())
-                            .header("X-User-Email", userContext.getEmail())
-                            .header("X-User-FirstName", userContext.getFirstName() != null ? userContext.getFirstName() : "")
-                            .header("X-User-LastName", userContext.getLastName() != null ? userContext.getLastName() : "")
-                            .header("X-User-Roles", String.join(",", userContext.getRoles()))
-                            .build();
-
                     log.debug("JWT validated, forwarding user context: {} (ID: {})", userContext.getUsername(), userContext.getUserId());
 
-                    // Continue with user context
+                    // Create new headers map with existing headers plus user context
+                    HttpHeaders newHeaders = new HttpHeaders();
+                    newHeaders.addAll(request.getHeaders());
+                    newHeaders.set("X-User-Id", String.valueOf(userContext.getUserId()));
+                    newHeaders.set("X-User-Username", userContext.getUsername());
+                    newHeaders.set("X-User-Email", userContext.getEmail());
+                    newHeaders.set("X-User-FirstName", userContext.getFirstName() != null ? userContext.getFirstName() : "");
+                    newHeaders.set("X-User-LastName", userContext.getLastName() != null ? userContext.getLastName() : "");
+                    newHeaders.set("X-User-Roles", String.join(",", userContext.getRoles()));
+
+                    // Create new request with modified headers
+                    ServerHttpRequest modifiedRequest = new ServerHttpRequestDecorator(request) {
+                        @Override
+                        public HttpHeaders getHeaders() {
+                            return newHeaders;
+                        }
+                    };
+
                     return chain.filter(exchange.mutate().request(modifiedRequest).build());
                 } else {
                     log.debug("Invalid JWT token, forwarding request without user context for path: {}", path);
                 }
             } catch (Exception e) {
-                log.debug("JWT processing error for path {}: {}, forwarding request without user context", path, e.getMessage());
+                log.debug("JWT processing error for path {}: {}, forwarding request without user context", path, e.getMessage(), e);
             }
         } else {
             log.debug("No Authorization header, forwarding request without user context for path: {}", path);
@@ -142,14 +150,29 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
      * Extract user context from JWT token
      */
     private UserContext extractUserContext(String token) {
-        return UserContext.builder()
-                .userId(jwtUtil.extractUserId(token))
-                .username(jwtUtil.extractUsername(token))
-                .email(jwtUtil.extractEmail(token))
-                .firstName(jwtUtil.extractFirstName(token))
-                .lastName(jwtUtil.extractLastName(token))
-                .roles(jwtUtil.extractRoles(token))
-                .build();
+        try {
+            Long userId = jwtUtil.extractUserId(token);
+            String username = jwtUtil.extractUsername(token);
+            String email = jwtUtil.extractEmail(token);
+            String firstName = jwtUtil.extractFirstName(token);
+            String lastName = jwtUtil.extractLastName(token);
+            List<String> roles = jwtUtil.extractRoles(token);
+
+            log.debug("Extracted user context - UserId: {}, Username: {}, Email: {}, FirstName: {}, LastName: {}, Roles: {}",
+                    userId, username, email, firstName, lastName, roles);
+
+            return UserContext.builder()
+                    .userId(userId)
+                    .username(username)
+                    .email(email)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .roles(roles)
+                    .build();
+        } catch (Exception e) {
+            log.error("Error extracting user context from token: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     /**

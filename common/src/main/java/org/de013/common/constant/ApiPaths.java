@@ -35,6 +35,9 @@ public final class ApiPaths {
     public static final String CART_ID_PARAM = "/{cartId}";
     public static final String ITEM_ID_PARAM = "/{itemId}";
     public static final String PRODUCT_ID_PARAM = "/{productId}";
+    public static final String ORDER_ID_PARAM = "/{orderId}";
+    public static final String USER_ID_PARAM = "/{userId}";
+    public static final String ORDER_NUMBER_PARAM = "/{orderNumber}";
     public static final String USERNAME_PARAM = "/username/{username}";
     public static final String LEGACY = "/legacy";
     public static final String SEARCH = "/search";
@@ -50,6 +53,13 @@ public final class ApiPaths {
     public static final String COUPON = "/coupon";
     public static final String CHECKOUT = "/checkout";
     public static final String PREPARE = "/prepare";
+
+    // Order specific endpoints
+    public static final String MY_ORDERS = "/my-orders";
+    public static final String NUMBER = "/number";
+    public static final String USER = "/user";
+    public static final String STATUS = "/status";
+    public static final String CANCEL = "/cancel";
 
     // Product Catalog specific endpoints
     public static final String SLUG = "/slug";

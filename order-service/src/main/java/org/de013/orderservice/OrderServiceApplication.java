@@ -2,13 +2,8 @@ package org.de013.orderservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
-import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
@@ -32,12 +27,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
     "org.de013.common"
 })
 @EnableDiscoveryClient
-@EnableFeignClients(basePackages = "org.de013.orderservice.client")
 @EnableJpaAuditing
-@EnableRedisRepositories(basePackages = "org.de013.orderservice.repository.redis")
-@EnableCaching
-@EnableAsync
-@EnableScheduling
 @EnableTransactionManagement
 public class OrderServiceApplication {
 

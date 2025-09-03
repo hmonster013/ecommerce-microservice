@@ -355,6 +355,35 @@ public class CartItemService {
         }
     }
 
+    /**
+     * Get cart item by ID
+     */
+    public Optional<CartItemResponseDto> getCartItemById(Long itemId) {
+        try {
+            log.debug("Getting cart item by ID: {}", itemId);
+
+            Optional<CartItem> itemOpt = cartItemRepository.findById(itemId);
+            if (itemOpt.isEmpty()) {
+                log.debug("Cart item not found: {}", itemId);
+                return Optional.empty();
+            }
+
+            CartItem item = itemOpt.get();
+
+            // Check if item is deleted
+            if (item.isDeleted()) {
+                log.debug("Cart item {} is deleted", itemId);
+                return Optional.empty();
+            }
+
+            return Optional.of(convertToResponseDto(item));
+
+        } catch (Exception e) {
+            log.error("Error getting cart item by ID {}: {}", itemId, e.getMessage(), e);
+            return Optional.empty();
+        }
+    }
+
     // ==================== HELPER METHODS ====================
 
     private CartItem createNewCartItem(Cart cart, AddToCartDto request, ProductDetailDto productInfo) {

@@ -1,5 +1,6 @@
 package org.de013.orderservice.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -226,165 +227,36 @@ public class UpdateOrderRequest {
         private String action;
     }
     
-    /**
-     * Shipping Update DTO
-     */
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class ShippingUpdateDto {
-        
-        /**
-         * Updated shipping method
-         */
-        @Size(max = 50, message = "{field.size.max}")
-        private String shippingMethod;
-        
-        /**
-         * Updated carrier
-         */
-        @Size(max = 100, message = "{shipping.carrier.size}")
-        private String carrier;
-        
-        /**
-         * Updated carrier service
-         */
-        @Size(max = 100, message = "{shipping.carrier.service.size}")
-        private String carrierService;
-        
-        /**
-         * Updated tracking number
-         */
-        @Size(max = 100, message = "{shipping.tracking.number.size}")
-        private String trackingNumber;
-        
-        /**
-         * Updated estimated delivery date
-         */
-        private LocalDateTime estimatedDeliveryDate;
-        
-        /**
-         * Updated special instructions
-         */
-        @Size(max = 2000, message = "{shipping.instructions.size}")
-        private String specialInstructions;
-        
-        /**
-         * Updated signature requirement
-         */
-        private Boolean signatureRequired;
-        
-        /**
-         * Updated adult signature requirement
-         */
-        private Boolean adultSignatureRequired;
-        
-        /**
-         * Updated insurance status
-         */
-        private Boolean isInsured;
-        
-        /**
-         * Updated insurance value
-         */
-        @DecimalMin(value = "0.0", message = "{insurance.value.non-negative}")
-        private BigDecimal insuranceValue;
-    }
+
     
     /**
      * Check if this update includes status change
      */
+    @JsonIgnore
     public boolean hasStatusUpdate() {
         return status != null;
     }
-    
+
     /**
      * Check if this update includes address changes
      */
+    @JsonIgnore
     public boolean hasAddressUpdate() {
         return shippingAddress != null || billingAddress != null;
     }
-    
+
     /**
-     * Check if this update includes item changes
+     * Validate that order can be updated based on current status (simplified for base version)
      */
-    public boolean hasItemUpdates() {
-        return orderItems != null && !orderItems.isEmpty();
-    }
-    
-    /**
-     * Check if this update includes shipping changes
-     */
-    public boolean hasShippingUpdates() {
-        return shippingMethod != null || deliveryInstructions != null || 
-               signatureRequired != null || adultSignatureRequired != null ||
-               purchaseInsurance != null || insuranceValue != null;
-    }
-    
-    /**
-     * Get items to be removed
-     */
-    public List<UpdateOrderItemDto> getItemsToRemove() {
-        if (orderItems == null) {
-            return List.of();
-        }
-        return orderItems.stream()
-                .filter(item -> "REMOVE".equals(item.getAction()))
-                .toList();
-    }
-    
-    /**
-     * Get items to be updated
-     */
-    public List<UpdateOrderItemDto> getItemsToUpdate() {
-        if (orderItems == null) {
-            return List.of();
-        }
-        return orderItems.stream()
-                .filter(item -> "UPDATE".equals(item.getAction()))
-                .toList();
-    }
-    
-    /**
-     * Check if update requires order recalculation
-     */
-    public boolean requiresRecalculation() {
-        return hasItemUpdates() || 
-               (orderItems != null && orderItems.stream()
-                   .anyMatch(item -> item.getQuantity() != null || 
-                            item.getUnitPrice() != null || 
-                            item.getDiscountAmount() != null));
-    }
-    
-    /**
-     * Check if update requires notification
-     */
-    public boolean requiresNotification() {
-        return sendNotification && (hasStatusUpdate() || hasAddressUpdate() || 
-               expectedDeliveryDate != null || hasShippingUpdates());
-    }
-    
-    /**
-     * Validate that order can be updated based on current status
-     */
+    @JsonIgnore
     public boolean isValidForStatus(OrderStatus currentStatus) {
         if (currentStatus == null) {
             return false;
         }
-        
-        // Some updates are only allowed for certain statuses
-        if (hasItemUpdates()) {
-            return currentStatus == OrderStatus.PENDING || 
-                   currentStatus == OrderStatus.CONFIRMED;
-        }
-        
-        if (hasAddressUpdate()) {
-            return currentStatus == OrderStatus.PENDING || 
-                   currentStatus == OrderStatus.CONFIRMED ||
-                   currentStatus == OrderStatus.PROCESSING;
-        }
-        
-        return true;
+
+        // Only allow updates for certain statuses
+        return currentStatus == OrderStatus.PENDING ||
+               currentStatus == OrderStatus.CONFIRMED ||
+               currentStatus == OrderStatus.PAID;
     }
 }

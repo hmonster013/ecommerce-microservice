@@ -1,5 +1,6 @@
 package org.de013.orderservice.entity.valueobject;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.DecimalMin;
@@ -55,11 +56,12 @@ public class Money implements Serializable, Comparable<Money> {
     
     /**
      * Create Money with amount and currency
-     * 
+     *
      * @param amount the monetary amount
      * @param currency the currency code
      * @return Money instance
      */
+    @JsonIgnore
     public static Money of(BigDecimal amount, String currency) {
         return new Money(amount, currency);
     }
@@ -71,27 +73,30 @@ public class Money implements Serializable, Comparable<Money> {
      * @param currency the currency code
      * @return Money instance
      */
+    @JsonIgnore
     public static Money of(double amount, String currency) {
         return new Money(BigDecimal.valueOf(amount), currency);
     }
-    
+
     /**
      * Create Money with string amount and currency
-     * 
+     *
      * @param amount the monetary amount as string
      * @param currency the currency code
      * @return Money instance
      */
+    @JsonIgnore
     public static Money of(String amount, String currency) {
         return new Money(new BigDecimal(amount), currency);
     }
-    
+
     /**
      * Create zero Money with specified currency
-     * 
+     *
      * @param currency the currency code
      * @return Money instance with zero amount
      */
+    @JsonIgnore
     public static Money zero(String currency) {
         return new Money(BigDecimal.ZERO, currency);
     }
@@ -213,27 +218,30 @@ public class Money implements Serializable, Comparable<Money> {
     
     /**
      * Check if this Money is zero
-     * 
+     *
      * @return true if amount is zero
      */
+    @JsonIgnore
     public boolean isZero() {
         return amount.compareTo(BigDecimal.ZERO) == 0;
     }
-    
+
     /**
      * Check if this Money is positive
-     * 
+     *
      * @return true if amount is greater than zero
      */
+    @JsonIgnore
     public boolean isPositive() {
         return amount.compareTo(BigDecimal.ZERO) > 0;
     }
-    
+
     /**
      * Check if this Money is negative
-     * 
+     *
      * @return true if amount is less than zero
      */
+    @JsonIgnore
     public boolean isNegative() {
         return amount.compareTo(BigDecimal.ZERO) < 0;
     }

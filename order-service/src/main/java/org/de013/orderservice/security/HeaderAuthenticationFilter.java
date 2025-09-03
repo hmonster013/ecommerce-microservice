@@ -45,16 +45,20 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             String email = request.getHeader(HEADER_USER_EMAIL);
             String roles = request.getHeader(HEADER_USER_ROLES);
 
+            // Debug logging
+            log.debug("Headers received - UserId: {}, Username: {}, Email: {}, Roles: {}",
+                    userId, username, email, roles);
+
             // If user context exists, create Authentication object
             if (StringUtils.hasText(userId) && StringUtils.hasText(username)) {
                 Authentication auth = createAuthenticationFromHeaders(userId, username, email, roles);
-                
+
                 if (auth != null) {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                     log.debug("Set authentication for user: {} with roles: {}", username, roles);
                 }
             } else {
-                log.debug("No user context found in headers");
+                log.debug("No user context found in headers - UserId: {}, Username: {}", userId, username);
             }
 
         } catch (Exception e) {

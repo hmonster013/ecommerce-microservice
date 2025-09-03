@@ -86,9 +86,6 @@ public class OpenApiConfig {
     private List<Server> serverList() {
         return List.of(
                 new Server()
-                        .url("http://localhost:" + serverPort)
-                        .description("Direct Service Access (Development)"),
-                new Server()
                         .url("http://localhost:8080/api/v1/ordersv")
                         .description("API Gateway (Development)")
         );
@@ -96,18 +93,6 @@ public class OpenApiConfig {
 
     private List<Tag> tagList() {
         return List.of(
-                new Tag()
-                        .name("Orders")
-                        .description("Order management operations - create, read, update, delete orders"),
-                new Tag()
-                        .name("Order Status")
-                        .description("Order status tracking and updates"),
-                new Tag()
-                        .name("Order Items")
-                        .description("Order item management operations"),
-                new Tag()
-                        .name("Order History")
-                        .description("Order history and analytics operations")
         );
     }
 

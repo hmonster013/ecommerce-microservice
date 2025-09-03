@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
-import org.de013.orderservice.dto.OrderResponse;
+import org.de013.orderservice.dto.response.OrderResponse;
 import org.de013.orderservice.service.OrderService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

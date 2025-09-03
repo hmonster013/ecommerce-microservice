@@ -1,5 +1,7 @@
 package org.de013.orderservice.entity.valueobject;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.NotBlank;
@@ -34,29 +36,33 @@ public class Address implements Serializable {
     /**
      * First name of the recipient
      */
+    @Schema(description = "First name of the recipient", example = "John")
     @Column(name = "first_name", length = 100)
     @NotBlank(message = "First name is required")
     @Size(max = 100, message = "First name must not exceed 100 characters")
     private String firstName;
-    
+
     /**
      * Last name of the recipient
      */
+    @Schema(description = "Last name of the recipient", example = "Doe")
     @Column(name = "last_name", length = 100)
     @NotBlank(message = "Last name is required")
     @Size(max = 100, message = "Last name must not exceed 100 characters")
     private String lastName;
-    
+
     /**
      * Company name (optional)
      */
+    @Schema(description = "Company name (optional)", example = "Acme Corp")
     @Column(name = "company", length = 200)
     @Size(max = 200, message = "Company name must not exceed 200 characters")
     private String company;
-    
+
     /**
      * Street address line 1
      */
+    @Schema(description = "Street address line 1", example = "123 Main Street")
     @Column(name = "street_address", length = 255)
     @NotBlank(message = "Street address is required")
     @Size(max = 255, message = "Street address must not exceed 255 characters")
@@ -65,29 +71,33 @@ public class Address implements Serializable {
     /**
      * Street address line 2 (optional)
      */
+    @Schema(description = "Street address line 2 (optional)", example = "Apt 4B")
     @Column(name = "street_address_2", length = 255)
     @Size(max = 255, message = "Street address line 2 must not exceed 255 characters")
     private String streetAddress2;
-    
+
     /**
      * City
      */
+    @Schema(description = "City name", example = "New York")
     @Column(name = "city", length = 100)
     @NotBlank(message = "City is required")
     @Size(max = 100, message = "City must not exceed 100 characters")
     private String city;
-    
+
     /**
      * State or province
      */
+    @Schema(description = "State or province", example = "NY")
     @Column(name = "state", length = 100)
     @NotBlank(message = "State is required")
     @Size(max = 100, message = "State must not exceed 100 characters")
     private String state;
-    
+
     /**
      * Postal or ZIP code
      */
+    @Schema(description = "Postal or ZIP code", example = "10001")
     @Column(name = "postal_code", length = 20)
     @NotBlank(message = "Postal code is required")
     @Size(max = 20, message = "Postal code must not exceed 20 characters")
@@ -96,56 +106,63 @@ public class Address implements Serializable {
     /**
      * Country code (ISO 3166-1 alpha-2)
      */
+    @Schema(description = "Country code (ISO 3166-1 alpha-2 or alpha-3)", example = "US")
     @Column(name = "country", length = 3)
     @NotBlank(message = "Country is required")
     @Size(min = 2, max = 3, message = "Country code must be 2-3 characters")
     @Pattern(regexp = "^[A-Z]{2,3}$", message = "Country code must be uppercase letters")
     private String country;
-    
+
     /**
      * Phone number (optional)
      */
+    @Schema(description = "Phone number in international format", example = "+15551234567")
     @Column(name = "phone", length = 20)
     @Size(max = 20, message = "Phone number must not exceed 20 characters")
     @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
     private String phone;
-    
+
     /**
      * Email address (optional)
      */
+    @Schema(description = "Email address", example = "john.doe@example.com")
     @Column(name = "email", length = 255)
     @Size(max = 255, message = "Email must not exceed 255 characters")
-    @Pattern(regexp = "^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$", 
+    @Pattern(regexp = "^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$",
              message = "Invalid email format")
     private String email;
     
     /**
      * Special delivery instructions
      */
+    @Schema(description = "Special delivery instructions", example = "Leave at front door")
     @Column(name = "delivery_instructions", length = 1000)
     @Size(max = 1000, message = "Delivery instructions must not exceed 1000 characters")
     private String deliveryInstructions;
-    
+
     /**
      * Address type (HOME, WORK, OTHER)
      */
+    @Schema(description = "Address type", example = "HOME")
     @Column(name = "address_type", length = 20)
     @Size(max = 20, message = "Address type must not exceed 20 characters")
     @Builder.Default
     private String addressType = "HOME";
-    
+
     /**
      * Whether this is a residential address
      */
+    @Schema(description = "Whether this is a residential address", example = "true")
     @Column(name = "is_residential")
     @Builder.Default
     private Boolean isResidential = true;
     
     /**
      * Get the full name (first + last name)
-     * 
+     *
      * @return full name
      */
+    @JsonIgnore
     public String getFullName() {
         StringBuilder fullName = new StringBuilder();
         
@@ -165,9 +182,10 @@ public class Address implements Serializable {
     
     /**
      * Get the complete street address (line 1 + line 2)
-     * 
+     *
      * @return complete street address
      */
+    @JsonIgnore
     public String getCompleteStreetAddress() {
         StringBuilder address = new StringBuilder();
         
@@ -187,9 +205,10 @@ public class Address implements Serializable {
     
     /**
      * Get formatted address as a single line
-     * 
+     *
      * @return formatted single-line address
      */
+    @JsonIgnore
     public String getFormattedSingleLine() {
         StringBuilder formatted = new StringBuilder();
         
@@ -236,9 +255,10 @@ public class Address implements Serializable {
     
     /**
      * Get formatted address as multiple lines
-     * 
+     *
      * @return formatted multi-line address
      */
+    @JsonIgnore
     public String getFormattedMultiLine() {
         StringBuilder formatted = new StringBuilder();
         
@@ -296,9 +316,10 @@ public class Address implements Serializable {
     
     /**
      * Check if this address is complete and valid for shipping
-     * 
+     *
      * @return true if address is complete
      */
+    @JsonIgnore
     public boolean isComplete() {
         return StringUtils.isNotBlank(firstName) &&
                StringUtils.isNotBlank(lastName) &&
@@ -311,10 +332,11 @@ public class Address implements Serializable {
     
     /**
      * Check if this is a domestic address (same country as business)
-     * 
+     *
      * @param businessCountry the business country code
      * @return true if domestic
      */
+    @JsonIgnore
     public boolean isDomestic(String businessCountry) {
         return StringUtils.isNotBlank(country) && 
                StringUtils.isNotBlank(businessCountry) &&
@@ -324,6 +346,7 @@ public class Address implements Serializable {
     /**
      * Normalize the address (trim whitespace, uppercase country code, etc.)
      */
+    @JsonIgnore
     public void normalize() {
         if (firstName != null) {
             firstName = firstName.trim();

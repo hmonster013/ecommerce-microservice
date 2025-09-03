@@ -5,11 +5,16 @@ spring:
   application:
     name: api-gateway
 
-  # Enable ANSI colors in console output
+  # Development profile - no need for multiple profiles
+  profiles:
+    active: dev
+
+  # Enable ANSI colors in console output for better development experience
   output:
     ansi:
       enabled: always
 
+  # Exclude database auto-configuration since API Gateway doesn't need database
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
@@ -148,29 +153,38 @@ spring:
 
 
 
+# Eureka configuration for development
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
     fetch-registry: true
     register-with-eureka: true
-    registry-fetch-interval-seconds: 30
-    initial-instance-info-replication-interval-seconds: 40
+    registry-fetch-interval-seconds: 5  # Faster discovery for development
+    initial-instance-info-replication-interval-seconds: 10
     healthcheck:
       enabled: true
   instance:
     prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30
-    lease-expiration-duration-in-seconds: 90
+    lease-renewal-interval-in-seconds: 10  # Faster heartbeat for development
+    lease-expiration-duration-in-seconds: 30  # Faster eviction for development
+    hostname: localhost
 
+# Management endpoints for development monitoring
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,gateway
+        include: health,info,metrics,gateway,env,configprops
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+    gateway:
+      enabled: true
+  info:
+    env:
+      enabled: true
 
 # Swagger/OpenAPI Configuration
 springdoc:
@@ -199,13 +213,16 @@ springdoc:
       - url: /api/v1/notificationsv/v3/api-docs
         name: Notification Service (v1)
 
-# JWT Configuration (must match user-service configuration)
+# JWT Configuration for development (must match user-service configuration)
 jwt:
   secret: ${JWT_SECRET:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}
   issuer: ${JWT_ISSUER:ecommerce-platform}
 
+# Development logging configuration
 logging:
   level:
-    org.springframework.cloud.gateway: DEBUG
-    reactor.netty.http.client: DEBUG
-    org.de013.apigateway.security: DEBUG
+    root: INFO
+    '[org.springframework.cloud.gateway]': DEBUG
+    '[reactor.netty.http.client]': DEBUG
+    '[org.de013.apigateway.security]': DEBUG
+    '[org.de013.apigateway]': DEBUG

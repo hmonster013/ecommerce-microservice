@@ -17,16 +17,17 @@ import java.util.function.Function;
 @Slf4j
 public class JwtUtil {
 
-    @Value("${jwt.secret:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.issuer:ecommerce-platform}")
+    @Value("${jwt.issuer}")
     private String jwtIssuer;
 
     /**
      * Get signing key for JWT
      */
     private Key getSigningKey() {
+        // Use secret directly as bytes instead of base64 decoding (matches JwtTokenProvider)
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }

@@ -1,118 +1,212 @@
 package org.de013.orderservice.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.constant.ApiPaths;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
-import org.de013.orderservice.dto.request.CancelOrderRequest;
 import org.de013.orderservice.dto.request.CreateOrderRequest;
 import org.de013.orderservice.dto.request.UpdateOrderRequest;
+import org.de013.orderservice.dto.request.CancelOrderRequest;
 import org.de013.orderservice.dto.response.OrderResponse;
-import org.de013.orderservice.repository.custom.OrderSearchRepository;
-import org.de013.orderservice.service.OrderProcessingService;
 import org.de013.orderservice.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Basic Order Controller - Core CRUD operations only
+ */
 @RestController
-@RequestMapping("/orders") // Gateway routes /api/v1/orders/** to /orders/**
+@RequestMapping(ApiPaths.ORDERS)
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Order Management", description = "APIs for order management including creation, retrieval, updates, and cancellation")
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderProcessingService processingService;
-    private final OrderSearchRepository orderSearchRepository;
 
+    /**
+     * Create a new order
+     */
+    @Operation(summary = "Create order", description = "Create a new order from shopping cart. Converts cart items to order items and initializes order with PENDING status.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Order created successfully",
+                content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or empty cart"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "404", description = "Cart not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping
     @PreAuthorize("@orderSecurity.isAuthenticated()")
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderResponse create(@RequestBody CreateOrderRequest request) {
-        // Get current user context from headers set by API Gateway
+    public OrderResponse createOrder(
+            @Parameter(description = "Order creation request", required = true)
+            @Valid @RequestBody CreateOrderRequest request) {
         UserContext userContext = UserContextHolder.getCurrentUser();
         if (userContext != null) {
             log.info("Creating order for user: {} (ID: {})", userContext.getUsername(), userContext.getUserId());
-            // You can set userId in request if needed
-            // request.setUserId(userContext.getUserId());
         }
-        return processingService.placeOrder(request);
+        return orderService.createOrder(request);
     }
 
-    @GetMapping("/{orderId}")
+    /**
+     * Get order by ID
+     */
+    @Operation(summary = "Get order by ID", description = "Retrieve order details by its unique identifier. Only accessible by order owner or admin.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Order found",
+                content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - not order owner or admin"),
+        @ApiResponse(responseCode = "404", description = "Order not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(ApiPaths.ORDER_ID_PARAM)
     @PreAuthorize("@orderSecurity.canAccessOrder(#orderId)")
-    public OrderResponse get(@PathVariable Long orderId) {
+    public OrderResponse getOrder(
+            @Parameter(description = "Order ID", required = true, example = "1")
+            @PathVariable Long orderId) {
         log.debug("Getting order {}", orderId);
         return orderService.getOrderById(orderId);
     }
 
-    @PutMapping("/{orderId}")
-    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
-    public OrderResponse update(@PathVariable Long orderId, @RequestBody UpdateOrderRequest request) {
-        log.debug("Updating order {}", orderId);
-        return orderService.updateOrder(orderId, request);
-    }
-
-    @DeleteMapping("/{orderId}")
-    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void cancel(@PathVariable Long orderId, @RequestBody(required = false) CancelOrderRequest request) {
-        log.debug("Cancelling order {}", orderId);
-        CancelOrderRequest req = request != null ? request : new CancelOrderRequest();
-        orderService.cancelOrder(orderId, req);
-    }
-
-    @GetMapping("/user/{userId}")
-    @PreAuthorize("@orderSecurity.canAccessUserOrders(#userId)")
-    public Page<OrderResponse> listByUser(@PathVariable Long userId, Pageable pageable) {
-        log.debug("Getting orders for user {}", userId);
-        return orderService.listOrdersByUser(userId, pageable);
-    }
-
-    @GetMapping("/my-orders")
+    /**
+     * Get current user's orders
+     */
+    @Operation(summary = "Get my orders", description = "Retrieve paginated list of orders for the authenticated user. Returns orders sorted by creation date (newest first).")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(ApiPaths.MY_ORDERS)
     @PreAuthorize("@orderSecurity.isAuthenticated()")
-    public Page<OrderResponse> getMyOrders(Pageable pageable) {
+    public Page<OrderResponse> getMyOrders(
+            @Parameter(description = "Pagination parameters") Pageable pageable) {
         UserContext userContext = UserContextHolder.requireAuthenticated();
         log.info("User {} requesting their orders", userContext.getUsername());
         return orderService.listOrdersByUser(userContext.getUserId(), pageable);
     }
 
-    @GetMapping("/search")
+    /**
+     * Get orders by user ID (admin only)
+     */
+    @Operation(summary = "Get user orders", description = "Retrieve paginated list of orders for a specific user. Admin access required or user accessing their own orders.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - admin required"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM)
+    @PreAuthorize("@orderSecurity.canAccessUserOrders(#userId)")
+    public Page<OrderResponse> getUserOrders(
+            @Parameter(description = "User ID", required = true, example = "1")
+            @PathVariable Long userId,
+            @Parameter(description = "Pagination parameters") Pageable pageable) {
+        log.debug("Getting orders for user {}", userId);
+        return orderService.listOrdersByUser(userId, pageable);
+    }
+
+    /**
+     * Get all orders (admin only)
+     */
+    @Operation(summary = "Get all orders", description = "Retrieve paginated list of all orders in the system. Admin access required. Useful for order management and reporting.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - admin required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping
     @PreAuthorize("@orderSecurity.isAdmin()")
-    public Page<OrderResponse> search(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) java.util.List<org.de013.orderservice.entity.enums.OrderStatus> statuses,
-            @RequestParam(required = false) java.util.List<org.de013.orderservice.entity.enums.OrderType> orderTypes,
-            @RequestParam(required = false) java.math.BigDecimal minAmount,
-            @RequestParam(required = false) java.math.BigDecimal maxAmount,
-            @RequestParam(required = false) String currency,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime endDate,
-            @RequestParam(required = false) String shippingCountry,
-            @RequestParam(required = false) String shippingCity,
-            @RequestParam(required = false) String customerEmail,
-            @RequestParam(required = false) String customerPhone,
-            @RequestParam(required = false) java.util.List<Long> productIds,
-            @RequestParam(required = false) Boolean isGift,
-            @RequestParam(required = false) Boolean requiresSpecialHandling,
-            @RequestParam(required = false) java.util.List<Integer> priorityLevels,
-            Pageable pageable
-    ) {
-        if ((q != null && !q.isBlank()) && userId == null && statuses == null && orderTypes == null && minAmount == null && maxAmount == null &&
-                currency == null && startDate == null && endDate == null && shippingCountry == null && shippingCity == null &&
-                customerEmail == null && customerPhone == null && productIds == null && isGift == null && requiresSpecialHandling == null && priorityLevels == null) {
-            var page = orderSearchRepository.searchOrdersByText(q, pageable);
-            return page.map(order -> orderService.getOrderById(order.getId()));
-        }
-        var page = orderSearchRepository.searchOrdersWithFilters(
-                userId, statuses, orderTypes, minAmount, maxAmount, currency, startDate, endDate,
-                shippingCountry, shippingCity, customerEmail, customerPhone, productIds, isGift, requiresSpecialHandling, priorityLevels, pageable
-        );
-        return page.map(order -> orderService.getOrderById(order.getId()));
+    public Page<OrderResponse> getAllOrders(
+            @Parameter(description = "Pagination parameters") Pageable pageable) {
+        log.debug("Admin getting all orders");
+        return orderService.listAllOrders(pageable);
+    }
+
+    /**
+     * Get order by order number
+     */
+    @Operation(summary = "Get order by number", description = "Retrieve order details by its unique order number (e.g., ORD-12345678). Accessible by order owner or admin.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Order found",
+                content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - not order owner or admin"),
+        @ApiResponse(responseCode = "404", description = "Order not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(ApiPaths.NUMBER + ApiPaths.ORDER_NUMBER_PARAM)
+    @PreAuthorize("@orderSecurity.isAuthenticated()")
+    public OrderResponse getOrderByNumber(
+            @Parameter(description = "Order number", required = true, example = "ORD-12345678")
+            @PathVariable String orderNumber) {
+        log.debug("Getting order by number: {}", orderNumber);
+        return orderService.getOrderByNumber(orderNumber);
+    }
+
+    /**
+     * Update order (admin only for now)
+     */
+    @Operation(summary = "Update order", description = "Update order details such as status, addresses, or customer notes. Admin access required or order owner for limited updates.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Order updated successfully",
+                content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or update not allowed for current status"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+        @ApiResponse(responseCode = "404", description = "Order not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PutMapping(ApiPaths.ORDER_ID_PARAM)
+    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
+    public OrderResponse updateOrder(
+            @Parameter(description = "Order ID", required = true, example = "1")
+            @PathVariable Long orderId,
+            @Parameter(description = "Order update request", required = true)
+            @Valid @RequestBody UpdateOrderRequest request) {
+        log.debug("Updating order {}", orderId);
+        return orderService.updateOrder(orderId, request);
+    }
+
+    /**
+     * Cancel order
+     */
+    @Operation(summary = "Cancel order", description = "Cancel an existing order. Only allowed for orders in PENDING, CONFIRMED, or PAID status. Cancelled orders cannot be restored.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "Order cancelled successfully"),
+        @ApiResponse(responseCode = "400", description = "Order cannot be cancelled in current status"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+        @ApiResponse(responseCode = "404", description = "Order not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @DeleteMapping(ApiPaths.ORDER_ID_PARAM)
+    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancelOrder(
+            @Parameter(description = "Order ID", required = true, example = "1")
+            @PathVariable Long orderId,
+            @Parameter(description = "Cancellation request with optional reason")
+            @RequestBody(required = false) CancelOrderRequest request) {
+        log.debug("Cancelling order {}", orderId);
+        String reason = (request != null && request.getReason() != null) ? request.getReason() : "Cancelled by user";
+        orderService.cancelOrder(orderId, reason);
     }
 }
 

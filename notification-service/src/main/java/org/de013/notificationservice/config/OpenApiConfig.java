@@ -91,9 +91,6 @@ public class OpenApiConfig {
     private List<Server> serverList() {
         return List.of(
                 new Server()
-                        .url("http://localhost:" + serverPort)
-                        .description("Direct Service Access (Development)"),
-                new Server()
                         .url("http://localhost:8080/api/v1/notificationsv")
                         .description("API Gateway (Development)")
         );

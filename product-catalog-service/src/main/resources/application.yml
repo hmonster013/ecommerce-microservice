@@ -115,8 +115,6 @@ management:
     health:
       show-details: always
 
-
-
 logging:
   level:
     org.de013.productcatalog: ${LOG_LEVEL_APP:DEBUG}

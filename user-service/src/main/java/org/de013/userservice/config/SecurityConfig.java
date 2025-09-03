@@ -25,19 +25,24 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
+/**
+ * Security configuration for User Service
+ *
+ * This configuration is designed for API Gateway-First architecture:
+ * - All requests should come through API Gateway (localhost:8080)
+ * - API Gateway validates JWT and passes user context via headers
+ * - Service uses HeaderAuthenticationFilter to read user context
+ * - Direct service calls are not supported for security reasons
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-
-
     private final HeaderAuthenticationFilter headerAuthenticationFilter;
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
-
-
 
     @Bean
     public HeaderAuthenticationProvider headerAuthenticationProvider() {
@@ -92,7 +97,7 @@ public class SecurityConfig {
                 // Session Management
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Add header authentication filter
+                // Add header authentication filter (for API Gateway calls only)
                 .addFilterBefore(headerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // Authentication providers
@@ -117,7 +122,7 @@ public class SecurityConfig {
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ));
 
-        // Allow specific headers
+        // Allow specific headers (including API Gateway headers)
         configuration.setAllowedHeaders(Arrays.asList(
                 "Authorization",
                 "Content-Type",
@@ -125,7 +130,12 @@ public class SecurityConfig {
                 "Accept",
                 "Origin",
                 "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
+                "Access-Control-Request-Headers",
+                // API Gateway headers
+                "X-User-Id",
+                "X-User-Username",
+                "X-User-Email",
+                "X-User-Roles"
         ));
 
         configuration.setAllowCredentials(true);

@@ -1,5 +1,6 @@
 package org.de013.orderservice.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -230,27 +231,31 @@ public class CancelOrderRequest {
     /**
      * Check if this is a full order cancellation
      */
+    @JsonIgnore
     public boolean isFullCancellation() {
         return itemsToCancel == null || itemsToCancel.isEmpty();
     }
-    
+
     /**
      * Check if this is a partial order cancellation
      */
+    @JsonIgnore
     public boolean isPartialCancellation() {
         return !isFullCancellation();
     }
-    
+
     /**
      * Check if refund is requested
      */
+    @JsonIgnore
     public boolean isRefundRequested() {
         return Boolean.TRUE.equals(refundRequested);
     }
-    
+
     /**
      * Check if partial refund is requested
      */
+    @JsonIgnore
     public boolean isPartialRefund() {
         return partialRefundAmount != null && partialRefundAmount.compareTo(BigDecimal.ZERO) > 0;
     }
@@ -258,32 +263,36 @@ public class CancelOrderRequest {
     /**
      * Check if this is a fraud-related cancellation
      */
+    @JsonIgnore
     public boolean isFraudCancellation() {
-        return "FRAUD_DETECTED".equals(reasonCategory) || 
-               Boolean.TRUE.equals(blacklistCustomer) || 
+        return "FRAUD_DETECTED".equals(reasonCategory) ||
+               Boolean.TRUE.equals(blacklistCustomer) ||
                Boolean.TRUE.equals(blockPaymentMethod);
     }
-    
+
     /**
      * Check if compensation is offered
      */
+    @JsonIgnore
     public boolean hasCompensation() {
         return compensation != null;
     }
-    
+
     /**
      * Get total items to cancel count
      */
+    @JsonIgnore
     public int getTotalItemsToCancel() {
         if (itemsToCancel == null) {
             return 0;
         }
         return itemsToCancel.size();
     }
-    
+
     /**
      * Get total quantity to cancel
      */
+    @JsonIgnore
     public int getTotalQuantityToCancel() {
         if (itemsToCancel == null) {
             return 0;
@@ -296,32 +305,36 @@ public class CancelOrderRequest {
     /**
      * Check if items should be restocked
      */
+    @JsonIgnore
     public boolean shouldRestockItems() {
-        return Boolean.TRUE.equals(restockItems) && 
+        return Boolean.TRUE.equals(restockItems) &&
                !"FRAUD_DETECTED".equals(reasonCategory);
     }
-    
+
     /**
      * Check if customer should be notified
      */
+    @JsonIgnore
     public boolean shouldNotifyCustomer() {
-        return Boolean.TRUE.equals(sendNotification) && 
+        return Boolean.TRUE.equals(sendNotification) &&
                !Boolean.TRUE.equals(isAdminCancellation);
     }
-    
+
     /**
      * Get effective refund method
      */
+    @JsonIgnore
     public String getEffectiveRefundMethod() {
         if (refundMethod != null) {
             return refundMethod;
         }
         return isRefundRequested() ? "ORIGINAL_PAYMENT" : null;
     }
-    
+
     /**
      * Validate cancellation request
      */
+    @JsonIgnore
     public boolean isValid() {
         // If refund is requested, refund method should be specified
         if (isRefundRequested() && refundMethod == null) {

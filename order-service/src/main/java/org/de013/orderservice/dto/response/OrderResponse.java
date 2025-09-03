@@ -1,5 +1,6 @@
 package org.de013.orderservice.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.de013.orderservice.entity.enums.OrderStatus;
 import org.de013.orderservice.entity.enums.OrderType;
@@ -159,20 +160,7 @@ public class OrderResponse {
      */
     private List<OrderItemResponse> orderItems;
     
-    /**
-     * Order tracking history
-     */
-    private List<OrderTrackingResponse> trackingHistory;
-    
-    /**
-     * Order payments
-     */
-    private List<OrderPaymentResponse> payments;
-    
-    /**
-     * Order shipping information
-     */
-    private OrderShippingResponse shipping;
+
     
     /**
      * Order summary statistics
@@ -439,197 +427,32 @@ public class OrderResponse {
         private Boolean isOverdue;
     }
     
-    /**
-     * Order Payment Response
-     */
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class OrderPaymentResponse {
-        
-        /**
-         * Payment ID
-         */
-        private Long id;
-        
-        /**
-         * External payment ID
-         */
-        private String paymentId;
-        
-        /**
-         * Transaction ID
-         */
-        private String transactionId;
-        
-        /**
-         * Payment method
-         */
-        private String paymentMethod;
-        
-        /**
-         * Payment method details (masked)
-         */
-        private String paymentMethodDetails;
-        
-        /**
-         * Payment status
-         */
-        private String status;
-        
-        /**
-         * Payment amount
-         */
-        private Money amount;
-        
-        /**
-         * Authorized amount
-         */
-        private Money authorizedAmount;
-        
-        /**
-         * Captured amount
-         */
-        private Money capturedAmount;
-        
-        /**
-         * Refunded amount
-         */
-        private Money refundedAmount;
-        
-        /**
-         * Available refund amount
-         */
-        private Money availableRefundAmount;
-        
-        /**
-         * Payment gateway
-         */
-        private String paymentGateway;
-        
-        /**
-         * Authorization code
-         */
-        private String authorizationCode;
-        
-        /**
-         * Risk score
-         */
-        private Integer riskScore;
-        
-        /**
-         * Risk assessment
-         */
-        private String riskAssessment;
-        
-        /**
-         * Payment timestamps
-         */
-        private LocalDateTime initiatedAt;
-        private LocalDateTime processedAt;
-        private LocalDateTime authorizedAt;
-        private LocalDateTime capturedAt;
-        private LocalDateTime failedAt;
-        private LocalDateTime refundedAt;
-        
-        /**
-         * Failure reason
-         */
-        private String failureReason;
-        
-        /**
-         * Refund reason
-         */
-        private String refundReason;
-        
-        /**
-         * Whether payment is successful
-         */
-        private Boolean isSuccessful;
-        
-        /**
-         * Whether payment can be refunded
-         */
-        private Boolean canBeRefunded;
-        
-        /**
-         * Whether payment is fully refunded
-         */
-        private Boolean isFullyRefunded;
-        
-        /**
-         * Refund percentage
-         */
-        private java.math.BigDecimal refundPercentage;
-        
-        /**
-         * Processing time in minutes
-         */
-        private Long processingTimeMinutes;
-    }
+
     
     /**
      * Check if billing address is same as shipping
      */
+    @JsonIgnore
     public boolean isBillingSameAsShipping() {
         return billingAddress == null || billingAddress.equals(shippingAddress);
     }
-    
+
     /**
      * Get effective billing address
      */
+    @JsonIgnore
     public Address getEffectiveBillingAddress() {
         return billingAddress != null ? billingAddress : shippingAddress;
     }
-    
-    /**
-     * Get latest tracking status
-     */
-    public OrderTrackingResponse getLatestTracking() {
-        if (trackingHistory == null || trackingHistory.isEmpty()) {
-            return null;
-        }
-        return trackingHistory.get(0);
-    }
-    
-    /**
-     * Get latest payment
-     */
-    public OrderPaymentResponse getLatestPayment() {
-        if (payments == null || payments.isEmpty()) {
-            return null;
-        }
-        return payments.get(0);
-    }
-    
-    /**
-     * Check if order has any successful payments
-     */
-    public boolean hasSuccessfulPayment() {
-        return payments != null && payments.stream()
-                .anyMatch(payment -> Boolean.TRUE.equals(payment.getIsSuccessful()));
-    }
-    
-    /**
-     * Get total refunded amount across all payments
-     */
-    public Money getTotalRefundedAmount() {
-        if (payments == null || payments.isEmpty()) {
-            return Money.zero(totalAmount.getCurrency());
-        }
-        
-        return payments.stream()
-                .filter(payment -> payment.getRefundedAmount() != null)
-                .map(OrderPaymentResponse::getRefundedAmount)
-                .reduce(Money.zero(totalAmount.getCurrency()), Money::add);
-    }
-    
+
+
+
     /**
      * Check if order is international
      */
+    @JsonIgnore
     public boolean isInternational(String businessCountry) {
-        return shippingAddress != null && 
+        return shippingAddress != null &&
                !shippingAddress.isDomestic(businessCountry);
     }
 }

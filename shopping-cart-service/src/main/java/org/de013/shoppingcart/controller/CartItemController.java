@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * REST Controller for Cart Item Operations
@@ -271,15 +272,17 @@ public class CartItemController {
     })
     @GetMapping(ApiPaths.ITEM_ID_PARAM)
     public ResponseEntity<CartItemResponseDto> getCartItemById(
-            @Parameter(description = "Cart item ID", required = true) 
+            @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId) {
-        
+
         try {
             log.debug("Getting cart item by ID: {}", itemId);
-            
-            // This would need to be implemented in CartItemService
-            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-            
+
+            Optional<CartItemResponseDto> cartItem = cartItemService.getCartItemById(itemId);
+
+            return cartItem.map(ResponseEntity::ok)
+                          .orElse(ResponseEntity.notFound().build());
+
         } catch (Exception e) {
             log.error("Error getting cart item {}: {}", itemId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

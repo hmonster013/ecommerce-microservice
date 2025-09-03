@@ -246,36 +246,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
                                        @Param("since") LocalDateTime since, 
                                        Pageable pageable);
     
-    /**
-     * Find orders pending payment
-     * 
-     * @param pageable pagination information
-     * @return page of orders pending payment
-     */
-    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN o.orderPayments p " +
-           "WHERE o.status IN ('PENDING', 'CONFIRMED') AND " +
-           "(p IS NULL OR p.status NOT IN ('CAPTURED', 'SETTLED'))")
-    Page<Order> findOrdersPendingPayment(Pageable pageable);
-    
-    /**
-     * Find orders ready for shipment
-     * 
-     * @param pageable pagination information
-     * @return page of orders ready for shipment
-     */
-    @Query("SELECT DISTINCT o FROM Order o JOIN o.orderPayments p " +
-           "WHERE o.status = 'PAID' AND p.status IN ('CAPTURED', 'SETTLED')")
-    Page<Order> findOrdersReadyForShipment(Pageable pageable);
-    
-    /**
-     * Find orders with failed payments
-     * 
-     * @param pageable pagination information
-     * @return page of orders with failed payments
-     */
-    @Query("SELECT DISTINCT o FROM Order o JOIN o.orderPayments p " +
-           "WHERE p.status IN ('FAILED', 'DECLINED', 'CANCELLED')")
-    Page<Order> findOrdersWithFailedPayments(Pageable pageable);
+
     
     /**
      * Find orders by customer email
@@ -382,19 +353,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
                             @Param("deliveryDate") LocalDateTime deliveryDate, 
                             @Param("updatedAt") LocalDateTime updatedAt);
     
-    /**
-     * Cancel orders with failed payments older than specified hours
-     * 
-     * @param hours number of hours
-     * @param updatedAt the update timestamp
-     * @return number of cancelled orders
-     */
-    @Modifying
-    @Query("UPDATE Order o SET o.status = 'CANCELLED', o.cancelledAt = :updatedAt, o.updatedAt = :updatedAt " +
-           "WHERE o.status = 'PENDING' AND o.createdAt < :cutoffTime AND " +
-           "NOT EXISTS (SELECT 1 FROM OrderPayment p WHERE p.order = o AND p.status IN ('CAPTURED', 'SETTLED'))")
-    int cancelOrdersWithFailedPayments(@Param("cutoffTime") LocalDateTime cutoffTime, 
-                                      @Param("updatedAt") LocalDateTime updatedAt);
+
     
     /**
      * Find top customers by order count

@@ -1,5 +1,6 @@
 package org.de013.orderservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -41,8 +42,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"orderItems", "orderTracking", "orderPayments", "orderShipping"})
-@EqualsAndHashCode(callSuper = true, exclude = {"orderItems", "orderTracking", "orderPayments", "orderShipping"})
+@ToString(exclude = {"orderItems"})
+@EqualsAndHashCode(callSuper = true, exclude = {"orderItems"})
 public class Order extends BaseEntity {
 
     /**
@@ -278,27 +279,7 @@ public class Order extends BaseEntity {
     @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    /**
-     * Order tracking records
-     */
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @OrderBy("createdAt DESC")
-    @Builder.Default
-    private List<OrderTracking> orderTracking = new ArrayList<>();
 
-    /**
-     * Order payments
-     */
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @OrderBy("createdAt DESC")
-    @Builder.Default
-    private List<OrderPayment> orderPayments = new ArrayList<>();
-
-    /**
-     * Order shipping information
-     */
-    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private OrderShipping orderShipping;
 
     // ==================== Business Methods ====================
 
@@ -326,47 +307,14 @@ public class Order extends BaseEntity {
         }
     }
 
-    /**
-     * Add order tracking record
-     *
-     * @param tracking the tracking record to add
-     */
-    public void addOrderTracking(OrderTracking tracking) {
-        if (tracking != null) {
-            orderTracking.add(tracking);
-            tracking.setOrder(this);
-        }
-    }
 
-    /**
-     * Add order payment record
-     *
-     * @param payment the payment record to add
-     */
-    public void addOrderPayment(OrderPayment payment) {
-        if (payment != null) {
-            orderPayments.add(payment);
-            payment.setOrder(this);
-        }
-    }
-
-    /**
-     * Set order shipping information
-     *
-     * @param shipping the shipping information
-     */
-    public void setOrderShipping(OrderShipping shipping) {
-        this.orderShipping = shipping;
-        if (shipping != null) {
-            shipping.setOrder(this);
-        }
-    }
 
     /**
      * Calculate total quantity of items in the order
      *
      * @return total quantity
      */
+    @JsonIgnore
     public Integer getTotalQuantity() {
         return orderItems.stream()
                 .mapToInt(OrderItem::getQuantity)
@@ -378,6 +326,7 @@ public class Order extends BaseEntity {
      *
      * @return number of unique items
      */
+    @JsonIgnore
     public Integer getTotalUniqueItems() {
         return orderItems.size();
     }
@@ -387,6 +336,7 @@ public class Order extends BaseEntity {
      *
      * @return true if order can be cancelled
      */
+    @JsonIgnore
     public boolean canBeCancelled() {
         return status != null && status.canTransitionTo(OrderStatus.CANCELLED);
     }
@@ -396,6 +346,7 @@ public class Order extends BaseEntity {
      *
      * @return true if order can be modified
      */
+    @JsonIgnore
     public boolean canBeModified() {
         return status == OrderStatus.PENDING || status == OrderStatus.CONFIRMED;
     }
@@ -405,6 +356,7 @@ public class Order extends BaseEntity {
      *
      * @return true if order is in final state
      */
+    @JsonIgnore
     public boolean isFinalState() {
         return status != null && status.isFinal();
     }
@@ -414,50 +366,32 @@ public class Order extends BaseEntity {
      *
      * @return true if order is active
      */
+    @JsonIgnore
     public boolean isActive() {
         return status != null && status.isActive();
     }
 
+
+
     /**
-     * Check if the order has been delivered
+     * Check if the order is paid (simplified for base version)
+     *
+     * @return true if order status indicates payment
+     */
+    @JsonIgnore
+    public boolean isPaid() {
+        return status == OrderStatus.PAID || status == OrderStatus.SHIPPED ||
+               status == OrderStatus.DELIVERED || status == OrderStatus.COMPLETED;
+    }
+
+    /**
+     * Check if the order has been delivered (simplified for base version)
      *
      * @return true if order has been delivered
      */
+    @JsonIgnore
     public boolean isDelivered() {
         return status == OrderStatus.DELIVERED || status == OrderStatus.COMPLETED;
-    }
-
-    /**
-     * Check if the order is paid
-     *
-     * @return true if order is paid
-     */
-    public boolean isPaid() {
-        return orderPayments.stream()
-                .anyMatch(payment -> payment.getStatus() != null &&
-                         payment.getStatus().isSuccessful());
-    }
-
-    /**
-     * Get the latest tracking status
-     *
-     * @return latest tracking status or null
-     */
-    public OrderTracking getLatestTracking() {
-        return orderTracking.stream()
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
-     * Get the latest payment
-     *
-     * @return latest payment or null
-     */
-    public OrderPayment getLatestPayment() {
-        return orderPayments.stream()
-                .findFirst()
-                .orElse(null);
     }
 
     /**
@@ -465,6 +399,7 @@ public class Order extends BaseEntity {
      *
      * @return true if addresses are the same
      */
+    @JsonIgnore
     public boolean isBillingSameAsShipping() {
         return billingAddress != null && billingAddress.equals(shippingAddress);
     }

@@ -33,22 +33,36 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
                                   FilterChain filterChain) throws ServletException, IOException {
 
         try {
+            // Debug logging to see ALL headers received
+            log.debug("=== ALL REQUEST HEADERS ===");
+            java.util.Enumeration<String> headerNames = request.getHeaderNames();
+            while (headerNames.hasMoreElements()) {
+                String headerName = headerNames.nextElement();
+                String headerValue = request.getHeader(headerName);
+                log.debug("Header: {} = {}", headerName, headerValue);
+            }
+            log.debug("=== END HEADERS ===");
+
             // Read user context from headers
             String userId = request.getHeader(HEADER_USER_ID);
             String username = request.getHeader(HEADER_USERNAME);
             String email = request.getHeader(HEADER_USER_EMAIL);
             String roles = request.getHeader(HEADER_USER_ROLES);
 
+            // Debug logging to see what headers we receive
+            log.debug("Headers received - UserId: {}, Username: {}, Email: {}, Roles: {}",
+                    userId, username, email, roles);
+
             // If user context exists, create Authentication object
             if (StringUtils.hasText(userId) && StringUtils.hasText(username)) {
                 Authentication auth = HeaderAuthenticationProvider.createFromHeaders(userId, username, email, roles);
-                
+
                 if (auth != null) {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                     log.debug("Set authentication for user: {} with roles: {}", username, roles);
                 }
             } else {
-                log.debug("No user context found in headers");
+                log.debug("No user context found in headers - UserId: {}, Username: {}", userId, username);
             }
 
         } catch (Exception e) {

@@ -5,6 +5,7 @@ import org.de013.orderservice.dto.request.UpdateOrderRequest;
 import org.de013.orderservice.dto.response.OrderResponse;
 import org.de013.orderservice.entity.Order;
 import org.de013.orderservice.entity.OrderItem;
+import org.de013.orderservice.entity.enums.OrderStatus;
 import org.de013.orderservice.entity.valueobject.Money;
 import org.springframework.stereotype.Component;
 
@@ -17,12 +18,12 @@ public class OrderMapper {
         Order o = new Order();
         o.setUserId(req.getUserId());
         o.setOrderType(req.getOrderType());
-        o.setOrderSource(req.getOrderSource());
+        o.setOrderSource("WEB"); // Default for base version
         o.setShippingAddress(req.getShippingAddress());
         o.setBillingAddress(req.getEffectiveBillingAddress());
         o.setCustomerNotes(req.getCustomerNotes());
-        o.setIsGift(Boolean.TRUE.equals(req.getIsGift()));
-        o.setGiftMessage(req.getGiftMessage());
+        o.setIsGift(false); // Simplified for base version
+        o.setGiftMessage(null); // Simplified for base version
         // Totals will be computed later; initialize to zero with request currency
         if (req.getCurrency() != null) {
             o.setSubtotalAmount(Money.zero(req.getCurrency()));
@@ -54,7 +55,7 @@ public class OrderMapper {
             .totalQuantity(items != null ? items.stream().mapToInt(i -> i.getQuantity() != null ? i.getQuantity() : 0).sum() : 0)
             .uniqueProducts(items != null ? (int) items.stream().map(OrderItem::getProductId).distinct().count() : 0)
             .isPaid(o.isPaid())
-            .isShipped(o.getOrderShipping() != null && o.getOrderShipping().isShipped())
+            .isShipped(o.getStatus() == OrderStatus.SHIPPED || o.getStatus() == OrderStatus.DELIVERED || o.getStatus() == OrderStatus.COMPLETED)
             .isDelivered(o.isDelivered())
             .canBeCancelled(o.canBeCancelled())
             .canBeModified(o.canBeModified())
@@ -130,7 +131,7 @@ public class OrderMapper {
                 .build()).collect(Collectors.toList()));
         }
 
-        // TODO: map trackingHistory, payments, shipping if needed
+        // Basic order mapping complete
         return resp;
     }
 

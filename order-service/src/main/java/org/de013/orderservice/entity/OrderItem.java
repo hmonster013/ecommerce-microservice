@@ -1,5 +1,6 @@
 package org.de013.orderservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -259,9 +260,10 @@ public class OrderItem extends BaseEntity {
     
     /**
      * Calculate the final price after discount
-     * 
+     *
      * @return final price after discount
      */
+    @JsonIgnore
     public Money getFinalPrice() {
         if (discountAmount != null && discountAmount.isPositive()) {
             return totalPrice.subtract(discountAmount);
@@ -271,9 +273,10 @@ public class OrderItem extends BaseEntity {
     
     /**
      * Calculate the price including tax
-     * 
+     *
      * @return price including tax
      */
+    @JsonIgnore
     public Money getPriceIncludingTax() {
         Money finalPrice = getFinalPrice();
         if (taxAmount != null && taxAmount.isPositive()) {
@@ -284,9 +287,10 @@ public class OrderItem extends BaseEntity {
     
     /**
      * Calculate discount percentage
-     * 
+     *
      * @return discount percentage
      */
+    @JsonIgnore
     public java.math.BigDecimal getDiscountPercentage() {
         if (discountAmount != null && discountAmount.isPositive() && 
             totalPrice != null && totalPrice.isPositive()) {

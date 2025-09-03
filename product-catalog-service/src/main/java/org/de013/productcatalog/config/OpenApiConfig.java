@@ -77,9 +77,6 @@ public class OpenApiConfig {
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
                         new Server()
-                                .url("http://localhost:" + serverPort)
-                                .description("Direct Service Access (Development)"),
-                        new Server()
                                 .url("http://localhost:8080/api/v1/productsv")
                                 .description("API Gateway (Development)")))
                 .tags(List.of(

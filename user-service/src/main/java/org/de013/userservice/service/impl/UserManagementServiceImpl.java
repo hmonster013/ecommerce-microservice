@@ -60,7 +60,7 @@ public class UserManagementServiceImpl implements UserManagementService {
                 .credentialsNonExpired(true)
                 .createdBy("SYSTEM")
                 .build();
-        
+
         // Add default role
         user.getRoles().add(customerRole);
         
@@ -284,7 +284,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         User user = findUserById(userId);
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
-        
+
         user.getRoles().add(role);
         userRepository.save(user);
         
@@ -298,7 +298,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         User user = findUserById(userId);
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
-        
+
         user.getRoles().remove(role);
         userRepository.save(user);
         
