@@ -85,9 +85,11 @@ public class RefundStatusResponse {
 
         return switch (status) {
             case PENDING -> "Refund is being processed";
+            case PROCESSING -> "Refund is currently processing";
             case SUCCEEDED -> "Refund completed successfully";
             case FAILED -> failureReason != null ? failureReason : "Refund failed";
             case CANCELED -> "Refund was canceled";
+            case REJECTED -> "Refund was rejected";
             case REQUIRES_ACTION -> "Refund requires additional action";
         };
     }

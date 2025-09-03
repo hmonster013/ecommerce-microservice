@@ -51,6 +51,10 @@ public class StripeWebhookRequest {
         return type;
     }
 
+    public String getEventId() {
+        return id;
+    }
+
     public String getObjectId() {
         if (data != null && data.getObject() != null) {
             return (String) data.getObject().get("id");
@@ -154,8 +158,37 @@ public class StripeWebhookRequest {
     }
 
     public boolean isRefundEvent() {
-        return type != null && type.startsWith("charge.dispute") || 
+        return type != null && type.startsWith("charge.dispute") ||
                (type != null && type.contains("refund"));
+    }
+
+    // ========== ADDITIONAL GETTERS ==========
+
+    /**
+     * Get refund ID from webhook data
+     */
+    public String getRefundId() {
+        if (data != null && data.getObject() != null) {
+            Map<String, Object> obj = data.getObject();
+
+            // Direct refund object
+            if ("refund".equals(obj.get("object"))) {
+                return (String) obj.get("id");
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get failure reason from webhook data
+     */
+    public String getFailureReason() {
+        if (data != null && data.getObject() != null) {
+            Map<String, Object> obj = data.getObject();
+            Object failureReason = obj.get("failure_reason");
+            return failureReason != null ? failureReason.toString() : null;
+        }
+        return null;
     }
 
     // Specific event type checks

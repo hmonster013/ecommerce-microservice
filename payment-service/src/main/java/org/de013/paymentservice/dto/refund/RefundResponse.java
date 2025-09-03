@@ -84,9 +84,11 @@ public class RefundResponse {
     public String getStatusDisplayName() {
         return switch (status) {
             case PENDING -> "Pending";
+            case PROCESSING -> "Processing";
             case SUCCEEDED -> "Succeeded";
             case FAILED -> "Failed";
             case CANCELED -> "Canceled";
+            case REJECTED -> "Rejected";
             case REQUIRES_ACTION -> "Requires Action";
         };
     }

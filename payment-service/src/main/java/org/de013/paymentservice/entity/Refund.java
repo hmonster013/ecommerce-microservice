@@ -41,9 +41,6 @@ public class Refund {
     @JoinColumn(name = "payment_id", nullable = false)
     private Payment payment;
 
-    @Column(name = "payment_id", insertable = false, updatable = false)
-    private Long paymentId;
-
     @Column(name = "order_id", nullable = false)
     private Long orderId;
 
@@ -185,6 +182,11 @@ public class Refund {
     @PreUpdate
     private void updateNetRefundAmount() {
         this.netRefundAmount = calculateNetRefundAmount();
+    }
+
+    // Helper method for getting payment ID
+    public Long getPaymentId() {
+        return payment != null ? payment.getId() : null;
     }
 
     @PrePersist

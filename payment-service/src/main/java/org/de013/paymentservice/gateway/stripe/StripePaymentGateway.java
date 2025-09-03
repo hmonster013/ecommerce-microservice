@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -598,5 +600,85 @@ public class StripePaymentGateway implements PaymentGateway {
             case "processing" -> org.de013.paymentservice.entity.enums.PaymentStatus.PROCESSING;
             default -> org.de013.paymentservice.entity.enums.PaymentStatus.FAILED;
         };
+    }
+
+    // ========== ADDITIONAL REFUND METHODS ==========
+
+    /**
+     * Create refund with StripeRefundRequest
+     */
+    public StripeRefundResponse createRefund(StripeRefundRequest request) throws Exception {
+        log.info("Creating refund with request: {}", request.getPaymentIntentId());
+
+        try {
+            RefundCreateParams.Builder paramsBuilder = RefundCreateParams.builder();
+
+            if (request.getPaymentIntentId() != null) {
+                paramsBuilder.setPaymentIntent(request.getPaymentIntentId());
+            } else if (request.getChargeId() != null) {
+                paramsBuilder.setCharge(request.getChargeId());
+            }
+
+            if (request.hasAmount()) {
+                paramsBuilder.setAmount(convertToSmallestUnit(request.getAmount(), "USD"));
+            }
+
+            if (request.hasReason()) {
+                switch (request.getReason().toLowerCase()) {
+                    case "duplicate" -> paramsBuilder.setReason(RefundCreateParams.Reason.DUPLICATE);
+                    case "fraudulent" -> paramsBuilder.setReason(RefundCreateParams.Reason.FRAUDULENT);
+                    default -> paramsBuilder.setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER);
+                }
+            }
+
+            if (request.getDescription() != null) {
+                // Note: Stripe doesn't have description field for refunds, using metadata instead
+                paramsBuilder.putMetadata("description", request.getDescription());
+            }
+
+            if (request.hasMetadata()) {
+                request.getMetadata().forEach(paramsBuilder::putMetadata);
+            }
+
+            com.stripe.model.Refund refund = com.stripe.model.Refund.create(paramsBuilder.build());
+
+            return mapToStripeRefundResponse(refund);
+
+        } catch (StripeException e) {
+            log.error("Failed to create refund: {}", e.getMessage(), e);
+            throw new PaymentGatewayException("Failed to create refund: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get refund by ID with StripeRefundResponse
+     */
+    public StripeRefundResponse getRefundResponse(String refundId) throws Exception {
+        try {
+            com.stripe.model.Refund refund = com.stripe.model.Refund.retrieve(refundId);
+            return mapToStripeRefundResponse(refund);
+        } catch (StripeException e) {
+            log.error("Failed to retrieve refund: {}", refundId, e);
+            throw new PaymentGatewayException("Failed to retrieve refund: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Map Stripe Refund to StripeRefundResponse
+     */
+    private StripeRefundResponse mapToStripeRefundResponse(com.stripe.model.Refund refund) {
+        return StripeRefundResponse.builder()
+                .refundId(refund.getId())
+                .chargeId(refund.getCharge())
+                .paymentIntentId(refund.getPaymentIntent())
+                .amount(BigDecimal.valueOf(refund.getAmount()).divide(BigDecimal.valueOf(100)))
+                .currency(refund.getCurrency().toUpperCase())
+                .status(refund.getStatus())
+                .reason(refund.getReason())
+                .failureReason(refund.getFailureReason())
+                .metadata(refund.getMetadata())
+                .created(LocalDateTime.ofEpochSecond(refund.getCreated(), 0, ZoneOffset.UTC))
+                .livemode(true)
+                .build();
     }
 }

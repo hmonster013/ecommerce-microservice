@@ -17,4 +17,17 @@ public class OrderDto {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Helper methods
+    public boolean isPaid() {
+        return "PAID".equals(status);
+    }
+
+    public boolean isPending() {
+        return "PENDING".equals(status);
+    }
+
+    public boolean isCanceled() {
+        return "CANCELED".equals(status);
+    }
 }

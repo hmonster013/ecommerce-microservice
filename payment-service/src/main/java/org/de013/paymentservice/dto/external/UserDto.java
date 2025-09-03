@@ -16,4 +16,21 @@ public class UserDto {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Helper methods
+    public boolean isActive() {
+        return "ACTIVE".equals(status);
+    }
+
+    public boolean isBlocked() {
+        return "BLOCKED".equals(status);
+    }
+
+    public boolean isDeleted() {
+        return "DELETED".equals(status);
+    }
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
 }
