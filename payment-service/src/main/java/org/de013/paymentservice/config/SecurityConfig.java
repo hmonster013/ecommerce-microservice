@@ -34,8 +34,14 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
 
-                        // Protected endpoints - authorization via @PreAuthorize
-                        .anyRequest().permitAll()
+                        // Webhook endpoints - public for payment gateway callbacks
+                        .requestMatchers("/webhooks/**").permitAll()
+
+                        // Payment processing endpoints - require authentication
+                        .requestMatchers("/payments/**", "/payment-methods/**", "/refunds/**").authenticated()
+
+                        // All other endpoints require authentication
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
