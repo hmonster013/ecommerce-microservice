@@ -1,9 +1,11 @@
 package org.de013.paymentservice.exception;
 
+import org.de013.common.exception.BusinessException;
+
 /**
  * Exception thrown when payment processing fails
  */
-public class PaymentProcessingException extends RuntimeException {
+public class PaymentProcessingException extends BusinessException {
 
     private String errorCode;
     private String gatewayError;

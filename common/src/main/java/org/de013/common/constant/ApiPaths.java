@@ -21,6 +21,9 @@ public final class ApiPaths {
     public static final String CART_ITEMS = "/cart-items";
     public static final String ORDERS = "/orders";
     public static final String PAYMENTS = "/payments";
+    public static final String PAYMENT_METHODS = "/payment-methods";
+    public static final String REFUNDS = "/refunds";
+    public static final String WEBHOOKS = "/webhooks";
     public static final String NOTIFICATIONS = "/notifications";
 
     // Common endpoints
@@ -39,6 +42,14 @@ public final class ApiPaths {
     public static final String USER_ID_PARAM = "/{userId}";
     public static final String ORDER_NUMBER_PARAM = "/{orderNumber}";
     public static final String USERNAME_PARAM = "/username/{username}";
+    public static final String PAYMENT_ID_PARAM = "/{paymentId}";
+    public static final String PAYMENT_METHOD_ID_PARAM = "/{paymentMethodId}";
+    public static final String REFUND_ID_PARAM = "/{refundId}";
+    public static final String PAYMENT_NUMBER_PARAM = "/{paymentNumber}";
+    public static final String REFUND_NUMBER_PARAM = "/{refundNumber}";
+    public static final String EVENT_TYPE_PARAM = "/{eventType}";
+    public static final String STATUS_PARAM = "/{status}";
+    public static final String TYPE_PARAM = "/{type}";
     public static final String LEGACY = "/legacy";
     public static final String SEARCH = "/search";
     public static final String ENABLE = "/enable";
@@ -60,6 +71,50 @@ public final class ApiPaths {
     public static final String USER = "/user";
     public static final String STATUS = "/status";
     public static final String CANCEL = "/cancel";
+    public static final String ORDER = "/order";
+    public static final String TYPE = "/type";
+
+    // Payment specific endpoints
+    public static final String PROCESS = "/process";
+    public static final String CONFIRM = "/confirm";
+    public static final String CAPTURE = "/capture";
+    public static final String SYNC = "/sync";
+    public static final String STATISTICS = "/statistics";
+    public static final String SUCCESSFUL = "/successful";
+    public static final String FAILED = "/failed";
+    public static final String PENDING = "/pending";
+    public static final String TOTAL_AMOUNT = "/total-amount";
+    public static final String COUNT = "/count";
+
+    // Payment Method specific endpoints
+    public static final String DEFAULT = "/default";
+    public static final String SET_DEFAULT = "/set-default";
+    public static final String ACTIVATE = "/activate";
+    public static final String DEACTIVATE = "/deactivate";
+    public static final String ATTACH_CUSTOMER = "/attach-customer";
+    public static final String DETACH_CUSTOMER = "/detach-customer";
+    public static final String CARDS = "/cards";
+    public static final String EXPIRED = "/expired";
+    public static final String EXPIRING_SOON = "/expiring-soon";
+    public static final String CLEANUP = "/cleanup";
+    public static final String INACTIVE = "/inactive";
+    public static final String ORPHANED = "/orphaned";
+
+    // Refund specific endpoints
+    public static final String APPROVE = "/approve";
+    public static final String REJECT = "/reject";
+    public static final String REQUIRING_APPROVAL = "/requiring-approval";
+    public static final String CAN_REFUND = "/can-refund";
+    public static final String VALID_AMOUNT = "/valid-amount";
+
+    // Webhook specific endpoints
+    public static final String STRIPE = "/stripe";
+    public static final String VERIFY = "/verify";
+    public static final String PARSE = "/parse";
+    public static final String EVENT_TYPES = "/event-types";
+    public static final String VALID = "/valid";
+    public static final String ERROR = "/error";
+    public static final String TEST = "/test";
 
     // Product Catalog specific endpoints
     public static final String SLUG = "/slug";
@@ -71,7 +126,6 @@ public final class ApiPaths {
     public static final String CHILDREN = "/children";
     public static final String PATH = "/path";
     public static final String FEATURED = "/featured";
-    public static final String ACTIVE = "/active";
     public static final String MOVE = "/move";
     public static final String REVIEWS = "/reviews";
     public static final String INVENTORY = "/inventory";
@@ -96,5 +150,9 @@ public final class ApiPaths {
     public static final String SUGGESTIONS = "/suggestions";
     public static final String SUMMARY = "/summary";
     public static final String RECENT = "/recent";
+
+    // Additional payment service endpoints
+    public static final String PAYMENT = "/payment";
+    public static final String ACTIVE = "/active";
 }
 

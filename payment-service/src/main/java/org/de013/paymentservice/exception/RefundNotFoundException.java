@@ -1,9 +1,11 @@
 package org.de013.paymentservice.exception;
 
+import org.de013.common.exception.ResourceNotFoundException;
+
 /**
  * Exception thrown when a refund is not found
  */
-public class RefundNotFoundException extends RuntimeException {
+public class RefundNotFoundException extends ResourceNotFoundException {
 
     private Long refundId;
     private String refundNumber;
@@ -14,7 +16,7 @@ public class RefundNotFoundException extends RuntimeException {
     }
 
     public RefundNotFoundException(String message, Throwable cause) {
-        super(message, cause);
+        super(message + (cause != null ? ": " + cause.getMessage() : ""));
     }
 
     public RefundNotFoundException(String message, Long refundId) {

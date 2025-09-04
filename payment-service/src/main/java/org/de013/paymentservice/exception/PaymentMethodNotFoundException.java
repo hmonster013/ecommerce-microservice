@@ -1,9 +1,11 @@
 package org.de013.paymentservice.exception;
 
+import org.de013.common.exception.ResourceNotFoundException;
+
 /**
  * Exception thrown when a payment method is not found
  */
-public class PaymentMethodNotFoundException extends RuntimeException {
+public class PaymentMethodNotFoundException extends ResourceNotFoundException {
 
     private Long paymentMethodId;
     private String stripePaymentMethodId;
@@ -13,7 +15,7 @@ public class PaymentMethodNotFoundException extends RuntimeException {
     }
 
     public PaymentMethodNotFoundException(String message, Throwable cause) {
-        super(message, cause);
+        super(message + (cause != null ? ": " + cause.getMessage() : ""));
     }
 
     public PaymentMethodNotFoundException(String message, Long paymentMethodId) {
