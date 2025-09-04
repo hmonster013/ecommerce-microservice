@@ -129,12 +129,27 @@ feign:
         connectTimeout: 5000
         readTimeout: 5000
         loggerLevel: basic
+        errorDecoder: org.de013.paymentservice.config.FeignErrorDecoder
+        requestInterceptor: org.de013.paymentservice.config.FeignRequestInterceptor
       order-service:
         connectTimeout: 3000
         readTimeout: 10000
+        loggerLevel: full
+        url: http://localhost:8084
       user-service:
         connectTimeout: 3000
         readTimeout: 5000
+        loggerLevel: full
+        url: http://localhost:8081
+  hystrix:
+    enabled: true
+  compression:
+    request:
+      enabled: true
+      mime-types: text/xml,application/xml,application/json
+      min-request-size: 2048
+    response:
+      enabled: true
 
 logging:
   level:
