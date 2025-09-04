@@ -180,6 +180,50 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
            "WHERE n.createdAt BETWEEN :startDate AND :endDate " +
            "AND n.deleted = false " +
            "GROUP BY n.type, n.channel, n.status")
-    List<Object[]> getNotificationStatistics(@Param("startDate") LocalDateTime startDate, 
+    List<Object[]> getNotificationStatistics(@Param("startDate") LocalDateTime startDate,
                                             @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Find pending notifications for digest
+     */
+    @Query("SELECT n FROM Notification n WHERE n.userId = :userId " +
+           "AND n.status IN ('PENDING', 'QUEUED') " +
+           "AND n.createdAt BETWEEN :startDate AND :endDate " +
+           "AND n.digestId IS NULL " +
+           "AND n.deleted = false " +
+           "ORDER BY n.createdAt DESC")
+    List<Notification> findPendingNotificationsForDigest(@Param("userId") Long userId,
+                                                        @Param("startDate") LocalDateTime startDate,
+                                                        @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Count digest notifications by frequency
+     */
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.type = 'DIGEST' " +
+           "AND n.referenceId LIKE CONCAT(:frequency, '%') " +
+           "AND n.createdAt BETWEEN :startDate AND :endDate " +
+           "AND n.deleted = false")
+    long countDigestNotifications(@Param("frequency") String frequency,
+                                @Param("startDate") LocalDateTime startDate,
+                                @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Count all digest notifications
+     */
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.type = 'DIGEST' " +
+           "AND n.createdAt BETWEEN :startDate AND :endDate " +
+           "AND n.deleted = false")
+    long countAllDigestNotifications(@Param("startDate") LocalDateTime startDate,
+                                   @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Get average notifications per digest
+     */
+    @Query("SELECT COALESCE(AVG(CAST(n.templateVariables['totalCount'] AS int)), 0) FROM Notification n " +
+           "WHERE n.type = 'DIGEST' " +
+           "AND n.createdAt BETWEEN :startDate AND :endDate " +
+           "AND n.templateVariables['totalCount'] IS NOT NULL " +
+           "AND n.deleted = false")
+    double getAverageNotificationsPerDigest(@Param("startDate") LocalDateTime startDate,
+                                          @Param("endDate") LocalDateTime endDate);
 }

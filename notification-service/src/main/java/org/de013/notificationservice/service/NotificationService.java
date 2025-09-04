@@ -31,6 +31,7 @@ public class NotificationService {
     private final TemplateService templateService;
     private final NotificationPreferenceService preferenceService;
     private final NotificationQueueService queueService;
+    private final PersonalizationService personalizationService;
 
     /**
      * Create a new notification
@@ -94,6 +95,32 @@ public class NotificationService {
 
         Notification savedNotification = notificationRepository.save(notification);
         log.info("Notification created successfully with id={}", savedNotification.getId());
+
+        // Apply personalization
+        try {
+            savedNotification = personalizationService.personalizeNotification(savedNotification);
+            savedNotification = notificationRepository.save(savedNotification);
+        } catch (Exception e) {
+            log.error("Error personalizing notification {}: {}", savedNotification.getId(), e.getMessage(), e);
+            // Continue with original notification if personalization fails
+        }
+
+        // Check if notification should be sent based on user preferences
+        if (!personalizationService.shouldSendNotification(savedNotification)) {
+            log.info("Notification blocked by user preferences: id={}", savedNotification.getId());
+            savedNotification.markAsFailed("Blocked by user preferences");
+            notificationRepository.save(savedNotification);
+            return savedNotification;
+        }
+
+        // Get optimal send time
+        java.time.LocalDateTime optimalSendTime = personalizationService.getOptimalSendTime(savedNotification);
+        if (optimalSendTime.isAfter(java.time.LocalDateTime.now())) {
+            savedNotification.setScheduledAt(optimalSendTime);
+            savedNotification = notificationRepository.save(savedNotification);
+            log.info("Notification scheduled for optimal time: id={}, scheduledAt={}",
+                    savedNotification.getId(), optimalSendTime);
+        }
 
         // Queue notification for delivery
         if (savedNotification.isReadyForDelivery()) {

@@ -172,4 +172,29 @@ public interface NotificationPreferenceRepository extends JpaRepository<Notifica
      * Check if preference exists for user, channel, and type
      */
     boolean existsByUserIdAndChannelAndTypeAndDeletedFalse(Long userId, NotificationChannel channel, NotificationType type);
+
+    /**
+     * Find users with digest mode enabled for specific frequency
+     */
+    @Query("SELECT np FROM NotificationPreference np WHERE np.digestMode = :digestMode " +
+           "AND np.digestFrequency = :frequency " +
+           "AND np.globalOptOut = false " +
+           "AND np.deleted = false")
+    List<NotificationPreference> findByDigestModeAndDigestFrequency(@Param("digestMode") Boolean digestMode,
+                                                                   @Param("frequency") org.de013.notificationservice.entity.enums.DigestFrequency frequency);
+
+    /**
+     * Find preferences by user ID
+     */
+    List<NotificationPreference> findByUserIdAndDeletedFalse(Long userId);
+
+    /**
+     * Find preferences by user ID and channel
+     */
+    List<NotificationPreference> findByUserIdAndChannelAndDeletedFalse(Long userId, NotificationChannel channel);
+
+    /**
+     * Find global preference for user (channel and type are null)
+     */
+    Optional<NotificationPreference> findByUserIdAndChannelIsNullAndTypeIsNullAndDeletedFalse(Long userId);
 }

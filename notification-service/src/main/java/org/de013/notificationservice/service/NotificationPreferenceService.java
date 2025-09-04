@@ -306,7 +306,7 @@ public class NotificationPreferenceService {
         existing.setQuietHoursStart(updated.getQuietHoursStart());
         existing.setQuietHoursEnd(updated.getQuietHoursEnd());
         existing.setTimezone(updated.getTimezone());
-        existing.setLanguage(updated.getLanguage());
+        existing.setLanguageCode(updated.getLanguageCode());
         existing.setFrequencyLimitPerHour(updated.getFrequencyLimitPerHour());
         existing.setFrequencyLimitPerDay(updated.getFrequencyLimitPerDay());
         existing.setMinimumPriority(updated.getMinimumPriority());
@@ -314,5 +314,75 @@ public class NotificationPreferenceService {
         existing.setMetadata(updated.getMetadata());
         existing.setOptOutReason(updated.getOptOutReason());
         existing.setGlobalOptOut(updated.getGlobalOptOut());
+    }
+
+    /**
+     * Get users with digest mode enabled for specific frequency
+     */
+    public List<NotificationPreference> getUsersWithDigestMode(org.de013.notificationservice.entity.enums.DigestFrequency frequency) {
+        try {
+            return preferenceRepository.findByDigestModeAndDigestFrequency(true, frequency);
+        } catch (Exception e) {
+            log.error("Error getting users with digest mode: frequency={}, error={}", frequency, e.getMessage(), e);
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    /**
+     * Get preference for user, channel, and type
+     */
+    public NotificationPreference getPreference(Long userId, NotificationChannel channel, NotificationType type) {
+        try {
+            Optional<NotificationPreference> preference = preferenceRepository.findByUserIdAndChannelAndTypeAndDeletedFalse(userId, channel, type);
+            return preference.orElse(null);
+        } catch (Exception e) {
+            log.error("Error getting preference: userId={}, channel={}, type={}, error={}",
+                    userId, channel, type, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Get or create preference for user, channel, and type
+     */
+    public NotificationPreference getOrCreatePreference(Long userId, NotificationChannel channel, NotificationType type) {
+        try {
+            NotificationPreference existing = getPreference(userId, channel, type);
+            if (existing != null) {
+                return existing;
+            }
+
+            // Create default preference
+            NotificationPreference newPreference = NotificationPreference.builder()
+                    .userId(userId)
+                    .channel(channel)
+                    .type(type)
+                    .enabled(true)
+                    .globalOptOut(false)
+                    .quietHoursEnabled(false)
+                    .timezone("UTC")
+                    .languageCode("en")
+                    .build();
+
+            return preferenceRepository.save(newPreference);
+
+        } catch (Exception e) {
+            log.error("Error getting or creating preference: userId={}, channel={}, type={}, error={}",
+                    userId, channel, type, e.getMessage(), e);
+            throw new RuntimeException("Failed to get or create preference: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Update preference
+     */
+    public NotificationPreference updatePreference(NotificationPreference preference) {
+        try {
+            preference.setUpdatedAt(java.time.LocalDateTime.now());
+            return preferenceRepository.save(preference);
+        } catch (Exception e) {
+            log.error("Error updating preference: id={}, error={}", preference.getId(), e.getMessage(), e);
+            throw new RuntimeException("Failed to update preference: " + e.getMessage(), e);
+        }
     }
 }

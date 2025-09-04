@@ -5,9 +5,11 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.de013.notificationservice.entity.enums.NotificationChannel;
 import org.de013.notificationservice.entity.enums.NotificationType;
+import org.de013.notificationservice.entity.enums.DigestFrequency;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,13 +62,54 @@ public class NotificationPreference extends BaseEntity {
     @Column(name = "quiet_hours_end")
     private LocalTime quietHoursEnd;
 
-    @Column(name = "timezone", length = 50)
-    @Builder.Default
-    private String timezone = "UTC";
+    @Column(name = "timezone")
+    private String timezone; // User's timezone (e.g., "America/New_York")
 
-    @Column(name = "language", length = 10)
-    @Builder.Default
-    private String language = "en";
+    @Column(name = "language_code", length = 10)
+    private String languageCode; // User's preferred language (e.g., "en", "vi", "fr")
+
+    @Column(name = "global_opt_out")
+    private Boolean globalOptOut = false; // Global opt-out from all notifications
+
+    @Column(name = "marketing_opt_out")
+    private Boolean marketingOptOut = false; // Opt-out from marketing notifications
+
+    @Column(name = "snooze_until")
+    private LocalDateTime snoozeUntil; // Temporary opt-out until this time
+
+    @Column(name = "frequency_limit")
+    private Integer frequencyLimit; // Max notifications per day (0 = unlimited)
+
+    @Column(name = "digest_mode")
+    private Boolean digestMode = false; // Receive notifications as digest
+
+    @Column(name = "digest_frequency")
+    @Enumerated(EnumType.STRING)
+    private DigestFrequency digestFrequency; // DAILY, WEEKLY
+
+    @Column(name = "personalization_enabled")
+    private Boolean personalizationEnabled = true; // Enable content personalization
+
+    @Column(name = "ab_test_group")
+    private String abTestGroup; // A/B testing group identifier
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "custom_preferences", columnDefinition = "jsonb")
+    private Map<String, Object> customPreferences = new HashMap<>(); // Custom user preferences
+
+    @Column(name = "gdpr_consent")
+    private Boolean gdprConsent; // GDPR consent status
+
+    @Column(name = "gdpr_consent_date")
+    private LocalDateTime gdprConsentDate; // When GDPR consent was given
+
+    @Column(name = "can_spam_compliant")
+    private Boolean canSpamCompliant = true; // CAN-SPAM compliance status
+
+    @Column(name = "last_engagement_date")
+    private LocalDateTime lastEngagementDate; // Last time user engaged with notifications
+
+
 
     @Column(name = "frequency_limit_per_hour")
     private Integer frequencyLimitPerHour;
@@ -90,9 +133,7 @@ public class NotificationPreference extends BaseEntity {
     @Column(name = "opt_out_reason", length = 500)
     private String optOutReason;
 
-    @Column(name = "global_opt_out", nullable = false)
-    @Builder.Default
-    private Boolean globalOptOut = false;
+
 
     // Business methods
 
@@ -220,7 +261,7 @@ public class NotificationPreference extends BaseEntity {
                 .globalOptOut(false)
                 .quietHoursEnabled(false)
                 .timezone("UTC")
-                .language("en")
+                .languageCode("en")
                 .build();
     }
 

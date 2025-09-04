@@ -120,6 +120,9 @@ public class Notification extends BaseEntity {
     @Column(name = "external_id", length = 255)
     private String externalId;
 
+    @Column(name = "digest_id")
+    private Long digestId; // ID of digest notification that includes this notification
+
     @Column(name = "correlation_id", length = 255)
     private String correlationId;
 

@@ -21,7 +21,8 @@ public enum NotificationStatus {
     EXPIRED("Expired", "Notification has expired", false, true),
     BOUNCED("Bounced", "Notification bounced back", false, true),
     REJECTED("Rejected", "Notification was rejected", false, true),
-    RETRY("Retry", "Notification is being retried", false, false);
+    RETRY("Retry", "Notification is being retried", false, false),
+    DIGESTED("Digested", "Notification included in digest", false, true);
 
     private final String displayName;
     private final String description;

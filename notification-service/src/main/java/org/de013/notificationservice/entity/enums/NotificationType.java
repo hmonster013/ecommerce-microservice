@@ -66,6 +66,7 @@ public enum NotificationType {
     REMINDER("Reminder", "General reminder notifications", "general"),
     ANNOUNCEMENT("Announcement", "General announcements", "general"),
     FEEDBACK_REQUEST("Feedback Request", "Request for user feedback", "general"),
+    DIGEST("Digest", "Digest notification containing multiple notifications", "general"),
     CUSTOM("Custom", "Custom notification type", "custom");
 
     private final String displayName;
