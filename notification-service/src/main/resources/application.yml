@@ -86,3 +86,41 @@ springdoc:
 logging:
   level:
     org.de013.notificationservice: DEBUG
+
+# Notification service configuration
+notification:
+  scheduler:
+    enabled: true
+  email:
+    enabled: true
+    default-sender: noreply@ecommerce.com
+    default-sender-name: E-Commerce Platform
+    rate-limit: 100
+    max-retries: 3
+    retry-delay-seconds: 60
+  sms:
+    enabled: true
+    mock-mode: true
+    provider-name: MOCK_SMS
+    rate-limit: 50
+    max-retries: 3
+    retry-delay-seconds: 120
+    max-message-length: 160
+  push:
+    enabled: true
+    mock-mode: true
+    rate-limit: 200
+    max-retries: 3
+    retry-delay-seconds: 60
+    default-sound: default
+    default-badge: 1
+  inapp:
+    enabled: true
+    rate-limit: 500
+    show-badge: true
+    auto-hide: true
+    auto-hide-delay-seconds: 5
+    play-sound: true
+    sound-file: notification.mp3
+    enable-actions: true
+    max-notifications-per-user: 100

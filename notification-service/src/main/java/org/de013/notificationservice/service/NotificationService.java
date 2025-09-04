@@ -30,6 +30,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final TemplateService templateService;
     private final NotificationPreferenceService preferenceService;
+    private final DeliveryService deliveryService;
 
     /**
      * Create a new notification
@@ -50,7 +51,7 @@ public class NotificationService {
         }
 
         // Build notification
-        Notification.NotificationBuilder builder = Notification.builder()
+        var builder = Notification.builder()
                 .userId(request.getUserId())
                 .type(request.getType())
                 .channel(request.getChannel())
@@ -93,6 +94,16 @@ public class NotificationService {
 
         Notification savedNotification = notificationRepository.save(notification);
         log.info("Notification created successfully with id={}", savedNotification.getId());
+
+        // Trigger delivery if notification is ready
+        if (savedNotification.isReadyForDelivery()) {
+            try {
+                deliveryService.deliverNotification(savedNotification);
+            } catch (Exception e) {
+                log.error("Error triggering delivery for notification {}: {}", savedNotification.getId(), e.getMessage(), e);
+                // Don't fail the creation, delivery will be retried by scheduler
+            }
+        }
 
         return savedNotification;
     }
@@ -242,6 +253,7 @@ public class NotificationService {
     /**
      * Render template content for notification
      */
+    @SuppressWarnings("rawtypes")
     private void renderTemplateContent(Notification.NotificationBuilder builder, CreateNotificationRequest request) {
         log.debug("Rendering template content for templateId={}", request.getTemplateId());
         
