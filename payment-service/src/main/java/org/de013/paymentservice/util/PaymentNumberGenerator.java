@@ -1,33 +1,36 @@
 package org.de013.paymentservice.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Utility class for generating unique payment numbers
+ * Utility class for generating unique payment numbers and identifiers.
  */
+@Slf4j
 @Component
 public class PaymentNumberGenerator {
 
-    private static final String PREFIX = "PAY";
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HHmmss");
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final AtomicLong SEQUENCE_COUNTER = new AtomicLong(0);
+
+    // Date formatters for different number formats
+    private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter YYMMDD = DateTimeFormatter.ofPattern("yyMMdd");
+    private static final DateTimeFormatter YYYYMMDDHHMM = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
 
     /**
-     * Generate a unique payment number
-     * Format: PAY-YYYYMMDD-HHMMSS-XXXX
-     * Example: PAY-20241203-143052-1234
+     * Generates a unique payment number in format: PAY-YYYYMMDD-XXXXXX
+     * Example: PAY-20241201-123456
      */
-    public String generatePaymentNumber() {
-        LocalDateTime now = LocalDateTime.now();
-        String datePart = now.format(DATE_FORMAT);
-        String timePart = now.format(TIME_FORMAT);
-        String randomPart = String.format("%04d", ThreadLocalRandom.current().nextInt(1000, 9999));
-        
-        return String.format("%s-%s-%s-%s", PREFIX, datePart, timePart, randomPart);
+    public static String generatePaymentNumber() {
+        String dateStr = LocalDateTime.now().format(YYYYMMDD);
+        String sequence = String.format("%06d", getNextSequence());
+        return String.format("PAY-%s-%s", dateStr, sequence);
     }
 
     /**
@@ -87,16 +90,38 @@ public class PaymentNumberGenerator {
         if (!isValidPaymentNumber(paymentNumber)) {
             return null;
         }
-        
+
         try {
             String[] parts = paymentNumber.split("-");
             String datePart = parts[1];
             String timePart = parts[2];
-            
+
             String dateTimeString = datePart + timePart;
             return LocalDateTime.parse(dateTimeString, DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Gets next sequence number (thread-safe).
+     */
+    private static long getNextSequence() {
+        return SEQUENCE_COUNTER.incrementAndGet();
+    }
+
+    /**
+     * Generates random alphanumeric string.
+     */
+    private static String generateRandomAlphanumeric(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < length; i++) {
+            int index = SECURE_RANDOM.nextInt(chars.length());
+            sb.append(chars.charAt(index));
+        }
+
+        return sb.toString();
     }
 }
