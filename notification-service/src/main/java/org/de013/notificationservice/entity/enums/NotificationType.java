@@ -16,12 +16,21 @@ public enum NotificationType {
     ORDER_DELIVERED("Order Delivered", "Notification sent when an order is delivered", "order"),
     ORDER_CANCELLED("Order Cancelled", "Notification sent when an order is cancelled", "order"),
     ORDER_RETURNED("Order Returned", "Notification sent when an order is returned", "order"),
+
+    // Additional order notifications
+    ORDER_CONFIRMATION("Order Confirmation", "Order confirmation notification", "order"),
+    ORDER_UPDATE("Order Update", "Order update notification", "order"),
     
     // Payment related notifications
     PAYMENT_SUCCESS("Payment Success", "Notification sent when payment is successful", "payment"),
     PAYMENT_FAILED("Payment Failed", "Notification sent when payment fails", "payment"),
     PAYMENT_REFUND("Payment Refund", "Notification sent when payment is refunded", "payment"),
     PAYMENT_PENDING("Payment Pending", "Notification sent when payment is pending", "payment"),
+
+    // Additional payment notifications
+    PAYMENT_CONFIRMATION("Payment Confirmation", "Payment confirmation notification", "payment"),
+    PAYMENT_REFUNDED("Payment Refunded", "Payment refunded notification", "payment"),
+    PAYMENT_CANCELLED("Payment Cancelled", "Payment cancelled notification", "payment"),
     
     // User account related notifications
     USER_REGISTRATION("User Registration", "Welcome notification for new users", "account"),
@@ -29,6 +38,13 @@ public enum NotificationType {
     PASSWORD_RESET("Password Reset", "Password reset notification", "account"),
     ACCOUNT_LOCKED("Account Locked", "Account locked notification", "account"),
     ACCOUNT_UNLOCKED("Account Unlocked", "Account unlocked notification", "account"),
+
+    // Additional user notifications
+    WELCOME("Welcome", "Welcome notification for new users", "account"),
+    ACCOUNT_ACTIVATION_REMINDER("Account Activation Reminder", "Reminder to activate account", "account"),
+    ACCOUNT_ACTIVATED("Account Activated", "Account activation confirmation", "account"),
+    GETTING_STARTED("Getting Started", "Getting started guide", "account"),
+    PROFILE_UPDATE("Profile Update", "Profile update confirmation", "account"),
     
     // Marketing notifications
     PROMOTIONAL("Promotional", "Marketing and promotional notifications", "marketing"),
@@ -49,6 +65,7 @@ public enum NotificationType {
     // General notifications
     REMINDER("Reminder", "General reminder notifications", "general"),
     ANNOUNCEMENT("Announcement", "General announcements", "general"),
+    FEEDBACK_REQUEST("Feedback Request", "Request for user feedback", "general"),
     CUSTOM("Custom", "Custom notification type", "custom");
 
     private final String displayName;

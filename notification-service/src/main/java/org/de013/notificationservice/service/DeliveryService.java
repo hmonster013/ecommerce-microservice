@@ -31,6 +31,7 @@ public class DeliveryService {
     private final NotificationDeliveryRepository deliveryRepository;
     private final RateLimitingService rateLimitingService;
     private final DeliveryAnalyticsService analyticsService;
+    private final org.de013.notificationservice.event.publisher.NotificationEventPublisher eventPublisher;
 
     /**
      * Deliver a notification using appropriate provider
@@ -106,7 +107,7 @@ public class DeliveryService {
 
             // Update notification based on result
             if (result.isSuccess()) {
-                handleSuccessfulDelivery(notification, result);
+                handleSuccessfulDelivery(notification, delivery, result);
             } else {
                 handleFailedDelivery(notification, delivery, result);
             }
@@ -239,18 +240,24 @@ public class DeliveryService {
     /**
      * Handle successful delivery
      */
-    private void handleSuccessfulDelivery(Notification notification, DeliveryResult result) {
+    private void handleSuccessfulDelivery(Notification notification, NotificationDelivery delivery, DeliveryResult result) {
         if (result.getStatus() == DeliveryStatus.SUCCESS) {
             notification.markAsDelivered();
             notification.setExternalId(result.getExternalId());
+
+            // Publish notification delivered event
+            eventPublisher.publishNotificationDelivered(notification, delivery);
         } else {
             notification.markAsSent();
             notification.setExternalId(result.getExternalId());
+
+            // Publish notification sent event
+            eventPublisher.publishNotificationSent(notification);
         }
-        
+
         notificationRepository.save(notification);
-        
-        log.info("Notification delivered successfully: id={}, status={}, externalId={}", 
+
+        log.info("Notification delivered successfully: id={}, status={}, externalId={}",
                 notification.getId(), result.getStatus(), result.getExternalId());
     }
 
@@ -272,7 +279,12 @@ public class DeliveryService {
         } else {
             // Mark as permanently failed
             notification.markAsFailed(result.getErrorMessage());
-            log.warn("Notification permanently failed: id={}, maxRetries={}, currentRetries={}", 
+
+            // Publish notification failed event
+            eventPublisher.publishNotificationFailed(notification, result.getErrorMessage(),
+                    delivery.getProviderName(), notification.getRetryCount());
+
+            log.warn("Notification permanently failed: id={}, maxRetries={}, currentRetries={}",
                     notification.getId(), notification.getMaxRetryAttempts(), notification.getRetryCount());
         }
         
