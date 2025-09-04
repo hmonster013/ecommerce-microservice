@@ -41,7 +41,6 @@ public class RefundServiceImpl implements RefundService {
     private final PaymentRepository paymentRepository;
     private final PaymentGatewayFactory gatewayFactory;
     private final RefundMapper refundMapper;
-    private final PaymentNumberGenerator paymentNumberGenerator;
 
     // ========== REFUND PROCESSING ==========
 
@@ -503,7 +502,7 @@ public class RefundServiceImpl implements RefundService {
     public String generateRefundNumber() {
         String refundNumber;
         do {
-            refundNumber = paymentNumberGenerator.generateRefundNumber();
+            refundNumber = PaymentNumberGenerator.generateRefundNumber();
         } while (refundNumberExists(refundNumber));
 
         return refundNumber;

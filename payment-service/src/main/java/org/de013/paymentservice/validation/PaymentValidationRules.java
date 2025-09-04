@@ -37,7 +37,7 @@ public class PaymentValidationRules {
         }
         
         // Currency validation
-        if (payment.getCurrency() == null || payment.getCurrency().trim().isEmpty()) {
+        if (payment.getCurrency() == null) {
             errors.add("Payment currency is required");
         }
         
@@ -82,12 +82,17 @@ public class PaymentValidationRules {
         
         // Type-specific validation
         if (paymentMethod.getType() == PaymentMethodType.CARD) {
-            if (paymentMethod.getCardLast4() == null || paymentMethod.getCardLast4().trim().isEmpty()) {
-                errors.add("Card last 4 digits are required");
+            if (paymentMethod.getMaskedCardNumber() == null || paymentMethod.getMaskedCardNumber().trim().isEmpty()) {
+                errors.add("Card information is required");
             }
-            
+
             if (paymentMethod.getCardBrand() == null || paymentMethod.getCardBrand().trim().isEmpty()) {
                 errors.add("Card brand is required");
+            }
+
+            // Check if card is expired
+            if (paymentMethod.isExpired()) {
+                errors.add("Card has expired");
             }
         }
         

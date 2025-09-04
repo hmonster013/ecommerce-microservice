@@ -65,13 +65,13 @@ public class StripeUtils {
         if (stripeStatus == null) {
             return RefundStatus.PENDING;
         }
-        
+
         return switch (stripeStatus.toLowerCase()) {
             case "pending" -> RefundStatus.PENDING;
-            case "succeeded" -> RefundStatus.COMPLETED;
+            case "succeeded" -> RefundStatus.SUCCEEDED;
             case "failed" -> RefundStatus.FAILED;
             case "canceled" -> RefundStatus.CANCELED;
-            case "requires_action" -> RefundStatus.PENDING;
+            case "requires_action" -> RefundStatus.REQUIRES_ACTION;
             default -> RefundStatus.FAILED;
         };
     }

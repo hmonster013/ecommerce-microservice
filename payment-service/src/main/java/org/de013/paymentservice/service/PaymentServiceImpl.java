@@ -36,7 +36,6 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentGatewayFactory gatewayFactory;
     private final PaymentMapper paymentMapper;
-    private final PaymentNumberGenerator paymentNumberGenerator;
 
     // ========== PAYMENT PROCESSING ==========
 
@@ -315,7 +314,7 @@ public class PaymentServiceImpl implements PaymentService {
     public String generatePaymentNumber() {
         String paymentNumber;
         do {
-            paymentNumber = paymentNumberGenerator.generatePaymentNumber();
+            paymentNumber = PaymentNumberGenerator.generatePaymentNumber();
         } while (paymentNumberExists(paymentNumber));
         return paymentNumber;
     }

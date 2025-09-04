@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -20,7 +21,8 @@ public class PaymentNumberGenerator {
 
     // Date formatters for different number formats
     private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter YYMMDD = DateTimeFormatter.ofPattern("yyMMdd");
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HHmmss");
     private static final DateTimeFormatter YYYYMMDDHHMM = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
 
     /**
@@ -38,12 +40,12 @@ public class PaymentNumberGenerator {
      * Format: REF-YYYYMMDD-HHMMSS-XXXX
      * Example: REF-20241203-143052-1234
      */
-    public String generateRefundNumber() {
+    public static String generateRefundNumber() {
         LocalDateTime now = LocalDateTime.now();
         String datePart = now.format(DATE_FORMAT);
         String timePart = now.format(TIME_FORMAT);
         String randomPart = String.format("%04d", ThreadLocalRandom.current().nextInt(1000, 9999));
-        
+
         return String.format("REF-%s-%s-%s", datePart, timePart, randomPart);
     }
 
@@ -52,53 +54,84 @@ public class PaymentNumberGenerator {
      * Format: TXN-YYYYMMDD-HHMMSS-XXXX
      * Example: TXN-20241203-143052-1234
      */
-    public String generateTransactionNumber() {
+    public static String generateTransactionNumber() {
         LocalDateTime now = LocalDateTime.now();
         String datePart = now.format(DATE_FORMAT);
         String timePart = now.format(TIME_FORMAT);
         String randomPart = String.format("%04d", ThreadLocalRandom.current().nextInt(1000, 9999));
-        
+
         return String.format("TXN-%s-%s-%s", datePart, timePart, randomPart);
     }
 
     /**
      * Validate payment number format
      */
-    public boolean isValidPaymentNumber(String paymentNumber) {
+    public static boolean isValidPaymentNumber(String paymentNumber) {
         if (paymentNumber == null || paymentNumber.trim().isEmpty()) {
             return false;
         }
-        
-        return paymentNumber.matches("^PAY-\\d{8}-\\d{6}-\\d{4}$");
+
+        return paymentNumber.matches("^PAY-\\d{8}-\\d{6}$");
     }
 
     /**
      * Validate refund number format
      */
-    public boolean isValidRefundNumber(String refundNumber) {
+    public static boolean isValidRefundNumber(String refundNumber) {
         if (refundNumber == null || refundNumber.trim().isEmpty()) {
             return false;
         }
-        
+
         return refundNumber.matches("^REF-\\d{8}-\\d{6}-\\d{4}$");
+    }
+
+    /**
+     * Validate transaction number format
+     */
+    public static boolean isValidTransactionNumber(String transactionNumber) {
+        if (transactionNumber == null || transactionNumber.trim().isEmpty()) {
+            return false;
+        }
+
+        return transactionNumber.matches("^TXN-\\d{8}-\\d{6}-\\d{4}$");
     }
 
     /**
      * Extract date from payment number
      */
-    public LocalDateTime extractDateFromPaymentNumber(String paymentNumber) {
+    public static LocalDateTime extractDateFromPaymentNumber(String paymentNumber) {
         if (!isValidPaymentNumber(paymentNumber)) {
             return null;
         }
 
         try {
             String[] parts = paymentNumber.split("-");
-            String datePart = parts[1];
-            String timePart = parts[2];
+            String datePart = parts[1]; // YYYYMMDD format
+
+            return LocalDateTime.parse(datePart + "0000", DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
+        } catch (Exception e) {
+            log.warn("Failed to extract date from payment number: {}", paymentNumber);
+            return null;
+        }
+    }
+
+    /**
+     * Extract date from refund number
+     */
+    public static LocalDateTime extractDateFromRefundNumber(String refundNumber) {
+        if (!isValidRefundNumber(refundNumber)) {
+            return null;
+        }
+
+        try {
+            String[] parts = refundNumber.split("-");
+            String datePart = parts[1]; // YYYYMMDD format
+            String timePart = parts[2]; // HHMMSS format
 
             String dateTimeString = datePart + timePart;
             return LocalDateTime.parse(dateTimeString, DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         } catch (Exception e) {
+            log.warn("Failed to extract date from refund number: {}", refundNumber);
             return null;
         }
     }
@@ -113,7 +146,7 @@ public class PaymentNumberGenerator {
     /**
      * Generates random alphanumeric string.
      */
-    private static String generateRandomAlphanumeric(int length) {
+    public static String generateRandomAlphanumeric(int length) {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder sb = new StringBuilder();
 

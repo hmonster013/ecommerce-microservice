@@ -143,13 +143,27 @@ public class PaymentUtils {
         if (paymentMethod == null) {
             return "Unknown";
         }
-        
+
         return switch (paymentMethod.getType()) {
-            case CARD -> String.format("%s ending in %s", 
-                    paymentMethod.getCardBrand(), 
-                    paymentMethod.getCardLast4());
-            case BANK_ACCOUNT -> "Bank Account ending in " + 
-                    (paymentMethod.getBankLast4() != null ? paymentMethod.getBankLast4() : "****");
+            case CARD -> {
+                String brand = paymentMethod.getCardBrand() != null ?
+                    paymentMethod.getCardBrand().toUpperCase() : "Card";
+                String maskedNumber = paymentMethod.getMaskedCardNumber();
+                if (maskedNumber != null) {
+                    yield String.format("%s %s", brand, maskedNumber);
+                } else {
+                    yield brand;
+                }
+            }
+            case BANK_ACCOUNT -> "Bank Account";
+            case WALLET -> {
+                String walletType = paymentMethod.getWalletType();
+                if (walletType != null) {
+                    yield walletType.replace("_", " ").toUpperCase();
+                } else {
+                    yield "Digital Wallet";
+                }
+            }
             default -> paymentMethod.getType().toString();
         };
     }
@@ -161,10 +175,11 @@ public class PaymentUtils {
         if (payment == null) {
             return "Payment";
         }
-        
-        return String.format("Payment for Order #%d - %s", 
-                payment.getOrderId(), 
-                formatAmount(payment.getAmount(), payment.getCurrency()));
+
+        String currencyCode = payment.getCurrency() != null ? payment.getCurrency().name() : "USD";
+        return String.format("Payment for Order #%d - %s",
+                payment.getOrderId(),
+                formatAmount(payment.getAmount(), currencyCode));
     }
     
     /**
