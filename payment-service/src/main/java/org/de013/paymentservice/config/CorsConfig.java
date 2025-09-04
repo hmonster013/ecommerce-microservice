@@ -24,11 +24,27 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
-                
+
         // Special configuration for webhooks (no credentials)
         registry.addMapping("/api/v1/webhooks/**")
                 .allowedOriginPatterns("*")
                 .allowedMethods("POST", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(false)
+                .maxAge(3600);
+
+        // Configuration for API docs
+        registry.addMapping("/v3/api-docs/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(false)
+                .maxAge(3600);
+
+        // Configuration for Swagger UI
+        registry.addMapping("/swagger-ui/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(false)
                 .maxAge(3600);

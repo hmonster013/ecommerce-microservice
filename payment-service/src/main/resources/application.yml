@@ -7,6 +7,16 @@ spring:
   profiles:
     active: dev
 
+  # Jackson configuration for proper date/time serialization
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      write-durations-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: UTC
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+
   # Enable ANSI colors in console output
   output:
     ansi:
@@ -50,8 +60,9 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
-    fetch-registry: true
-    register-with-eureka: true
+    fetch-registry: false
+    register-with-eureka: false
+    enabled: false
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}
@@ -95,19 +106,7 @@ payment:
     encryption-key: ${PAYMENT_ENCRYPTION_KEY:your_32_character_encryption_key}
     webhook-timeout: ${WEBHOOK_TIMEOUT:10000}  # 10 seconds
 
-# Swagger/OpenAPI Configuration
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-    enabled: true
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
-    operationsSorter: method
-    tagsSorter: alpha
-    tryItOutEnabled: true
-    filter: true
-    displayRequestDuration: true
+
     docExpansion: none
     defaultModelsExpandDepth: 1
     defaultModelExpandDepth: 1
@@ -153,6 +152,31 @@ feign:
 
 logging:
   level:
-    org.de013.paymentservice: DEBUG
-    org.springframework.security: DEBUG
-    com.stripe: INFO
+    '[org.de013.paymentservice]': DEBUG
+    '[org.springframework.security]': DEBUG
+    '[com.stripe]': INFO
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    displayRequestDuration: true
+  show-actuator: true
+  group-configs:
+    - group: 'payment-api'
+      display-name: 'Payment Service API'
+      paths-to-match: '/api/v1/**'
+    - group: 'stripe-api'
+      display-name: 'Stripe Integration API'
+      paths-to-match: '/api/v1/stripe/**'
+    - group: 'admin-api'
+      display-name: 'Admin API'
+      paths-to-match: '/api/v1/admin/**'

@@ -28,13 +28,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * REST Controller for payment operations
+ * Payment Controller
+ * Handles payment processing, status checking, and payment management
  */
 @RestController
 @RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.PAYMENTS)
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Payment", description = "Payment management APIs")
+@Tag(name = "Payments", description = "Payment processing and management operations")
 public class PaymentController extends BaseController {
 
     private final PaymentService paymentService;
@@ -42,14 +43,44 @@ public class PaymentController extends BaseController {
     // ========== PAYMENT PROCESSING ==========
 
     @PostMapping(ApiPaths.PROCESS)
-    @Operation(summary = "Process a payment", description = "Process a new payment for an order")
+    @Operation(
+        summary = "Process a payment",
+        description = """
+            Process a new payment for an order using the specified payment method.
+
+            **Payment Flow:**
+            1. Validates order and user information
+            2. Processes payment through selected gateway (Stripe, PayPal, etc.)
+            3. Updates order status
+            4. Sends notifications
+
+            **Supported Payment Methods:**
+            - Credit/Debit Cards (via Stripe)
+            - Bank Accounts
+            - Digital Wallets (PayPal, Apple Pay, Google Pay)
+
+            **Example Request:**
+            ```json
+            {
+              "orderId": 12345,
+              "userId": 67890,
+              "amount": 99.99,
+              "currency": "USD",
+              "paymentMethodId": "pm_1234567890",
+              "gateway": "STRIPE"
+            }
+            ```
+            """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Payment processed successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid payment request"),
+            @ApiResponse(responseCode = "400", description = "Invalid payment request or validation failed"),
             @ApiResponse(responseCode = "404", description = "Order or user not found"),
+            @ApiResponse(responseCode = "409", description = "Payment already exists for this order"),
+            @ApiResponse(responseCode = "422", description = "Payment method invalid or expired"),
             @ApiResponse(responseCode = "500", description = "Payment processing failed")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> processPayment(
+            @Parameter(description = "Payment processing request", required = true)
             @Valid @RequestBody ProcessPaymentRequest request) {
         log.info("Processing payment request for order: {}", request.getOrderId());
 

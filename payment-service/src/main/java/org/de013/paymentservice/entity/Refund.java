@@ -41,6 +41,9 @@ public class Refund {
     @JoinColumn(name = "payment_id", nullable = false)
     private Payment payment;
 
+    @Column(name = "payment_id", nullable = false, insertable = false, updatable = false)
+    private Long paymentId;
+
     @Column(name = "order_id", nullable = false)
     private Long orderId;
 
@@ -179,23 +182,26 @@ public class Refund {
     }
 
     @PrePersist
-    @PreUpdate
-    private void updateNetRefundAmount() {
-        this.netRefundAmount = calculateNetRefundAmount();
-    }
-
-    // Helper method for getting payment ID
-    public Long getPaymentId() {
-        return payment != null ? payment.getId() : null;
-    }
-
-    @PrePersist
-    private void setDefaults() {
+    private void prePersist() {
+        // Set defaults
         if (this.currency == null && this.payment != null) {
             this.currency = this.payment.getCurrency().name();
         }
         if (this.orderId == null && this.payment != null) {
             this.orderId = this.payment.getOrderId();
         }
+        // Update net refund amount
+        this.netRefundAmount = calculateNetRefundAmount();
+    }
+
+    @PreUpdate
+    private void preUpdate() {
+        // Update net refund amount on updates
+        this.netRefundAmount = calculateNetRefundAmount();
+    }
+
+    // Helper method for getting payment ID
+    public Long getPaymentId() {
+        return payment != null ? payment.getId() : null;
     }
 }
