@@ -30,7 +30,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final TemplateService templateService;
     private final NotificationPreferenceService preferenceService;
-    private final DeliveryService deliveryService;
+    private final NotificationQueueService queueService;
 
     /**
      * Create a new notification
@@ -95,12 +95,13 @@ public class NotificationService {
         Notification savedNotification = notificationRepository.save(notification);
         log.info("Notification created successfully with id={}", savedNotification.getId());
 
-        // Trigger delivery if notification is ready
+        // Queue notification for delivery
         if (savedNotification.isReadyForDelivery()) {
             try {
-                deliveryService.deliverNotification(savedNotification);
+                queueService.queueNotification(savedNotification);
+                log.info("Notification queued for delivery: id={}", savedNotification.getId());
             } catch (Exception e) {
-                log.error("Error triggering delivery for notification {}: {}", savedNotification.getId(), e.getMessage(), e);
+                log.error("Error queuing notification for delivery {}: {}", savedNotification.getId(), e.getMessage(), e);
                 // Don't fail the creation, delivery will be retried by scheduler
             }
         }

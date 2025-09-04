@@ -29,6 +29,8 @@ public class DeliveryService {
     private final List<DeliveryProvider> deliveryProviders;
     private final NotificationRepository notificationRepository;
     private final NotificationDeliveryRepository deliveryRepository;
+    private final RateLimitingService rateLimitingService;
+    private final DeliveryAnalyticsService analyticsService;
 
     /**
      * Deliver a notification using appropriate provider
@@ -51,9 +53,30 @@ public class DeliveryService {
         
         // Check if provider is available
         if (!deliveryProvider.isAvailable()) {
-            log.warn("Delivery provider not available: provider={}, notification={}", 
+            log.warn("Delivery provider not available: provider={}, notification={}",
                     deliveryProvider.getProviderName(), notification.getId());
             markNotificationAsFailed(notification, "Delivery provider not available: " + deliveryProvider.getProviderName());
+            return;
+        }
+
+        // Check rate limits
+        if (!rateLimitingService.isUserWithinRateLimit(notification.getUserId(), notification.getChannel(), notification.getType())) {
+            log.warn("User rate limit exceeded: userId={}, channel={}, type={}",
+                    notification.getUserId(), notification.getChannel(), notification.getType());
+            markNotificationAsFailed(notification, "User rate limit exceeded");
+            return;
+        }
+
+        if (!rateLimitingService.isProviderWithinRateLimit(notification.getChannel())) {
+            log.warn("Provider rate limit exceeded: channel={}", notification.getChannel());
+            markNotificationAsFailed(notification, "Provider rate limit exceeded");
+            return;
+        }
+
+        if (rateLimitingService.isBurstProtectionTriggered(notification.getUserId(), notification.getChannel())) {
+            log.warn("Burst protection triggered: userId={}, channel={}",
+                    notification.getUserId(), notification.getChannel());
+            markNotificationAsFailed(notification, "Burst protection triggered");
             return;
         }
 
@@ -66,12 +89,21 @@ public class DeliveryService {
         notificationRepository.save(notification);
 
         try {
+            // Record rate limiting attempt
+            rateLimitingService.recordNotificationAttempt(notification.getUserId(), notification.getChannel(), notification.getType());
+
             // Attempt delivery
+            long startTime = System.currentTimeMillis();
             DeliveryResult result = deliveryProvider.deliver(notification);
-            
+            long processingTime = System.currentTimeMillis() - startTime;
+
+            // Record analytics
+            analyticsService.recordDeliveryAttempt(notification.getId(), notification.getChannel(),
+                    notification.getType(), result.getStatus(), processingTime);
+
             // Update delivery record with result
             updateDeliveryRecord(delivery, result);
-            
+
             // Update notification based on result
             if (result.isSuccess()) {
                 handleSuccessfulDelivery(notification, result);

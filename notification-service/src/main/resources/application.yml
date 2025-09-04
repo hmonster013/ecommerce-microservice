@@ -53,6 +53,37 @@ spring:
           starttls:
             enable: true
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    connection-timeout: 60000
+    listener:
+      simple:
+        concurrency: 3
+        max-concurrency: 10
+        prefetch: 10
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          multiplier: 2
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
 eureka:
   client:
     service-url:
@@ -91,6 +122,9 @@ logging:
 notification:
   scheduler:
     enabled: true
+  queue:
+    ttl: 3600000  # 1 hour
+    max-retry: 3
   email:
     enabled: true
     default-sender: noreply@ecommerce.com

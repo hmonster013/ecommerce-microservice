@@ -162,4 +162,6 @@ public interface NotificationDeliveryRepository extends JpaRepository<Notificati
     Long getTotalCostByChannel(@Param("channel") NotificationChannel channel,
                               @Param("startTime") LocalDateTime startTime,
                               @Param("endTime") LocalDateTime endTime);
+
+
 }
