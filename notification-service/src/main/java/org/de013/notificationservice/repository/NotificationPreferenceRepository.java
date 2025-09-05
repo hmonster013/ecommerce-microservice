@@ -117,7 +117,7 @@ public interface NotificationPreferenceRepository extends JpaRepository<Notifica
     /**
      * Find preferences by language
      */
-    List<NotificationPreference> findByLanguageAndDeletedFalseOrderByCreatedAtDesc(String language);
+    List<NotificationPreference> findByLanguageCodeAndDeletedFalseOrderByCreatedAtDesc(String languageCode);
 
     /**
      * Update global opt-out status for user

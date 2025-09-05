@@ -1,11 +1,11 @@
 package org.de013.notificationservice.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.notificationservice.entity.NotificationTemplate;
 import org.de013.notificationservice.entity.enums.NotificationChannel;
 import org.de013.notificationservice.entity.enums.NotificationType;
 import org.de013.notificationservice.repository.NotificationTemplateRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -24,13 +24,24 @@ import java.util.Optional;
  * Service for managing notification templates
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 @Transactional(readOnly = true)
 public class TemplateService {
 
     private final NotificationTemplateRepository templateRepository;
     private final TemplateEngine templateEngine;
+    private final org.de013.notificationservice.template.AdvancedTemplateEngine advancedTemplateEngine;
+    private final LocalizationService localizationService;
+
+    public TemplateService(NotificationTemplateRepository templateRepository,
+                          @Qualifier("customTemplateEngine") TemplateEngine templateEngine,
+                          org.de013.notificationservice.template.AdvancedTemplateEngine advancedTemplateEngine,
+                          LocalizationService localizationService) {
+        this.templateRepository = templateRepository;
+        this.templateEngine = templateEngine;
+        this.advancedTemplateEngine = advancedTemplateEngine;
+        this.localizationService = localizationService;
+    }
 
     /**
      * Find active template by name, channel, and language

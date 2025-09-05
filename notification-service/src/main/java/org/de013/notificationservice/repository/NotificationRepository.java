@@ -219,11 +219,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     /**
      * Get average notifications per digest
      */
-    @Query("SELECT COALESCE(AVG(CAST(n.templateVariables['totalCount'] AS int)), 0) FROM Notification n " +
+    @Query(value = "SELECT COALESCE(AVG(CAST(template_variables->>'totalCount' AS integer)), 0) FROM notifications n " +
            "WHERE n.type = 'DIGEST' " +
-           "AND n.createdAt BETWEEN :startDate AND :endDate " +
-           "AND n.templateVariables['totalCount'] IS NOT NULL " +
-           "AND n.deleted = false")
+           "AND n.created_at BETWEEN :startDate AND :endDate " +
+           "AND n.template_variables->>'totalCount' IS NOT NULL " +
+           "AND n.deleted = false", nativeQuery = true)
     double getAverageNotificationsPerDigest(@Param("startDate") LocalDateTime startDate,
                                           @Param("endDate") LocalDateTime endDate);
 }
