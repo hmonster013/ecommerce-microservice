@@ -68,15 +68,21 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
             // SearchController - Public endpoints (no @PreAuthorize)
             "/api/v1/productsv/search/suggestions",       // GET search suggestions
 
-            // HealthController - Public endpoint
-            "/api/v1/productsv/health",                   // GET health check
+            // Actuator endpoints - Public endpoints
+            "/api/v1/productsv/actuator/health",          // Product service health
+            "/api/v1/productsv/actuator/info",            // Product service info
 
-            // Other services - Health checks and public endpoints
-            "/api/v1/usersv/health",                      // User service health
-            "/api/v1/cartsv/health",                      // Cart service health
-            "/api/v1/ordersv/health",                     // Order service health
-            "/api/v1/paymentsv/health",                   // Payment service health
-            "/api/v1/notificationsv/health"               // Notification service health
+            // Other services - Actuator endpoints
+            "/api/v1/usersv/actuator/health",             // User service health
+            "/api/v1/usersv/actuator/info",               // User service info
+            "/api/v1/cartsv/actuator/health",             // Cart service health
+            "/api/v1/cartsv/actuator/info",               // Cart service info
+            "/api/v1/ordersv/actuator/health",            // Order service health
+            "/api/v1/ordersv/actuator/info",              // Order service info
+            "/api/v1/paymentsv/actuator/health",          // Payment service health
+            "/api/v1/paymentsv/actuator/info",            // Payment service info
+            "/api/v1/notificationsv/actuator/health",     // Notification service health
+            "/api/v1/notificationsv/actuator/info"        // Notification service info
     );
 
     @Override

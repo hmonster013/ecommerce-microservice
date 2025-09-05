@@ -71,10 +71,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,env,configprops
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      show-components: always
+  info:
+    env:
+      enabled: true
 
 # JWT Configuration
 jwt:
@@ -106,11 +111,22 @@ payment:
     encryption-key: ${PAYMENT_ENCRYPTION_KEY:your_32_character_encryption_key}
     webhook-timeout: ${WEBHOOK_TIMEOUT:10000}  # 10 seconds
 
-
-    docExpansion: none
-    defaultModelsExpandDepth: 1
-    defaultModelExpandDepth: 1
-  show-actuator: false
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: none
+    display-request-duration: true
+    default-models-expand-depth: 1
+    default-model-expand-depth: 1
+  show-actuator: true
   group-configs:
     - group: 'payment-service-v1'
       display-name: 'Payment Service API (v1)'
@@ -119,6 +135,7 @@ payment:
         - '/payment-methods/**'
         - '/refunds/**'
         - '/webhooks/**'
+        - '/actuator/**'
 
 # Feign Configuration
 feign:
@@ -156,27 +173,4 @@ logging:
     '[org.springframework.security]': DEBUG
     '[com.stripe]': INFO
 
-# Swagger/OpenAPI Configuration
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-    operationsSorter: method
-    tagsSorter: alpha
-    tryItOutEnabled: true
-    filter: true
-    displayRequestDuration: true
-  show-actuator: true
-  group-configs:
-    - group: 'payment-api'
-      display-name: 'Payment Service API'
-      paths-to-match: '/api/v1/**'
-    - group: 'stripe-api'
-      display-name: 'Stripe Integration API'
-      paths-to-match: '/api/v1/stripe/**'
-    - group: 'admin-api'
-      display-name: 'Admin API'
-      paths-to-match: '/api/v1/admin/**'
+

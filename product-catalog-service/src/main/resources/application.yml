@@ -90,8 +90,14 @@ springdoc:
     tags-sorter: alpha
     doc-expansion: none
     display-request-duration: true
-  show-actuator: false
-  packages-to-scan: org.de013.productcatalog.controller
+  show-actuator: true
+  group-configs:
+    - group: 'product-catalog-service-v1'
+      display-name: 'Product Catalog Service API (v1)'
+      paths-to-match:
+        - '/products/**'
+        - '/categories/**'
+        - '/actuator/**'
 
 eureka:
   client:
@@ -110,10 +116,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,env,configprops
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      show-components: always
+  info:
+    env:
+      enabled: true
 
 logging:
   level:

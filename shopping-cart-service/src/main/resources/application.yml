@@ -66,10 +66,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,env,configprops
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      show-components: always
+  info:
+    env:
+      enabled: true
 
 # Authentication and CORS handled by API Gateway
 # No JWT or CORS configuration needed in microservices
@@ -112,14 +117,14 @@ springdoc:
     docExpansion: none
     defaultModelsExpandDepth: 1
     defaultModelExpandDepth: 1
-  show-actuator: false
+  show-actuator: true
   group-configs:
     - group: 'shopping-cart-service-v1'
       display-name: 'Shopping Cart Service API (v1)'
       paths-to-match:
         - '/carts/**'
         - '/cart-items/**'
-        - '/health/**'
+        - '/actuator/**'
 
 logging:
   level:

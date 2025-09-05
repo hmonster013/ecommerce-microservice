@@ -99,21 +99,37 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,env,configprops
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      show-components: always
+  info:
+    env:
+      enabled: true
 
 # Swagger/OpenAPI Configuration
 springdoc:
   api-docs:
+    path: /v3/api-docs
     enabled: true
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+    try-it-out-enabled: true
+    operations-sorter: method
     tags-sorter: alpha
-    operations-sorter: alpha
+    doc-expansion: none
+    display-request-duration: true
   show-actuator: true
+  group-configs:
+    - group: 'notification-service-v1'
+      display-name: 'Notification Service API (v1)'
+      paths-to-match:
+        - '/notifications/**'
+        - '/analytics/**'
+        - '/actuator/**'
 
 logging:
   level:

@@ -74,16 +74,20 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,gateway,env
+        include: health,info,metrics,env,configprops
       base-path: /actuator
   endpoint:
     health:
       show-details: always
+      show-components: always
   health:
     rabbit:
       enabled: false  # Disable RabbitMQ health check for base version
     redis:
       enabled: false  # Disable Redis health check for base version
+  info:
+    env:
+      enabled: true
 
 # OpenAPI/Swagger Configuration for development
 springdoc:
@@ -98,8 +102,13 @@ springdoc:
     tags-sorter: alpha
     doc-expansion: none
     display-request-duration: true
-  show-actuator: false
-  packages-to-scan: org.de013.orderservice.controller
+  show-actuator: true
+  group-configs:
+    - group: 'order-service-v1'
+      display-name: 'Order Service API (v1)'
+      paths-to-match:
+        - '/orders/**'
+        - '/actuator/**'
 
 # Development logging configuration
 logging:

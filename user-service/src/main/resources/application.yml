@@ -76,10 +76,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,env,configprops
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      show-components: always
+  info:
+    env:
+      enabled: true
 
 # JWT Configuration
 jwt:
@@ -126,14 +131,14 @@ springdoc:
     docExpansion: none
     defaultModelsExpandDepth: 1
     defaultModelExpandDepth: 1
-  show-actuator: false
+  show-actuator: true
   group-configs:
     - group: 'user-service-v1'
       display-name: 'User Service API (v1)'
       paths-to-match:
         - '/users/**'
         - '/auth/**'
-        - '/health/**'
+        - '/actuator/**'
     - group: 'user-service-legacy'
       display-name: 'User Service API (Legacy)'
       paths-to-match:

@@ -193,45 +193,5 @@ public class AnalyticsController {
         }
     }
 
-    /**
-     * Health check endpoint for monitoring
-     */
-    @GetMapping("/health")
-    @Operation(summary = "Analytics health check", description = "Check the health of analytics services")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Analytics services are healthy")
-    })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> healthCheck() {
-        log.debug("Analytics health check");
 
-        try {
-            Map<String, Object> health = Map.of(
-                "status", "UP",
-                "timestamp", LocalDateTime.now().toString(),
-                "services", Map.of(
-                    "analytics", "UP",
-                    "rate_limiting", "UP",
-                    "queue", "UP"
-                )
-            );
-            
-            org.de013.common.dto.ApiResponse<Map<String, Object>> response = 
-                    org.de013.common.dto.ApiResponse.success(health);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            log.error("Analytics health check failed: {}", e.getMessage(), e);
-            Map<String, Object> health = Map.of(
-                "status", "DOWN",
-                "timestamp", LocalDateTime.now().toString(),
-                "error", e.getMessage()
-            );
-            
-            org.de013.common.dto.ApiResponse<Map<String, Object>> response = 
-                    org.de013.common.dto.ApiResponse.success(health);
-            
-            return ResponseEntity.ok(response);
-        }
-    }
 }

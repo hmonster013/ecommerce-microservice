@@ -170,15 +170,5 @@ public class WebhookController extends BaseController {
         }
     }
 
-    // ========== HEALTH CHECK ==========
 
-    @GetMapping(ApiPaths.HEALTH)
-    @Operation(summary = "Webhook service health check", description = "Check if webhook service is healthy")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Service is healthy")
-    })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> healthCheck() {
-        log.debug("Webhook service health check");
-        return success("Webhook service is healthy", "Health check completed");
-    }
 }
