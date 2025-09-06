@@ -1,6 +1,5 @@
 package org.de013.paymentservice.gateway.stripe;
 
-import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;
 
@@ -42,8 +41,9 @@ public class StripePaymentGateway implements PaymentGateway {
     @PostConstruct
     public void initialize() {
         if (config.getGateways().getStripe().isEnabled()) {
-            Stripe.apiKey = config.getGateways().getStripe().getApiKey();
-            log.info("Stripe payment gateway initialized with API version: {}", 
+            // Stripe API key is now set by StripeConfig
+            // This just logs the initialization
+            log.info("Stripe payment gateway service initialized with API version: {}",
                     config.getGateways().getStripe().getApiVersion());
         }
     }
@@ -204,7 +204,14 @@ public class StripePaymentGateway implements PaymentGateway {
         try {
             PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
                     .setAmount(request.getAmountInCents())
-                    .setCurrency(request.getCurrency().toLowerCase());
+                    .setCurrency(request.getCurrency().toLowerCase())
+                    // Configure automatic payment methods to avoid redirects
+                    .setAutomaticPaymentMethods(
+                        PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                            .setEnabled(true)
+                            .setAllowRedirects(PaymentIntentCreateParams.AutomaticPaymentMethods.AllowRedirects.NEVER)
+                            .build()
+                    );
 
             if (request.getPaymentMethodId() != null) {
                 paramsBuilder.setPaymentMethod(request.getPaymentMethodId());
@@ -291,6 +298,17 @@ public class StripePaymentGateway implements PaymentGateway {
 
             if (paymentMethodId != null) {
                 paramsBuilder.setPaymentMethod(paymentMethodId);
+            }
+
+            // Add return URL to handle redirect-based payment methods
+            // This is required by Stripe when automatic payment methods are enabled
+            String returnUrl = config.getGateways().getStripe().getSuccessUrl();
+            if (returnUrl != null && !returnUrl.isEmpty()) {
+                paramsBuilder.setReturnUrl(returnUrl);
+            } else {
+                // Fallback URL if not configured
+                paramsBuilder.setReturnUrl("http://localhost:3000/payment/success");
+                log.warn("Stripe success URL not configured, using fallback URL");
             }
 
             PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);

@@ -11,7 +11,7 @@ import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.paymentservice.dto.payment.StripeWebhookRequest;
 import org.de013.paymentservice.service.WebhookService;
-import org.springframework.beans.factory.annotation.Value;
+import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,16 +20,14 @@ import org.springframework.web.bind.annotation.*;
  * REST Controller for webhook operations
  */
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.WEBHOOKS)
+@RequestMapping(ApiPaths.WEBHOOKS)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Webhook", description = "Webhook handling APIs")
 public class WebhookController extends BaseController {
 
     private final WebhookService webhookService;
-
-    @Value("${stripe.webhook.secret:whsec_test}")
-    private String webhookSecret;
+    private final PaymentGatewayConfig paymentGatewayConfig;
 
     // ========== STRIPE WEBHOOK ==========
 
@@ -77,6 +75,7 @@ public class WebhookController extends BaseController {
         log.debug("Verifying Stripe webhook signature");
 
         try {
+            String webhookSecret = paymentGatewayConfig.getGateways().getStripe().getWebhookSecret();
             boolean isValid = webhookService.verifyWebhookSignature(payload, signature, webhookSecret);
             return ResponseEntity.ok(isValid);
         } catch (Exception e) {

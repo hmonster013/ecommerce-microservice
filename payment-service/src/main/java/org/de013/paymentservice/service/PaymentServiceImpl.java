@@ -10,7 +10,10 @@ import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.de013.paymentservice.exception.PaymentNotFoundException;
 import org.de013.paymentservice.exception.PaymentProcessingException;
+import org.de013.paymentservice.gateway.PaymentGateway;
 import org.de013.paymentservice.gateway.PaymentGatewayFactory;
+import org.de013.paymentservice.gateway.stripe.StripePaymentGateway;
+import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
 import org.de013.paymentservice.mapper.PaymentMapper;
 import org.de013.paymentservice.repository.PaymentRepository;
 import org.de013.paymentservice.util.PaymentNumberGenerator;
@@ -62,10 +65,58 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse confirmPayment(Long paymentId, String paymentMethodId) {
+        log.info("Confirming payment: {} with payment method: {}", paymentId, paymentMethodId);
+
         Payment payment = getPaymentEntityById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-        // TODO: Implement confirmation logic
-        return paymentMapper.toPaymentResponse(payment);
+
+        try {
+            // Validate payment can be confirmed
+            if (payment.getStatus() != PaymentStatus.PENDING) {
+                throw new PaymentProcessingException("Payment cannot be confirmed. Current status: " + payment.getStatus());
+            }
+
+            if (payment.getStripePaymentIntentId() == null) {
+                throw new PaymentProcessingException("Payment Intent ID is missing");
+            }
+
+            // Get Stripe gateway
+            PaymentGateway gateway = gatewayFactory.getGateway("STRIPE");
+            StripePaymentGateway stripeGateway = (StripePaymentGateway) gateway;
+
+            // Confirm payment intent with Stripe
+            StripePaymentResponse stripeResponse = stripeGateway.confirmPaymentIntent(
+                payment.getStripePaymentIntentId(),
+                paymentMethodId
+            );
+
+            // Update payment based on Stripe response
+            updatePaymentFromStripeResponse(payment, stripeResponse);
+
+            // Save updated payment
+            payment = paymentRepository.save(payment);
+
+            // Update order status if payment is successful
+            if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
+                updateOrderStatus(payment.getOrderId(), "PAID");
+                log.info("Payment confirmed successfully: {}", payment.getPaymentNumber());
+            } else if (payment.getStatus() == PaymentStatus.FAILED) {
+                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED");
+                log.warn("Payment confirmation failed: {}", payment.getPaymentNumber());
+            }
+
+            return paymentMapper.toPaymentResponse(payment);
+
+        } catch (Exception e) {
+            log.error("Failed to confirm payment: {}", paymentId, e);
+
+            // Update payment status to failed
+            payment.setStatus(PaymentStatus.FAILED);
+            payment.setFailureReason(e.getMessage());
+            payment = paymentRepository.save(payment);
+
+            throw new PaymentProcessingException("Failed to confirm payment: " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -361,6 +412,48 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (Exception e) {
             log.warn("Failed to update order status for order: {}", orderId, e);
         }
+    }
+
+    private void updatePaymentFromStripeResponse(Payment payment, StripePaymentResponse stripeResponse) {
+        log.debug("Updating payment {} from Stripe response", payment.getId());
+
+        // Map Stripe status to our PaymentStatus
+        PaymentStatus newStatus = mapStripeStatusToPaymentStatus(stripeResponse.getStatus());
+        payment.setStatus(newStatus);
+
+        // Update other fields from Stripe response
+        if (stripeResponse.getClientSecret() != null) {
+            // Note: We don't store client secret for security reasons
+        }
+
+        if (stripeResponse.getFailureMessage() != null) {
+            payment.setFailureReason(stripeResponse.getFailureMessage());
+        }
+
+        // Update timestamps
+        payment.setUpdatedAt(LocalDateTime.now());
+
+        log.info("Payment {} status updated to: {}", payment.getPaymentNumber(), newStatus);
+    }
+
+    private PaymentStatus mapStripeStatusToPaymentStatus(String stripeStatus) {
+        if (stripeStatus == null) {
+            return PaymentStatus.PENDING;
+        }
+
+        return switch (stripeStatus.toLowerCase()) {
+            case "succeeded" -> PaymentStatus.SUCCEEDED;
+            case "requires_payment_method" -> PaymentStatus.REQUIRES_PAYMENT_METHOD;
+            case "requires_confirmation" -> PaymentStatus.REQUIRES_CONFIRMATION;
+            case "requires_action" -> PaymentStatus.REQUIRES_ACTION;
+            case "processing" -> PaymentStatus.PROCESSING;
+            case "canceled" -> PaymentStatus.CANCELED;
+            case "failed" -> PaymentStatus.FAILED;
+            default -> {
+                log.warn("Unknown Stripe status: {}, defaulting to PENDING", stripeStatus);
+                yield PaymentStatus.PENDING;
+            }
+        };
     }
 
     private void createPaymentTransaction(Payment payment, Object stripeResponse, Object transactionType) {

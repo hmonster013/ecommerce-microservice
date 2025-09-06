@@ -29,7 +29,7 @@ import java.util.List;
  * REST Controller for refund operations
  */
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.REFUNDS)
+@RequestMapping(ApiPaths.REFUNDS)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Refund", description = "Refund management APIs")

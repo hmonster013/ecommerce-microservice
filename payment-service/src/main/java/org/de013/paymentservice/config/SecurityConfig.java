@@ -1,6 +1,7 @@
 package org.de013.paymentservice.config;
 
 import lombok.RequiredArgsConstructor;
+import org.de013.common.constant.ApiPaths;
 import org.de013.paymentservice.security.HeaderAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,10 +33,14 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
 
                         // Webhook endpoints - public for payment gateway callbacks
-                        .requestMatchers("/webhooks/**", "/api/v1/webhooks/**").permitAll()
+                        .requestMatchers(ApiPaths.WEBHOOKS + "/**").permitAll()
+
+                        // Stripe endpoints - public for health checks and integration testing
+                        .requestMatchers(ApiPaths.STRIPE + ApiPaths.HEALTH, ApiPaths.STRIPE + ApiPaths.WEBHOOKS).permitAll()
 
                         // Payment processing endpoints - require authentication
-                        .requestMatchers("/api/v1/payments/**", "/api/v1/payment-methods/**", "/api/v1/refunds/**").authenticated()
+                        .requestMatchers(ApiPaths.PAYMENTS + "/**", ApiPaths.PAYMENT_METHODS + "/**", ApiPaths.REFUNDS + "/**").authenticated()
+                        .requestMatchers(ApiPaths.STRIPE + "/**").authenticated()
 
                         // All other endpoints require authentication
                         .anyRequest().authenticated()

@@ -116,6 +116,11 @@ public final class ApiPaths {
     public static final String ERROR = "/error";
     public static final String TEST = "/test";
 
+    // Stripe specific endpoints
+    public static final String PAYMENT_INTENTS = "/payment-intents";
+    public static final String CUSTOMERS = "/customers";
+    public static final String CUSTOMER_ID_PARAM = "/{customerId}";
+
     // Product Catalog specific endpoints
     public static final String SLUG = "/slug";
     public static final String SLUG_PARAM = "/slug/{slug}";

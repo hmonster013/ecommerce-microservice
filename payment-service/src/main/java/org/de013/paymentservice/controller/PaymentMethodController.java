@@ -29,7 +29,7 @@ import java.util.List;
  * REST Controller for payment method operations
  */
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.PAYMENT_METHODS)
+@RequestMapping(ApiPaths.PAYMENT_METHODS)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Payment Method", description = "Payment method management APIs")

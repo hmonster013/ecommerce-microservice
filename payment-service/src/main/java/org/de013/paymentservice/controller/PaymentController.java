@@ -32,7 +32,7 @@ import java.util.List;
  * Handles payment processing, status checking, and payment management
  */
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + ApiPaths.PAYMENTS)
+@RequestMapping(ApiPaths.PAYMENTS)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Payments", description = "Payment processing and management operations")

@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.de013.paymentservice.exception.PaymentGatewayException;
 import org.de013.paymentservice.gateway.stripe.StripePaymentGateway;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -25,8 +27,9 @@ public class PaymentGatewayFactory {
     private final Map<String, PaymentGateway> gateways = new HashMap<>();
 
     /**
-     * Initialize all available gateways
+     * Initialize all available gateways after application startup
      */
+    @EventListener(ApplicationReadyEvent.class)
     public void initializeGateways() {
         log.info("Initializing payment gateways...");
         

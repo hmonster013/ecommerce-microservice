@@ -98,19 +98,7 @@ public class OpenApiConfig {
         return List.of(
                 new Tag()
                         .name("Payments")
-                        .description("Payment processing operations - create, process, validate payments"),
-                new Tag()
-                        .name("Payment Methods")
-                        .description("Payment method management operations"),
-                new Tag()
-                        .name("Payment Status")
-                        .description("Payment status tracking and updates"),
-                new Tag()
-                        .name("Refunds")
-                        .description("Refund and cancellation operations"),
-                new Tag()
-                        .name("Payment History")
-                        .description("Payment history and analytics operations")
+                        .description("Payment processing operations - create, process, validate payments")
         );
     }
 

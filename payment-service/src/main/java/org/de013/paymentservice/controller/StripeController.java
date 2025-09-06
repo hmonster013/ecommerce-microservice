@@ -14,6 +14,14 @@ import org.de013.common.controller.BaseController;
 import org.de013.paymentservice.service.PaymentService;
 import org.de013.paymentservice.service.WebhookService;
 import org.de013.paymentservice.service.PaymentMethodService;
+import org.de013.paymentservice.gateway.stripe.StripePaymentGateway;
+import org.de013.paymentservice.gateway.stripe.StripeCustomerService;
+import org.de013.paymentservice.dto.stripe.StripePaymentRequest;
+import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
+import org.de013.paymentservice.dto.stripe.StripeCustomerRequest;
+import org.de013.paymentservice.dto.stripe.StripeCustomerResponse;
+import org.de013.paymentservice.entity.Payment;
+import org.de013.paymentservice.exception.PaymentNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +31,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Slf4j
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.V1 + "/stripe")
+@RequestMapping(ApiPaths.STRIPE)
 @RequiredArgsConstructor
 @Tag(name = "Stripe", description = "Stripe payment gateway integration operations")
 public class StripeController extends BaseController {
@@ -31,8 +39,10 @@ public class StripeController extends BaseController {
     private final PaymentService paymentService;
     private final WebhookService webhookService;
     private final PaymentMethodService paymentMethodService;
+    private final StripePaymentGateway stripePaymentGateway;
+    private final StripeCustomerService stripeCustomerService;
 
-    @PostMapping("/webhooks")
+    @PostMapping(ApiPaths.WEBHOOKS)
     @Operation(
         summary = "Handle Stripe webhooks",
         description = """
@@ -98,7 +108,7 @@ public class StripeController extends BaseController {
         }
     }
 
-    @PostMapping("/payment-intents")
+    @PostMapping(ApiPaths.PAYMENT_INTENTS)
     @Operation(
         summary = "Create Stripe Payment Intent",
         description = """
@@ -132,24 +142,63 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
             @ApiResponse(responseCode = "500", description = "Stripe API error")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Object>> createPaymentIntent(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<StripePaymentResponse>> createPaymentIntent(
             @Parameter(description = "Payment ID to create intent for", required = true)
             @RequestParam Long paymentId) {
-        
+
         log.info("Creating Stripe Payment Intent for payment: {}", paymentId);
-        
+
         try {
-            // For now, return a placeholder response
-            // TODO: Implement Stripe Payment Intent creation
-            Object paymentIntent = createPlaceholderPaymentIntent(paymentId);
-            return created(paymentIntent, "Payment Intent created successfully");
+            // Validate input
+            if (!isValidPaymentId(paymentId)) {
+                return badRequest("Invalid payment ID");
+            }
+
+            if (!isStripeConfigured()) {
+                return ResponseEntity.status(503)
+                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+            }
+
+            // Get payment details
+            Payment payment = paymentService.getPaymentEntityById(paymentId)
+                    .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
+
+            // Create Stripe payment request
+            StripePaymentRequest stripeRequest = StripePaymentRequest.builder()
+                    .amount(payment.getAmount())
+                    .currency(payment.getCurrency().name().toLowerCase())
+                    .description(payment.getDescription())
+                    .receiptEmail(payment.getReceiptEmail())
+                    .metadata(java.util.Map.of(
+                            "payment_id", paymentId.toString(),
+                            "order_id", payment.getOrderId().toString(),
+                            "user_id", payment.getUserId().toString()
+                    ))
+                    .build();
+
+            // Create payment intent with Stripe
+            StripePaymentResponse stripeResponse = stripePaymentGateway.createPaymentIntent(stripeRequest);
+
+            // Update payment with Stripe payment intent ID
+            payment.setStripePaymentIntentId(stripeResponse.getPaymentIntentId());
+            paymentService.savePaymentEntity(payment);
+
+            log.info("Payment Intent created successfully: {} for payment: {}",
+                    stripeResponse.getPaymentIntentId(), paymentId);
+
+            return created(stripeResponse, "Payment Intent created successfully");
+
+        } catch (PaymentNotFoundException e) {
+            log.error("Payment not found: {}", paymentId);
+            return notFound("Payment not found: " + paymentId);
         } catch (Exception e) {
             log.error("Error creating Stripe Payment Intent for payment: {}", paymentId, e);
-            throw e;
+            return ResponseEntity.status(500)
+                    .body(org.de013.common.dto.ApiResponse.error("Failed to create Payment Intent", e.getMessage()));
         }
     }
 
-    @GetMapping("/payment-methods/{customerId}")
+    @GetMapping(ApiPaths.PAYMENT_METHODS + ApiPaths.CUSTOMER_ID_PARAM)
     @Operation(
         summary = "Get customer payment methods",
         description = """
@@ -174,23 +223,49 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Customer not found"),
             @ApiResponse(responseCode = "500", description = "Stripe API error")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Object>> getCustomerPaymentMethods(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<java.util.List<org.de013.paymentservice.dto.paymentmethod.PaymentMethodResponse>>> getCustomerPaymentMethods(
             @Parameter(description = "Stripe customer ID", required = true)
-            @PathVariable String customerId) {
-        
-        log.info("Retrieving payment methods for Stripe customer: {}", customerId);
-        
+            @PathVariable String customerId,
+            @Parameter(description = "Payment method type filter") @RequestParam(required = false) String type) {
+
+        log.info("Retrieving payment methods for Stripe customer: {} with type filter: {}", customerId, type);
+
         try {
-            // Use PaymentMethodService to get Stripe payment methods
+            // Validate input
+            if (!isValidStripeCustomerId(customerId)) {
+                return badRequest("Invalid Stripe customer ID format");
+            }
+
+            if (!isStripeConfigured()) {
+                return ResponseEntity.status(503)
+                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+            }
+
+            // Get payment methods from Stripe
             var paymentMethods = paymentMethodService.getStripePaymentMethodsForCustomer(customerId);
+
+            // Filter by type if specified
+            if (type != null && !type.trim().isEmpty()) {
+                paymentMethods = paymentMethods.stream()
+                        .filter(pm -> pm.getType().name().equalsIgnoreCase(type))
+                        .toList();
+            }
+
+            log.info("Retrieved {} payment methods for customer: {}", paymentMethods.size(), customerId);
             return success(paymentMethods, "Payment methods retrieved successfully");
+
+        } catch (org.de013.paymentservice.exception.PaymentProcessingException e) {
+            log.error("Payment processing error for customer: {}", customerId, e);
+            return ResponseEntity.status(400)
+                    .body(org.de013.common.dto.ApiResponse.error("Failed to retrieve payment methods", e.getMessage()));
         } catch (Exception e) {
-            log.error("Error retrieving payment methods for customer: {}", customerId, e);
-            throw e;
+            log.error("Unexpected error retrieving payment methods for customer: {}", customerId, e);
+            return ResponseEntity.status(500)
+                    .body(org.de013.common.dto.ApiResponse.error("Internal server error", e.getMessage()));
         }
     }
 
-    @PostMapping("/customers")
+    @PostMapping(ApiPaths.CUSTOMERS)
     @Operation(
         summary = "Create Stripe customer",
         description = """
@@ -215,23 +290,54 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "409", description = "Customer already exists"),
             @ApiResponse(responseCode = "500", description = "Stripe API error")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Object>> createStripeCustomer(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<StripeCustomerResponse>> createStripeCustomer(
             @Parameter(description = "User ID to create customer for", required = true)
-            @RequestParam Long userId) {
-        
+            @RequestParam Long userId,
+            @Parameter(description = "Customer email") @RequestParam(required = false) String email,
+            @Parameter(description = "Customer name") @RequestParam(required = false) String name,
+            @Parameter(description = "Customer phone") @RequestParam(required = false) String phone) {
+
         log.info("Creating Stripe customer for user: {}", userId);
-        
+
         try {
-            // TODO: Implement Stripe customer creation
-            Object customer = createPlaceholderCustomer(userId);
-            return created(customer, "Stripe customer created successfully");
+            // Validate input
+            if (!isValidUserId(userId)) {
+                return badRequest("Invalid user ID");
+            }
+
+            if (!isStripeConfigured()) {
+                return ResponseEntity.status(503)
+                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+            }
+
+            // Create Stripe customer request
+            StripeCustomerRequest customerRequest = StripeCustomerRequest.builder()
+                    .email(email)
+                    .name(name)
+                    .phone(phone)
+                    .description("Customer for user ID: " + userId)
+                    .metadata(java.util.Map.of(
+                            "user_id", userId.toString(),
+                            "created_by", "ecommerce-platform"
+                    ))
+                    .build();
+
+            // Create customer with Stripe
+            StripeCustomerResponse customerResponse = stripePaymentGateway.createCustomer(customerRequest);
+
+            log.info("Stripe customer created successfully: {} for user: {}",
+                    customerResponse.getCustomerId(), userId);
+
+            return created(customerResponse, "Stripe customer created successfully");
+
         } catch (Exception e) {
             log.error("Error creating Stripe customer for user: {}", userId, e);
-            throw e;
+            return ResponseEntity.status(500)
+                    .body(org.de013.common.dto.ApiResponse.error("Failed to create Stripe customer", e.getMessage()));
         }
     }
 
-    @GetMapping("/health")
+    @GetMapping(ApiPaths.HEALTH)
     @Operation(
         summary = "Check Stripe integration health",
         description = """
@@ -249,56 +355,95 @@ public class StripeController extends BaseController {
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<Object>> checkStripeHealth() {
         log.info("Checking Stripe integration health");
-        
+
         try {
-            // TODO: Implement Stripe health check
-            Object healthStatus = createHealthStatus();
-            return success(healthStatus, "Stripe integration is healthy");
+            // Test Stripe API connectivity by retrieving account information
+            java.util.Map<String, Object> healthStatus = new java.util.HashMap<>();
+
+            // Check if Stripe is enabled
+            boolean stripeEnabled = stripePaymentGateway.isEnabled();
+            healthStatus.put("stripe_enabled", stripeEnabled);
+
+            if (stripeEnabled) {
+                // Test API connectivity
+                try {
+                    // Try to retrieve account balance (lightweight API call)
+                    com.stripe.model.Balance balance = com.stripe.model.Balance.retrieve();
+                    healthStatus.put("api_connectivity", "healthy");
+                    healthStatus.put("api_response_time", System.currentTimeMillis());
+                    healthStatus.put("available_balance", balance.getAvailable());
+
+                } catch (Exception apiException) {
+                    log.warn("Stripe API connectivity issue", apiException);
+                    healthStatus.put("api_connectivity", "unhealthy");
+                    healthStatus.put("api_error", apiException.getMessage());
+                }
+
+                // Check supported currencies
+                healthStatus.put("supported_currencies", stripePaymentGateway.getSupportedCurrencies());
+                healthStatus.put("supported_payment_methods", stripePaymentGateway.getSupportedPaymentMethodTypes());
+            }
+
+            healthStatus.put("provider", stripePaymentGateway.getProviderName());
+            healthStatus.put("timestamp", System.currentTimeMillis());
+            healthStatus.put("status", stripeEnabled && healthStatus.get("api_connectivity").equals("healthy") ? "healthy" : "degraded");
+
+            boolean isHealthy = stripeEnabled && "healthy".equals(healthStatus.get("api_connectivity"));
+
+            if (isHealthy) {
+                return success(healthStatus, "Stripe integration is healthy");
+            } else {
+                return ResponseEntity.status(503)
+                        .body(org.de013.common.dto.ApiResponse.error("Stripe integration issues detected", healthStatus));
+            }
+
         } catch (Exception e) {
             log.error("Stripe health check failed", e);
+            java.util.Map<String, Object> errorStatus = java.util.Map.of(
+                    "status", "unhealthy",
+                    "error", e.getMessage(),
+                    "timestamp", System.currentTimeMillis()
+            );
             return ResponseEntity.status(503)
-                    .body(org.de013.common.dto.ApiResponse.error("Stripe integration unhealthy", e.getMessage()));
+                    .body(org.de013.common.dto.ApiResponse.error("Stripe integration unhealthy", errorStatus));
         }
     }
 
     // ========== PRIVATE HELPER METHODS ==========
 
     /**
-     * Create placeholder payment intent response
+     * Check if Stripe is properly configured and enabled
      */
-    private Object createPlaceholderPaymentIntent(Long paymentId) {
-        return java.util.Map.of(
-            "id", "pi_placeholder_" + paymentId,
-            "client_secret", "pi_placeholder_" + paymentId + "_secret_xyz",
-            "status", "requires_payment_method",
-            "amount", 0,
-            "currency", "usd",
-            "metadata", java.util.Map.of("paymentId", paymentId.toString())
-        );
+    private boolean isStripeConfigured() {
+        try {
+            return stripePaymentGateway.isEnabled() &&
+                   stripePaymentGateway.getProviderName().equals("STRIPE");
+        } catch (Exception e) {
+            log.warn("Error checking Stripe configuration", e);
+            return false;
+        }
     }
 
     /**
-     * Create placeholder customer response
+     * Validate payment ID parameter
      */
-    private Object createPlaceholderCustomer(Long userId) {
-        return java.util.Map.of(
-            "id", "cus_placeholder_" + userId,
-            "object", "customer",
-            "email", "placeholder@example.com",
-            "metadata", java.util.Map.of("userId", userId.toString()),
-            "created", System.currentTimeMillis() / 1000
-        );
+    private boolean isValidPaymentId(Long paymentId) {
+        return paymentId != null && paymentId > 0;
     }
 
     /**
-     * Create health status response
+     * Validate user ID parameter
      */
-    private Object createHealthStatus() {
-        return java.util.Map.of(
-            "status", "healthy",
-            "stripe_api", "connected",
-            "webhook_endpoint", "active",
-            "timestamp", java.time.Instant.now().toString()
-        );
+    private boolean isValidUserId(Long userId) {
+        return userId != null && userId > 0;
+    }
+
+    /**
+     * Validate Stripe customer ID format
+     */
+    private boolean isValidStripeCustomerId(String customerId) {
+        return customerId != null &&
+               !customerId.trim().isEmpty() &&
+               customerId.startsWith("cus_");
     }
 }
