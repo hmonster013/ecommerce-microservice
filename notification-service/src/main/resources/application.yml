@@ -18,29 +18,22 @@ spring:
   
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: false
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
   
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
     placeholder-replacement: false
   
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: notification-service
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+# Kafka disabled for simple notification service
+  # kafka:
+  #   bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   
   mail:
     # SMTP Configuration - supports Gmail, Outlook, SendGrid, etc.
@@ -60,36 +53,12 @@ spring:
     # Test connection on startup
     test-connection: false
 
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:user}
-    password: ${RABBITMQ_PASSWORD:password}
-    virtual-host: ${RABBITMQ_VHOST:/}
-    connection-timeout: 60000
-    listener:
-      simple:
-        concurrency: 3
-        max-concurrency: 10
-        prefetch: 10
-        retry:
-          enabled: true
-          initial-interval: 1000
-          max-attempts: 3
-          multiplier: 2
-
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      database: ${REDIS_DATABASE:0}
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
+# RabbitMQ and Redis disabled for simple notification service
+  # rabbitmq:
+  #   host: ${RABBITMQ_HOST:localhost}
+  # data:
+  #   redis:
+  #     host: ${REDIS_HOST:localhost}
 
 eureka:
   client:
@@ -123,69 +92,37 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
-    try-it-out-enabled: true
-    operations-sorter: method
-    tags-sorter: alpha
-    doc-expansion: none
-    display-request-duration: true
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    displayRequestDuration: true
+    docExpansion: none
+    defaultModelsExpandDepth: 1
+    defaultModelExpandDepth: 1
   show-actuator: true
   group-configs:
     - group: 'notification-service-v1'
-      display-name: 'Notification Service API (v1)'
+      display-name: 'Simple Notification Service API (v1)'
       paths-to-match:
-        - '/notifications/**'
-        - '/analytics/**'
+        - '/api/v1/notificationsv/**'
         - '/actuator/**'
 
 logging:
   level:
-    org.de013.notificationservice: DEBUG
+    "[org.de013.notificationservice]": DEBUG
 
-# Notification service configuration
-notification:
-  scheduler:
-    enabled: true
-  queue:
-    ttl: 3600000  # 1 hour
-    max-retry: 3
-  email:
-    enabled: true
-    default-sender: noreply@ecommerce.com
-    default-sender-name: E-Commerce Platform
-    rate-limit: 100
-    max-retries: 3
-    retry-delay-seconds: 60
-  sms:
-    enabled: true
-    mock-mode: false  # Set to true for testing, false for production
-    provider-name: TWILIO
-    api-url: https://api.twilio.com/2010-04-01/Accounts
-    # Twilio credentials - should be set via environment variables in production
-    account-sid: ${TWILIO_ACCOUNT_SID:your_account_sid_here}
-    auth-token: ${TWILIO_AUTH_TOKEN:your_auth_token_here}
-    api-key: ${TWILIO_API_KEY:}  # Optional, can use auth-token instead
-    sender-number: ${TWILIO_PHONE_NUMBER:your_twilio_phone_number_here}
-    rate-limit: 50
-    max-retries: 3
-    retry-delay-seconds: 120
-    max-message-length: 160
-    enable-delivery-reports: true
-    webhook-url: ${TWILIO_WEBHOOK_URL:}
-  push:
-    enabled: true
-    mock-mode: true
-    rate-limit: 200
-    max-retries: 3
-    retry-delay-seconds: 60
-    default-sound: default
-    default-badge: 1
-  inapp:
-    enabled: true
-    rate-limit: 500
-    show-badge: true
-    auto-hide: true
-    auto-hide-delay-seconds: 5
-    play-sound: true
-    sound-file: notification.mp3
-    enable-actions: true
-    max-notifications-per-user: 100
+# Simple notification service configuration
+app:
+  notification:
+    email:
+      enabled: true
+      default-sender: noreply@ecommerce.com
+      default-sender-name: E-Commerce Platform
+    sms:
+      enabled: true
+      mock-mode: false  # Set to false for production with real Twilio credentials
+      provider-name: TWILIO
+      account-sid: ${TWILIO_ACCOUNT_SID:your_account_sid_here}
+      auth-token: ${TWILIO_AUTH_TOKEN:your_auth_token_here}
+      sender-number: ${TWILIO_PHONE_NUMBER:your_twilio_phone_number_here}

@@ -159,5 +159,12 @@ public final class ApiPaths {
     // Additional payment service endpoints
     public static final String PAYMENT = "/payment";
     public static final String ACTIVE = "/active";
+
+    // Notification specific endpoints
+    public static final String SEND_EMAIL = "/send-email";
+    public static final String SEND_SMS = "/send-sms";
+    public static final String SEND_BOTH = "/send-both";
+    public static final String READ = "/read";
+    public static final String UNREAD_COUNT = "/unread-count";
 }
 

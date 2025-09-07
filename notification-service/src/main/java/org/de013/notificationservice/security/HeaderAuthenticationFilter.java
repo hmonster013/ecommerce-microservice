@@ -34,8 +34,8 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     private static final String HEADER_USER_ROLES = "X-User-Roles";
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                  HttpServletResponse response, 
+    protected void doFilterInternal(HttpServletRequest request,
+                                  HttpServletResponse response,
                                   FilterChain filterChain) throws ServletException, IOException {
 
         try {
@@ -84,17 +84,17 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
         }
 
         List<SimpleGrantedAuthority> authorities = parseRoles(roles);
-        
+
         // Create Authentication object with user info
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 username, // principal
                 null,     // credentials (no password needed)
                 authorities // authorities
         );
-        
+
         // Set additional details
         auth.setDetails(new HeaderUserDetails(userId, username, email, roles));
-        
+
         return auth;
     }
 
@@ -105,7 +105,7 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
         if (!StringUtils.hasText(roles)) {
             return Collections.emptyList();
         }
-        
+
         return Arrays.stream(roles.split(","))
                 .map(String::trim)
                 .filter(role -> !role.isEmpty())
