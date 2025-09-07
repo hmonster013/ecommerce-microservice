@@ -1,5 +1,7 @@
 # E-commerce Microservices Platform
 
+> **Project URL**: https://roadmap.sh/projects/scalable-ecommerce-platform
+
 Một nền tảng thương mại điện tử được xây dựng với kiến trúc microservices sử dụng Spring Boot, Spring Cloud, và Docker.
 
 ## 🏗️ Kiến trúc hệ thống
