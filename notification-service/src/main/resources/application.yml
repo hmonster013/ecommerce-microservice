@@ -43,8 +43,9 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
   
   mail:
-    host: smtp.gmail.com
-    port: 587
+    # SMTP Configuration - supports Gmail, Outlook, SendGrid, etc.
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:your-email@gmail.com}
     password: ${MAIL_PASSWORD:your-app-password}
     properties:
@@ -53,6 +54,11 @@ spring:
           auth: true
           starttls:
             enable: true
+          ssl:
+            trust: "*"
+        debug: false
+    # Test connection on startup
+    test-connection: false
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
@@ -151,12 +157,20 @@ notification:
     retry-delay-seconds: 60
   sms:
     enabled: true
-    mock-mode: true
-    provider-name: MOCK_SMS
+    mock-mode: false  # Set to true for testing, false for production
+    provider-name: TWILIO
+    api-url: https://api.twilio.com/2010-04-01/Accounts
+    # Twilio credentials - should be set via environment variables in production
+    account-sid: ${TWILIO_ACCOUNT_SID:your_account_sid_here}
+    auth-token: ${TWILIO_AUTH_TOKEN:your_auth_token_here}
+    api-key: ${TWILIO_API_KEY:}  # Optional, can use auth-token instead
+    sender-number: ${TWILIO_PHONE_NUMBER:your_twilio_phone_number_here}
     rate-limit: 50
     max-retries: 3
     retry-delay-seconds: 120
     max-message-length: 160
+    enable-delivery-reports: true
+    webhook-url: ${TWILIO_WEBHOOK_URL:}
   push:
     enabled: true
     mock-mode: true
