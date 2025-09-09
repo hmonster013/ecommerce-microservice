@@ -6,7 +6,7 @@ import org.de013.productcatalog.entity.Product;
 import org.de013.productcatalog.entity.ProductCategory;
 import org.de013.productcatalog.entity.Category;
 import org.de013.productcatalog.entity.Inventory;
-import org.de013.productcatalog.entity.Review;
+
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -144,24 +144,7 @@ public class ProductSpecification {
         };
     }
 
-    public static Specification<Product> hasMinRating(Double minRating) {
-        return (root, query, criteriaBuilder) -> {
-            if (minRating == null) {
-                return criteriaBuilder.conjunction();
-            }
-            
-            Subquery<Double> avgRatingSubquery = query.subquery(Double.class);
-            Root<Review> reviewRoot = avgRatingSubquery.from(Review.class);
-            
-            avgRatingSubquery.select(criteriaBuilder.avg(reviewRoot.get("rating")))
-                .where(
-                    criteriaBuilder.equal(reviewRoot.get("product"), root),
-                    criteriaBuilder.equal(reviewRoot.get("status"), org.de013.productcatalog.entity.enums.ReviewStatus.APPROVED)
-                );
-            
-            return criteriaBuilder.greaterThanOrEqualTo(avgRatingSubquery, minRating);
-        };
-    }
+
 
     public static Specification<Product> searchInFields(String query, ProductSearchDto searchDto) {
         return (root, criteriaQuery, criteriaBuilder) -> {
@@ -220,7 +203,6 @@ public class ProductSpecification {
                 .and(isDigital(searchDto.getDigitalOnly()))
                 .and(isInStock(searchDto.getInStockOnly()))
                 .and(isOnSale(searchDto.getOnSaleOnly()))
-                .and(hasMinRating(searchDto.getMinRating()))
                 .and(searchInFields(searchDto.getQuery(), searchDto));
     }
 

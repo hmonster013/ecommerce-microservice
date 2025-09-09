@@ -132,7 +132,7 @@ public final class ApiPaths {
     public static final String PATH = "/path";
     public static final String FEATURED = "/featured";
     public static final String MOVE = "/move";
-    public static final String REVIEWS = "/reviews";
+
     public static final String INVENTORY = "/inventory";
     public static final String LOW_STOCK = "/low-stock";
     public static final String OUT_OF_STOCK = "/out-of-stock";
@@ -147,11 +147,8 @@ public final class ApiPaths {
     public static final String FULFILL = "/fulfill";
     public static final String STATS = "/stats";
     public static final String CHECK = "/check";
-    public static final String MODERATE = "/moderate";
-    public static final String MODERATION = "/moderation";
     public static final String BULK = "/bulk";
-    public static final String HELPFUL = "/helpful";
-    public static final String NOT_HELPFUL = "/not-helpful";
+
     public static final String SUGGESTIONS = "/suggestions";
     public static final String SUMMARY = "/summary";
     public static final String RECENT = "/recent";

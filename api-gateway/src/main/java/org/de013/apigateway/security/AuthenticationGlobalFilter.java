@@ -61,8 +61,7 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
             "/api/v1/productsv/categories/search",        // GET category search
             "/api/v1/productsv/categories/slug",          // GET category by slug (with path param)
 
-            // ReviewController - Public read endpoints (no @PreAuthorize)
-            "/api/v1/productsv/reviews",                  // GET reviews (with path params)
+
 
             // InventoryController - Public read endpoints (no @PreAuthorize)
             "/api/v1/productsv/inventory",                // GET inventory (with path params)

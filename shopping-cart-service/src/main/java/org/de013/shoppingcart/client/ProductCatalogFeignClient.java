@@ -192,22 +192,7 @@ public interface ProductCatalogFeignClient {
             @PathVariable("productId") String productId,
             @RequestParam(value = "limit", defaultValue = "3") Integer limit);
 
-    // ==================== PRODUCT REVIEWS & RATINGS ====================
 
-    /**
-     * Get product rating summary
-     */
-    @GetMapping("/{productId}/rating")
-    Map<String, Object> getProductRating(@PathVariable("productId") String productId);
-
-    /**
-     * Get product reviews
-     */
-    @GetMapping("/{productId}/reviews")
-    List<Map<String, Object>> getProductReviews(
-            @PathVariable("productId") String productId,
-            @RequestParam(value = "page", defaultValue = "0") Integer page,
-            @RequestParam(value = "size", defaultValue = "10") Integer size);
 
     // ==================== PRODUCT ANALYTICS ====================
 

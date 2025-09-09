@@ -91,10 +91,7 @@ public class OpenApiConfig {
                                 .description("Advanced search operations - Full-text search, filtering, and sorting"),
                         new Tag()
                                 .name("Inventory")
-                                .description("Inventory management operations - Stock tracking and availability"),
-                        new Tag()
-                                .name("Reviews")
-                                .description("Review management operations - Customer reviews and ratings")))
+                                .description("Inventory management operations - Stock tracking and availability")))
                 .addSecurityItem(securityRequirement())
                 .components(securityComponents());
     }

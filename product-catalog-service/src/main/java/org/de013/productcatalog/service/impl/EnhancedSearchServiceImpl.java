@@ -350,9 +350,7 @@ public class EnhancedSearchServiceImpl implements EnhancedSearchService {
                 filters.put("price", priceRange);
             }
             
-            if (searchDto.getMinRating() != null) {
-                filters.put("minRating", searchDto.getMinRating());
-            }
+
             
             if (searchDto.getInStock() != null) {
                 filters.put("inStock", searchDto.getInStock());

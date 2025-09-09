@@ -48,10 +48,7 @@ public class AdvancedProductSpecification {
                 predicates.add(createBrandPredicate(searchDto.getBrands(), root, criteriaBuilder));
             }
 
-            // Rating filtering
-            if (searchDto.getMinRating() != null) {
-                predicates.add(createRatingPredicate(searchDto.getMinRating(), root, criteriaBuilder));
-            }
+
 
             // Status filtering (default to ACTIVE only)
             List<ProductStatus> statuses = searchDto.getStatuses();
@@ -174,20 +171,7 @@ public class AdvancedProductSpecification {
         return cb.or(brandPredicates.toArray(new Predicate[0]));
     }
 
-    /**
-     * Rating filtering predicate
-     */
-    private static Predicate createRatingPredicate(Double minRating, Root<Product> root, CriteriaBuilder cb) {
-        // This would require a subquery to calculate average rating from reviews
-        Subquery<Double> ratingSubquery = cb.createQuery().subquery(Double.class);
-        Root<Review> reviewRoot = ratingSubquery.from(Review.class);
-        
-        ratingSubquery.select(cb.avg(reviewRoot.get("rating")))
-                     .where(cb.equal(reviewRoot.get("product"), root),
-                            cb.equal(reviewRoot.get("status"), "APPROVED"));
-        
-        return cb.greaterThanOrEqualTo(ratingSubquery, minRating);
-    }
+
 
     /**
      * Status filtering predicate

@@ -90,8 +90,7 @@ public class ProductResponseDto {
     @Schema(description = "Inventory information")
     private InventoryResponseDto inventory;
 
-    @Schema(description = "Review summary")
-    private ReviewSummaryDto reviewSummary;
+
 
     @Schema(description = "Pricing information")
     private PricingInfo pricing;
@@ -134,36 +133,5 @@ public class ProductResponseDto {
         private Boolean onSale;
     }
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    @Schema(description = "Review summary")
-    public static class ReviewSummaryDto {
-        
-        @Schema(description = "Average rating", example = "4.5")
-        private Double averageRating;
-        
-        @Schema(description = "Total review count", example = "150")
-        private Integer totalReviews;
-        
-        @Schema(description = "Rating distribution")
-        private List<RatingCount> ratingDistribution;
-        
-        @Getter
-        @Setter
-        @NoArgsConstructor
-        @AllArgsConstructor
-        @Builder
-        @Schema(description = "Rating count")
-        public static class RatingCount {
-            
-            @Schema(description = "Rating value", example = "5")
-            private Integer rating;
-            
-            @Schema(description = "Count", example = "75")
-            private Integer count;
-        }
-    }
+
 }

@@ -244,24 +244,7 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
         return List.of();
     }
 
-    // ==================== PRODUCT REVIEWS & RATINGS ====================
 
-    @Override
-    public Map<String, Object> getProductRating(String productId) {
-        log.warn("Product Catalog Service unavailable, using fallback rating for: {}", productId);
-        return Map.of(
-            "productId", productId,
-            "averageRating", 0.0,
-            "totalReviews", 0,
-            "fallback", true
-        );
-    }
-
-    @Override
-    public List<Map<String, Object>> getProductReviews(String productId, Integer page, Integer size) {
-        log.warn("Product Catalog Service unavailable, returning empty reviews for: {}", productId);
-        return List.of();
-    }
 
     // ==================== PRODUCT ANALYTICS ====================
 

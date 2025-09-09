@@ -134,17 +134,4 @@ UPDATE inventory SET
     reorder_quantity = 20
 WHERE product_id = 5;
 
--- Insert sample reviews
-INSERT INTO reviews (product_id, user_id, rating, title, comment, status, verified_purchase, reviewer_name) VALUES
-(1, 1001, 5, 'Amazing phone!', 'The iPhone 15 Pro exceeded my expectations. The camera quality is outstanding and the performance is incredibly smooth.', 'APPROVED', true, 'John D.'),
-(1, 1002, 4, 'Great but expensive', 'Love the features but the price is quite high. Overall satisfied with the purchase.', 'APPROVED', true, 'Sarah M.'),
-(2, 1003, 5, 'Perfect for work', 'The MacBook Air M2 is incredibly fast and the battery life is amazing. Perfect for my daily work needs.', 'APPROVED', true, 'Mike R.'),
-(3, 1004, 5, 'Best noise canceling', 'These headphones have the best noise canceling I have ever experienced. Sound quality is exceptional.', 'APPROVED', true, 'Lisa K.'),
-(4, 1005, 4, 'Comfortable and stylish', 'Very comfortable shoes for daily wear. The design is modern and goes well with most outfits.', 'APPROVED', true, 'David L.');
 
--- Update helpful counts for reviews
-UPDATE reviews SET helpful_count = 15, not_helpful_count = 2 WHERE id = 1;
-UPDATE reviews SET helpful_count = 8, not_helpful_count = 1 WHERE id = 2;
-UPDATE reviews SET helpful_count = 12, not_helpful_count = 0 WHERE id = 3;
-UPDATE reviews SET helpful_count = 20, not_helpful_count = 3 WHERE id = 4;
-UPDATE reviews SET helpful_count = 6, not_helpful_count = 1 WHERE id = 5;

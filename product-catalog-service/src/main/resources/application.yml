@@ -56,6 +56,8 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        # Disable statistics logging
+        generate_statistics: false
         # Performance optimizations
         jdbc:
           batch_size: 25
@@ -130,6 +132,9 @@ logging:
   level:
     org.de013.productcatalog: ${LOG_LEVEL_APP:DEBUG}
     org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
+    # Disable Hibernate statistics logging
+    org.hibernate.stat: WARN
+    org.hibernate.engine.internal.StatisticalLoggingSessionEventListener: WARN
 
 # Application specific configuration
 app:

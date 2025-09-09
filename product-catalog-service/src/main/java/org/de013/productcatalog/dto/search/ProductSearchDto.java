@@ -39,10 +39,7 @@ public class ProductSearchDto {
     @Schema(description = "Maximum price", example = "2000.00")
     private BigDecimal maxPrice;
 
-    @Schema(description = "Minimum rating", example = "4.0")
-    @Min(value = 1, message = "{review.rating.invalid}")
-    @Max(value = 5, message = "{review.rating.invalid}")
-    private Double minRating;
+
 
     @Schema(description = "Only featured products", example = "false")
     private Boolean featuredOnly;
@@ -128,7 +125,7 @@ public class ProductSearchDto {
                (brands != null && !brands.isEmpty()) ||
                (statuses != null && !statuses.isEmpty()) ||
                hasPriceRange() ||
-               minRating != null ||
+
                Boolean.TRUE.equals(featuredOnly) ||
                Boolean.TRUE.equals(inStockOnly) ||
                Boolean.TRUE.equals(onSaleOnly) ||

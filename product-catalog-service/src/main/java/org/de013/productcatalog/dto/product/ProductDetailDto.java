@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import org.de013.productcatalog.dto.category.CategorySummaryDto;
 import org.de013.productcatalog.dto.inventory.InventoryResponseDto;
-import org.de013.productcatalog.dto.review.ReviewSummaryDto;
+
 import org.de013.productcatalog.entity.enums.ProductStatus;
 
 import java.math.BigDecimal;
@@ -90,11 +90,7 @@ public class ProductDetailDto {
     @Schema(description = "Inventory information")
     private InventoryResponseDto inventory;
 
-    @Schema(description = "Review summary")
-    private ReviewSummaryDto reviewSummary;
 
-    @Schema(description = "Recent reviews")
-    private List<org.de013.productcatalog.dto.review.ReviewResponseDto> recentReviews;
 
     @Schema(description = "Related products")
     private List<ProductSummaryDto> relatedProducts;

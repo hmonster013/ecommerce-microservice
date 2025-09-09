@@ -149,7 +149,7 @@ docker-compose up product-catalog-service
 - [x] **Category DTOs**: CategoryCreateDto, CategoryUpdateDto, CategoryResponseDto, CategorySummaryDto, CategoryTreeDto
 - [x] **Search & Filter DTOs**: ProductSearchDto, ProductFilterDto, PriceRangeDto, SearchResultDto
 - [x] **Inventory DTOs**: InventoryUpdateDto, InventoryResponseDto, StockAlertDto
-- [x] **Review DTOs**: ReviewCreateDto, ReviewUpdateDto, ReviewResponseDto, ReviewSummaryDto
+
 - [x] **Product Support DTOs**: ProductImageDto, ProductVariantDto, ProductVariantGroupDto
 - [x] **Common DTOs**: Using shared DTOs from common module (ApiResponse, PageResponse, ErrorResponseDto)
 
@@ -467,30 +467,7 @@ curl -X PUT "http://localhost:8082/api/v1/inventory/product/1" \
   }'
 ```
 
-### ⭐ Review Examples
 
-#### Get Product Reviews
-```bash
-# Get reviews for a product
-curl -X GET "http://localhost:8082/api/v1/reviews/product/1?page=0&size=10" \
-  -H "accept: application/json"
-```
-
-#### Create Review (User)
-```bash
-# Submit product review
-curl -X POST "http://localhost:8082/api/v1/reviews/product/1" \
-  -H "accept: application/json" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_USER_TOKEN" \
-  -d '{
-    "rating": 5,
-    "title": "Excellent product!",
-    "comment": "Great quality and fast delivery. Highly recommended!",
-    "reviewerName": "John Doe",
-    "reviewerEmail": "john.doe@example.com"
-  }'
-```
 
 ## 🔧 Installation
 

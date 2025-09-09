@@ -159,9 +159,7 @@ public class RedisConfig {
         cacheConfigurations.put("inventory", defaultConfig.entryTtl(Duration.ofMinutes(2)));
         cacheConfigurations.put("stockStatus", defaultConfig.entryTtl(Duration.ofMinutes(1)));
         
-        // Review caches - medium TTL
-        cacheConfigurations.put("reviews", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigurations.put("reviewSummary", defaultConfig.entryTtl(Duration.ofMinutes(20)));
+
         
         // Analytics caches - short TTL for real-time data
         cacheConfigurations.put("analytics", defaultConfig.entryTtl(Duration.ofMinutes(5)));

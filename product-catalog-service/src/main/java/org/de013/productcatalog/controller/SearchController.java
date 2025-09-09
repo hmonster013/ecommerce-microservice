@@ -45,8 +45,8 @@ public class SearchController {
                     
                     **Search Features:**
                     - **Full-text search**: Search across product name, description, brand, and category
-                    - **Dynamic filtering**: Filter by price range, category, brand, rating, availability
-                    - **Flexible sorting**: Sort by relevance, price, name, rating, date, popularity
+                    - **Dynamic filtering**: Filter by price range, category, brand, availability
+                    - **Flexible sorting**: Sort by relevance, price, name, date, popularity
                     - **Pagination**: Efficient pagination with configurable page size
                     - **Search analytics**: Automatic tracking of search behavior and performance
                     
@@ -83,8 +83,7 @@ public class SearchController {
                                               "brand": "TechBrand",
                                               "status": "ACTIVE",
                                               "featured": true,
-                                              "averageRating": 4.5,
-                                              "reviewCount": 128,
+
                                               "categories": [
                                                 {
                                                   "id": 1,
@@ -164,10 +163,7 @@ public class SearchController {
                     example = "500.00")
             @RequestParam(required = false) BigDecimal maxPrice,
             
-            @Parameter(
-                    description = "Minimum rating filter (1-5)",
-                    example = "4.0")
-            @RequestParam(required = false) Double minRating,
+
             
             @Parameter(
                     description = "Filter by availability - true for in-stock only",
@@ -180,7 +176,7 @@ public class SearchController {
             @RequestParam(required = false) Boolean featured,
             
             @Parameter(
-                    description = "Sort field - relevance, price, name, rating, date, popularity",
+                    description = "Sort field - relevance, price, name, date, popularity",
                     example = "relevance")
             @RequestParam(defaultValue = "relevance") String sortBy,
             
@@ -199,8 +195,8 @@ public class SearchController {
                     example = "20")
             @RequestParam(defaultValue = "20") int size) {
 
-        log.info("Advanced search request - query: '{}', category: {}, brand: '{}', price: {}-{}, rating: {}+, inStock: {}, featured: {}, sort: {} {}, page: {}, size: {}",
-                query, categoryId, brand, minPrice, maxPrice, minRating, inStock, featured, sortBy, sortDir, page, size);
+        log.info("Advanced search request - query: '{}', category: {}, brand: '{}', price: {}-{}, inStock: {}, featured: {}, sort: {} {}, page: {}, size: {}",
+                query, categoryId, brand, minPrice, maxPrice, inStock, featured, sortBy, sortDir, page, size);
 
         // Create sort object
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
@@ -214,7 +210,7 @@ public class SearchController {
                 .brands(brand != null ? List.of(brand) : null)
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
-                .minRating(minRating)
+
                 .inStockOnly(inStock)
                 .featuredOnly(featured)
                 .build();
