@@ -207,8 +207,12 @@ public class UserManagementServiceImpl implements UserManagementService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> searchUsers(String keyword, Pageable pageable) {
-        // Note: userRepository.searchUsers needs to be implemented with Specification for dynamic search
-        Page<User> users = userRepository.findAll(pageable); // Placeholder
+        log.info("Searching users with keyword: {}", keyword);
+
+        Page<User> users = userRepository.searchUsers(keyword, pageable);
+
+        log.info("Found {} users matching keyword: {}", users.getTotalElements(), keyword);
+
         return PageResponse.of(users.map(userMapper::convertToUserResponse));
     }
 
