@@ -47,7 +47,7 @@ public class CartController {
 
     // ==================== CART RETRIEVAL ====================
 
-    @Operation(summary = "Get or create cart", description = "Retrieve existing cart or create new one for user/session **🔐 (Authenticated Users)** - Requires valid JWT token")
+    @Operation(summary = "Get or create cart 🔐 (Authenticated)", description = "Retrieve existing cart or create new one for user/session")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cart retrieved successfully",
                 content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
@@ -93,7 +93,7 @@ public class CartController {
         }
     }
 
-    @Operation(summary = "Get cart by ID", description = "Retrieve cart by its unique identifier **🔐 (Cart Owner or Admin)** - Accessible by cart owner or admin only")
+    @Operation(summary = "Get cart by ID 🔐 (Owner/Admin)", description = "Retrieve cart by its unique identifier. Accessible by cart owner or admin only")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cart found",
                 content = @Content(schema = @Schema(implementation = CartResponseDto.class))),

@@ -86,7 +86,7 @@ public class CategoryController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category));
     }
 
-    @Operation(summary = "Create new category", description = "Create a new category **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "Create new category 🔐 (Admin Only)", description = "Create a new category")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Category created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid category data"),
@@ -105,7 +105,7 @@ public class CategoryController {
                 .body(org.de013.common.dto.ApiResponse.success(category, "Category created successfully"));
     }
 
-    @Operation(summary = "Update category", description = "Update existing category **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "Update category 🔐 (Admin Only)", description = "Update existing category")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Category updated successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid category data"),
@@ -127,7 +127,7 @@ public class CategoryController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category, "Category updated successfully"));
     }
 
-    @Operation(summary = "Delete category", description = "Delete category **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "Delete category 🔐 (Admin Only)", description = "Delete category")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Category deleted successfully"),
         @ApiResponse(responseCode = "403", description = "Access denied"),
@@ -229,7 +229,7 @@ public class CategoryController {
     }
 
     // Admin endpoints
-    @Operation(summary = "Set category active status", description = "Activate or deactivate category **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "Set category active status 🔐 (Admin Only)", description = "Activate or deactivate category")
     @PutMapping(ApiPaths.ID_PARAM + ApiPaths.ACTIVE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> setActiveStatus(
@@ -246,7 +246,7 @@ public class CategoryController {
                 "Category status updated successfully"));
     }
 
-    @Operation(summary = "Move category", description = "Move category to different parent **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "Move category 🔐 (Admin Only)", description = "Move category to different parent")
     @PutMapping(ApiPaths.ID_PARAM + ApiPaths.MOVE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> moveCategory(
