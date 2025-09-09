@@ -144,10 +144,6 @@ springdoc:
         - '/users/**'
         - '/auth/**'
         - '/actuator/**'
-    - group: 'user-service-legacy'
-      display-name: 'User Service API (Legacy)'
-      paths-to-match:
-        - '/legacy/**'
 
 logging:
   level:

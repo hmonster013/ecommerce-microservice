@@ -74,6 +74,17 @@ public class UserManagementController extends BaseController {
         return ok(user);
     }
 
+    @GetMapping(ApiPaths.USERNAME_PARAM)
+    @Operation(summary = "Get user by username (Admin only)", description = "Retrieve user information by username")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> getUserByUsername(
+            @Parameter(description = "Username", required = true)
+            @PathVariable String username) {
+
+        UserResponse user = userManagementService.getUserByUsername(username);
+        return ok(user);
+    }
+
     @GetMapping
     @Operation(summary = "Get all users (Admin only)", description = "Retrieve all users with pagination")
     @PreAuthorize("hasRole('ADMIN')")

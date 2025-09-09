@@ -81,9 +81,6 @@ public class SecurityConfig {
                         // User endpoints - Require authentication, specific authorization via @PreAuthorize
                         .requestMatchers(ApiPaths.USERS + "/**").authenticated()
 
-                        // Legacy endpoints
-                        .requestMatchers("/legacy/**").authenticated()
-
                         // Admin endpoints - Require ADMIN role
                         .requestMatchers("/admin/**").hasRole("ADMIN")
 
