@@ -44,7 +44,7 @@ public class CartItemController {
 
     // ==================== ITEM ADDITION ====================
 
-    @Operation(summary = "Add item to cart", description = "Add a product item to the shopping cart")
+    @Operation(summary = "Add item to cart", description = "Add a product item to the shopping cart **🔐 (Authenticated Users)** - Requires valid JWT token")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Item added successfully",
                 content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
@@ -100,7 +100,7 @@ public class CartItemController {
 
     // ==================== ITEM UPDATES ====================
 
-    @Operation(summary = "Update cart item", description = "Update quantity, price, or other properties of a cart item")
+    @Operation(summary = "Update cart item", description = "Update quantity, price, or other properties of a cart item **🔐 (Authenticated Users)** - Requires valid JWT token")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Item updated successfully",
                 content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
@@ -143,7 +143,7 @@ public class CartItemController {
         }
     }
 
-    @Operation(summary = "Update item quantity", description = "Update only the quantity of a cart item")
+    @Operation(summary = "Update item quantity", description = "Update only the quantity of a cart item **🔐 (Authenticated Users)** - Requires valid JWT token")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Quantity updated successfully",
                 content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),

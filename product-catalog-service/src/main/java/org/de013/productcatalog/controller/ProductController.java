@@ -114,6 +114,10 @@ public class ProductController {
                     Create a new product in the catalog. This endpoint allows administrators to add new products
                     with complete product information including name, description, pricing, categories, and variants.
 
+                    **🔐 Authorization: Admin Only**
+                    - Requires `ADMIN` role
+                    - JWT token must be provided in Authorization header
+
                     **Features:**
                     - Automatic SKU validation and uniqueness check
                     - Category assignment and validation
@@ -232,7 +236,7 @@ public class ProductController {
                 .body(org.de013.common.dto.ApiResponse.success(product, "Product created successfully"));
     }
 
-    @Operation(summary = "Update product", description = "Update existing product (Admin only)")
+    @Operation(summary = "Update product", description = "Update existing product **🔐 (Admin Only)** - Requires ADMIN role")
     @PutMapping(ApiPaths.ID_PARAM)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductResponseDto>> updateProduct(
@@ -244,7 +248,7 @@ public class ProductController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(product, "Product updated successfully"));
     }
 
-    @Operation(summary = "Delete product", description = "Delete product (Admin only)")
+    @Operation(summary = "Delete product", description = "Delete product **🔐 (Admin Only)** - Requires ADMIN role")
     @DeleteMapping(ApiPaths.ID_PARAM)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Void>> deleteProduct(@PathVariable Long id) {

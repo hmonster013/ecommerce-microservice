@@ -39,7 +39,7 @@ public class OrderController {
     /**
      * Create a new order
      */
-    @Operation(summary = "Create order", description = "Create a new order from shopping cart. Converts cart items to order items and initializes order with PENDING status.")
+    @Operation(summary = "Create order", description = "Create a new order from shopping cart. Converts cart items to order items and initializes order with PENDING status. **🔐 (Authenticated Users)** - Requires valid JWT token")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Order created successfully",
                 content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -64,7 +64,7 @@ public class OrderController {
     /**
      * Get order by ID
      */
-    @Operation(summary = "Get order by ID", description = "Retrieve order details by its unique identifier. Only accessible by order owner or admin.")
+    @Operation(summary = "Get order by ID", description = "Retrieve order details by its unique identifier. **🔐 (Order Owner or Admin)** - Accessible by order owner or admin only")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Order found",
                 content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -85,7 +85,7 @@ public class OrderController {
     /**
      * Get current user's orders
      */
-    @Operation(summary = "Get my orders", description = "Retrieve paginated list of orders for the authenticated user. Returns orders sorted by creation date (newest first).")
+    @Operation(summary = "Get my orders", description = "Retrieve paginated list of orders for the authenticated user. Returns orders sorted by creation date (newest first). **🔐 (Authenticated Users)** - Requires valid JWT token")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
@@ -103,7 +103,7 @@ public class OrderController {
     /**
      * Get orders by user ID (admin only)
      */
-    @Operation(summary = "Get user orders", description = "Retrieve paginated list of orders for a specific user. Admin access required or user accessing their own orders.")
+    @Operation(summary = "Get user orders", description = "Retrieve paginated list of orders for a specific user. **🔐 (Admin or Own Orders)** - Admin access required or user accessing their own orders")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
@@ -124,7 +124,7 @@ public class OrderController {
     /**
      * Get all orders (admin only)
      */
-    @Operation(summary = "Get all orders", description = "Retrieve paginated list of all orders in the system. Admin access required. Useful for order management and reporting.")
+    @Operation(summary = "Get all orders", description = "Retrieve paginated list of all orders in the system. **🔐 (Admin Only)** - Requires ADMIN role. Useful for order management and reporting")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
@@ -142,7 +142,7 @@ public class OrderController {
     /**
      * Get order by order number
      */
-    @Operation(summary = "Get order by number", description = "Retrieve order details by its unique order number (e.g., ORD-12345678). Accessible by order owner or admin.")
+    @Operation(summary = "Get order by number", description = "Retrieve order details by its unique order number (e.g., ORD-12345678). **🔐 (Authenticated Users)** - Accessible by order owner or admin")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Order found",
                 content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -163,7 +163,7 @@ public class OrderController {
     /**
      * Update order (admin only for now)
      */
-    @Operation(summary = "Update order", description = "Update order details such as status, addresses, or customer notes. Admin access required or order owner for limited updates.")
+    @Operation(summary = "Update order", description = "Update order details such as status, addresses, or customer notes. **🔐 (Admin or Order Owner)** - Admin access required or order owner for limited updates")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Order updated successfully",
                 content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -187,7 +187,7 @@ public class OrderController {
     /**
      * Cancel order
      */
-    @Operation(summary = "Cancel order", description = "Cancel an existing order. Only allowed for orders in PENDING, CONFIRMED, or PAID status. Cancelled orders cannot be restored.")
+    @Operation(summary = "Cancel order", description = "Cancel an existing order. Only allowed for orders in PENDING, CONFIRMED, or PAID status. **🔐 (Admin or Order Owner)** - Cancelled orders cannot be restored")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Order cancelled successfully"),
         @ApiResponse(responseCode = "400", description = "Order cannot be cancelled in current status"),
