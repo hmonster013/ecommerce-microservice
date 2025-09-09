@@ -1,7 +1,6 @@
-package org.de013.userservice.service.impl;
+package org.de013.apigateway.service.impl;
 
-
-import org.de013.userservice.service.TokenBlacklistService;
+import org.de013.apigateway.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;

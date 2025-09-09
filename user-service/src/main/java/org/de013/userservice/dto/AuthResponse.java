@@ -18,6 +18,10 @@ public class AuthResponse {
             required = true)
     private String token;
 
+    @Schema(description = "JWT refresh token",
+            example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    private String refreshToken;
+
     @Builder.Default
     @Schema(description = "Token type",
             example = "Bearer",

@@ -54,6 +54,11 @@ spring:
           max-idle: 10
           min-idle: 5
           max-wait: 2000ms
+
+# Token blacklist configuration
+token:
+  blacklist:
+    prefix: ${TOKEN_BLACKLIST_PREFIX:auth}
   
   flyway:
     enabled: true

@@ -2,6 +2,7 @@ package org.de013.apigateway.security;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.apigateway.service.TokenBlacklistService;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -24,6 +25,7 @@ import java.util.List;
 public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     // Public endpoints that don't require authentication
     private static final List<String> GATEWAY_PUBLIC_ENDPOINTS = Arrays.asList(
@@ -105,8 +107,8 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
 
         if (StringUtils.hasText(token)) {
             try {
-                // Validate JWT token format and extract user context
-                if (jwtUtil.validateToken(token)) {
+                // Validate JWT token format and check blacklist
+                if (jwtUtil.validateToken(token) && !isTokenBlacklisted(token)) {
                     UserContext userContext = extractUserContext(token);
 
                     log.debug("JWT validated, forwarding user context: {} (ID: {})", userContext.getUsername(), userContext.getUserId());
@@ -182,13 +184,26 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
     }
 
     /**
+     * Check if token is blacklisted
+     */
+    private boolean isTokenBlacklisted(String token) {
+        try {
+            return tokenBlacklistService.isTokenBlacklisted(token);
+        } catch (Exception e) {
+            log.warn("Error checking token blacklist status: {}", e.getMessage());
+            // In case of error, allow the token (fail open)
+            return false;
+        }
+    }
+
+    /**
      * Handle unauthorized access
      */
     private Mono<Void> handleUnauthorized(ServerWebExchange exchange, String message) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
         response.getHeaders().add("Content-Type", "application/json");
-        
+
         String body = String.format("{\"error\": \"Unauthorized\", \"message\": \"%s\"}", message);
         return response.writeWith(Mono.just(response.bufferFactory().wrap(body.getBytes())));
     }

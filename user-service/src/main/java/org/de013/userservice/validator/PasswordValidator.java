@@ -55,84 +55,12 @@ public class PasswordValidator implements ConstraintValidator<ValidPassword, Str
             addConstraintViolation(context, "password.noSpecialChar");
             return false;
         }
-
-        // Check for common weak passwords
-        if (isCommonPassword(password)) {
-            addConstraintViolation(context, "password.tooCommon");
-            return false;
-        }
         
         return true;
     }
     
-    private void addConstraintViolation(ConstraintValidatorContext context, String message) {
+    private void addConstraintViolation(ConstraintValidatorContext context, String messageKey) {
         context.disableDefaultConstraintViolation();
-        context.buildConstraintViolationWithTemplate(message).addConstraintViolation();
-    }
-    
-    private boolean isCommonPassword(String password) {
-        String lowerPassword = password.toLowerCase();
-        
-        // List of common weak passwords
-        String[] commonPasswords = {
-            "password", "123456", "12345678", "qwerty", "abc123", 
-            "password123", "admin", "letmein", "welcome", "monkey",
-            "1234567890", "password1", "123456789", "welcome123",
-            "admin123", "root", "toor", "pass", "test", "guest"
-        };
-        
-        for (String common : commonPasswords) {
-            if (lowerPassword.contains(common)) {
-                return true;
-            }
-        }
-        
-        // Check for sequential characters
-        if (hasSequentialChars(password)) {
-            return true;
-        }
-        
-        // Check for repeated characters
-        if (hasRepeatedChars(password)) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    private boolean hasSequentialChars(String password) {
-        String lowerPassword = password.toLowerCase();
-        
-        // Check for sequential letters (abc, def, etc.)
-        for (int i = 0; i < lowerPassword.length() - 2; i++) {
-            char c1 = lowerPassword.charAt(i);
-            char c2 = lowerPassword.charAt(i + 1);
-            char c3 = lowerPassword.charAt(i + 2);
-            
-            if (c2 == c1 + 1 && c3 == c2 + 1) {
-                return true;
-            }
-        }
-        
-        // Check for sequential numbers (123, 456, etc.)
-        String[] sequences = {"123", "234", "345", "456", "567", "678", "789", "890"};
-        for (String seq : sequences) {
-            if (lowerPassword.contains(seq)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    private boolean hasRepeatedChars(String password) {
-        // Check for more than 2 consecutive repeated characters
-        for (int i = 0; i < password.length() - 2; i++) {
-            char c = password.charAt(i);
-            if (password.charAt(i + 1) == c && password.charAt(i + 2) == c) {
-                return true;
-            }
-        }
-        return false;
+        context.buildConstraintViolationWithTemplate("{" + messageKey + "}").addConstraintViolation();
     }
 }

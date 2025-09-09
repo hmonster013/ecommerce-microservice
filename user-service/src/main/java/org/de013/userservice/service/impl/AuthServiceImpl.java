@@ -48,12 +48,14 @@ public class AuthServiceImpl implements AuthService {
             
             // Generate tokens
             String accessToken = jwtTokenProvider.generateTokenFromUserDetails(user);
-            
+            String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+
             // Log successful registration
             logAuthenticationEvent("REGISTRATION_SUCCESS", request.getUsername(), null);
-            
+
             return AuthResponse.builder()
                     .token(accessToken)
+                    .refreshToken(refreshToken)
                     .user(userResponse)
                     .build();
                     
@@ -80,15 +82,17 @@ public class AuthServiceImpl implements AuthService {
             
             // Generate tokens
             String accessToken = jwtTokenProvider.generateToken(authentication);
-            
+            String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+
             // Get user response
             UserResponse userResponse = userManagementService.getUserByUsername(user.getUsername());
-            
+
             // Log successful login
             logAuthenticationEvent("LOGIN_SUCCESS", request.getUsername(), null);
-            
+
             return AuthResponse.builder()
                     .token(accessToken)
+                    .refreshToken(refreshToken)
                     .user(userResponse)
                     .build();
                     
