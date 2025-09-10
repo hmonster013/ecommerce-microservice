@@ -363,7 +363,24 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     // Placeholder implementations for remaining methods
-    @Override public List<CategorySummaryDto> getCategoryPath(Long categoryId) { return List.of(); }
+    @Override
+    @Cacheable(value = "categories", key = "'path_' + #categoryId")
+    public List<CategorySummaryDto> getCategoryPath(Long categoryId) {
+        log.debug("Getting category path for ID: {}", categoryId);
+
+        // Validate category exists
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new CategoryNotFoundException(categoryId);
+        }
+
+        // Get path using recursive query
+        List<Object[]> pathData = categoryRepository.findCategoryPath(categoryId);
+
+        // Convert Object[] to CategorySummaryDto using mapper
+        return pathData.stream()
+                .map(categoryMapper::fromPathQueryResult)
+                .collect(Collectors.toList());
+    }
     @Override public List<CategorySummaryDto> getCategoryAncestors(Long categoryId) { return List.of(); }
     @Override public List<CategorySummaryDto> getCategoryDescendants(Long categoryId) { return List.of(); }
     @Override public CategoryTreeDto buildCategoryTree(Long rootCategoryId) { return null; }

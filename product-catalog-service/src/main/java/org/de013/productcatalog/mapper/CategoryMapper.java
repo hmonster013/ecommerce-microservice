@@ -86,5 +86,25 @@ public class CategoryMapper {
         }
         return buildCategoryPath(category.getParent()) + " > " + category.getName();
     }
+
+    /**
+     * Convert Object[] from native query to CategorySummaryDto
+     * Used for category path queries that return raw database results
+     *
+     * @param row Object array from native query: [id, name, slug, parent_id, level]
+     * @return CategorySummaryDto
+     */
+    public CategorySummaryDto fromPathQueryResult(Object[] row) {
+        if (row == null || row.length < 5) {
+            return null;
+        }
+
+        return CategorySummaryDto.builder()
+                .id(((Number) row[0]).longValue())
+                .name((String) row[1])
+                .slug((String) row[2])
+                .level(((Number) row[4]).intValue())
+                .build();
+    }
 }
 
