@@ -91,7 +91,7 @@ public class SearchServiceImpl implements SearchService {
             return getEmptyPageResponse();
         }
         
-        Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE, pageable);
+        Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
     }
 
@@ -267,7 +267,7 @@ public class SearchServiceImpl implements SearchService {
         
         // Simple implementation - would be enhanced with proper search engine
         Pageable pageable = PageRequest.of(0, limit);
-        Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE, pageable);
+        Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE.name(), pageable);
         
         return products.getContent().stream()
                 .map(Product::getName)

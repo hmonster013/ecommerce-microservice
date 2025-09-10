@@ -162,7 +162,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Getting products by category ID: {} with pagination: {}", categoryId, pageable);
         
         Page<Product> products = productRepository.findByCategoryIdAndStatus(
-                categoryId, ProductStatus.ACTIVE, pageable);
+                categoryId, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
     }
 
@@ -171,7 +171,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Getting products by category slug: {} with pagination: {}", categorySlug, pageable);
         
         Page<Product> products = productRepository.findByCategorySlugAndStatus(
-                categorySlug, ProductStatus.ACTIVE, pageable);
+                categorySlug, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
     }
 
@@ -212,7 +212,7 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductSummaryDto> getFeaturedProductsByCategory(Long categoryId) {
         log.debug("Getting featured products by category ID: {}", categoryId);
         
-        List<Product> products = productRepository.findFeaturedByCategoryId(categoryId, ProductStatus.ACTIVE);
+        List<Product> products = productRepository.findFeaturedByCategoryId(categoryId, ProductStatus.ACTIVE.name());
         return products.stream()
                 .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
@@ -223,7 +223,7 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductSummaryDto> getFeaturedProductsByCategory(Long categoryId, int limit) {
         log.debug("Getting featured products by category ID: {} with limit: {}", categoryId, limit);
         
-        List<Product> products = productRepository.findFeaturedByCategoryId(categoryId, ProductStatus.ACTIVE);
+        List<Product> products = productRepository.findFeaturedByCategoryId(categoryId, ProductStatus.ACTIVE.name());
         return products.stream()
                 .limit(limit)
                 .map(productMapper::toProductSummaryDto)
@@ -260,7 +260,7 @@ public class ProductServiceImpl implements ProductService {
     public PageResponse<ProductSummaryDto> searchProductsSimple(String query, Pageable pageable) {
         log.debug("Simple search for products with query: {}", query);
         
-        Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE, pageable);
+        Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
     }
 
@@ -391,7 +391,7 @@ public class ProductServiceImpl implements ProductService {
     @Override public long getTotalProductCount() { return productRepository.count(); }
     @Override public long getActiveProductCount() { return productRepository.countByStatus(ProductStatus.ACTIVE); }
     @Override public long getFeaturedProductCount() { return productRepository.countByIsFeaturedTrue(); }
-    @Override public long getProductCountByCategory(Long categoryId) { return productRepository.countByCategoryIdAndStatus(categoryId, ProductStatus.ACTIVE); }
+    @Override public long getProductCountByCategory(Long categoryId) { return productRepository.countByCategoryIdAndStatus(categoryId, ProductStatus.ACTIVE.name()); }
     @Override public long getProductCountByBrand(String brand) { return productRepository.countByBrand(brand); }
     @Override public List<ProductSummaryDto> getRecentProducts() { return List.of(); }
     @Override public List<ProductSummaryDto> getRecentProducts(int limit) { return List.of(); }

@@ -49,7 +49,7 @@ public class CacheServiceImpl implements CacheService {
             
             // Preload recently created products
             Page<Product> recentProductsPage = productRepository.findRecentProducts(
-                ProductStatus.ACTIVE, PageRequest.of(0, 20));
+                ProductStatus.ACTIVE.name(), PageRequest.of(0, 20));
             Cache productCache = cacheManager.getCache("products");
             if (productCache != null) {
                 recentProductsPage.getContent().forEach(product ->
