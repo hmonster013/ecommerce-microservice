@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.constant.ApiPaths;
 
@@ -172,13 +173,11 @@ public class CategoryController {
     @GetMapping(ApiPaths.TREE)
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategoryTreeDto>>> getCategoryTree(
             @Parameter(description = "Maximum depth level to retrieve")
-            @RequestParam(required = false) Integer maxLevel) {
+            @RequestParam(required = false) @Min(0) Integer maxLevel) {
         
         log.info("Getting category tree with maxLevel: {}", maxLevel);
         
-        List<CategoryTreeDto> categoryTree = maxLevel != null ? 
-                categoryService.getCategoryTree(maxLevel) : 
-                categoryService.getCategoryTree();
+        List<CategoryTreeDto> categoryTree = categoryService.getCategoryTree(maxLevel);
         
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(categoryTree));
     }

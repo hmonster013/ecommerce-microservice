@@ -27,8 +27,6 @@ public interface CategoryService {
     List<CategorySummaryDto> getAllActiveCategoriesOrdered();
 
     // Hierarchy Operations
-    List<CategoryTreeDto> getCategoryTree();
-    
     List<CategoryTreeDto> getCategoryTree(Integer maxLevel);
     
     List<CategorySummaryDto> getRootCategories();

@@ -60,8 +60,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     @Query("SELECT c FROM Category c WHERE c.parent.id = :parentId AND c.isActive = true ORDER BY c.displayOrder ASC")
     List<Category> findChildCategories(@Param("parentId") Long parentId);
 
-    @Query("SELECT c FROM Category c WHERE c.level <= :maxLevel AND c.isActive = true ORDER BY c.level ASC, c.displayOrder ASC")
-    List<Category> findCategoriesUpToLevel(@Param("maxLevel") Integer maxLevel);
+    @Query("SELECT c FROM Category c WHERE c.level = 0 AND c.isActive = true ORDER BY c.level ASC, c.displayOrder ASC")
+    List<Category> findCategoriesUpToLevel();
 
     // Category path queries
     @Query(value = "WITH RECURSIVE category_path AS (" +

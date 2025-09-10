@@ -17,14 +17,13 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.text.Normalizer;
-import java.util.List;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -192,23 +191,20 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Cacheable(value = "categories", key = "'tree'")
-    public List<CategoryTreeDto> getCategoryTree() {
-        log.debug("Getting category tree");
-        
-        List<Category> rootCategories = categoryRepository.findRootCategories();
-        return rootCategories.stream()
-                .map(this::buildCategoryTreeRecursive)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     @Cacheable(value = "categories", key = "'tree_level_' + #maxLevel")
     public List<CategoryTreeDto> getCategoryTree(Integer maxLevel) {
         log.debug("Getting category tree with max level: {}", maxLevel);
-        
-        List<Category> categories = categoryRepository.findCategoriesUpToLevel(maxLevel);
-        return buildCategoryTreeFromFlat(categories);
+
+        // Get all root categories and build tree with level limit
+        List<Category> rootCategories = categoryRepository.findCategoriesUpToLevel();
+        List<CategoryTreeDto> treeDtos = rootCategories.stream()
+                .map(category -> categoryMapper.toCategoryTreeDto(category))
+                .collect(Collectors.toList());
+
+        // Apply max level filtering to each tree
+        treeDtos.forEach(treeDto -> buildCategoryTreeWithMaxLevel(treeDto, maxLevel));
+
+        return treeDtos;
     }
 
     @Override
@@ -318,7 +314,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private CategoryTreeDto buildCategoryTreeRecursive(Category category) {
         CategoryTreeDto treeDto = categoryMapper.toCategoryTreeDto(category);
-        
+
         List<Category> children = categoryRepository.findChildCategories(category.getId());
         if (!children.isEmpty()) {
             List<CategoryTreeDto> childrenDtos = children.stream()
@@ -326,16 +322,24 @@ public class CategoryServiceImpl implements CategoryService {
                     .collect(Collectors.toList());
             treeDto.setChildren(childrenDtos);
         }
-        
+
         return treeDto;
     }
 
-    private List<CategoryTreeDto> buildCategoryTreeFromFlat(List<Category> categories) {
-        // TODO: Implement tree building from flat list
-        return categories.stream()
-                .filter(c -> c.getParent() == null)
-                .map(categoryMapper::toCategoryTreeDto)
-                .collect(Collectors.toList());
+    private void buildCategoryTreeWithMaxLevel(CategoryTreeDto treeDto, Integer maxLevel) {
+        if (maxLevel == null) {
+            return;
+        }
+
+        if (treeDto.getLevel() >= maxLevel) {
+            treeDto.setChildren(null);
+            return;
+        } else if (treeDto.getChildren() != null && !treeDto.getChildren().isEmpty()) {
+            List<CategoryTreeDto> children = treeDto.getChildren();
+            for (CategoryTreeDto child : children) {
+                buildCategoryTreeWithMaxLevel(child, maxLevel);
+            }
+        }
     }
 
     private void updateCategoryFields(Category category, CategoryUpdateDto updateDto) {
