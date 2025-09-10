@@ -1,6 +1,7 @@
 package org.de013.shoppingcart.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -142,6 +143,7 @@ public class CartResponseDto {
     /**
      * Calculate time until expiration in seconds
      */
+    @JsonIgnore
     public Long calculateExpiresInSeconds() {
         if (expiresAt == null) {
             return null;
@@ -156,6 +158,7 @@ public class CartResponseDto {
     /**
      * Check if cart has any items
      */
+    @JsonIgnore
     public boolean hasItems() {
         return items != null && !items.isEmpty();
     }
@@ -163,6 +166,7 @@ public class CartResponseDto {
     /**
      * Get total savings amount
      */
+    @JsonIgnore
     public BigDecimal getTotalSavings() {
         if (discountAmount == null) {
             return BigDecimal.ZERO;

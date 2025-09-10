@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.stripe;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -63,18 +64,22 @@ public class StripeCustomerRequest {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean hasAddress() {
         return address != null && address.getLine1() != null;
     }
 
+    @JsonIgnore
     public boolean hasShipping() {
         return shipping != null && shipping.getAddress() != null;
     }
 
+    @JsonIgnore
     public boolean hasPaymentMethod() {
         return paymentMethodId != null && !paymentMethodId.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasMetadata() {
         return metadata != null && !metadata.isEmpty();
     }

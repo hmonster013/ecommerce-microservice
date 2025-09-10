@@ -179,6 +179,7 @@ public class CartItemResponseDto {
     /**
      * Calculate discount percentage
      */
+    @JsonIgnore
     public BigDecimal calculateDiscountPercentage() {
         if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0 && 
             discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -191,6 +192,7 @@ public class CartItemResponseDto {
     /**
      * Calculate total savings (discount * quantity)
      */
+    @JsonIgnore
     public BigDecimal calculateTotalSavings() {
         if (discountAmount != null && quantity != null) {
             return discountAmount.multiply(BigDecimal.valueOf(quantity));
@@ -240,6 +242,7 @@ public class CartItemResponseDto {
     /**
      * Check if item is low in stock
      */
+    @JsonIgnore
     public boolean isLowStock() {
         return stockQuantity != null && stockQuantity <= 5;
     }
@@ -247,6 +250,7 @@ public class CartItemResponseDto {
     /**
      * Check if item is out of stock
      */
+    @JsonIgnore
     public boolean isOutOfStock() {
         return stockQuantity != null && stockQuantity <= 0;
     }

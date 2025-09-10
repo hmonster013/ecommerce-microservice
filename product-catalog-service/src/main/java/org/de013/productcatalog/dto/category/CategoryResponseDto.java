@@ -1,6 +1,7 @@
 package org.de013.productcatalog.dto.category;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -99,14 +100,17 @@ public class CategoryResponseDto implements Serializable {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean isRootCategory() {
         return parent == null;
     }
 
+    @JsonIgnore
     public boolean hasChildren() {
         return children != null && !children.isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasProducts() {
         return productCount != null && productCount > 0;
     }

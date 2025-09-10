@@ -1,6 +1,7 @@
 package org.de013.paymentservice.dto.payment;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -106,10 +107,12 @@ public class PaymentResponse {
     }
 
     // Helper methods for frontend
+    @JsonIgnore
     public boolean canBeRefunded() {
         return status == PaymentStatus.SUCCEEDED && !isFullyRefunded;
     }
 
+    @JsonIgnore
     public boolean canBeCanceled() {
         return status == PaymentStatus.PENDING || 
                status == PaymentStatus.REQUIRES_ACTION ||
@@ -117,6 +120,7 @@ public class PaymentResponse {
                status == PaymentStatus.REQUIRES_PAYMENT_METHOD;
     }
 
+    @JsonIgnore
     public BigDecimal getRefundableAmount() {
         if (totalRefundedAmount == null) {
             return amount;
@@ -124,6 +128,7 @@ public class PaymentResponse {
         return amount.subtract(totalRefundedAmount);
     }
 
+    @JsonIgnore
     public String getStatusDisplayName() {
         return switch (status) {
             case PENDING -> "Pending";

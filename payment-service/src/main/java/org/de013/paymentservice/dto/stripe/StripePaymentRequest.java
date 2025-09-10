@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.stripe;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -96,27 +97,33 @@ public class StripePaymentRequest {
     }
 
     // Helper methods
+    @JsonIgnore
     public long getAmountInCents() {
         if (amount == null) return 0;
         return amount.multiply(new BigDecimal("100")).longValue();
     }
 
+    @JsonIgnore
     public boolean isNewCustomer() {
         return customerId == null && customerData != null;
     }
 
+    @JsonIgnore
     public boolean isNewPaymentMethod() {
         return paymentMethodId == null && paymentMethodData != null;
     }
 
+    @JsonIgnore
     public boolean shouldSavePaymentMethod() {
         return setupFutureUsage != null && setupFutureUsage;
     }
 
+    @JsonIgnore
     public boolean isAutomaticCapture() {
         return "automatic".equals(captureMethod) || captureMethod == null;
     }
 
+    @JsonIgnore
     public boolean isAutomaticConfirmation() {
         return "automatic".equals(confirmationMethod) || confirmationMethod == null;
     }

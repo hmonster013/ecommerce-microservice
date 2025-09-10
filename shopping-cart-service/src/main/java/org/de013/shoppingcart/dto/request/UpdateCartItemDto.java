@@ -80,6 +80,7 @@ public class UpdateCartItemDto {
     /**
      * Validate that either userId or sessionId is provided
      */
+    @JsonIgnore
     @AssertTrue(message = "{user.or.session.required}")
     public boolean isValidUserOrSession() {
         return (userId != null && !userId.trim().isEmpty()) || 
@@ -119,6 +120,7 @@ public class UpdateCartItemDto {
     /**
      * Check if this is for a guest session
      */
+    @JsonIgnore
     public boolean isGuestSession() {
         return sessionId != null && !sessionId.trim().isEmpty() && 
                (userId == null || userId.trim().isEmpty());
@@ -127,6 +129,7 @@ public class UpdateCartItemDto {
     /**
      * Get the identifier (userId or sessionId)
      */
+    @JsonIgnore
     public String getIdentifier() {
         return isAuthenticatedUser() ? userId : sessionId;
     }
@@ -134,6 +137,7 @@ public class UpdateCartItemDto {
     /**
      * Check if quantity is being updated
      */
+    @JsonIgnore
     public boolean isQuantityUpdate() {
         return quantity != null;
     }
@@ -141,6 +145,7 @@ public class UpdateCartItemDto {
     /**
      * Check if price is being updated
      */
+    @JsonIgnore
     public boolean isPriceUpdate() {
         return unitPrice != null;
     }
@@ -148,6 +153,7 @@ public class UpdateCartItemDto {
     /**
      * Check if gift options are being updated
      */
+    @JsonIgnore
     public boolean isGiftOptionsUpdate() {
         return isGift != null || giftMessage != null || giftWrapType != null;
     }

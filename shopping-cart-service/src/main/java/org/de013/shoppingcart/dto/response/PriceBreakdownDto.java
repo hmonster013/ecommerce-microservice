@@ -1,5 +1,6 @@
 package org.de013.shoppingcart.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -253,6 +254,7 @@ public class PriceBreakdownDto {
     /**
      * Calculate total discounts
      */
+    @JsonIgnore
     public BigDecimal getTotalDiscounts() {
         BigDecimal total = BigDecimal.ZERO;
         
@@ -268,6 +270,7 @@ public class PriceBreakdownDto {
     /**
      * Calculate savings percentage
      */
+    @JsonIgnore
     public BigDecimal calculateSavingsPercentage() {
         if (originalTotal != null && originalTotal.compareTo(BigDecimal.ZERO) > 0 && 
             totalSavings != null && totalSavings.compareTo(BigDecimal.ZERO) > 0) {
@@ -280,6 +283,7 @@ public class PriceBreakdownDto {
     /**
      * Check if there are any discounts applied
      */
+    @JsonIgnore
     public boolean hasDiscounts() {
         return getTotalDiscounts().compareTo(BigDecimal.ZERO) > 0;
     }
@@ -287,6 +291,7 @@ public class PriceBreakdownDto {
     /**
      * Check if there are any fees
      */
+    @JsonIgnore
     public boolean hasFees() {
         return totalFees != null && totalFees.compareTo(BigDecimal.ZERO) > 0;
     }
@@ -294,6 +299,7 @@ public class PriceBreakdownDto {
     /**
      * Get net amount (subtotal after discounts, before taxes and fees)
      */
+    @JsonIgnore
     public BigDecimal getNetAmount() {
         return subtotalAfterDiscounts != null ? subtotalAfterDiscounts : BigDecimal.ZERO;
     }

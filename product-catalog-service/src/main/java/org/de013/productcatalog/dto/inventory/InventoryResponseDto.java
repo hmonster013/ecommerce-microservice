@@ -78,6 +78,7 @@ public class InventoryResponseDto {
     }
 
     // Manual getters for critical methods (Lombok backup)
+    @JsonIgnore
     public Integer getAvailableQuantity() {
         return availableQuantity;
     }

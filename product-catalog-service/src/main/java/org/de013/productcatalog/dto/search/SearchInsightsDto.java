@@ -1,6 +1,7 @@
 package org.de013.productcatalog.dto.search;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -104,6 +105,7 @@ public class SearchInsightsDto {
     /**
      * Get the most critical issue that needs attention
      */
+    @JsonIgnore
     public String getCriticalIssue() {
         if (performance == null) {
             return "No performance data available";
@@ -131,6 +133,7 @@ public class SearchInsightsDto {
     /**
      * Get the top opportunity for improvement
      */
+    @JsonIgnore
     public String getTopOpportunity() {
         if (noResultQueries != null && !noResultQueries.isEmpty()) {
             long totalNoResults = noResultQueries.stream()
@@ -157,6 +160,7 @@ public class SearchInsightsDto {
     /**
      * Generate automated insights based on data
      */
+    @JsonIgnore
     public List<String> generateAutomatedInsights() {
         List<String> autoInsights = new java.util.ArrayList<>();
 
@@ -209,6 +213,7 @@ public class SearchInsightsDto {
     /**
      * Calculate overall health score
      */
+    @JsonIgnore
     public Integer calculateOverallScore() {
         if (performance == null) {
             return 0;

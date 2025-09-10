@@ -1,6 +1,7 @@
 package org.de013.paymentservice.dto.payment;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -56,28 +57,33 @@ public class PaymentStatusResponse {
     private String lastTransactionStatus;
 
     // Helper methods
+    @JsonIgnore
     public boolean canRetry() {
-        return status == PaymentStatus.FAILED || 
+        return status == PaymentStatus.FAILED ||
                status == PaymentStatus.REQUIRES_PAYMENT_METHOD;
     }
 
+    @JsonIgnore
     public boolean needsUserAction() {
         return status == PaymentStatus.REQUIRES_ACTION ||
                status == PaymentStatus.REQUIRES_CONFIRMATION;
     }
 
+    @JsonIgnore
     public boolean isInProgress() {
         return status == PaymentStatus.PENDING ||
                status == PaymentStatus.PROCESSING ||
                needsUserAction();
     }
 
+    @JsonIgnore
     public boolean isFinalStatus() {
         return status == PaymentStatus.SUCCEEDED ||
                status == PaymentStatus.FAILED ||
                status == PaymentStatus.CANCELED;
     }
 
+    @JsonIgnore
     public String getStatusMessage() {
         if (message != null && !message.trim().isEmpty()) {
             return message;

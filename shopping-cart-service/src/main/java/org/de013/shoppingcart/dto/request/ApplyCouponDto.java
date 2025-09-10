@@ -141,6 +141,7 @@ public class ApplyCouponDto {
     /**
      * Check if existing coupon should be replaced
      */
+    @JsonIgnore
     public boolean shouldReplaceExisting() {
         return Boolean.TRUE.equals(replaceExisting);
     }
@@ -148,6 +149,7 @@ public class ApplyCouponDto {
     /**
      * Check if coupon should be force applied
      */
+    @JsonIgnore
     public boolean shouldForceApply() {
         return Boolean.TRUE.equals(forceApply);
     }

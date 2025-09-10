@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.search;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -51,6 +52,7 @@ public class FilterUsageDto {
     /**
      * Check if this is a high-impact filter
      */
+    @JsonIgnore
     public boolean isHighImpact() {
         return usagePercentage != null && usagePercentage > 5.0 &&
                clickThroughRate != null && clickThroughRate > 50.0;
@@ -59,6 +61,7 @@ public class FilterUsageDto {
     /**
      * Check if this filter improves search results
      */
+    @JsonIgnore
     public boolean improvesResults() {
         return clickThroughRate != null && clickThroughRate > 60.0 &&
                conversionRate != null && conversionRate > 8.0;
@@ -67,6 +70,7 @@ public class FilterUsageDto {
     /**
      * Get filter category for grouping
      */
+    @JsonIgnore
     public String getFilterCategory() {
         if (filterType == null) return "UNKNOWN";
         
@@ -98,6 +102,7 @@ public class FilterUsageDto {
     /**
      * Calculate effectiveness score based on usage and performance
      */
+    @JsonIgnore
     public Integer calculateEffectivenessScore() {
         double score = 0.0;
         
@@ -122,6 +127,7 @@ public class FilterUsageDto {
     /**
      * Get recommendation for this filter
      */
+    @JsonIgnore
     public String getRecommendation() {
         if (isHighImpact() && improvesResults()) {
             return "PROMOTE - This filter is highly effective and should be prominently featured";

@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.payment;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -105,14 +106,17 @@ public class ProcessPaymentRequest {
     }
 
     // Validation methods
+    @JsonIgnore
     public boolean isUsingExistingPaymentMethod() {
         return stripePaymentMethodId != null && !stripePaymentMethodId.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean isNewCustomer() {
         return stripeCustomerId == null || stripeCustomerId.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean requiresBillingAddress() {
         return !isUsingExistingPaymentMethod() && paymentMethodType == PaymentMethodType.CARD;
     }

@@ -1,6 +1,7 @@
 package org.de013.productcatalog.dto.search;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -95,6 +96,7 @@ public class SearchPerformanceDto {
     /**
      * Calculate search success rate (searches with results / total searches)
      */
+    @JsonIgnore
     public Double getSearchSuccessRate() {
         if (totalSearches == null || totalSearches == 0) {
             return 0.0;
@@ -105,6 +107,7 @@ public class SearchPerformanceDto {
     /**
      * Calculate search efficiency score (0-100)
      */
+    @JsonIgnore
     public Integer getSearchEfficiencyScore() {
         double score = 0.0;
         
@@ -133,6 +136,7 @@ public class SearchPerformanceDto {
     /**
      * Check if search performance is healthy
      */
+    @JsonIgnore
     public Boolean isHealthy() {
         return getSearchEfficiencyScore() >= 70 && 
                (averageExecutionTime == null || averageExecutionTime < 500) &&
@@ -142,6 +146,7 @@ public class SearchPerformanceDto {
     /**
      * Get performance status
      */
+    @JsonIgnore
     public String getPerformanceStatus() {
         int score = getSearchEfficiencyScore();
         if (score >= 90) return "EXCELLENT";
@@ -154,6 +159,7 @@ public class SearchPerformanceDto {
     /**
      * Get performance recommendations
      */
+    @JsonIgnore
     public String[] getRecommendations() {
         java.util.List<String> recommendations = new java.util.ArrayList<>();
         

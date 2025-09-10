@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.stripe;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -98,38 +99,47 @@ public class StripeCustomerResponse {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean hasAddress() {
         return address != null && address.getLine1() != null;
     }
 
+    @JsonIgnore
     public boolean hasShipping() {
         return shipping != null && shipping.getAddress() != null;
     }
 
+    @JsonIgnore
     public boolean hasDefaultPaymentMethod() {
         return defaultPaymentMethodId != null && !defaultPaymentMethodId.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasPaymentMethods() {
         return paymentMethods != null && !paymentMethods.isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasBalance() {
         return balance != null && balance != 0;
     }
 
+    @JsonIgnore
     public boolean hasPositiveBalance() {
         return balance != null && balance > 0;
     }
 
+    @JsonIgnore
     public boolean hasNegativeBalance() {
         return balance != null && balance < 0;
     }
 
+    @JsonIgnore
     public int getPaymentMethodCount() {
         return paymentMethods != null ? paymentMethods.size() : 0;
     }
 
+    @JsonIgnore
     public String getDisplayName() {
         if (name != null && !name.trim().isEmpty()) {
             return name;
@@ -140,6 +150,7 @@ public class StripeCustomerResponse {
         return customerId;
     }
 
+    @JsonIgnore
     public String getFullAddress() {
         if (!hasAddress()) {
             return null;

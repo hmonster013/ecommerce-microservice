@@ -1,6 +1,7 @@
 package org.de013.paymentservice.dto.refund;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -81,6 +82,7 @@ public class RefundResponse {
     }
 
     // Helper methods for display
+    @JsonIgnore
     public String getStatusDisplayName() {
         return switch (status) {
             case PENDING -> "Pending";
@@ -93,6 +95,7 @@ public class RefundResponse {
         };
     }
 
+    @JsonIgnore
     public String getRefundTypeDisplayName() {
         return switch (refundType) {
             case "FULL" -> "Full Refund";
@@ -101,30 +104,37 @@ public class RefundResponse {
         };
     }
 
+    @JsonIgnore
     public boolean isSuccessful() {
         return status == RefundStatus.SUCCEEDED;
     }
 
+    @JsonIgnore
     public boolean isFailed() {
         return status == RefundStatus.FAILED;
     }
 
+    @JsonIgnore
     public boolean isPending() {
         return status == RefundStatus.PENDING;
     }
 
+    @JsonIgnore
     public boolean requiresAction() {
         return status == RefundStatus.REQUIRES_ACTION;
     }
 
+    @JsonIgnore
     public boolean isProcessed() {
         return processedAt != null;
     }
 
+    @JsonIgnore
     public boolean isSettled() {
         return settledAt != null;
     }
 
+    @JsonIgnore
     public String getEstimatedArrival() {
         if (expectedArrivalDate == null) {
             return "Unknown";
@@ -145,6 +155,7 @@ public class RefundResponse {
         }
     }
 
+    @JsonIgnore
     public String getProcessingTimeDescription() {
         if (!isSuccessful()) {
             return "N/A";

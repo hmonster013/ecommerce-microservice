@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.external;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -63,22 +64,25 @@ public class UserValidationResponse {
     private BigDecimal recentPaymentAmount;
     
     // Helper methods
+    @JsonIgnore
     public boolean isPaymentAllowed() {
         return valid && canMakePayments && !userBlocked && !highRiskUser;
     }
-    
+
     public boolean canProcessAmount(BigDecimal amount) {
         if (!hasPaymentLimits) return true;
-        
+
         return (transactionLimit == null || amount.compareTo(transactionLimit) <= 0) &&
                (remainingDailyLimit == null || amount.compareTo(remainingDailyLimit) <= 0) &&
                (remainingMonthlyLimit == null || amount.compareTo(remainingMonthlyLimit) <= 0);
     }
-    
+
+    @JsonIgnore
     public boolean needsAdditionalVerification() {
         return requiresVerification || highRiskUser || "HIGH".equals(riskLevel) || "CRITICAL".equals(riskLevel);
     }
-    
+
+    @JsonIgnore
     public boolean hasPaymentRestrictions() {
         return paymentBlockReason != null && !paymentBlockReason.trim().isEmpty();
     }

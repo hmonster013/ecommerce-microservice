@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.stripe;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,30 +36,37 @@ public class StripeRefundResponse {
     private Boolean livemode;
 
     // Helper methods
+    @JsonIgnore
     public boolean isSuccessful() {
         return "succeeded".equals(status);
     }
 
+    @JsonIgnore
     public boolean isPending() {
         return "pending".equals(status);
     }
 
+    @JsonIgnore
     public boolean isFailed() {
         return "failed".equals(status);
     }
 
+    @JsonIgnore
     public boolean isCanceled() {
         return "canceled".equals(status);
     }
 
+    @JsonIgnore
     public boolean hasFailureReason() {
         return failureReason != null && !failureReason.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean isProcessed() {
         return processedAt != null;
     }
 
+    @JsonIgnore
     public boolean hasExpectedArrival() {
         return expectedArrivalDate != null;
     }

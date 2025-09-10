@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.external;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -53,14 +54,17 @@ public class OrderValidationResponse {
     private LocalDateTime reservationExpiry;
     
     // Helper methods
+    @JsonIgnore
     public boolean isPaymentAllowed() {
         return valid && canProcessPayment && !orderPaid && !orderCanceled;
     }
-    
+
+    @JsonIgnore
     public boolean requiresInventoryReservation() {
         return reservationRequired && allItemsInStock;
     }
     
+    @JsonIgnore
     public boolean hasPaymentRestrictions() {
         return paymentBlockReason != null && !paymentBlockReason.trim().isEmpty();
     }

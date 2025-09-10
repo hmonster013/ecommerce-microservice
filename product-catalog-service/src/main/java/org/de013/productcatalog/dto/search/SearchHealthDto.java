@@ -1,6 +1,7 @@
 package org.de013.productcatalog.dto.search;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -117,6 +118,7 @@ public class SearchHealthDto {
     /**
      * Check if search system is healthy
      */
+    @JsonIgnore
     public boolean isHealthy() {
         return "HEALTHY".equals(status) && healthScore != null && healthScore >= 80;
     }
@@ -124,6 +126,7 @@ public class SearchHealthDto {
     /**
      * Check if system is under high load
      */
+    @JsonIgnore
     public boolean isUnderHighLoad() {
         if (currentLoad == null || maxCapacity == null || maxCapacity == 0) {
             return false;
@@ -134,6 +137,7 @@ public class SearchHealthDto {
     /**
      * Check if system has performance issues
      */
+    @JsonIgnore
     public boolean hasPerformanceIssues() {
         return (averageResponseTime != null && averageResponseTime > 1000) ||
                (errorRate != null && errorRate > 5.0) ||
@@ -143,6 +147,7 @@ public class SearchHealthDto {
     /**
      * Check if system has resource issues
      */
+    @JsonIgnore
     public boolean hasResourceIssues() {
         return (memoryUsage != null && memoryUsage > 90.0) ||
                (cpuUsage != null && cpuUsage > 90.0) ||
@@ -152,6 +157,7 @@ public class SearchHealthDto {
     /**
      * Get critical issues count
      */
+    @JsonIgnore
     public long getCriticalIssuesCount() {
         if (issues == null) return 0;
         return issues.stream()
@@ -162,6 +168,7 @@ public class SearchHealthDto {
     /**
      * Get warning issues count
      */
+    @JsonIgnore
     public long getWarningIssuesCount() {
         if (issues == null) return 0;
         return issues.stream()
@@ -172,6 +179,7 @@ public class SearchHealthDto {
     /**
      * Calculate capacity utilization percentage
      */
+    @JsonIgnore
     public Double getCapacityUtilization() {
         if (currentLoad == null || maxCapacity == null || maxCapacity == 0) {
             return 0.0;
@@ -182,6 +190,7 @@ public class SearchHealthDto {
     /**
      * Get overall system status description
      */
+    @JsonIgnore
     public String getStatusDescription() {
         if (isHealthy()) {
             return "Search system is operating normally";
@@ -205,6 +214,7 @@ public class SearchHealthDto {
     /**
      * Generate automated recommendations
      */
+    @JsonIgnore
     public List<String> generateRecommendations() {
         List<String> autoRecommendations = new java.util.ArrayList<>();
         

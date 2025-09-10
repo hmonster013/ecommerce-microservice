@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.search;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,6 +55,7 @@ public class PopularQueryDto {
     /**
      * Check if this is a high-performing query
      */
+    @JsonIgnore
     public boolean isHighPerforming() {
         return clickThroughRate != null && clickThroughRate > 60.0 &&
                conversionRate != null && conversionRate > 10.0;
@@ -62,6 +64,7 @@ public class PopularQueryDto {
     /**
      * Check if this query needs optimization
      */
+    @JsonIgnore
     public boolean needsOptimization() {
         return clickThroughRate != null && clickThroughRate < 30.0 ||
                averageExecutionTime != null && averageExecutionTime > 1000;
@@ -70,6 +73,7 @@ public class PopularQueryDto {
     /**
      * Get performance score (0-100)
      */
+    @JsonIgnore
     public int getPerformanceScore() {
         double score = 0.0;
         
@@ -93,6 +97,7 @@ public class PopularQueryDto {
     /**
      * Get query category based on performance
      */
+    @JsonIgnore
     public String getCategory() {
         int score = getPerformanceScore();
         if (score >= 80) return "TOP_PERFORMER";

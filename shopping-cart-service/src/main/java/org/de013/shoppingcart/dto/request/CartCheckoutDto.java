@@ -241,6 +241,7 @@ public class CartCheckoutDto {
     /**
      * Get effective billing address
      */
+    @JsonIgnore
     public AddressDto getEffectiveBillingAddress() {
         return Boolean.TRUE.equals(sameBillingAddress) ? shippingAddress : billingAddress;
     }

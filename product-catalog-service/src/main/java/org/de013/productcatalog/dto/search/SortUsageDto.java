@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.search;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,6 +49,7 @@ public class SortUsageDto {
     /**
      * Check if this is a preferred sort option
      */
+    @JsonIgnore
     public boolean isPreferred() {
         return usagePercentage != null && usagePercentage > 10.0;
     }
@@ -55,6 +57,7 @@ public class SortUsageDto {
     /**
      * Check if this sort option drives conversions
      */
+    @JsonIgnore
     public boolean drivesConversions() {
         return conversionRate != null && conversionRate > 8.0;
     }
@@ -62,6 +65,7 @@ public class SortUsageDto {
     /**
      * Get sort category
      */
+    @JsonIgnore
     public String getSortCategory() {
         if (sortCriteria == null) return "UNKNOWN";
         
@@ -79,6 +83,7 @@ public class SortUsageDto {
     /**
      * Calculate effectiveness score
      */
+    @JsonIgnore
     public Integer calculateEffectivenessScore() {
         double score = 0.0;
         
@@ -103,6 +108,7 @@ public class SortUsageDto {
     /**
      * Get recommendation for this sort option
      */
+    @JsonIgnore
     public String getRecommendation() {
         if (isPreferred() && drivesConversions()) {
             return "FEATURE - Highly effective sort option, consider making it more prominent";

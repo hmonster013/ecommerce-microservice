@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.search;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -116,22 +117,27 @@ public class SearchResultDto {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean hasResults() {
         return products != null && !products.isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasQuery() {
         return query != null && !query.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasSuggestions() {
         return suggestions != null && !suggestions.isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasDidYouMean() {
         return didYouMean != null && !didYouMean.isEmpty();
     }
 
+    @JsonIgnore
     public String getResultSummary() {
         if (totalResults == null) {
             return "No results";
@@ -146,6 +152,7 @@ public class SearchResultDto {
         }
     }
 
+    @JsonIgnore
     public String getExecutionTimeSummary() {
         if (executionTimeMs == null) {
             return "";

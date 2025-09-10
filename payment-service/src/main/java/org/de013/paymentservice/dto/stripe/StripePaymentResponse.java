@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.stripe;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -122,42 +123,52 @@ public class StripePaymentResponse {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean isSuccessful() {
         return "succeeded".equals(status);
     }
 
+    @JsonIgnore
     public boolean requiresAction() {
         return "requires_action".equals(status);
     }
 
+    @JsonIgnore
     public boolean requiresConfirmation() {
         return "requires_confirmation".equals(status);
     }
 
+    @JsonIgnore
     public boolean requiresPaymentMethod() {
         return "requires_payment_method".equals(status);
     }
 
+    @JsonIgnore
     public boolean isFailed() {
         return "failed".equals(status) || error != null;
     }
 
+    @JsonIgnore
     public boolean isPending() {
         return "processing".equals(status) || "requires_capture".equals(status);
     }
 
+    @JsonIgnore
     public boolean hasNextAction() {
         return nextAction != null;
     }
 
+    @JsonIgnore
     public boolean isRedirectRequired() {
         return hasNextAction() && "redirect_to_url".equals(nextAction.getType());
     }
 
+    @JsonIgnore
     public boolean isStripeJsRequired() {
         return hasNextAction() && "use_stripe_sdk".equals(nextAction.getType());
     }
 
+    @JsonIgnore
     public String getFailureMessage() {
         if (error != null && error.getMessage() != null) {
             return error.getMessage();
@@ -168,6 +179,7 @@ public class StripePaymentResponse {
         return null;
     }
 
+    @JsonIgnore
     public String getFailureCode() {
         if (error != null && error.getCode() != null) {
             return error.getCode();
@@ -178,6 +190,7 @@ public class StripePaymentResponse {
         return null;
     }
 
+    @JsonIgnore
     public BigDecimal getAmountInDollars() {
         if (amount == null) return BigDecimal.ZERO;
         return amount.divide(new BigDecimal("100"));

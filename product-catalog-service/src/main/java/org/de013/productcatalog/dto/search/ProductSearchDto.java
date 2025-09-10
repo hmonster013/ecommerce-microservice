@@ -132,6 +132,7 @@ public class ProductSearchDto {
                Boolean.TRUE.equals(digitalOnly);
     }
 
+    @JsonIgnore
     public String getEffectiveSortBy() {
         if (sortBy != null && !sortBy.trim().isEmpty()) {
             return sortBy.trim();
@@ -139,6 +140,7 @@ public class ProductSearchDto {
         return hasQuery() ? "relevance" : "name";
     }
 
+    @JsonIgnore
     public String getEffectiveSortDirection() {
         if (sortDirection != null && !sortDirection.trim().isEmpty()) {
             return sortDirection.trim().toUpperCase();
@@ -147,14 +149,17 @@ public class ProductSearchDto {
     }
 
     // Manual getters for critical methods (Lombok backup)
+    @JsonIgnore
     public String getQuery() {
         return query;
     }
 
+    @JsonIgnore
     public Integer getPage() {
         return page;
     }
 
+    @JsonIgnore
     public Integer getSize() {
         return size;
     }

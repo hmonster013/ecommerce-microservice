@@ -1,6 +1,7 @@
 package org.de013.paymentservice.dto.refund;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -60,24 +61,29 @@ public class RefundStatusResponse {
     private String paymentNumber;
 
     // Helper methods
+    @JsonIgnore
     public boolean canBeRetried() {
         return status == RefundStatus.FAILED;
     }
 
+    @JsonIgnore
     public boolean needsAction() {
         return status == RefundStatus.REQUIRES_ACTION;
     }
 
+    @JsonIgnore
     public boolean isInProgress() {
         return status == RefundStatus.PENDING || needsAction();
     }
 
+    @JsonIgnore
     public boolean isFinalStatus() {
         return status == RefundStatus.SUCCEEDED ||
                status == RefundStatus.FAILED ||
                status == RefundStatus.CANCELED;
     }
 
+    @JsonIgnore
     public String getStatusMessage() {
         if (message != null && !message.trim().isEmpty()) {
             return message;
@@ -94,6 +100,7 @@ public class RefundStatusResponse {
         };
     }
 
+    @JsonIgnore
     public String getEstimatedArrivalMessage() {
         if (status != RefundStatus.SUCCEEDED || expectedArrivalDate == null) {
             return null;

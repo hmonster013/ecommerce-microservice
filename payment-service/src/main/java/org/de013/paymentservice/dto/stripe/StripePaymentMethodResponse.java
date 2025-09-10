@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.stripe;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -92,22 +93,27 @@ public class StripePaymentMethodResponse {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean isCardPaymentMethod() {
         return "card".equals(type);
     }
 
+    @JsonIgnore
     public boolean isBankAccountPaymentMethod() {
         return "us_bank_account".equals(type) || "sepa_debit".equals(type);
     }
 
+    @JsonIgnore
     public boolean hasCustomer() {
         return customerId != null && !customerId.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasBillingDetails() {
         return billingDetails != null;
     }
 
+    @JsonIgnore
     public String getDisplayName() {
         if (isCardPaymentMethod() && card != null) {
             String brand = card.getBrand() != null ? card.getBrand().toUpperCase() : "CARD";
@@ -124,6 +130,7 @@ public class StripePaymentMethodResponse {
         return type != null ? type.toUpperCase() : "PAYMENT METHOD";
     }
 
+    @JsonIgnore
     public String getMaskedNumber() {
         if (isCardPaymentMethod() && card != null && card.getLast4() != null) {
             return "**** **** **** " + card.getLast4();
@@ -136,6 +143,7 @@ public class StripePaymentMethodResponse {
         return "****";
     }
 
+    @JsonIgnore
     public boolean isExpired() {
         if (!isCardPaymentMethod() || card == null) {
             return false;
@@ -150,6 +158,7 @@ public class StripePaymentMethodResponse {
                (now.getYear() == card.getExpYear() && now.getMonthValue() > card.getExpMonth());
     }
 
+    @JsonIgnore
     public String getExpiryString() {
         if (isCardPaymentMethod() && card != null && 
             card.getExpMonth() != null && card.getExpYear() != null) {
@@ -158,6 +167,7 @@ public class StripePaymentMethodResponse {
         return null;
     }
 
+    @JsonIgnore
     public boolean hasValidChecks() {
         if (!isCardPaymentMethod() || card == null || card.getChecks() == null) {
             return true; // Assume valid if no checks available
@@ -169,6 +179,7 @@ public class StripePaymentMethodResponse {
                !"fail".equals(checks.getAddressPostalCodeCheck());
     }
 
+    @JsonIgnore
     public String getFullBillingAddress() {
         if (!hasBillingDetails() || billingDetails.getAddress() == null) {
             return null;

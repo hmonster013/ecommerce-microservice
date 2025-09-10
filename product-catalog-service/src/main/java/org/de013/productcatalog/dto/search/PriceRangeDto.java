@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.search;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
@@ -31,6 +32,7 @@ public class PriceRangeDto {
     private String label;
 
     // Validation method
+    @JsonIgnore
     @jakarta.validation.constraints.AssertTrue(message = "Maximum price must be greater than minimum price")
     public boolean isPriceRangeValid() {
         if (minPrice == null || maxPrice == null) {
@@ -40,18 +42,22 @@ public class PriceRangeDto {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean hasMinPrice() {
         return minPrice != null;
     }
 
+    @JsonIgnore
     public boolean hasMaxPrice() {
         return maxPrice != null;
     }
 
+    @JsonIgnore
     public boolean isValidRange() {
         return hasMinPrice() || hasMaxPrice();
     }
 
+    @JsonIgnore
     public String getDisplayLabel() {
         if (label != null && !label.trim().isEmpty()) {
             return label;

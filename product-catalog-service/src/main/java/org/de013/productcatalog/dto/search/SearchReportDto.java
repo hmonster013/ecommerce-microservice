@@ -1,6 +1,7 @@
 package org.de013.productcatalog.dto.search;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -139,6 +140,7 @@ public class SearchReportDto {
     /**
      * Get report summary in text format
      */
+    @JsonIgnore
     public String getTextSummary() {
         StringBuilder summary = new StringBuilder();
         
@@ -175,6 +177,7 @@ public class SearchReportDto {
     /**
      * Check if report shows positive trends
      */
+    @JsonIgnore
     public boolean showsPositiveTrends() {
         if (comparison == null) return true;
         
@@ -185,6 +188,7 @@ public class SearchReportDto {
     /**
      * Get high priority recommendations count
      */
+    @JsonIgnore
     public long getHighPriorityRecommendationsCount() {
         if (recommendations == null) return 0;
         
@@ -196,6 +200,7 @@ public class SearchReportDto {
     /**
      * Get critical issues count
      */
+    @JsonIgnore
     public long getCriticalIssuesCount() {
         if (problemQueries == null) return 0;
         
@@ -207,6 +212,7 @@ public class SearchReportDto {
     /**
      * Calculate report completeness score
      */
+    @JsonIgnore
     public int getCompletenessScore() {
         int score = 0;
         int maxScore = 8;
@@ -226,6 +232,7 @@ public class SearchReportDto {
     /**
      * Get report quality assessment
      */
+    @JsonIgnore
     public String getQualityAssessment() {
         int completeness = getCompletenessScore();
         

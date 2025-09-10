@@ -1,6 +1,7 @@
 package org.de013.productcatalog.dto.inventory;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -77,6 +78,7 @@ public class StockAlertDto {
     }
 
     // Helper methods
+    @JsonIgnore
     public String getDisplayMessage() {
         return switch (alertType) {
             case OUT_OF_STOCK -> String.format("Product '%s' is out of stock", productName);
@@ -86,6 +88,7 @@ public class StockAlertDto {
         };
     }
 
+    @JsonIgnore
     public String getRecommendedAction() {
         if (recommendedAction != null) {
             return recommendedAction;

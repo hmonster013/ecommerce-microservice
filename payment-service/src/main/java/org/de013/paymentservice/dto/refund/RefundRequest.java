@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.refund;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -52,18 +53,22 @@ public class RefundRequest {
     private String instructions;
 
     // Helper methods
+    @JsonIgnore
     public boolean isFullRefund() {
         return "FULL".equals(refundType);
     }
 
+    @JsonIgnore
     public boolean isPartialRefund() {
         return "PARTIAL".equals(refundType);
     }
 
+    @JsonIgnore
     public boolean hasInstructions() {
         return instructions != null && !instructions.trim().isEmpty();
     }
 
+    @JsonIgnore
     public String getReasonCode() {
         // Map common reasons to codes for better categorization
         if (reason == null) return "OTHER";

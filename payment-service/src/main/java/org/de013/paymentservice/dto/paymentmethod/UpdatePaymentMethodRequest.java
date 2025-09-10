@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.paymentmethod;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -67,33 +68,39 @@ public class UpdatePaymentMethodRequest {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean hasNicknameUpdate() {
         return nickname != null;
     }
 
+    @JsonIgnore
     public boolean hasDefaultUpdate() {
         return setAsDefault != null;
     }
 
+    @JsonIgnore
     public boolean hasActiveUpdate() {
         return isActive != null;
     }
 
+    @JsonIgnore
     public boolean hasBillingAddressUpdate() {
         return billingAddress != null;
     }
 
+    @JsonIgnore
     public boolean hasCardExpiryUpdate() {
-        return cardExpiryUpdate != null && 
-               cardExpiryUpdate.getExpiryMonth() != null && 
+        return cardExpiryUpdate != null &&
+               cardExpiryUpdate.getExpiryMonth() != null &&
                cardExpiryUpdate.getExpiryYear() != null;
     }
 
+    @JsonIgnore
     public boolean hasAnyUpdate() {
-        return hasNicknameUpdate() || 
-               hasDefaultUpdate() || 
-               hasActiveUpdate() || 
-               hasBillingAddressUpdate() || 
+        return hasNicknameUpdate() ||
+               hasDefaultUpdate() ||
+               hasActiveUpdate() ||
+               hasBillingAddressUpdate() ||
                hasCardExpiryUpdate();
     }
 }

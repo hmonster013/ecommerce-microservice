@@ -1,6 +1,7 @@
 package org.de013.paymentservice.dto.paymentmethod;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -90,6 +91,7 @@ public class PaymentMethodResponse {
     }
 
     // Helper methods for frontend display
+    @JsonIgnore
     public String getTypeDisplayName() {
         return switch (type) {
             case CARD -> "Card";
@@ -101,6 +103,7 @@ public class PaymentMethodResponse {
         };
     }
 
+    @JsonIgnore
     public String getStatusDisplayName() {
         if (!isActive) {
             return "Inactive";
@@ -114,6 +117,7 @@ public class PaymentMethodResponse {
         return "Active";
     }
 
+    @JsonIgnore
     public String getShortDescription() {
         if (nickname != null && !nickname.trim().isEmpty()) {
             return nickname;
@@ -135,14 +139,17 @@ public class PaymentMethodResponse {
         return getTypeDisplayName();
     }
 
+    @JsonIgnore
     public boolean canBeDeleted() {
         return isActive && !isDefault;
     }
 
+    @JsonIgnore
     public boolean canBeSetAsDefault() {
         return isActive && !isDefault && (isExpired == null || !isExpired);
     }
 
+    @JsonIgnore
     public boolean needsUpdate() {
         return isExpired != null && isExpired;
     }

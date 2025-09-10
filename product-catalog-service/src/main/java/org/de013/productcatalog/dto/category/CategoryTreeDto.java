@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.category;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -51,19 +52,22 @@ public class CategoryTreeDto {
     @Schema(description = "Is selectable", example = "true")
     private Boolean selectable;
 
-    // Helper methods
+    @JsonIgnore
     public boolean isRootCategory() {
         return level != null && level == 0;
     }
 
+    @JsonIgnore
     public boolean hasChildren() {
         return children != null && !children.isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasProducts() {
         return productCount != null && productCount > 0;
     }
 
+    @JsonIgnore
     public int getChildrenCount() {
         return children != null ? children.size() : 0;
     }
@@ -75,6 +79,7 @@ public class CategoryTreeDto {
         children.add(child);
     }
 
+    @JsonIgnore
     public String getDisplayText() {
         StringBuilder text = new StringBuilder(name);
         if (productCount != null && productCount > 0) {

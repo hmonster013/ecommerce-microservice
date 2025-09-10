@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.external;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,22 +36,27 @@ public class UserDto {
     private Boolean canMakePayments;
 
     // Helper methods
+    @JsonIgnore
     public boolean isActive() {
         return "ACTIVE".equals(status);
     }
 
+    @JsonIgnore
     public boolean isBlocked() {
         return "BLOCKED".equals(status);
     }
 
+    @JsonIgnore
     public boolean isDeleted() {
         return "DELETED".equals(status);
     }
 
+    @JsonIgnore
     public String getFullName() {
         return firstName + " " + lastName;
     }
 
+    @JsonIgnore
     public boolean canProcessPayments() {
         return isActive() && Boolean.TRUE.equals(canMakePayments) && !"BLOCKED".equals(paymentStatus);
     }
@@ -80,6 +86,7 @@ public class UserDto {
                    (remainingMonthlyLimit == null || amount.compareTo(remainingMonthlyLimit) <= 0);
         }
 
+        @JsonIgnore
         public boolean canProcessTransaction() {
             return remainingTransactionsToday == null || remainingTransactionsToday > 0;
         }
@@ -108,14 +115,17 @@ public class UserDto {
         private Integer recentPaymentCount;
         private BigDecimal recentPaymentAmount;
 
+        @JsonIgnore
         public boolean isHighRisk() {
             return "HIGH".equals(riskLevel) || "CRITICAL".equals(riskLevel);
         }
 
+        @JsonIgnore
         public boolean shouldBlockPayment() {
             return !Boolean.TRUE.equals(allowPayments) || "CRITICAL".equals(riskLevel);
         }
 
+        @JsonIgnore
         public boolean needsVerification() {
             return Boolean.TRUE.equals(requiresAdditionalVerification) || isHighRisk();
         }

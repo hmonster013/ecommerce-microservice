@@ -1,5 +1,6 @@
 package org.de013.paymentservice.dto.stripe;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -72,34 +73,42 @@ public class StripePaymentMethodRequest {
     }
 
     // Helper methods
+    @JsonIgnore
     public boolean isCardPaymentMethod() {
         return "card".equals(type);
     }
 
+    @JsonIgnore
     public boolean isBankAccountPaymentMethod() {
         return "us_bank_account".equals(type) || "sepa_debit".equals(type);
     }
 
+    @JsonIgnore
     public boolean hasCustomer() {
         return customerId != null && !customerId.trim().isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasBillingDetails() {
         return billingDetails != null;
     }
 
+    @JsonIgnore
     public boolean hasCardDetails() {
         return card != null && (card.getNumber() != null || card.getToken() != null);
     }
 
+    @JsonIgnore
     public boolean hasBankAccountDetails() {
         return bankAccount != null && bankAccount.getAccountNumber() != null;
     }
 
+    @JsonIgnore
     public boolean isUsingToken() {
         return card != null && card.getToken() != null;
     }
 
+    @JsonIgnore
     public boolean hasMetadata() {
         return metadata != null && !metadata.isEmpty();
     }

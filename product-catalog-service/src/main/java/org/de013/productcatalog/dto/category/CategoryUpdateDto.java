@@ -1,5 +1,6 @@
 package org.de013.productcatalog.dto.category;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -37,6 +38,7 @@ public class CategoryUpdateDto {
     private Boolean isActive;
 
     // Validation method
+    @JsonIgnore
     @AssertTrue(message = "{ValidSlug.invalid.format}")
     public boolean isSlugValid() {
         if (slug == null || slug.trim().isEmpty()) {
@@ -46,6 +48,7 @@ public class CategoryUpdateDto {
     }
 
     // Helper method to check if any field is set
+    @JsonIgnore
     public boolean hasUpdates() {
         return name != null || description != null || slug != null ||
                parentId != null || displayOrder != null || isActive != null;
