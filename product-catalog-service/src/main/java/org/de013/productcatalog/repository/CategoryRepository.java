@@ -175,6 +175,24 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
            "ORDER BY c.level ASC, c.displayOrder ASC")
     List<Category> findByNamePattern(@Param("pattern") String pattern);
 
+    // Comprehensive search across name, description, and slug
+    @Query("SELECT c FROM Category c WHERE " +
+           "(:query IS NULL OR :query = '' OR " +
+           "LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(c.slug) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+           "c.isActive = true " +
+           "ORDER BY " +
+           "CASE " +
+           "  WHEN :query IS NULL OR :query = '' THEN 0 " +
+           "  WHEN LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) THEN 1 " +
+           "  WHEN LOWER(c.slug) LIKE LOWER(CONCAT('%', :query, '%')) THEN 2 " +
+           "  WHEN LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%')) THEN 3 " +
+           "  ELSE 4 " +
+           "END, " +
+           "c.level ASC, c.displayOrder ASC")
+    List<Category> searchCategories(@Param("query") String query);
+
     // Categories with no products
     @Query("SELECT c FROM Category c " +
            "LEFT JOIN c.productCategories pc " +

@@ -395,7 +395,21 @@ public class CategoryServiceImpl implements CategoryService {
     @Override public List<CategorySummaryDto> getChildCategoriesWithProductCount(Long parentId) { return List.of(); }
     @Override public PageResponse<CategorySummaryDto> getPopularCategories(Pageable pageable) { return null; }
     @Override public List<CategorySummaryDto> getPopularCategories(int limit) { return List.of(); }
-    @Override public List<CategorySummaryDto> searchCategories(String query) { return List.of(); }
+    @Override
+    @Cacheable(value = "categories", key = "'search_' + (#query != null ? #query : 'all')")
+    public List<CategorySummaryDto> searchCategories(String query) {
+        log.debug("Searching categories with query: {}", query);
+
+        // Repository handles both empty and non-empty queries
+        List<Category> categories = categoryRepository.searchCategories(query);
+
+        log.debug("Found {} categories matching query: {}", categories.size(), query);
+
+        // Convert to DTOs and return
+        return categories.stream()
+                .map(categoryMapper::toCategorySummaryDto)
+                .collect(Collectors.toList());
+    }
     @Override public PageResponse<CategorySummaryDto> searchCategories(String query, Pageable pageable) { return null; }
     @Override public CategoryResponseDto activateCategory(Long id) { return null; }
     @Override public CategoryResponseDto deactivateCategory(Long id) { return null; }
