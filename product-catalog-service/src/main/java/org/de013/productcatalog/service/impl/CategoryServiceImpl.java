@@ -366,6 +366,27 @@ public class CategoryServiceImpl implements CategoryService {
         category.setLevel(newParent != null ? newParent.getLevel() + 1 : 0);
     }
 
+    private void updateDescendantLevels(Long parentCategoryId, Integer newParentLevel) {
+        log.debug("Updating descendant levels for category ID: {} with new parent level: {}",
+                parentCategoryId, newParentLevel);
+
+        // Get all direct children
+        List<Category> children = categoryRepository.findByParentId(parentCategoryId);
+
+        for (Category child : children) {
+            // Update child level
+            int newChildLevel = newParentLevel + 1;
+            child.setLevel(newChildLevel);
+            categoryRepository.save(child);
+
+            // Recursively update grandchildren
+            updateDescendantLevels(child.getId(), newChildLevel);
+        }
+
+        log.debug("Updated levels for {} direct children of category ID: {}",
+                children.size(), parentCategoryId);
+    }
+
     // Placeholder implementations for remaining methods
     @Override
     @Cacheable(value = "categories", key = "'path_' + #categoryId")
@@ -423,7 +444,41 @@ public class CategoryServiceImpl implements CategoryService {
     @Override public void updateCategoryLevels(Long parentId) { }
     @Override public void updateDisplayOrder(Long categoryId, Integer newOrder) { }
     @Override public void reorderCategories(List<Long> categoryIds) { }
-    @Override public void moveCategory(Long categoryId, Long newParentId) { }
+    @Override
+    @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
+    public void moveCategory(Long categoryId, Long newParentId) {
+        // Validate category exists
+        Category category = findCategoryById(categoryId);
+
+        // Validate new parent if provided
+        if (newParentId != null) {
+            validateCategoryHierarchy(newParentId, categoryId);
+        }
+
+        // Get old parent for comparison
+        Category oldParent = category.getParent();
+        Long oldParentId = oldParent != null ? oldParent.getId() : null;
+
+        // Check if actually moving to a different parent
+        if (Objects.equals(oldParentId, newParentId)) {
+            log.debug("Category {} is already under parent {}, no move needed", categoryId, newParentId);
+            return;
+        }
+
+        // Update category parent and level
+        updateCategoryParent(category, newParentId);
+
+        // Update display order - place at end of siblings
+        Integer newDisplayOrder = categoryRepository.findMaxDisplayOrderBySiblings(newParentId) + 1;
+        category.setDisplayOrder(newDisplayOrder);
+
+        // Save the category
+        categoryRepository.save(category);
+
+        // Update levels for all descendants recursively
+        updateDescendantLevels(categoryId, category.getLevel());
+    }
     @Override public void moveCategoryUp(Long categoryId) { }
     @Override public void moveCategoryDown(Long categoryId) { }
     @Override public boolean hasChildren(Long categoryId) { return categoryRepository.existsByParentId(categoryId); }
