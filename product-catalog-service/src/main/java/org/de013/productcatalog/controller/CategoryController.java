@@ -87,7 +87,7 @@ public class CategoryController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category));
     }
 
-    @Operation(summary = "Create new category 🔐 (Admin Only)", description = "Create a new category")
+    @Operation(summary = "[ADMIN] Create new category", description = "Create a new category")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Category created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid category data"),
@@ -98,15 +98,15 @@ public class CategoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> createCategory(
             @Parameter(description = "Category creation data", required = true)
             @Valid @RequestBody CategoryCreateDto createDto) {
-        
+
         log.info("Creating new category with name: {}", createDto.getName());
-        
+
         CategoryResponseDto category = categoryService.createCategory(createDto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(org.de013.common.dto.ApiResponse.success(category, "Category created successfully"));
     }
 
-    @Operation(summary = "Update category 🔐 (Admin Only)", description = "Update existing category")
+    @Operation(summary = "[ADMIN] Update category", description = "Update existing category")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Category updated successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid category data"),
@@ -118,17 +118,17 @@ public class CategoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> updateCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id,
-            
+
             @Parameter(description = "Category update data", required = true)
             @Valid @RequestBody CategoryUpdateDto updateDto) {
-        
+
         log.info("Updating category with ID: {}", id);
-        
+
         CategoryResponseDto category = categoryService.updateCategory(id, updateDto);
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category, "Category updated successfully"));
     }
 
-    @Operation(summary = "Delete category 🔐 (Admin Only)", description = "Delete category")
+    @Operation(summary = "[ADMIN] Delete category", description = "Delete category")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Category deleted successfully"),
         @ApiResponse(responseCode = "403", description = "Access denied"),
@@ -140,9 +140,9 @@ public class CategoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<Void>> deleteCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id) {
-        
+
         log.info("Deleting category with ID: {}", id);
-        
+
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(null, "Category deleted successfully"));
     }
@@ -228,36 +228,36 @@ public class CategoryController {
     }
 
     // Admin endpoints
-    @Operation(summary = "Set category active status 🔐 (Admin Only)", description = "Activate or deactivate category")
+    @Operation(summary = "[ADMIN] Set category active status", description = "Activate or deactivate category")
     @PutMapping(ApiPaths.ID_PARAM + ApiPaths.ACTIVE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> setActiveStatus(
             @PathVariable Long id,
             @RequestParam Boolean active) {
-        
+
         log.info("Setting active status for category ID: {} to: {}", id, active);
-        
-        CategoryResponseDto category = active ? 
-                categoryService.activateCategory(id) : 
+
+        CategoryResponseDto category = active ?
+                categoryService.activateCategory(id) :
                 categoryService.deactivateCategory(id);
-        
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category, 
+
+        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category,
                 "Category status updated successfully"));
     }
 
-    @Operation(summary = "Move category 🔐 (Admin Only)", description = "Move category to different parent")
+    @Operation(summary = "[ADMIN] Move category", description = "Move category to different parent")
     @PutMapping(ApiPaths.ID_PARAM + ApiPaths.MOVE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> moveCategory(
             @PathVariable Long id,
             @RequestParam(required = false) Long newParentId) {
-        
+
         log.info("Moving category ID: {} to new parent ID: {}", id, newParentId);
-        
+
         categoryService.moveCategory(id, newParentId);
         CategoryResponseDto category = categoryService.getCategoryById(id);
-        
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category, 
+
+        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category,
                 "Category moved successfully"));
     }
 }

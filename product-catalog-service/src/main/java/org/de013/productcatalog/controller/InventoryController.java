@@ -25,7 +25,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("") // Gateway routes /api/v1/products/** to /products/** - inventory is under products
+@RequestMapping("")
 @RequiredArgsConstructor
 @Tag(name = "Inventory", description = "Inventory management API")
 public class InventoryController {
@@ -48,7 +48,7 @@ public class InventoryController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory));
     }
 
-    @Operation(summary = "Update product inventory 🔐 (Admin Only)", description = "Update inventory information for a specific product")
+    @Operation(summary = "[ADMIN] Update product inventory", description = "Update inventory information")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Inventory updated successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid inventory data"),
@@ -60,17 +60,17 @@ public class InventoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> updateProductInventory(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
-            
+
             @Parameter(description = "Inventory update data", required = true)
             @Valid @RequestBody InventoryUpdateDto updateDto) {
-        
+
         log.info("Updating inventory for product ID: {}", id);
-        
+
         InventoryResponseDto inventory = inventoryService.updateInventory(id, updateDto);
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory, "Inventory updated successfully"));
     }
 
-    @Operation(summary = "Get low stock products 🔐 (Admin Only)", description = "Retrieve products with low stock levels")
+    @Operation(summary = "[ADMIN] Get low stock products", description = "Retrieve products with low stock levels")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Low stock products retrieved successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Access denied")
@@ -80,87 +80,87 @@ public class InventoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<InventoryResponseDto>>> getLowStockProducts(
             @Parameter(description = "Pagination parameters")
             @PageableDefault(size = 20, sort = "quantity", direction = Sort.Direction.ASC) Pageable pageable) {
-        
+
         log.info("Getting low stock products");
-        
+
         PageResponse<InventoryResponseDto> lowStockProducts = inventoryService.getLowStockInventories(pageable);
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(lowStockProducts));
     }
 
-    @Operation(summary = "Get out of stock products 🔐 (Admin Only)", description = "Retrieve products that are out of stock")
+    @Operation(summary = "[ADMIN] Get out of stock products", description = "Retrieve products that are out of stock")
     @GetMapping(ApiPaths.INVENTORY + ApiPaths.OUT_OF_STOCK)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<InventoryResponseDto>>> getOutOfStockProducts(
             @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        
+
         log.info("Getting out of stock products");
-        
+
         PageResponse<InventoryResponseDto> outOfStockProducts = inventoryService.getOutOfStockInventories(pageable);
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(outOfStockProducts));
     }
 
-    @Operation(summary = "Get stock alerts 🔐 (Admin Only)", description = "Retrieve all stock alerts")
+    @Operation(summary = "[ADMIN] Get stock alerts", description = "Retrieve all stock alerts")
     @GetMapping(ApiPaths.INVENTORY + ApiPaths.ALERTS)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<StockAlertDto>>> getStockAlerts() {
         log.info("Getting stock alerts");
-        
+
         List<StockAlertDto> alerts = inventoryService.getStockAlerts();
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(alerts));
     }
 
-    @Operation(summary = "Get low stock alerts 🔐 (Admin Only)", description = "Retrieve low stock alerts")
+    @Operation(summary = "[ADMIN] Get low stock alerts", description = "Retrieve low stock alerts")
     @GetMapping(ApiPaths.INVENTORY + ApiPaths.ALERTS + ApiPaths.LOW_STOCK)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<StockAlertDto>>> getLowStockAlerts() {
         log.info("Getting low stock alerts");
-        
+
         List<StockAlertDto> alerts = inventoryService.getLowStockAlerts();
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(alerts));
     }
 
-    @Operation(summary = "Get reorder alerts 🔐 (Admin Only)", description = "Retrieve reorder alerts")
+    @Operation(summary = "[ADMIN] Get reorder alerts", description = "Retrieve reorder alerts")
     @GetMapping(ApiPaths.INVENTORY + ApiPaths.ALERTS + ApiPaths.REORDER)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<StockAlertDto>>> getReorderAlerts() {
         log.info("Getting reorder alerts");
-        
+
         List<StockAlertDto> alerts = inventoryService.getReorderAlerts();
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(alerts));
     }
 
     // Stock Management Operations
-    @Operation(summary = "Add stock 🔐 (Admin Only)", description = "Add stock to a product")
+    @Operation(summary = "[ADMIN] Add stock", description = "Add stock to a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.ADD)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> addStock(
             @PathVariable Long id,
             @Parameter(description = "Quantity to add", required = true)
             @RequestParam Integer quantity) {
-        
+
         log.info("Adding {} stock to product ID: {}", quantity, id);
-        
+
         InventoryResponseDto inventory = inventoryService.addStock(id, quantity);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory, 
+        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory,
                 String.format("Added %d units to inventory", quantity)));
     }
 
-    @Operation(summary = "Remove stock 🔐 (Admin Only)", description = "Remove stock from a product")
+    @Operation(summary = "[ADMIN] Remove stock", description = "Remove stock from a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.REMOVE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> removeStock(
             @PathVariable Long id,
             @Parameter(description = "Quantity to remove", required = true)
             @RequestParam Integer quantity) {
-        
+
         log.info("Removing {} stock from product ID: {}", quantity, id);
-        
+
         InventoryResponseDto inventory = inventoryService.removeStock(id, quantity);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory, 
+        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory,
                 String.format("Removed %d units from inventory", quantity)));
     }
 
-    @Operation(summary = "Set stock level", description = "Set exact stock level for a product **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "[ADMIN] Set stock level", description = "Set exact stock level for a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.SET)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> setStock(
@@ -175,7 +175,7 @@ public class InventoryController {
                 String.format("Set inventory to %d units", quantity)));
     }
 
-    @Operation(summary = "Adjust stock", description = "Adjust stock by a positive or negative amount **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "[ADMIN] Adjust stock", description = "Adjust stock by a positive or negative amount")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.ADJUST)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> adjustStock(
@@ -191,7 +191,7 @@ public class InventoryController {
     }
 
     // Stock Reservation Operations
-    @Operation(summary = "Reserve stock", description = "Reserve stock for an order **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "[ADMIN] Reserve stock", description = "Reserve stock for an order")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.RESERVE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> reserveStock(
@@ -208,7 +208,7 @@ public class InventoryController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(success, message));
     }
 
-    @Operation(summary = "Release reserved stock", description = "Release previously reserved stock **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "[ADMIN] Release reserved stock", description = "Release previously reserved stock")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.RELEASE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> releaseReservedStock(
@@ -225,7 +225,7 @@ public class InventoryController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(success, message));
     }
 
-    @Operation(summary = "Fulfill order", description = "Fulfill an order by reducing stock and reserved quantity **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "[ADMIN] Fulfill order", description = "Fulfill an order by reducing stock and reserved quantity")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.FULFILL)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> fulfillOrder(
@@ -243,7 +243,7 @@ public class InventoryController {
     }
 
     // Inventory Statistics
-    @Operation(summary = "Get inventory statistics", description = "Get overall inventory statistics **🔐 (Admin Only)** - Requires ADMIN role")
+    @Operation(summary = "[ADMIN] Get inventory statistics", description = "Get overall inventory statistics")
     @GetMapping(ApiPaths.INVENTORY + ApiPaths.STATS)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Object>> getInventoryStatistics() {

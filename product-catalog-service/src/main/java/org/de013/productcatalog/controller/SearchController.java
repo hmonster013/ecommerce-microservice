@@ -40,28 +40,7 @@ public class SearchController {
 
     @Operation(
             summary = "Advanced product search",
-            description = """
-                    Perform advanced product search with comprehensive filtering and sorting options.
-                    
-                    **Search Features:**
-                    - **Full-text search**: Search across product name, description, brand, and category
-                    - **Dynamic filtering**: Filter by price range, category, brand, availability
-                    - **Flexible sorting**: Sort by relevance, price, name, date, popularity
-                    - **Pagination**: Efficient pagination with configurable page size
-                    - **Search analytics**: Automatic tracking of search behavior and performance
-                    
-                    **Performance:**
-                    - Results are cached for optimal performance
-                    - Search suggestions and autocomplete support
-                    - Real-time inventory integration
-                    - Sub-100ms response times for cached results
-                    
-                    **Business Intelligence:**
-                    - Search queries are tracked for analytics
-                    - Popular searches and trends analysis
-                    - Conversion tracking and optimization
-                    - A/B testing support for search algorithms
-                    """)
+            description = "Perform advanced product search with filtering and sorting options")
     @ApiResponses(value = {
         @ApiResponse(
                 responseCode = "200",
@@ -226,21 +205,7 @@ public class SearchController {
 
     @Operation(
             summary = "Get search suggestions",
-            description = """
-                    Get search suggestions and autocomplete recommendations based on partial query input.
-                    
-                    **Features:**
-                    - Real-time autocomplete suggestions
-                    - Popular search queries
-                    - Typo correction and "did you mean" suggestions
-                    - Category-based suggestions
-                    - Brand-based suggestions
-                    
-                    **Performance:**
-                    - Sub-50ms response times
-                    - Cached suggestions for popular queries
-                    - Intelligent ranking based on search frequency
-                    """)
+            description = "Get search suggestions and autocomplete recommendations")
     @ApiResponses(value = {
         @ApiResponse(
                 responseCode = "200",

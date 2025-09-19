@@ -44,7 +44,8 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             String username = request.getHeader(HEADER_USERNAME);
             String email = request.getHeader(HEADER_USER_EMAIL);
             String roles = request.getHeader(HEADER_USER_ROLES);
-
+            log.debug("Headers received - UserId: {}, Username: {}, Email: {}, Roles: {}",
+                    userId, username, email, roles);
             // If user context exists, create Authentication object
             if (StringUtils.hasText(userId) && StringUtils.hasText(username)) {
                 Authentication auth = createAuthenticationFromHeaders(userId, username, email, roles);

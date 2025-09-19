@@ -27,63 +27,43 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
 
-    // Public endpoints that don't require authentication
-    private static final List<String> GATEWAY_PUBLIC_ENDPOINTS = Arrays.asList(
-            // Infrastructure endpoints
+    // Infrastructure endpoints that don't require authentication
+    // All business endpoints will go through JWT validation
+    // Individual services decide public/protected via @PreAuthorize
+    private static final List<String> GATEWAY_INFRASTRUCTURE_ENDPOINTS = Arrays.asList(
+            // Core infrastructure endpoints
             "/actuator/health",
             "/actuator/info",
             "/swagger-ui",
             "/v3/api-docs",
+            "/swagger-resources",
+            "/webjars",
+
+            // Service-specific API docs
             "/api/usersv/v3/api-docs",
             "/api/productsv/v3/api-docs",
             "/api/cartsv/v3/api-docs",
             "/api/ordersv/v3/api-docs",
             "/api/paymentsv/v3/api-docs",
             "/api/notificationsv/v3/api-docs",
-            "/swagger-resources",
-            "/webjars",
 
-            // Authentication endpoints
+            // Authentication endpoints - must be public for login
             "/api/v1/usersv/auth",
             "/api/user-service/auth",
 
-            // Product Catalog Service - Public endpoints
-            // ProductController - Public endpoints (no @PreAuthorize)
-            "/api/v1/productsv",                          // GET products list
-            "/api/v1/productsv/featured",                 // GET featured products
-            "/api/v1/productsv/search",                   // GET/POST product search
-            "/api/v1/productsv/sku",                      // GET product by SKU (with path param)
-
-            // CategoryController - Public endpoints (no @PreAuthorize)
-            "/api/v1/productsv/categories",               // GET categories list
-            "/api/v1/productsv/categories/tree",          // GET category tree
-            "/api/v1/productsv/categories/root",          // GET root categories
-            "/api/v1/productsv/categories/search",        // GET category search
-            "/api/v1/productsv/categories/slug",          // GET category by slug (with path param)
-
-
-
-            // InventoryController - Public read endpoints (no @PreAuthorize)
-            "/api/v1/productsv/inventory",                // GET inventory (with path params)
-
-            // SearchController - Public endpoints (no @PreAuthorize)
-            "/api/v1/productsv/search/suggestions",       // GET search suggestions
-
-            // Actuator endpoints - Public endpoints
-            "/api/v1/productsv/actuator/health",          // Product service health
-            "/api/v1/productsv/actuator/info",            // Product service info
-
-            // Other services - Actuator endpoints
-            "/api/v1/usersv/actuator/health",             // User service health
-            "/api/v1/usersv/actuator/info",               // User service info
-            "/api/v1/cartsv/actuator/health",             // Cart service health
-            "/api/v1/cartsv/actuator/info",               // Cart service info
-            "/api/v1/ordersv/actuator/health",            // Order service health
-            "/api/v1/ordersv/actuator/info",              // Order service info
-            "/api/v1/paymentsv/actuator/health",          // Payment service health
-            "/api/v1/paymentsv/actuator/info",            // Payment service info
-            "/api/v1/notificationsv/actuator/health",     // Notification service health
-            "/api/v1/notificationsv/actuator/info"        // Notification service info
+            // Service actuator endpoints
+            "/api/v1/usersv/actuator/health",
+            "/api/v1/usersv/actuator/info",
+            "/api/v1/productsv/actuator/health",
+            "/api/v1/productsv/actuator/info",
+            "/api/v1/cartsv/actuator/health",
+            "/api/v1/cartsv/actuator/info",
+            "/api/v1/ordersv/actuator/health",
+            "/api/v1/ordersv/actuator/info",
+            "/api/v1/paymentsv/actuator/health",
+            "/api/v1/paymentsv/actuator/info",
+            "/api/v1/notificationsv/actuator/health",
+            "/api/v1/notificationsv/actuator/info"
     );
 
     @Override
@@ -93,14 +73,15 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
         
         log.debug("Processing request: {} {}", request.getMethod(), path);
 
-        // Skip authentication for Gateway infrastructure endpoints only
-        if (isGatewayPublicEndpoint(path)) {
-            log.debug("Gateway public endpoint accessed: {}", path);
+        // Skip authentication for infrastructure endpoints only
+        // All business endpoints will go through JWT validation
+        if (isInfrastructureEndpoint(path)) {
+            log.debug("Infrastructure endpoint accessed: {}", path);
             return chain.filter(exchange);
         }
 
-        // For all business endpoints, extract JWT if present and forward user context
-        // Let individual services handle their own authorization
+        // For all business endpoints, validate JWT and forward user context
+        // Individual services decide public/protected via @PreAuthorize
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         String token = jwtUtil.extractTokenFromHeader(authHeader);
 
@@ -141,16 +122,22 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
             log.debug("No Authorization header, forwarding request without user context for path: {}", path);
         }
 
-        // Forward request without user context - let services handle authorization
+        // Forward request without user context
+        // Services with @PreAuthorize will reject, public endpoints will allow
         return chain.filter(exchange);
     }
 
     /**
-     * Check if endpoint is public (doesn't require authentication)
+     * Check if endpoint is infrastructure endpoint (doesn't require authentication)
+     *
+     * FAIL SECURE APPROACH:
+     * - Only infrastructure endpoints are public
+     * - All business endpoints go through JWT validation
+     * - Individual services decide public/protected via @PreAuthorize
      */
-    private boolean isGatewayPublicEndpoint(String path) {
-        return GATEWAY_PUBLIC_ENDPOINTS.stream()
-                .anyMatch(publicPath -> path.startsWith(publicPath));
+    private boolean isInfrastructureEndpoint(String path) {
+        return GATEWAY_INFRASTRUCTURE_ENDPOINTS.stream()
+                .anyMatch(infraPath -> path.startsWith(infraPath));
     }
 
     /**

@@ -108,25 +108,8 @@ public class ProductController {
     }
 
     @Operation(
-            summary = "Create new product 🔐 (Admin Only)",
-            description = """
-                    Create a new product in the catalog. This endpoint allows administrators to add new products
-                    with complete product information including name, description, pricing, categories, and variants.
-
-                    **Features:**
-                    - Automatic SKU validation and uniqueness check
-                    - Category assignment and validation
-                    - Product variant support
-                    - Image upload and management
-                    - Inventory initialization
-                    - Cache invalidation for optimal performance
-
-                    **Business Rules:**
-                    - SKU must be unique across all products
-                    - At least one category must be assigned
-                    - Price must be positive
-                    - Product name must be unique within category
-                    """)
+            summary = "[ADMIN] Create new product",
+            description = "Create a new product in the catalog")
     @ApiResponses(value = {
         @ApiResponse(
                 responseCode = "201",
@@ -231,7 +214,7 @@ public class ProductController {
                 .body(org.de013.common.dto.ApiResponse.success(product, "Product created successfully"));
     }
 
-    @Operation(summary = "Update product 🔐 (Admin Only)", description = "Update existing product")
+    @Operation(summary = "[ADMIN] Update product", description = "Update existing product")
     @PutMapping(ApiPaths.ID_PARAM)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductResponseDto>> updateProduct(
@@ -243,7 +226,7 @@ public class ProductController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(product, "Product updated successfully"));
     }
 
-    @Operation(summary = "Delete product 🔐 (Admin Only)", description = "Delete product")
+    @Operation(summary = "[ADMIN] Delete product", description = "Delete product")
     @DeleteMapping(ApiPaths.ID_PARAM)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
