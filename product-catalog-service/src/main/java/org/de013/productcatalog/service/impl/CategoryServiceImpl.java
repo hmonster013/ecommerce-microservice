@@ -432,8 +432,16 @@ public class CategoryServiceImpl implements CategoryService {
                 .collect(Collectors.toList());
     }
     @Override public PageResponse<CategorySummaryDto> searchCategories(String query, Pageable pageable) { return null; }
-    @Override public CategoryResponseDto activateCategory(Long id) { return null; }
-    @Override public CategoryResponseDto deactivateCategory(Long id) { return null; }
+    @Override
+    @Transactional
+    @CacheEvict(value = "categories", key = "#id")
+    public CategoryResponseDto updateCategoryStatus(Long id, boolean isActive) {
+        Category category = findCategoryById(id);
+        category.setIsActive(isActive);
+        category = categoryRepository.save(category);
+
+        return categoryMapper.toCategoryResponseDto(category);
+    }
     @Override public List<CategoryResponseDto> bulkUpdateActiveStatus(List<Long> categoryIds, boolean active) { return List.of(); }
     @Override public long getTotalCategoryCount() { return categoryRepository.count(); }
     @Override public long getActiveCategoryCount() { return categoryRepository.countByIsActiveTrue(); }

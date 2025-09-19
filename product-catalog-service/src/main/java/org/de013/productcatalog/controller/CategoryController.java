@@ -237,9 +237,7 @@ public class CategoryController {
 
         log.info("Setting active status for category ID: {} to: {}", id, active);
 
-        CategoryResponseDto category = active ?
-                categoryService.activateCategory(id) :
-                categoryService.deactivateCategory(id);
+        CategoryResponseDto category = categoryService.updateCategoryStatus(id, active);
 
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category,
                 "Category status updated successfully"));

@@ -82,9 +82,7 @@ public interface CategoryService {
     String generateUniqueSlug(String name, Long excludeCategoryId);
 
     // Category Status Operations
-    CategoryResponseDto activateCategory(Long id);
-    
-    CategoryResponseDto deactivateCategory(Long id);
+    CategoryResponseDto updateCategoryStatus(Long id, boolean isActive);
     
     List<CategoryResponseDto> bulkUpdateActiveStatus(List<Long> categoryIds, boolean active);
 
