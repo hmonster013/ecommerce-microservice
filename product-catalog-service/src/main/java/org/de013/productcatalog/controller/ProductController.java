@@ -16,8 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.*;
-import org.de013.productcatalog.dto.search.ProductSearchDto;
-import org.de013.productcatalog.dto.search.SearchResultDto;
+
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.de013.productcatalog.service.ProductService;
 import org.springframework.data.domain.Pageable;
@@ -266,14 +265,7 @@ public class ProductController {
         return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(products));
     }
 
-    @Operation(summary = "Search products")
-    @PostMapping(ApiPaths.SEARCH)
-    public ResponseEntity<org.de013.common.dto.ApiResponse<SearchResultDto>> searchProducts(
-            @Valid @RequestBody ProductSearchDto searchDto) {
-        log.info("Searching products with criteria: {}", searchDto);
-        SearchResultDto results = productService.searchProducts(searchDto);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(results));
-    }
+
 
     @Operation(summary = "Simple product search")
     @GetMapping(ApiPaths.SEARCH)

@@ -2,8 +2,7 @@ package org.de013.productcatalog.service;
 
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.*;
-import org.de013.productcatalog.dto.search.ProductSearchDto;
-import org.de013.productcatalog.dto.search.SearchResultDto;
+
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.springframework.data.domain.Pageable;
 
@@ -43,8 +42,6 @@ public interface ProductService {
     List<ProductSummaryDto> getFeaturedProductsByCategory(Long categoryId, int limit);
 
     // Search Operations
-    SearchResultDto searchProducts(ProductSearchDto searchDto);
-    
     PageResponse<ProductSummaryDto> searchProductsSimple(String query, Pageable pageable);
     
     PageResponse<ProductSummaryDto> fullTextSearch(String query, Pageable pageable);

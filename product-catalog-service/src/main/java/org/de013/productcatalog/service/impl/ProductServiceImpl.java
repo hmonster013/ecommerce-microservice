@@ -4,14 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.*;
-import org.de013.productcatalog.dto.search.ProductSearchDto;
-import org.de013.productcatalog.dto.search.SearchResultDto;
+
 import org.de013.productcatalog.entity.*;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.de013.productcatalog.exception.DuplicateSkuException;
 import org.de013.productcatalog.exception.ProductNotFoundException;
 import org.de013.productcatalog.repository.*;
-import org.de013.productcatalog.repository.specification.ProductSpecification;
+
 import org.de013.productcatalog.service.ProductService;
 import org.de013.productcatalog.mapper.ProductMapper;
 import org.springframework.cache.annotation.CacheEvict;
@@ -21,11 +20,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -230,31 +228,7 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
     }
 
-    @Override
-    public SearchResultDto searchProducts(ProductSearchDto searchDto) {
-        log.debug("Searching products with criteria: {}", searchDto);
-        
-        long startTime = System.currentTimeMillis();
-        
-        Specification<Product> spec = ProductSpecification.buildFromSearchDto(searchDto);
-        Pageable pageable = createPageable(searchDto);
-        
-        Page<Product> products = productRepository.findAll(spec, pageable);
-        
-        long executionTime = System.currentTimeMillis() - startTime;
-        
-        List<ProductSummaryDto> productDtos = products.getContent().stream()
-                .map(productMapper::toProductSummaryDto)
-                .collect(Collectors.toList());
-        
-        return SearchResultDto.builder()
-                .query(searchDto.getQuery())
-                .totalResults(products.getTotalElements())
-                .executionTimeMs(executionTime)
-                .products(productDtos)
-                .metadata(createSearchMetadata(searchDto, products))
-                .build();
-    }
+
 
     @Override
     public PageResponse<ProductSummaryDto> searchProductsSimple(String query, Pageable pageable) {
@@ -295,35 +269,7 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
-    private Pageable createPageable(ProductSearchDto searchDto) {
-        Sort sort = createSort(searchDto.getEffectiveSortBy(), searchDto.getEffectiveSortDirection());
-        return PageRequest.of(searchDto.getPage(), searchDto.getSize(), sort);
-    }
 
-    private Sort createSort(String sortBy, String direction) {
-        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction) ? 
-                Sort.Direction.DESC : Sort.Direction.ASC;
-        
-        return switch (sortBy.toLowerCase()) {
-            case "name" -> Sort.by(sortDirection, "name");
-            case "price" -> Sort.by(sortDirection, "price");
-            case "created" -> Sort.by(sortDirection, "createdAt");
-            case "updated" -> Sort.by(sortDirection, "updatedAt");
-            case "brand" -> Sort.by(sortDirection, "brand");
-            default -> Sort.by(sortDirection, "name");
-        };
-    }
-
-    private SearchResultDto.SearchMetadata createSearchMetadata(ProductSearchDto searchDto, Page<Product> products) {
-        return SearchResultDto.SearchMetadata.builder()
-                .searchType("specification")
-                .sortBy(searchDto.getEffectiveSortBy())
-                .sortDirection(searchDto.getEffectiveSortDirection())
-                .page(searchDto.getPage())
-                .size(searchDto.getSize())
-                .hasMore(!products.isLast())
-                .build();
-    }
 
     // Validation methods
     @Override
