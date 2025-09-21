@@ -6,6 +6,7 @@ import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.*;
 
 import org.de013.productcatalog.entity.*;
+import java.util.Optional;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.de013.productcatalog.exception.DuplicateSkuException;
 import org.de013.productcatalog.exception.ProductNotFoundException;
@@ -378,42 +379,67 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private void createInitialInventory(Product product, ProductCreateDto createDto) {
-        log.debug("Creating initial inventory for product ID: {} with quantity: {}",
+        log.debug("Setting initial inventory for product ID: {} with quantity: {}",
                  product.getId(), createDto.getInitialQuantity());
 
-        // Skip inventory creation for digital products
+        // Skip inventory setup for digital products
         if (Boolean.TRUE.equals(createDto.getIsDigital())) {
-            log.debug("Skipping inventory creation for digital product: {}", product.getSku());
+            log.debug("Skipping inventory setup for digital product: {}", product.getSku());
             return;
         }
 
-        // Check if inventory already exists for this product
-        if (inventoryRepository.findByProductId(product.getId()).isPresent()) {
-            log.warn("Inventory already exists for product ID: {}, skipping creation", product.getId());
-            return;
+        // Get existing inventory (created by database trigger)
+        Optional<Inventory> existingInventory = inventoryRepository.findByProductId(product.getId());
+
+        if (existingInventory.isPresent()) {
+            // Update existing inventory with initial values
+            Inventory inventory = existingInventory.get();
+
+            // Set initial quantity
+            if (createDto.getInitialQuantity() != null) {
+                inventory.setQuantity(createDto.getInitialQuantity());
+            }
+
+            // Set min stock level and reorder point
+            if (createDto.getMinStockLevel() != null) {
+                inventory.setMinStockLevel(createDto.getMinStockLevel());
+                inventory.setReorderPoint(createDto.getMinStockLevel());
+            }
+
+            // Set max stock level if initial quantity is provided
+            if (createDto.getInitialQuantity() != null && createDto.getInitialQuantity() > 0) {
+                // Set max stock level to 10x initial quantity as a reasonable default
+                inventory.setMaxStockLevel(createDto.getInitialQuantity() * 10);
+            }
+
+            inventoryRepository.save(inventory);
+            log.debug("Updated existing inventory for product ID: {} with quantity: {}",
+                     product.getId(), inventory.getQuantity());
+        } else {
+            // Fallback: Create inventory if trigger didn't work for some reason
+            log.warn("No inventory found for product ID: {}, creating new one", product.getId());
+
+            Inventory inventory = Inventory.builder()
+                    .product(product)
+                    .quantity(createDto.getInitialQuantity() != null ? createDto.getInitialQuantity() : 0)
+                    .reservedQuantity(0)
+                    .minStockLevel(createDto.getMinStockLevel() != null ? createDto.getMinStockLevel() : 0)
+                    .reorderPoint(createDto.getMinStockLevel() != null ? createDto.getMinStockLevel() : 0)
+                    .trackInventory(true)
+                    .allowBackorder(false)
+                    .build();
+
+            // Set max stock level if provided (optional)
+            if (createDto.getInitialQuantity() != null && createDto.getInitialQuantity() > 0) {
+                // Set max stock level to 10x initial quantity as a reasonable default
+                inventory.setMaxStockLevel(createDto.getInitialQuantity() * 10);
+            }
+
+            inventoryRepository.save(inventory);
+
+            log.info("Created initial inventory for product: {} with quantity: {}",
+                    product.getSku(), inventory.getQuantity());
         }
-
-        // Create inventory record
-        Inventory inventory = Inventory.builder()
-                .product(product)
-                .quantity(createDto.getInitialQuantity() != null ? createDto.getInitialQuantity() : 0)
-                .reservedQuantity(0)
-                .minStockLevel(createDto.getMinStockLevel() != null ? createDto.getMinStockLevel() : 0)
-                .reorderPoint(createDto.getMinStockLevel() != null ? createDto.getMinStockLevel() : 0)
-                .trackInventory(true)
-                .allowBackorder(false)
-                .build();
-
-        // Set max stock level if provided (optional)
-        if (createDto.getInitialQuantity() != null && createDto.getInitialQuantity() > 0) {
-            // Set max stock level to 10x initial quantity as a reasonable default
-            inventory.setMaxStockLevel(createDto.getInitialQuantity() * 10);
-        }
-
-        inventoryRepository.save(inventory);
-
-        log.info("Created initial inventory for product: {} with quantity: {}",
-                product.getSku(), inventory.getQuantity());
     }
 
     private void updateProductFields(Product product, ProductUpdateDto updateDto) {

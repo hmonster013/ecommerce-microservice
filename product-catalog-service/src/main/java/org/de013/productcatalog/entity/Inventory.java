@@ -128,7 +128,13 @@ public class Inventory extends BaseEntity {
     }
 
     public void removeStock(int quantityToRemove) {
-        this.quantity = Math.max(0, this.quantity - quantityToRemove);
+        if (quantityToRemove > this.quantity) {
+            throw new IllegalArgumentException(
+                String.format("Cannot remove %d items. Only %d available in stock",
+                    quantityToRemove, this.quantity)
+            );
+        }
+        this.quantity -= quantityToRemove;
     }
 
     public String getStockStatus() {

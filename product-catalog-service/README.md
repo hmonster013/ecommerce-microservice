@@ -148,7 +148,7 @@ docker-compose up product-catalog-service
 - [x] **Product DTOs**: ProductCreateDto, ProductUpdateDto, ProductResponseDto, ProductDetailDto, ProductSummaryDto
 - [x] **Category DTOs**: CategoryCreateDto, CategoryUpdateDto, CategoryResponseDto, CategorySummaryDto, CategoryTreeDto
 - [x] **Search & Filter DTOs**: ProductSearchDto, ProductFilterDto, PriceRangeDto, SearchResultDto
-- [x] **Inventory DTOs**: InventoryUpdateDto, InventoryResponseDto, StockAlertDto
+- [x] **Inventory DTOs**: InventoryResponseDto (simplified to core inventory management)
 
 - [x] **Product Support DTOs**: ProductImageDto, ProductVariantDto, ProductVariantGroupDto
 - [x] **Common DTOs**: Using shared DTOs from common module (ApiResponse, PageResponse, ErrorResponseDto)

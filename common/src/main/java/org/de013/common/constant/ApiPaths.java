@@ -134,18 +134,12 @@ public final class ApiPaths {
     public static final String MOVE = "/move";
 
     public static final String INVENTORY = "/inventory";
-    public static final String LOW_STOCK = "/low-stock";
-    public static final String OUT_OF_STOCK = "/out-of-stock";
-    public static final String ALERTS = "/alerts";
-    public static final String REORDER = "/reorder";
     public static final String ADD = "/add";
     public static final String REMOVE = "/remove";
     public static final String SET = "/set";
-    public static final String ADJUST = "/adjust";
     public static final String RESERVE = "/reserve";
     public static final String RELEASE = "/release";
     public static final String FULFILL = "/fulfill";
-    public static final String STATS = "/stats";
     public static final String CHECK = "/check";
     public static final String BULK = "/bulk";
 
