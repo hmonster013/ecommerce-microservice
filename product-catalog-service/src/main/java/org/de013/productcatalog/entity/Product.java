@@ -77,7 +77,7 @@ public class Product extends BaseEntity {
 
     @NotNull(message = "Product status is required")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private ProductStatus status = ProductStatus.ACTIVE;
 

@@ -23,8 +23,8 @@ import org.springframework.data.domain.Sort;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,42 +44,54 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponseDto createProduct(ProductCreateDto createDto) {
         log.info("Creating product with SKU: {}", createDto.getSku());
-        
-        validateProductData(createDto);
-        
-        // Create product entity
-        Product product = Product.builder()
-                .name(createDto.getName())
-                .description(createDto.getDescription())
-                .shortDescription(createDto.getShortDescription())
-                .sku(createDto.getSku())
-                .price(createDto.getPrice())
-                .comparePrice(createDto.getComparePrice())
-                .costPrice(createDto.getCostPrice())
-                .brand(createDto.getBrand())
-                .weight(createDto.getWeight())
-                .dimensions(createDto.getDimensions())
-                .status(createDto.getStatus())
-                .isFeatured(createDto.getIsFeatured())
-                .isDigital(createDto.getIsDigital())
-                .requiresShipping(createDto.getRequiresShipping())
-                .metaTitle(createDto.getMetaTitle())
-                .metaDescription(createDto.getMetaDescription())
-                .searchKeywords(createDto.getSearchKeywords())
-                .build();
 
-        product = productRepository.save(product);
-        
-        // Create product-category relationships
-        createProductCategoryRelationships(product, createDto.getCategoryIds(), createDto.getPrimaryCategoryId());
-        
-        // Create initial inventory if specified
-        if (createDto.getInitialQuantity() != null && createDto.getInitialQuantity() > 0) {
-            createInitialInventory(product, createDto);
+        validateProductData(createDto);
+
+        try {
+            // Create product entity
+            Product product = Product.builder()
+                    .name(createDto.getName())
+                    .description(createDto.getDescription())
+                    .shortDescription(createDto.getShortDescription())
+                    .sku(createDto.getSku())
+                    .price(createDto.getPrice())
+                    .comparePrice(createDto.getComparePrice())
+                    .costPrice(createDto.getCostPrice())
+                    .brand(createDto.getBrand())
+                    .weight(createDto.getWeight())
+                    .dimensions(createDto.getDimensions())
+                    .status(createDto.getStatus())
+                    .isFeatured(createDto.getIsFeatured())
+                    .isDigital(createDto.getIsDigital())
+                    .requiresShipping(createDto.getRequiresShipping())
+                    .metaTitle(createDto.getMetaTitle())
+                    .metaDescription(createDto.getMetaDescription())
+                    .searchKeywords(createDto.getSearchKeywords())
+                    .build();
+
+            Product savedProduct = productRepository.save(product);
+            log.debug("Product entity saved with ID: {}", savedProduct.getId());
+
+            // Create product-category relationships
+            createProductCategoryRelationships(savedProduct, createDto.getCategoryIds(), createDto.getPrimaryCategoryId());
+
+            // Create initial inventory if specified
+            if (createDto.getInitialQuantity() != null && createDto.getInitialQuantity() > 0) {
+                createInitialInventory(savedProduct, createDto);
+            }
+
+            log.info("Product created successfully with ID: {}", savedProduct.getId());
+
+            // Load the created ProductCategories and set them to the product
+            List<ProductCategory> productCategories = productCategoryRepository.findByProductId(savedProduct.getId());
+            savedProduct.setProductCategories(productCategories);
+
+            return productMapper.toProductResponseDto(savedProduct);
+
+        } catch (Exception e) {
+            log.error("Error creating product with SKU: {}", createDto.getSku(), e);
+            throw e; // Re-throw to trigger transaction rollback
         }
-        
-        log.info("Product created successfully with ID: {}", product.getId());
-        return productMapper.toProductResponseDto(product);
     }
 
     @Override
@@ -307,7 +319,58 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private void createProductCategoryRelationships(Product product, List<Long> categoryIds, Long primaryCategoryId) {
-        // TODO: Implement category relationship creation
+        log.debug("Creating category relationships for product ID: {} with categories: {}", product.getId(), categoryIds);
+
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            log.warn("No category IDs provided for product: {}", product.getSku());
+            return;
+        }
+
+        // Validate all categories exist and are active
+        List<Category> categories = categoryRepository.findAllById(categoryIds);
+
+        if (categories.size() != categoryIds.size()) {
+            List<Long> foundIds = categories.stream().map(Category::getId).toList();
+            List<Long> missingIds = categoryIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .toList();
+            throw new IllegalArgumentException("Categories not found: " + missingIds);
+        }
+
+        // Check if all categories are active
+        List<Category> inactiveCategories = categories.stream()
+                .filter(category -> !category.getIsActive())
+                .toList();
+        if (!inactiveCategories.isEmpty()) {
+            List<Long> inactiveIds = inactiveCategories.stream().map(Category::getId).toList();
+            throw new IllegalArgumentException("Cannot assign product to inactive categories: " + inactiveIds);
+        }
+
+        // Create ProductCategory relationships
+        List<ProductCategory> productCategories = new ArrayList<>();
+        for (Category category : categories) {
+            boolean isPrimary = primaryCategoryId != null && primaryCategoryId.equals(category.getId());
+
+            ProductCategory productCategory = ProductCategory.builder()
+                    .product(product)
+                    .category(category)
+                    .isPrimary(isPrimary)
+                    .build();
+
+            productCategories.add(productCategory);
+        }
+
+        // If no primary category specified, make the first one primary
+        if (primaryCategoryId == null && !productCategories.isEmpty()) {
+            productCategories.get(0).setPrimary(true);
+            log.debug("No primary category specified, setting first category as primary: {}",
+                     productCategories.get(0).getCategory().getId());
+        }
+
+        // Save all relationships
+        productCategoryRepository.saveAll(productCategories);
+
+        log.info("Created {} category relationships for product: {}", productCategories.size(), product.getSku());
     }
 
     private void updateProductCategoryRelationships(Product product, List<Long> categoryIds, Long primaryCategoryId) {
@@ -315,7 +378,42 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private void createInitialInventory(Product product, ProductCreateDto createDto) {
-        // TODO: Implement initial inventory creation
+        log.debug("Creating initial inventory for product ID: {} with quantity: {}",
+                 product.getId(), createDto.getInitialQuantity());
+
+        // Skip inventory creation for digital products
+        if (Boolean.TRUE.equals(createDto.getIsDigital())) {
+            log.debug("Skipping inventory creation for digital product: {}", product.getSku());
+            return;
+        }
+
+        // Check if inventory already exists for this product
+        if (inventoryRepository.findByProductId(product.getId()).isPresent()) {
+            log.warn("Inventory already exists for product ID: {}, skipping creation", product.getId());
+            return;
+        }
+
+        // Create inventory record
+        Inventory inventory = Inventory.builder()
+                .product(product)
+                .quantity(createDto.getInitialQuantity() != null ? createDto.getInitialQuantity() : 0)
+                .reservedQuantity(0)
+                .minStockLevel(createDto.getMinStockLevel() != null ? createDto.getMinStockLevel() : 0)
+                .reorderPoint(createDto.getMinStockLevel() != null ? createDto.getMinStockLevel() : 0)
+                .trackInventory(true)
+                .allowBackorder(false)
+                .build();
+
+        // Set max stock level if provided (optional)
+        if (createDto.getInitialQuantity() != null && createDto.getInitialQuantity() > 0) {
+            // Set max stock level to 10x initial quantity as a reasonable default
+            inventory.setMaxStockLevel(createDto.getInitialQuantity() * 10);
+        }
+
+        inventoryRepository.save(inventory);
+
+        log.info("Created initial inventory for product: {} with quantity: {}",
+                product.getSku(), inventory.getQuantity());
     }
 
     private void updateProductFields(Product product, ProductUpdateDto updateDto) {
