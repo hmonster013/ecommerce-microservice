@@ -43,11 +43,9 @@ public class CartController {
 
     private final CartService cartService;
 
-
-
     // ==================== CART RETRIEVAL ====================
 
-    @Operation(summary = "Get or create cart 🔐 (Authenticated)", description = "Retrieve existing cart or create new one for user/session")
+    @Operation(summary = "Get or create cart", description = "Retrieve existing cart or create new one for user/session")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cart retrieved successfully",
                 content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
@@ -93,7 +91,7 @@ public class CartController {
         }
     }
 
-    @Operation(summary = "Get cart by ID 🔐 (Owner/Admin)", description = "Retrieve cart by its unique identifier. Accessible by cart owner or admin only")
+    @Operation(summary = "[ADMIN] Get cart by ID", description = "Retrieve cart by its unique identifier. Accessible by cart owner or admin only")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cart found",
                 content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
@@ -121,7 +119,7 @@ public class CartController {
 
     // ==================== CART OPERATIONS ====================
 
-    @Operation(summary = "Clear cart", description = "Remove all items from the cart while keeping the cart structure intact. **🔐 (Cart Owner or Admin)** - This action cannot be undone")
+    @Operation(summary = "[ADMIN] Clear cart", description = "Remove all items from the cart while keeping the cart structure intact. This action cannot be undone")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cart cleared successfully",
                 content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
@@ -154,7 +152,7 @@ public class CartController {
         }
     }
 
-    @Operation(summary = "Delete cart", description = "Permanently delete the entire cart and all its items. **🔐 (Cart Owner or Admin)** - This action cannot be undone")
+    @Operation(summary = "[ADMIN] Delete cart", description = "Permanently delete the entire cart and all its items. This action cannot be undone")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Cart deleted successfully"),
         @ApiResponse(responseCode = "404", description = "Cart not found"),
@@ -187,7 +185,7 @@ public class CartController {
 
     // ==================== COUPON MANAGEMENT ====================
 
-    @Operation(summary = "Apply coupon", description = "Apply a discount coupon code to the cart. **🔐 (Cart Owner or Admin)** - The coupon will be validated and discount applied if valid")
+    @Operation(summary = "[ADMIN] Apply coupon", description = "Apply a discount coupon code to the cart. The coupon will be validated and discount applied if valid")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Coupon applied successfully",
                 content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
@@ -215,7 +213,7 @@ public class CartController {
         }
     }
 
-    @Operation(summary = "Remove coupon", description = "Remove the currently applied coupon from the cart and recalculate totals without discount. **🔐 (Cart Owner or Admin)**")
+    @Operation(summary = "[ADMIN] Remove coupon", description = "Remove the currently applied coupon from the cart and recalculate totals without discount")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Coupon removed successfully",
                 content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
@@ -250,7 +248,7 @@ public class CartController {
 
     // ==================== CART VALIDATION ====================
 
-    @Operation(summary = "Validate cart", description = "Perform comprehensive cart validation including item availability, pricing, and business rules. **🔐 (Cart Owner or Admin)** - Returns validation results and any issues found")
+    @Operation(summary = "[ADMIN] Validate cart", description = "Perform comprehensive cart validation including item availability, pricing, and business rules. Returns validation results and any issues found")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Validation completed",
                 content = @Content(schema = @Schema(implementation = Map.class))),
@@ -297,7 +295,7 @@ public class CartController {
 
     // ==================== CHECKOUT PREPARATION ====================
 
-    @Operation(summary = "Prepare checkout", description = "Prepare cart for checkout by validating items, calculating final totals, taxes, and shipping costs. **🔐 (Cart Owner or Admin)** - Returns checkout summary with all necessary information for order creation")
+    @Operation(summary = "[ADMIN] Prepare checkout", description = "Prepare cart for checkout by validating items, calculating final totals, taxes, and shipping costs. Returns checkout summary with all necessary information for order creation")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Checkout prepared successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid checkout data"),
@@ -325,7 +323,7 @@ public class CartController {
 
     // ==================== UTILITY ENDPOINTS ====================
 
-    @Operation(summary = "Update cart activity", description = "Update the last activity timestamp for the cart to prevent automatic expiration. **🔐 (Cart Owner or Admin)** - Useful for keeping active carts alive during user sessions")
+    @Operation(summary = "[ADMIN] Update cart activity", description = "Update the last activity timestamp for the cart to prevent automatic expiration. Useful for keeping active carts alive during user sessions")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Activity updated successfully"),
         @ApiResponse(responseCode = "404", description = "Cart not found"),

@@ -22,13 +22,6 @@ CREATE TABLE inventory (
     CONSTRAINT chk_inventory_max_stock CHECK (max_stock_level IS NULL OR max_stock_level >= min_stock_level)
 );
 
--- Create indexes
-CREATE INDEX idx_inventory_product_id ON inventory(product_id);
-CREATE INDEX idx_inventory_low_stock ON inventory(quantity, min_stock_level);
-CREATE INDEX idx_inventory_out_of_stock ON inventory(quantity) WHERE quantity = 0;
-CREATE INDEX idx_inventory_needs_reorder ON inventory(quantity, reorder_point) WHERE quantity <= reorder_point;
-CREATE INDEX idx_inventory_location ON inventory(location);
-
 -- Create trigger to update updated_at
 CREATE TRIGGER update_inventory_updated_at 
     BEFORE UPDATE ON inventory 

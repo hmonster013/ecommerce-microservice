@@ -443,44 +443,86 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private void updateProductFields(Product product, ProductUpdateDto updateDto) {
-        // TODO: Implement field updates
+        // Update basic product information
+        if (updateDto.getName() != null) {
+            product.setName(updateDto.getName());
+        }
+
+        if (updateDto.getDescription() != null) {
+            product.setDescription(updateDto.getDescription());
+        }
+
+        if (updateDto.getShortDescription() != null) {
+            product.setShortDescription(updateDto.getShortDescription());
+        }
+
+        if (updateDto.getSku() != null) {
+            product.setSku(updateDto.getSku());
+        }
+
+        // Update pricing information
+        if (updateDto.getPrice() != null) {
+            product.setPrice(updateDto.getPrice());
+        }
+
+        if (updateDto.getComparePrice() != null) {
+            product.setComparePrice(updateDto.getComparePrice());
+        }
+
+        if (updateDto.getCostPrice() != null) {
+            product.setCostPrice(updateDto.getCostPrice());
+        }
+
+        // Update product attributes
+        if (updateDto.getBrand() != null) {
+            product.setBrand(updateDto.getBrand());
+        }
+
+        if (updateDto.getWeight() != null) {
+            product.setWeight(updateDto.getWeight());
+        }
+
+        if (updateDto.getDimensions() != null) {
+            product.setDimensions(updateDto.getDimensions());
+        }
+
+        // Update product status and flags
+        if (updateDto.getStatus() != null) {
+            product.setStatus(updateDto.getStatus());
+        }
+
+        if (updateDto.getIsFeatured() != null) {
+            product.setIsFeatured(updateDto.getIsFeatured());
+        }
+
+        if (updateDto.getIsDigital() != null) {
+            product.setIsDigital(updateDto.getIsDigital());
+        }
+
+        if (updateDto.getRequiresShipping() != null) {
+            product.setRequiresShipping(updateDto.getRequiresShipping());
+        }
+
+        // Update SEO fields
+        if (updateDto.getMetaTitle() != null) {
+            product.setMetaTitle(updateDto.getMetaTitle());
+        }
+
+        if (updateDto.getMetaDescription() != null) {
+            product.setMetaDescription(updateDto.getMetaDescription());
+        }
+
+        if (updateDto.getSearchKeywords() != null) {
+            product.setSearchKeywords(updateDto.getSearchKeywords());
+        }
     }
 
-    // Placeholder implementations for remaining methods
-    @Override public List<ProductSummaryDto> getRelatedProducts(Long productId) { return List.of(); }
-    @Override public List<ProductSummaryDto> getRelatedProducts(Long productId, int limit) { return List.of(); }
-    @Override public List<ProductSummaryDto> getProductsInSameCategory(Long productId) { return List.of(); }
-    @Override public ProductResponseDto activateProduct(Long id) { return null; }
-    @Override public ProductResponseDto deactivateProduct(Long id) { return null; }
-    @Override public ProductResponseDto discontinueProduct(Long id) { return null; }
-    @Override public List<ProductResponseDto> bulkUpdateStatus(List<Long> productIds, ProductStatus status) { return List.of(); }
-    @Override public ProductResponseDto setFeatured(Long id, boolean featured) { return null; }
-    @Override public List<ProductResponseDto> bulkSetFeatured(List<Long> productIds, boolean featured) { return List.of(); }
+    // Essential implementations only
     @Override public boolean isSkuUnique(String sku) { return !productRepository.existsBySku(sku); }
     @Override public boolean isSkuUnique(String sku, Long excludeProductId) { return !productRepository.existsBySkuAndIdNot(sku, excludeProductId); }
     @Override public long getTotalProductCount() { return productRepository.count(); }
     @Override public long getActiveProductCount() { return productRepository.countByStatus(ProductStatus.ACTIVE); }
     @Override public long getFeaturedProductCount() { return productRepository.countByIsFeaturedTrue(); }
-    @Override public long getProductCountByCategory(Long categoryId) { return productRepository.countByCategoryIdAndStatus(categoryId, ProductStatus.ACTIVE.name()); }
-    @Override public long getProductCountByBrand(String brand) { return productRepository.countByBrand(brand); }
-    @Override public List<ProductSummaryDto> getRecentProducts() { return List.of(); }
-    @Override public List<ProductSummaryDto> getRecentProducts(int limit) { return List.of(); }
-    @Override public PageResponse<ProductSummaryDto> getRecentProducts(Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> getProductsOnSale(Pageable pageable) { return null; }
-    @Override public List<ProductSummaryDto> getProductsOnSale(int limit) { return List.of(); }
-    @Override public PageResponse<ProductSummaryDto> getInStockProducts(Pageable pageable) { return null; }
-    @Override public List<ProductSummaryDto> getLowStockProducts() { return List.of(); }
-    @Override public List<String> getAllBrands() { return List.of(); }
-    @Override public List<String> getActiveBrands() { return List.of(); }
-    @Override public PageResponse<ProductSummaryDto> getProductsByBrands(List<String> brands, Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> getProductsByCategories(List<Long> categoryIds, Pageable pageable) { return null; }
-    @Override public long getProductCountByCategories(List<Long> categoryIds) { return 0; }
-    @Override public PageResponse<ProductSummaryDto> getProductsByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) { return null; }
     @Override public boolean existsById(Long id) { return productRepository.existsById(id); }
     @Override public boolean existsBySku(String sku) { return productRepository.existsBySku(sku); }
-    @Override @CacheEvict(value = "products", allEntries = true) public void clearProductCache() { }
-    @Override @CacheEvict(value = "products", key = "#productId") public void clearProductCache(Long productId) { }
-    @Override public void refreshProductCache(Long productId) { }
-    @Override public List<ProductSummaryDto> getProductsByIds(List<Long> productIds) { return List.of(); }
-    @Override public void bulkDeleteProducts(List<Long> productIds) { }
 }

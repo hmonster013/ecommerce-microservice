@@ -1,6 +1,3 @@
--- Create product status enum
-CREATE TYPE product_status AS ENUM ('ACTIVE', 'INACTIVE', 'DISCONTINUED', 'OUT_OF_STOCK');
-
 -- Create products table
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
@@ -14,7 +11,7 @@ CREATE TABLE products (
     brand VARCHAR(255),
     weight DECIMAL(8,3) CHECK (weight >= 0),
     dimensions VARCHAR(100), -- e.g., "10x20x30 cm"
-    status product_status NOT NULL DEFAULT 'ACTIVE',
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE', 'DISCONTINUED', 'OUT_OF_STOCK')),
     is_featured BOOLEAN NOT NULL DEFAULT false,
     is_digital BOOLEAN NOT NULL DEFAULT false,
     requires_shipping BOOLEAN NOT NULL DEFAULT true,
@@ -26,16 +23,6 @@ CREATE TABLE products (
     created_by VARCHAR(255),
     updated_by VARCHAR(255)
 );
-
--- Create indexes
-CREATE INDEX idx_products_sku ON products(sku);
-CREATE INDEX idx_products_status ON products(status);
-CREATE INDEX idx_products_featured ON products(is_featured);
-CREATE INDEX idx_products_brand ON products(brand);
-CREATE INDEX idx_products_price ON products(price);
-CREATE INDEX idx_products_created_at ON products(created_at);
-CREATE INDEX idx_products_name_search ON products USING gin(to_tsvector('english', name));
-CREATE INDEX idx_products_description_search ON products USING gin(to_tsvector('english', description));
 
 -- Create trigger to update updated_at
 CREATE TRIGGER update_products_updated_at 

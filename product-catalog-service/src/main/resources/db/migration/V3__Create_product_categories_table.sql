@@ -11,11 +11,6 @@ CREATE TABLE product_categories (
     CONSTRAINT uk_product_category UNIQUE (product_id, category_id)
 );
 
--- Create indexes
-CREATE INDEX idx_product_categories_product_id ON product_categories(product_id);
-CREATE INDEX idx_product_categories_category_id ON product_categories(category_id);
-CREATE INDEX idx_product_categories_primary ON product_categories(is_primary);
-
 -- Ensure only one primary category per product
 CREATE UNIQUE INDEX idx_product_categories_primary_unique 
     ON product_categories(product_id) 

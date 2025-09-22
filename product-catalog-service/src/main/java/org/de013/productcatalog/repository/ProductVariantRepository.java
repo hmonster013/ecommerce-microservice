@@ -40,7 +40,8 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     // Value queries
     List<ProductVariant> findByProductIdAndValue(Long productId, String value);
     
-    Optional<ProductVariant> findByProductIdAndVariantTypeAndValue(Long productId, VariantType variantType, String value);
+    @Query("SELECT pv FROM ProductVariant pv WHERE pv.product.id = :productId AND pv.variantType = :variantType AND pv.value = :value")
+    Optional<ProductVariant> findByProductIdAndVariantTypeAndValue(@Param("productId") Long productId, @Param("variantType") VariantType variantType, @Param("value") String value);
 
     // Grouped by variant type
     @Query("SELECT pv FROM ProductVariant pv WHERE pv.product.id = :productId AND pv.isActive = true " +
@@ -107,9 +108,11 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     
     boolean existsBySkuAndIdNot(String sku, Long id);
     
-    boolean existsByProductIdAndVariantTypeAndValue(Long productId, VariantType variantType, String value);
+    @Query("SELECT COUNT(pv) > 0 FROM ProductVariant pv WHERE pv.product.id = :productId AND pv.variantType = :variantType AND pv.value = :value")
+    boolean existsByProductIdAndVariantTypeAndValue(@Param("productId") Long productId, @Param("variantType") VariantType variantType, @Param("value") String value);
     
-    boolean existsByProductIdAndVariantTypeAndValueAndIdNot(Long productId, VariantType variantType, String value, Long id);
+    @Query("SELECT COUNT(pv) > 0 FROM ProductVariant pv WHERE pv.product.id = :productId AND pv.variantType = :variantType AND pv.value = :value AND pv.id != :id")
+    boolean existsByProductIdAndVariantTypeAndValueAndIdNot(@Param("productId") Long productId, @Param("variantType") VariantType variantType, @Param("value") String value, @Param("id") Long id);
 
     // Bulk operations
     @Modifying
@@ -131,6 +134,20 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     @Query("SELECT COALESCE(MAX(pv.displayOrder), 0) FROM ProductVariant pv WHERE pv.product.id = :productId")
     Integer findMaxDisplayOrderByProductId(@Param("productId") Long productId);
+
+    // Find variants with display order greater than the deleted variant (for reordering)
+    @Query("SELECT pv FROM ProductVariant pv WHERE pv.product.id = :productId " +
+           "AND pv.displayOrder > :deletedDisplayOrder ORDER BY pv.displayOrder ASC")
+    List<ProductVariant> findVariantsToReorderAfterDeletion(@Param("productId") Long productId,
+                                                           @Param("deletedDisplayOrder") Integer deletedDisplayOrder);
+
+    // Find variants by product and variant type with display order greater than deleted (for type-specific reordering)
+    @Query("SELECT pv FROM ProductVariant pv WHERE pv.product.id = :productId " +
+           "AND pv.variantType = :variantType AND pv.displayOrder > :deletedDisplayOrder " +
+           "ORDER BY pv.displayOrder ASC")
+    List<ProductVariant> findVariantsToReorderAfterDeletionByType(@Param("productId") Long productId,
+                                                                 @Param("variantType") VariantType variantType,
+                                                                 @Param("deletedDisplayOrder") Integer deletedDisplayOrder);
 
     // Popular variants (most used values)
     @Query("SELECT pv.variantType, pv.value, COUNT(pv) as usage_count FROM ProductVariant pv " +

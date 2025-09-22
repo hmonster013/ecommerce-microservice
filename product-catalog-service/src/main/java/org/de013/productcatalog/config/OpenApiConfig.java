@@ -41,7 +41,9 @@ public class OpenApiConfig {
                                 **Enterprise Product Catalog Service** - A comprehensive microservice for managing product catalogs with advanced features:
 
                                 ## 🚀 Key Features
-                                - **Product Management**: Complete CRUD operations for products, categories, and variants
+                                - **Product Management**: Complete CRUD operations for products, categories, variants, and images
+                                - **Variant Management**: Product variants with different types (size, color, material, etc.)
+                                - **Image Management**: Product images with multiple types and variant-specific images
                                 - **Advanced Search**: Full-text search with filtering, sorting, and pagination
                                 - **Inventory Management**: Real-time stock tracking and availability
                                 - **Review System**: Customer reviews and ratings management
@@ -86,6 +88,12 @@ public class OpenApiConfig {
                         new Tag()
                                 .name("Categories")
                                 .description("Category management operations - Hierarchical category structure"),
+                        new Tag()
+                                .name("Product Variants")
+                                .description("Product variant management - Handle different product variations like size, color, material"),
+                        new Tag()
+                                .name("Product Images")
+                                .description("Product image management - Handle product images, galleries, and variant-specific images"),
                         new Tag()
                                 .name("Search")
                                 .description("Advanced search operations - Full-text search, filtering, and sorting"),

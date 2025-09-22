@@ -26,22 +26,6 @@ CREATE TABLE search_analytics (
     metadata TEXT
 );
 
--- Create indexes for better query performance
-CREATE INDEX idx_search_analytics_query ON search_analytics(search_query);
-CREATE INDEX idx_search_analytics_normalized_query ON search_analytics(normalized_query);
-CREATE INDEX idx_search_analytics_date ON search_analytics(search_date);
-CREATE INDEX idx_search_analytics_result_count ON search_analytics(result_count);
-CREATE INDEX idx_search_analytics_user_session ON search_analytics(user_session_id);
-CREATE INDEX idx_search_analytics_source ON search_analytics(search_source);
-CREATE INDEX idx_search_analytics_had_clicks ON search_analytics(had_clicks);
-CREATE INDEX idx_search_analytics_led_to_purchase ON search_analytics(led_to_purchase);
-CREATE INDEX idx_search_analytics_execution_time ON search_analytics(execution_time_ms);
-
--- Create composite indexes for common query patterns
-CREATE INDEX idx_search_analytics_date_result ON search_analytics(search_date, result_count);
-CREATE INDEX idx_search_analytics_query_date ON search_analytics(normalized_query, search_date);
-CREATE INDEX idx_search_analytics_session_date ON search_analytics(user_session_id, search_date);
-
 -- Add comments for documentation
 COMMENT ON TABLE search_analytics IS 'Tracks user search behavior and analytics for optimization';
 COMMENT ON COLUMN search_analytics.search_query IS 'Original search query entered by user';

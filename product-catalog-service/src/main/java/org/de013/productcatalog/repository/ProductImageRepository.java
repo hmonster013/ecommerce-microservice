@@ -32,13 +32,14 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     
     Optional<ProductImage> findFirstByProductIdAndImageTypeAndIsActiveTrueOrderByDisplayOrderAsc(Long productId, ImageType imageType);
     
-    @Query("SELECT pi FROM ProductImage pi WHERE pi.product.id = :productId AND pi.imageType = 'MAIN' AND pi.isActive = true")
+    @Query(value = "SELECT * FROM product_images pi WHERE pi.product_id = :productId AND pi.image_type = 'MAIN' AND pi.is_active = true",
+           nativeQuery = true)
     Optional<ProductImage> findMainImageByProductId(@Param("productId") Long productId);
 
     // Gallery images
-    @Query("SELECT pi FROM ProductImage pi WHERE pi.product.id = :productId AND " +
-           "pi.imageType IN ('MAIN', 'GALLERY', 'DETAIL', 'LIFESTYLE') AND pi.isActive = true " +
-           "ORDER BY pi.displayOrder ASC")
+    @Query(value = "SELECT * FROM product_images pi WHERE pi.product_id = :productId AND " +
+           "pi.image_type IN ('MAIN', 'GALLERY', 'DETAIL', 'LIFESTYLE') AND pi.is_active = true " +
+           "ORDER BY pi.display_order ASC", nativeQuery = true)
     List<ProductImage> findGalleryImagesByProductId(@Param("productId") Long productId);
 
     // Variant-specific images
@@ -58,7 +59,8 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     List<ProductImage> findByProductIds(@Param("productIds") List<Long> productIds);
 
     // Main images for multiple products
-    @Query("SELECT pi FROM ProductImage pi WHERE pi.product.id IN :productIds AND pi.imageType = 'MAIN' AND pi.isActive = true")
+    @Query(value = "SELECT * FROM product_images pi WHERE pi.product_id IN :productIds AND pi.image_type = 'MAIN' AND pi.is_active = true",
+           nativeQuery = true)
     List<ProductImage> findMainImagesByProductIds(@Param("productIds") List<Long> productIds);
 
     // Images by file format
@@ -146,13 +148,14 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     @Query("SELECT COALESCE(MAX(pi.displayOrder), 0) FROM ProductImage pi WHERE pi.product.id = :productId")
     Integer findMaxDisplayOrderByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT COALESCE(MAX(pi.displayOrder), 0) FROM ProductImage pi " +
-           "WHERE pi.product.id = :productId AND pi.imageType = :imageType")
-    Integer findMaxDisplayOrderByProductIdAndType(@Param("productId") Long productId, @Param("imageType") ImageType imageType);
+    @Query(value = "SELECT COALESCE(MAX(pi.display_order), 0) FROM product_images pi " +
+           "WHERE pi.product_id = :productId AND pi.image_type = :imageType", nativeQuery = true)
+    Integer findMaxDisplayOrderByProductIdAndType(@Param("productId") Long productId, @Param("imageType") String imageType);
 
     // Image URLs for products
-    @Query("SELECT pi.product.id, pi.url FROM ProductImage pi " +
-           "WHERE pi.product.id IN :productIds AND pi.imageType = 'MAIN' AND pi.isActive = true")
+    @Query(value = "SELECT pi.product_id, pi.url FROM product_images pi " +
+           "WHERE pi.product_id IN :productIds AND pi.image_type = 'MAIN' AND pi.is_active = true",
+           nativeQuery = true)
     List<Object[]> findMainImageUrlsByProductIds(@Param("productIds") List<Long> productIds);
 
     // Products without images
@@ -162,7 +165,7 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     List<Long> findProductIdsWithoutImages();
 
     // Products with specific image types
-    @Query("SELECT DISTINCT pi.product.id FROM ProductImage pi " +
-           "WHERE pi.imageType = :imageType AND pi.isActive = true")
-    List<Long> findProductIdsByImageType(@Param("imageType") ImageType imageType);
+    @Query(value = "SELECT DISTINCT pi.product_id FROM product_images pi " +
+           "WHERE pi.image_type = :imageType AND pi.is_active = true", nativeQuery = true)
+    List<Long> findProductIdsByImageType(@Param("imageType") String imageType);
 }

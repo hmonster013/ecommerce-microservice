@@ -133,6 +133,31 @@ public final class ApiPaths {
     public static final String FEATURED = "/featured";
     public static final String MOVE = "/move";
 
+    // Product Variant endpoints
+    public static final String VARIANTS = "/variants";
+    public static final String VARIANT_ID_PARAM = "/{variantId}";
+    public static final String VARIANT_SKU_PARAM = "/sku/{sku}";
+    public static final String VARIANT_GROUPS = "/groups";
+    public static final String VARIANT_TYPES = "/types";
+    public static final String VARIANT_VALUES = "/values";
+    public static final String VARIANT_REORDER = "/reorder";
+    public static final String VARIANT_MOVE_UP = "/move-up";
+    public static final String VARIANT_MOVE_DOWN = "/move-down";
+    public static final String VARIANT_ACTIVATE = "/activate";
+    public static final String VARIANT_DEACTIVATE = "/deactivate";
+
+    // Product Image endpoints
+    public static final String IMAGES = "/images";
+    public static final String IMAGE_ID_PARAM = "/{imageId}";
+    public static final String IMAGE_MAIN = "/main";
+    public static final String IMAGE_GALLERY = "/gallery";
+    public static final String IMAGE_TYPES = "/types";
+    public static final String IMAGE_REORDER = "/reorder";
+    public static final String IMAGE_MOVE_UP = "/move-up";
+    public static final String IMAGE_MOVE_DOWN = "/move-down";
+    public static final String IMAGE_SET_MAIN = "/set-main";
+    public static final String IMAGE_UNSET_MAIN = "/unset-main";
+
     public static final String INVENTORY = "/inventory";
     public static final String ADD = "/add";
     public static final String REMOVE = "/remove";

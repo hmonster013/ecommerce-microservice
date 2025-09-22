@@ -16,13 +16,6 @@ CREATE TABLE categories (
     CONSTRAINT fk_category_parent FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
--- Create indexes
-CREATE INDEX idx_categories_parent_id ON categories(parent_id);
-CREATE INDEX idx_categories_slug ON categories(slug);
-CREATE INDEX idx_categories_level ON categories(level);
-CREATE INDEX idx_categories_active ON categories(is_active);
-CREATE INDEX idx_categories_display_order ON categories(display_order);
-
 -- Create trigger to update updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
