@@ -99,39 +99,128 @@ INSERT INTO product_images (product_id, url, alt_text, image_type, display_order
 (5, 'https://example.com/images/samsung-s24-main.jpg', 'Samsung Galaxy S24 front view', 'MAIN', 1, 'Samsung Galaxy S24');
 
 -- Update inventory (will be automatically created by trigger, but let's update with realistic values)
-UPDATE inventory SET 
-    quantity = 50, 
-    min_stock_level = 10, 
+-- iPhone 15 Pro: Total 45 units (20+15+10 from variants)
+UPDATE inventory SET
+    quantity = 45,
+    min_stock_level = 10,
     reorder_point = 15,
     reorder_quantity = 25
 WHERE product_id = 1;
 
-UPDATE inventory SET 
-    quantity = 25, 
-    min_stock_level = 5, 
+-- MacBook Air M2: Total 20 units (12+8 from variants)
+UPDATE inventory SET
+    quantity = 20,
+    min_stock_level = 5,
     reorder_point = 8,
     reorder_quantity = 15
 WHERE product_id = 2;
 
-UPDATE inventory SET 
-    quantity = 100, 
-    min_stock_level = 20, 
+-- Sony Headphones: No variants, keep original
+UPDATE inventory SET
+    quantity = 100,
+    min_stock_level = 20,
     reorder_point = 30,
     reorder_quantity = 50
 WHERE product_id = 3;
 
-UPDATE inventory SET 
-    quantity = 75, 
-    min_stock_level = 15, 
+-- Nike Shoes: Total 90 units (15+20+25+18+12 from variants)
+UPDATE inventory SET
+    quantity = 90,
+    min_stock_level = 15,
     reorder_point = 25,
     reorder_quantity = 40
 WHERE product_id = 4;
 
-UPDATE inventory SET 
-    quantity = 40, 
-    min_stock_level = 8, 
+-- Samsung Galaxy S24: No variants, keep original
+UPDATE inventory SET
+    quantity = 40,
+    min_stock_level = 8,
     reorder_point = 12,
     reorder_quantity = 20
 WHERE product_id = 5;
+
+-- Insert variant inventory data (will be automatically created by trigger, but let's update with realistic values)
+-- iPhone 15 Pro storage variants inventory
+UPDATE variant_inventory SET
+    quantity = 20,
+    min_stock_level = 5,
+    reorder_point = 8,
+    reorder_quantity = 15,
+    sku = 'IPHONE-15-PRO-128'
+WHERE variant_id = 1;
+
+UPDATE variant_inventory SET
+    quantity = 15,
+    min_stock_level = 3,
+    reorder_point = 5,
+    reorder_quantity = 10,
+    sku = 'IPHONE-15-PRO-256'
+WHERE variant_id = 2;
+
+UPDATE variant_inventory SET
+    quantity = 10,
+    min_stock_level = 2,
+    reorder_point = 3,
+    reorder_quantity = 8,
+    sku = 'IPHONE-15-PRO-512'
+WHERE variant_id = 3;
+
+-- MacBook Air M2 storage variants inventory
+UPDATE variant_inventory SET
+    quantity = 12,
+    min_stock_level = 2,
+    reorder_point = 4,
+    reorder_quantity = 8,
+    sku = 'MACBOOK-AIR-M2-256'
+WHERE variant_id = 7;
+
+UPDATE variant_inventory SET
+    quantity = 8,
+    min_stock_level = 1,
+    reorder_point = 2,
+    reorder_quantity = 5,
+    sku = 'MACBOOK-AIR-M2-512'
+WHERE variant_id = 8;
+
+-- Nike shoes size variants inventory
+UPDATE variant_inventory SET
+    quantity = 15,
+    min_stock_level = 3,
+    reorder_point = 5,
+    reorder_quantity = 10,
+    sku = 'NIKE-AIRMAX270-WHITE-8'
+WHERE variant_id = 15;
+
+UPDATE variant_inventory SET
+    quantity = 20,
+    min_stock_level = 4,
+    reorder_point = 6,
+    reorder_quantity = 12,
+    sku = 'NIKE-AIRMAX270-WHITE-9'
+WHERE variant_id = 16;
+
+UPDATE variant_inventory SET
+    quantity = 25,
+    min_stock_level = 5,
+    reorder_point = 8,
+    reorder_quantity = 15,
+    sku = 'NIKE-AIRMAX270-WHITE-10'
+WHERE variant_id = 17;
+
+UPDATE variant_inventory SET
+    quantity = 18,
+    min_stock_level = 3,
+    reorder_point = 6,
+    reorder_quantity = 12,
+    sku = 'NIKE-AIRMAX270-WHITE-11'
+WHERE variant_id = 18;
+
+UPDATE variant_inventory SET
+    quantity = 12,
+    min_stock_level = 2,
+    reorder_point = 4,
+    reorder_quantity = 8,
+    sku = 'NIKE-AIRMAX270-WHITE-12'
+WHERE variant_id = 19;
 
 
