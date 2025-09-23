@@ -1,481 +1,70 @@
 package org.de013.shoppingcart.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.de013.common.security.UserContext;
-import org.de013.common.security.UserContextHolder;
-import org.de013.common.dto.ProductDetailDto;
 import org.de013.shoppingcart.dto.request.AddToCartDto;
 import org.de013.shoppingcart.dto.request.RemoveFromCartDto;
 import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
 import org.de013.shoppingcart.dto.response.CartItemResponseDto;
-import org.de013.shoppingcart.entity.Cart;
-
-import org.de013.shoppingcart.entity.CartItem;
-import org.de013.shoppingcart.entity.RedisCart;
-
-import org.de013.shoppingcart.repository.jpa.CartItemRepository;
-import org.de013.shoppingcart.repository.jpa.CartRepository;
-import org.de013.shoppingcart.repository.redis.RedisCartRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
- * Cart Item Service
+ * Cart Item Service Interface
  * Handles cart item operations including add, update, remove, and validation
  */
-@Service
-@RequiredArgsConstructor
-@Slf4j
-@Transactional
-public class CartItemService {
-
-    private final CartItemRepository cartItemRepository;
-    private final CartRepository cartRepository;
-    private final RedisCartRepository redisCartRepository;
-
-    private final ProductCatalogClient productCatalogClient;
+public interface CartItemService {
 
     // ==================== ITEM ADDITION ====================
 
     /**
      * Add item to cart
      */
-    public CartItemResponseDto addItemToCart(Long cartId, AddToCartDto request) {
-        try {
-            log.debug("Adding item {} to cart {}", request.getProductId(), cartId);
-            
-            // Get cart
-            Optional<Cart> cartOpt = cartRepository.findByIdWithItems(cartId);
-            if (cartOpt.isEmpty()) {
-                throw new RuntimeException("Cart not found");
-            }
-            
-            Cart cart = cartOpt.get();
-            
-            // Validate cart can be modified
-            if (!cart.canBeModified()) {
-                log.error("Cart {} cannot be modified - Status: {}, Expired: {}, ExpiresAt: {}",
-                         cartId, cart.getStatus(), cart.isExpired(), cart.getExpiresAt());
-                throw new RuntimeException("Cart cannot be modified");
-            }
-            
-            // Debug logging
-            log.debug("Request unit price: {}", request.getUnitPrice());
-            log.debug("Request details: productId={}, quantity={}, variantId={}",
-                     request.getProductId(), request.getQuantity(), request.getVariantId());
-
-            // Get product information
-            ProductDetailDto productInfo = productCatalogClient.getProductInfo(request.getProductId());
-            if (productInfo == null) {
-                throw new RuntimeException("Product not found");
-            }
-
-            log.debug("Product info - current price: {}, original price: {}",
-                     productInfo.getCurrentPrice(), productInfo.getOriginalPrice());
-            
-            // Check if item already exists
-            Optional<CartItem> existingItem = cartItemRepository.findByCartIdAndProductIdAndVariantId(
-                cartId, request.getProductId(), request.getVariantId());
-            
-            CartItem cartItem;
-            if (existingItem.isPresent()) {
-                // Update existing item
-                cartItem = existingItem.get();
-                int newQuantity = cartItem.getQuantity() + request.getQuantity();
-                cartItem.updateQuantity(newQuantity);
-            } else {
-                // Create new item
-                cartItem = createNewCartItem(cart, request, productInfo);
-                cart.addItem(cartItem);
-            }
-            
-            // Basic validation - check required fields
-            if (cartItem.getQuantity() <= 0) {
-                throw new RuntimeException("Invalid quantity");
-            }
-            
-            // Save item
-            cartItem = cartItemRepository.save(cartItem);
-            
-            // Update Redis
-            updateRedisCart(cartId);
-            
-            // Analytics removed for basic functionality
-            
-            log.info("Added item {} to cart {}, quantity: {}", 
-                    request.getProductId(), cartId, request.getQuantity());
-            
-            return convertToResponseDto(cartItem);
-            
-        } catch (Exception e) {
-            log.error("Error adding item to cart: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to add item to cart", e);
-        }
-    }
+    CartItemResponseDto addItemToCart(Long cartId, AddToCartDto request);
 
     // ==================== ITEM UPDATES ====================
 
     /**
      * Update cart item
      */
-    public CartItemResponseDto updateCartItem(UpdateCartItemDto request) {
-        try {
-            log.debug("Updating cart item {}", request.getItemId());
-            
-            Optional<CartItem> itemOpt = cartItemRepository.findById(request.getItemId());
-            if (itemOpt.isEmpty()) {
-                throw new RuntimeException("Cart item not found");
-            }
-            
-            CartItem item = itemOpt.get();
-            
-            // Validate cart can be modified
-            if (!item.getCart().canBeModified()) {
-                throw new RuntimeException("Cart cannot be modified");
-            }
-            
-            // Update fields
-            if (request.getQuantity() != null) {
-                item.updateQuantity(request.getQuantity());
-            }
-            
-            if (request.getUnitPrice() != null && request.isPriceUpdate()) {
-                item.updateUnitPrice(request.getUnitPrice());
-            }
-            
-            if (request.getSpecialInstructions() != null) {
-                item.setSpecialInstructions(request.getSpecialInstructions());
-            }
-            
-            if (request.getIsGift() != null) {
-                item.setIsGift(request.getIsGift());
-                item.setGiftMessage(request.getGiftMessage());
-                item.setGiftWrapType(request.getGiftWrapType());
-            }
-            
-            // Basic validation - check required fields
-            if (item.getQuantity() <= 0) {
-                throw new RuntimeException("Invalid quantity");
-            }
-            
-            // Save item
-            item = cartItemRepository.save(item);
-            
-            // Update Redis
-            updateRedisCart(item.getCart().getId());
-            
-            log.info("Updated cart item {}", request.getItemId());
-            return convertToResponseDto(item);
-            
-        } catch (Exception e) {
-            log.error("Error updating cart item: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to update cart item", e);
-        }
-    }
+    CartItemResponseDto updateCartItem(UpdateCartItemDto request);
 
     // ==================== ITEM REMOVAL ====================
 
     /**
      * Remove item from cart
      */
-    public boolean removeItemFromCart(RemoveFromCartDto request) {
-        try {
-            log.debug("Removing item from cart: {}", request);
-            
-            if (request.isSingleRemoval()) {
-                return removeSingleItem(request.getItemId(), request.getUserId(), request.getSessionId());
-            } else if (request.isBulkRemoval()) {
-                return removeBulkItems(request.getItemIds(), request.getUserId(), request.getSessionId());
-            } else if (request.isRemoveAll()) {
-                return removeAllItemsFromCart(request.getUserId(), request.getSessionId());
-            } else if (request.isByProduct()) {
-                return removeItemsByProduct(request.getProductId(), request.getVariantId(), 
-                                          request.getUserId(), request.getSessionId());
-            }
-            
-            return false;
-            
-        } catch (Exception e) {
-            log.error("Error removing item from cart: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-
-    /**
-     * Remove single item
-     */
-    private boolean removeSingleItem(Long itemId, String userId, String sessionId) {
-        Optional<CartItem> itemOpt = cartItemRepository.findById(itemId);
-        if (itemOpt.isEmpty()) {
-            return false;
-        }
-        
-        CartItem item = itemOpt.get();
-        Long cartId = item.getCart().getId();
-        
-        // Analytics removed for basic functionality
-        
-        // Soft delete item
-        cartItemRepository.batchSoftDelete(List.of(itemId), LocalDateTime.now(), "USER_REQUEST");
-        
-        // Update Redis
-        updateRedisCart(cartId);
-        
-        log.info("Removed item {} from cart {}", itemId, cartId);
-        return true;
-    }
-
-    /**
-     * Remove multiple items
-     */
-    private boolean removeBulkItems(List<Long> itemIds, String userId, String sessionId) {
-        if (itemIds == null || itemIds.isEmpty()) {
-            return false;
-        }
-        
-        // Get items for analytics
-        List<CartItem> items = cartItemRepository.findAllById(itemIds);
-        
-        // Analytics removed for basic functionality
-        
-        // Soft delete items
-        cartItemRepository.batchSoftDelete(itemIds, LocalDateTime.now(), "USER_REQUEST");
-        
-        // Update Redis for affected carts
-        items.stream()
-                .map(item -> item.getCart().getId())
-                .distinct()
-                .forEach(this::updateRedisCart);
-        
-        log.info("Removed {} items from cart", itemIds.size());
-        return true;
-    }
+    boolean removeItemFromCart(RemoveFromCartDto request);
 
     /**
      * Remove all items from cart
      */
-    public boolean removeAllItems(Long cartId) {
-        try {
-            cartItemRepository.batchSoftDeleteByCartId(cartId, LocalDateTime.now(), "CLEAR_CART");
-            updateRedisCart(cartId);
-            log.info("Removed all items from cart {}", cartId);
-            return true;
-        } catch (Exception e) {
-            log.error("Error removing all items from cart {}: {}", cartId, e.getMessage(), e);
-            return false;
-        }
-    }
-
-    private boolean removeAllItemsFromCart(String userId, String sessionId) {
-        // Get cart first
-        Optional<Cart> cartOpt = getCartByUserOrSession(userId, sessionId);
-        if (cartOpt.isEmpty()) {
-            return false;
-        }
-        
-        return removeAllItems(cartOpt.get().getId());
-    }
-
-    /**
-     * Remove items by product
-     */
-    private boolean removeItemsByProduct(String productId, String variantId, String userId, String sessionId) {
-        Optional<Cart> cartOpt = getCartByUserOrSession(userId, sessionId);
-        if (cartOpt.isEmpty()) {
-            return false;
-        }
-        
-        Optional<CartItem> itemOpt = cartItemRepository.findByCartIdAndProductIdAndVariantId(
-            cartOpt.get().getId(), productId, variantId);
-        
-        if (itemOpt.isPresent()) {
-            return removeSingleItem(itemOpt.get().getId(), userId, sessionId);
-        }
-        
-        return false;
-    }
+    boolean removeAllItems(Long cartId);
 
     // ==================== CART CALCULATIONS ====================
 
     /**
      * Calculate cart subtotal
      */
-    public BigDecimal calculateCartSubtotal(Long cartId) {
-        try {
-            return cartItemRepository.getCartSubtotal(cartId);
-        } catch (Exception e) {
-            log.error("Error calculating cart subtotal: {}", e.getMessage(), e);
-            return BigDecimal.ZERO;
-        }
-    }
+    BigDecimal calculateCartSubtotal(Long cartId);
 
     /**
      * Get cart item count
      */
-    public int getCartItemCount(Long cartId) {
-        try {
-            return (int) cartItemRepository.countByCartId(cartId);
-        } catch (Exception e) {
-            log.error("Error getting cart item count: {}", e.getMessage(), e);
-            return 0;
-        }
-    }
+    int getCartItemCount(Long cartId);
 
     /**
      * Get cart total quantity
      */
-    public int getCartTotalQuantity(Long cartId) {
-        try {
-            return cartItemRepository.getTotalQuantityByCartId(cartId);
-        } catch (Exception e) {
-            log.error("Error getting cart total quantity: {}", e.getMessage(), e);
-            return 0;
-        }
-    }
+    int getCartTotalQuantity(Long cartId);
 
     /**
      * Get cart items
      */
-    public List<CartItemResponseDto> getCartItems(Long cartId) {
-        try {
-            List<CartItem> items = cartItemRepository.findByCartId(cartId);
-            return items.stream()
-                    .map(this::convertToResponseDto)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Error getting cart items: {}", e.getMessage(), e);
-            return List.of();
-        }
-    }
+    List<CartItemResponseDto> getCartItems(Long cartId);
 
     /**
      * Get cart item by ID
      */
-    public Optional<CartItemResponseDto> getCartItemById(Long itemId) {
-        try {
-            log.debug("Getting cart item by ID: {}", itemId);
-
-            Optional<CartItem> itemOpt = cartItemRepository.findById(itemId);
-            if (itemOpt.isEmpty()) {
-                log.debug("Cart item not found: {}", itemId);
-                return Optional.empty();
-            }
-
-            CartItem item = itemOpt.get();
-
-            // Check if item is deleted
-            if (item.isDeleted()) {
-                log.debug("Cart item {} is deleted", itemId);
-                return Optional.empty();
-            }
-
-            return Optional.of(convertToResponseDto(item));
-
-        } catch (Exception e) {
-            log.error("Error getting cart item by ID {}: {}", itemId, e.getMessage(), e);
-            return Optional.empty();
-        }
-    }
-
-    // ==================== HELPER METHODS ====================
-
-    private CartItem createNewCartItem(Cart cart, AddToCartDto request, ProductDetailDto productInfo) {
-        BigDecimal finalUnitPrice = request.getUnitPrice() != null ? request.getUnitPrice() :
-                                   (productInfo.getCurrentPrice() != null ? productInfo.getCurrentPrice() : BigDecimal.ZERO);
-
-        log.debug("Creating cart item - request.unitPrice: {}, productInfo.currentPrice: {}, final unitPrice: {}",
-                 request.getUnitPrice(), productInfo.getCurrentPrice(), finalUnitPrice);
-
-        return CartItem.builder()
-                .cart(cart)
-                .productId(request.getProductId())
-                .productSku(productInfo.getSku())
-                .productName(productInfo.getName())
-                .productDescription(productInfo.getDescription())
-                .productImageUrl(productInfo.getImageUrl())
-                .categoryId(productInfo.getCategoryId())
-                .categoryName(productInfo.getCategoryName())
-                .quantity(request.getQuantity())
-                .unitPrice(finalUnitPrice)
-                .originalPrice(productInfo.getOriginalPrice())
-                .currency("USD")
-                .variantId(request.getVariantId())
-                .specialInstructions(request.getSpecialInstructions())
-                .isGift(request.getIsGift())
-                .giftMessage(request.getGiftMessage())
-                .giftWrapType(request.getGiftWrapType())
-                .addedAt(LocalDateTime.now())
-                .availabilityStatus("AVAILABLE")
-                .stockQuantity(productInfo.getStockQuantity())
-                .build();
-    }
-
-    private void updateRedisCart(Long cartId) {
-        try {
-            Optional<RedisCart> redisCartOpt = redisCartRepository.findByCartId(cartId);
-            if (redisCartOpt.isPresent()) {
-                RedisCart redisCart = redisCartOpt.get();
-                
-                // Recalculate totals
-                redisCart.setSubtotal(calculateCartSubtotal(cartId));
-                redisCart.setItemCount(getCartItemCount(cartId));
-                redisCart.setTotalQuantity(getCartTotalQuantity(cartId));
-                redisCart.updateCartTotals();
-                
-                redisCartRepository.save(redisCart);
-            }
-        } catch (Exception e) {
-            log.error("Error updating Redis cart: {}", e.getMessage(), e);
-        }
-    }
-
-    private Optional<Cart> getCartByUserOrSession(String userId, String sessionId) {
-        if (userId != null) {
-            return cartRepository.findByUserIdAndStatus(userId, org.de013.shoppingcart.entity.enums.CartStatus.ACTIVE);
-        } else if (sessionId != null) {
-            return cartRepository.findBySessionIdAndStatus(sessionId, org.de013.shoppingcart.entity.enums.CartStatus.ACTIVE);
-        }
-        return Optional.empty();
-    }
-
-    private CartItemResponseDto convertToResponseDto(CartItem item) {
-        return CartItemResponseDto.builder()
-                .itemId(item.getId())
-                .productId(item.getProductId())
-                .productSku(item.getProductSku())
-                .productName(item.getProductName())
-                .productDescription(item.getProductDescription())
-                .productImageUrl(item.getProductImageUrl())
-                .categoryId(item.getCategoryId())
-                .categoryName(item.getCategoryName())
-                .quantity(item.getQuantity())
-                .unitPrice(item.getUnitPrice())
-                .originalPrice(item.getOriginalPrice())
-                .discountAmount(item.getDiscountAmount())
-                .totalPrice(item.getTotalPrice())
-                .currency(item.getCurrency())
-                .variantId(item.getVariantId())
-                .variantAttributes(item.getVariantAttributes())
-                .specialInstructions(item.getSpecialInstructions())
-                .isGift(item.getIsGift())
-                .giftMessage(item.getGiftMessage())
-                .giftWrapType(item.getGiftWrapType())
-                .giftWrapPrice(item.getGiftWrapPrice())
-                .addedAt(item.getAddedAt())
-                .availabilityStatus(item.getAvailabilityStatus())
-                .stockQuantity(item.getStockQuantity())
-                .priceChanged(item.getPriceChanged())
-                .build();
-    }
-
-
-
-
+    Optional<CartItemResponseDto> getCartItemById(Long itemId);
 }

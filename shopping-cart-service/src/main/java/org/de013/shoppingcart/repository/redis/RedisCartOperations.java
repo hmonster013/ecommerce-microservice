@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.shoppingcart.entity.RedisCart;
-import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.entity.enums.CartType;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
@@ -111,21 +110,64 @@ public class RedisCartOperations {
      */
     public boolean deleteCart(String cartKey) {
         try {
-            // Get cart first to clean up indexes
-            Optional<RedisCart> cartOpt = getCart(cartKey);
-            
+            // Get cart first to clean up indexes (with error handling for corrupted data)
+            Optional<RedisCart> cartOpt = Optional.empty();
+            try {
+                cartOpt = getCart(cartKey);
+            } catch (Exception e) {
+                log.warn("Could not deserialize cart {}, proceeding with deletion: {}", cartKey, e.getMessage());
+            }
+
             // Delete main cart data
             Boolean deleted = redisTemplate.delete(cartKey);
-            
-            // Clean up indexes if cart existed
+
+            // Clean up indexes if cart was successfully deserialized
             if (cartOpt.isPresent()) {
                 cleanupIndexEntries(cartOpt.get());
             }
-            
+
             log.debug("Deleted cart: {}", cartKey);
             return Boolean.TRUE.equals(deleted);
         } catch (Exception e) {
             log.error("Error deleting cart from Redis: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Delete cart by user/session parameters with comprehensive cleanup
+     * Handles potential key collisions and ensures complete cleanup
+     */
+    public boolean deleteCartByIdentifiers(String userId, String sessionId) {
+        try {
+            boolean anyDeleted = false;
+
+            // Delete user cart if userId provided
+            if (userId != null && !userId.trim().isEmpty()) {
+                String userCartKey = USER_CART_PREFIX + userId;
+                if (deleteCart(userCartKey)) {
+                    anyDeleted = true;
+                    log.debug("Deleted user cart: {}", userCartKey);
+                }
+            }
+
+            // Delete session cart if sessionId provided
+            if (sessionId != null && !sessionId.trim().isEmpty()) {
+                String sessionCartKey = SESSION_CART_PREFIX + sessionId;
+                if (deleteCart(sessionCartKey)) {
+                    anyDeleted = true;
+                    log.debug("Deleted session cart: {}", sessionCartKey);
+                }
+            }
+
+            // Additional cleanup: remove any orphaned activity/metrics data
+            if (anyDeleted) {
+                cleanupRelatedData(userId, sessionId);
+            }
+
+            return anyDeleted;
+        } catch (Exception e) {
+            log.error("Error deleting cart by identifiers userId={}, sessionId={}: {}", userId, sessionId, e.getMessage(), e);
             return false;
         }
     }
@@ -329,6 +371,7 @@ public class RedisCartOperations {
 
     /**
      * Generate cart key based on cart data
+     * Priority: userId > sessionId > cartId
      */
     private String generateCartKey(RedisCart cart) {
         if (cart.getUserId() != null) {
@@ -337,6 +380,22 @@ public class RedisCartOperations {
             return SESSION_CART_PREFIX + cart.getSessionId();
         } else {
             return CART_PREFIX + cart.getCartId();
+        }
+    }
+
+    /**
+     * Generate cart key based on parameters
+     * Utility method for consistent key generation
+     */
+    public String generateCartKey(String userId, String sessionId, Long cartId) {
+        if (userId != null && !userId.trim().isEmpty()) {
+            return USER_CART_PREFIX + userId;
+        } else if (sessionId != null && !sessionId.trim().isEmpty()) {
+            return SESSION_CART_PREFIX + sessionId;
+        } else if (cartId != null) {
+            return CART_PREFIX + cartId;
+        } else {
+            throw new IllegalArgumentException("At least one identifier (userId, sessionId, or cartId) must be provided");
         }
     }
 
@@ -389,7 +448,38 @@ public class RedisCartOperations {
     }
 
     /**
-     * Convert object to RedisCart
+     * Clean up related data (activity, metrics, etc.)
+     */
+    private void cleanupRelatedData(String userId, String sessionId) {
+        try {
+            // Clean up activity data
+            if (userId != null) {
+                String userActivityKey = CART_ACTIVITY_PREFIX + "user:" + userId;
+                redisTemplate.delete(userActivityKey);
+            }
+            if (sessionId != null) {
+                String sessionActivityKey = CART_ACTIVITY_PREFIX + "session:" + sessionId;
+                redisTemplate.delete(sessionActivityKey);
+            }
+
+            // Clean up metrics data
+            if (userId != null) {
+                String userMetricsKey = CART_METRICS_PREFIX + "user:" + userId;
+                redisTemplate.delete(userMetricsKey);
+            }
+            if (sessionId != null) {
+                String sessionMetricsKey = CART_METRICS_PREFIX + "session:" + sessionId;
+                redisTemplate.delete(sessionMetricsKey);
+            }
+
+            log.debug("Cleaned up related data for userId={}, sessionId={}", userId, sessionId);
+        } catch (Exception e) {
+            log.error("Error cleaning up related data: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Convert object to RedisCart with improved error handling
      */
     private RedisCart convertToRedisCart(Object cartData) {
         try {
@@ -406,4 +496,8 @@ public class RedisCartOperations {
             return null;
         }
     }
+
+
+
+
 }

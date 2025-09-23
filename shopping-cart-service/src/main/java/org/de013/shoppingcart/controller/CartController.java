@@ -264,7 +264,7 @@ public class CartController {
             log.debug("Basic validation for cart: {}", cartId);
 
             // Simple validation - check if cart exists and has items
-            Optional<CartResponseDto> cartOpt = cartService.getActiveCart(null, null);
+            Optional<CartResponseDto> cartOpt = cartService.getCartById(cartId);
             if (cartOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }

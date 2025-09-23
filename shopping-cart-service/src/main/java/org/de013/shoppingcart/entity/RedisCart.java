@@ -1,6 +1,7 @@
 package org.de013.shoppingcart.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.entity.enums.CartType;
@@ -18,6 +19,7 @@ import java.util.List;
  * RedisCart Entity
  * Represents a shopping cart stored in Redis for high-performance operations
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @RedisHash(value = "cart", timeToLive = 86400) // 24 hours default TTL
 @Getter
 @Setter
@@ -365,11 +367,11 @@ public class RedisCart implements Serializable {
             redisCart.setItems(redisItems);
         }
 
-        // Set Redis ID
+        // Set Redis ID - consistent with generateCartKey() logic
         if (cart.getUserId() != null) {
-            redisCart.setId("user:" + cart.getUserId());
+            redisCart.setId("user_cart:" + cart.getUserId());
         } else if (cart.getSessionId() != null) {
-            redisCart.setId("session:" + cart.getSessionId());
+            redisCart.setId("session_cart:" + cart.getSessionId());
         } else {
             redisCart.setId("cart:" + cart.getId());
         }

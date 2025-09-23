@@ -38,6 +38,12 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     Optional<Cart> findBySessionIdAndStatus(@Param("sessionId") String sessionId, @Param("status") CartStatus status);
 
     /**
+     * Find active cart by user ID and session ID
+     */
+    @Query("SELECT c FROM Cart c WHERE c.userId = :userId AND c.sessionId = :sessionId AND c.status = :status AND c.deleted = false")
+    Optional<Cart> findByUserIdAndSessionIdAndStatus(@Param("userId") String userId, @Param("sessionId") String sessionId, @Param("status") CartStatus status);
+
+    /**
      * Find cart by user ID and cart type
      */
     @Query("SELECT c FROM Cart c WHERE c.userId = :userId AND c.cartType = :cartType AND c.deleted = false")
