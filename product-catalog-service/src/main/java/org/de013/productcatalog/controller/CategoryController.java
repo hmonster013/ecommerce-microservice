@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
 
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.category.*;
@@ -18,7 +19,6 @@ import org.de013.productcatalog.service.ProductService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +29,7 @@ import java.util.List;
 @RequestMapping(ApiPaths.CATEGORIES)
 @RequiredArgsConstructor
 @Tag(name = "Categories", description = "Category management API")
-public class CategoryController {
+public class CategoryController extends BaseController {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CategoryController.class);
 
@@ -50,9 +50,9 @@ public class CategoryController {
             @RequestParam(required = false, defaultValue = "true") Boolean activeOnly) {
         
         log.info("Getting categories with activeOnly: {}", activeOnly);
-        
+
         PageResponse<CategoryResponseDto> categories = categoryService.getAllCategories(pageable);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(categories));
+        return ok(categories);
     }
 
     @Operation(summary = "Get category by ID", description = "Retrieve detailed category information by ID")
@@ -64,11 +64,11 @@ public class CategoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> getCategoryById(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id) {
-        
+
         log.info("Getting category by ID: {}", id);
-        
+
         CategoryResponseDto category = categoryService.getCategoryById(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category));
+        return ok(category);
     }
 
     @Operation(summary = "Get category by slug", description = "Retrieve detailed category information by slug")
@@ -80,11 +80,11 @@ public class CategoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> getCategoryBySlug(
             @Parameter(description = "Category slug", required = true)
             @PathVariable String slug) {
-        
+
         log.info("Getting category by slug: {}", slug);
-        
+
         CategoryResponseDto category = categoryService.getCategoryBySlug(slug);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category));
+        return ok(category);
     }
 
     @Operation(summary = "[ADMIN] Create new category", description = "Create a new category")
@@ -102,8 +102,7 @@ public class CategoryController {
         log.info("Creating new category with name: {}", createDto.getName());
 
         CategoryResponseDto category = categoryService.createCategory(createDto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(org.de013.common.dto.ApiResponse.success(category, "Category created successfully"));
+        return created(category, "Category created successfully");
     }
 
     @Operation(summary = "[ADMIN] Update category", description = "Update existing category")
@@ -125,7 +124,7 @@ public class CategoryController {
         log.info("Updating category with ID: {}", id);
 
         CategoryResponseDto category = categoryService.updateCategory(id, updateDto);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category, "Category updated successfully"));
+        return updated(category, "Category updated successfully");
     }
 
     @Operation(summary = "[ADMIN] Delete category", description = "Delete category")
@@ -137,14 +136,14 @@ public class CategoryController {
     })
     @DeleteMapping(ApiPaths.ID_PARAM)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Void>> deleteCategory(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id) {
 
         log.info("Deleting category with ID: {}", id);
 
         categoryService.deleteCategory(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(null, "Category deleted successfully"));
+        return deleted("Category deleted successfully");
     }
 
     @Operation(summary = "Get products in category", description = "Retrieve products belonging to a specific category")
@@ -163,7 +162,7 @@ public class CategoryController {
         log.info("Getting products in category ID: {}", id);
         
         PageResponse<ProductSummaryDto> products = productService.getProductsByCategory(id, pageable);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(products));
+        return ok(products);
     }
 
     @Operation(summary = "Get category tree", description = "Retrieve hierarchical category tree structure")
@@ -174,21 +173,21 @@ public class CategoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategoryTreeDto>>> getCategoryTree(
             @Parameter(description = "Maximum depth level to retrieve")
             @RequestParam(required = false) @Min(0) Integer maxLevel) {
-        
+
         log.info("Getting category tree with maxLevel: {}", maxLevel);
-        
+
         List<CategoryTreeDto> categoryTree = categoryService.getCategoryTree(maxLevel);
-        
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(categoryTree));
+
+        return ok(categoryTree);
     }
 
     @Operation(summary = "Get root categories", description = "Retrieve top-level categories")
     @GetMapping(ApiPaths.ROOT)
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategorySummaryDto>>> getRootCategories() {
         log.info("Getting root categories");
-        
+
         List<CategorySummaryDto> categories = categoryService.getRootCategories();
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(categories));
+        return ok(categories);
     }
 
     @Operation(summary = "Get child categories", description = "Retrieve child categories of a parent category")
@@ -200,7 +199,7 @@ public class CategoryController {
         log.info("Getting child categories for parent ID: {}", id);
         
         List<CategorySummaryDto> children = categoryService.getChildCategories(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(children));
+        return ok(children);
     }
 
     @Operation(summary = "Get category path", description = "Get breadcrumb path for a category")
@@ -208,11 +207,11 @@ public class CategoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategorySummaryDto>>> getCategoryPath(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id) {
-        
+
         log.info("Getting category path for ID: {}", id);
-        
+
         List<CategorySummaryDto> path = categoryService.getCategoryPath(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(path));
+        return ok(path);
     }
 
     @Operation(summary = "Search categories", description = "Search categories by name")
@@ -220,11 +219,11 @@ public class CategoryController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategorySummaryDto>>> searchCategories(
             @Parameter(description = "Search query", required = true)
             @RequestParam String q) {
-        
+
         log.info("Searching categories with query: {}", q);
-        
+
         List<CategorySummaryDto> categories = categoryService.searchCategories(q);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(categories));
+        return ok(categories);
     }
 
     // Admin endpoints
@@ -239,8 +238,7 @@ public class CategoryController {
 
         CategoryResponseDto category = categoryService.updateCategoryStatus(id, active);
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category,
-                "Category status updated successfully"));
+        return updated(category, "Category status updated successfully");
     }
 
     @Operation(summary = "[ADMIN] Move category", description = "Move category to different parent")
@@ -255,7 +253,6 @@ public class CategoryController {
         categoryService.moveCategory(id, newParentId);
         CategoryResponseDto category = categoryService.getCategoryById(id);
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(category,
-                "Category moved successfully"));
+        return updated(category, "Category moved successfully");
     }
 }

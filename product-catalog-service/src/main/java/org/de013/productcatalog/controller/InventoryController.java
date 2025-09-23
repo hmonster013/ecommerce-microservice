@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
 import org.de013.productcatalog.dto.inventory.InventoryResponseDto;
 import org.de013.productcatalog.service.InventoryService;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("")
 @RequiredArgsConstructor
 @Tag(name = "Inventory", description = "Inventory management API")
-public class InventoryController {
+public class InventoryController extends BaseController {
 
     private final InventoryService inventoryService;
 
@@ -35,7 +36,7 @@ public class InventoryController {
         log.info("Getting inventory for product ID: {}", id);
         
         InventoryResponseDto inventory = inventoryService.getInventoryByProductId(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory));
+        return ok(inventory);
     }
 
     // Stock Management Operations
@@ -51,8 +52,7 @@ public class InventoryController {
         log.info("Adding {} stock to product ID: {}", quantity, id);
 
         InventoryResponseDto inventory = inventoryService.addStock(id, quantity);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory,
-                String.format("Added %d units to inventory", quantity)));
+        return updated(inventory, String.format("Added %d units to inventory", quantity));
     }
 
     @Operation(summary = "[ADMIN] Remove stock", description = "Remove stock from a product")
@@ -67,8 +67,7 @@ public class InventoryController {
         log.info("Removing {} stock from product ID: {}", quantity, id);
 
         InventoryResponseDto inventory = inventoryService.removeStock(id, quantity);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory,
-                String.format("Removed %d units from inventory", quantity)));
+        return updated(inventory, String.format("Removed %d units from inventory", quantity));
     }
 
     @Operation(summary = "[ADMIN] Set stock level", description = "Set exact stock level for a product")
@@ -83,8 +82,7 @@ public class InventoryController {
         log.info("Setting stock to {} for product ID: {}", quantity, id);
 
         InventoryResponseDto inventory = inventoryService.setStock(id, quantity);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory,
-                String.format("Set inventory to %d units", quantity)));
+        return updated(inventory, String.format("Set inventory to %d units", quantity));
     }
 
     // Stock Reservation Operations
@@ -104,7 +102,7 @@ public class InventoryController {
                 String.format("Reserved %d units successfully", quantity) :
                 "Failed to reserve stock - insufficient quantity";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(success, message));
+        return success(success, message);
     }
 
     @Operation(summary = "[ADMIN] Release reserved stock", description = "Release previously reserved stock")
@@ -123,7 +121,7 @@ public class InventoryController {
                 String.format("Released %d reserved units successfully", quantity) :
                 "Failed to release reserved stock";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(success, message));
+        return success(success, message);
     }
 
     @Operation(summary = "[ADMIN] Fulfill order", description = "Fulfill an order by reducing stock and reserved quantity")
@@ -142,7 +140,7 @@ public class InventoryController {
                 String.format("Fulfilled order for %d units successfully", quantity) :
                 "Failed to fulfill order - insufficient reserved stock";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(success, message));
+        return success(success, message);
     }
 
     @Operation(summary = "Check stock availability", description = "Check if sufficient stock is available for an order")
@@ -160,6 +158,6 @@ public class InventoryController {
                 "Stock is available" :
                 "Insufficient stock available";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(available, message));
+        return success(available, message);
     }
 }

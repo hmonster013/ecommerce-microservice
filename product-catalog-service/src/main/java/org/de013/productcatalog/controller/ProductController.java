@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.de013.common.dto.PageResponse;
@@ -22,9 +23,7 @@ import org.de013.productcatalog.service.ProductService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,7 +33,7 @@ import java.util.List;
 @RequestMapping(ApiPaths.PRODUCTS)
 @RequiredArgsConstructor
 @Tag(name = "Products", description = "Product management API")
-public class ProductController {
+public class ProductController extends BaseController {
 
     private final ProductService productService;
 
@@ -72,7 +71,7 @@ public class ProductController {
             products = productService.getAllProducts(pageable);
         }
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(products));
+        return ok(products);
     }
 
     @Operation(summary = "Get product by ID", description = "Retrieve detailed product information by ID")
@@ -88,7 +87,7 @@ public class ProductController {
         log.info("Getting product by ID: {}", id);
 
         ProductDetailDto product = productService.getProductById(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(product));
+        return ok(product);
     }
 
     @Operation(summary = "Get product by SKU", description = "Retrieve detailed product information by SKU")
@@ -104,7 +103,7 @@ public class ProductController {
         log.info("Getting product by SKU: {}", sku);
 
         ProductDetailDto product = productService.getProductBySku(sku);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(product));
+        return ok(product);
     }
 
     @Operation(
@@ -210,8 +209,7 @@ public class ProductController {
         log.info("Creating new product with SKU: {}", createDto.getSku());
 
         ProductResponseDto product = productService.createProduct(createDto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(org.de013.common.dto.ApiResponse.success(product, "Product created successfully"));
+        return created(product, "Product created successfully");
     }
 
     @Operation(summary = "[ADMIN] Update product", description = "Update existing product")
@@ -223,16 +221,16 @@ public class ProductController {
 
         log.info("Updating product with ID: {}", id);
         ProductResponseDto product = productService.updateProduct(id, updateDto);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(product, "Product updated successfully"));
+        return updated(product, "Product updated successfully");
     }
 
     @Operation(summary = "[ADMIN] Delete product", description = "Delete product")
     @DeleteMapping(ApiPaths.ID_PARAM)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteProduct(@PathVariable Long id) {
         log.info("Deleting product with ID: {}", id);
         productService.deleteProduct(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(null, "Product deleted successfully"));
+        return deleted("Product deleted successfully");
     }
 
     @Operation(summary = "Get featured products")
@@ -245,7 +243,7 @@ public class ProductController {
         List<ProductSummaryDto> products = categoryId != null ?
             productService.getFeaturedProductsByCategory(categoryId, limit) :
             productService.getFeaturedProducts(limit);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(products));
+        return ok(products);
     }
 
 
@@ -257,6 +255,6 @@ public class ProductController {
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         log.info("Simple search for query: {}", q);
         PageResponse<ProductSummaryDto> results = productService.searchProductsSimple(q, pageable);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(results));
+        return ok(results);
     }
 }

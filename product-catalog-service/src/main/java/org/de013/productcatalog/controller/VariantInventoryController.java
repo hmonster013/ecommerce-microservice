@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
 import org.de013.productcatalog.dto.inventory.VariantInventoryDto;
 import org.de013.productcatalog.service.VariantInventoryService;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ import java.util.List;
 @RequestMapping("")
 @RequiredArgsConstructor
 @Tag(name = "Variant Inventory", description = "Product variant inventory management API")
-public class VariantInventoryController {
+public class VariantInventoryController extends BaseController {
 
     private final VariantInventoryService variantInventoryService;
 
@@ -37,7 +38,7 @@ public class VariantInventoryController {
         log.info("Getting inventory for variant ID: {}", id);
         
         VariantInventoryDto inventory = variantInventoryService.getVariantInventoryByVariantId(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory));
+        return ok(inventory);
     }
 
     @Operation(summary = "Get all variant inventories for product", description = "Retrieve inventory information for all variants of a product")
@@ -53,7 +54,7 @@ public class VariantInventoryController {
         log.info("Getting variant inventories for product ID: {}", id);
         
         List<VariantInventoryDto> inventories = variantInventoryService.getVariantInventoriesByProductId(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventories));
+        return ok(inventories);
     }
 
     // Stock Management Operations
@@ -69,8 +70,7 @@ public class VariantInventoryController {
         log.info("Adding {} stock to variant ID: {}", quantity, id);
 
         VariantInventoryDto inventory = variantInventoryService.addStock(id, quantity);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory,
-                String.format("Added %d units to variant inventory", quantity)));
+        return updated(inventory, String.format("Added %d units to variant inventory", quantity));
     }
 
     @Operation(summary = "[ADMIN] Remove stock from variant", description = "Remove stock from a specific variant")
@@ -85,8 +85,7 @@ public class VariantInventoryController {
         log.info("Removing {} stock from variant ID: {}", quantity, id);
 
         VariantInventoryDto inventory = variantInventoryService.removeStock(id, quantity);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory,
-                String.format("Removed %d units from variant inventory", quantity)));
+        return updated(inventory, String.format("Removed %d units from variant inventory", quantity));
     }
 
     @Operation(summary = "[ADMIN] Set stock level for variant", description = "Set exact stock level for a specific variant")
@@ -101,8 +100,7 @@ public class VariantInventoryController {
         log.info("Setting stock to {} for variant ID: {}", quantity, id);
 
         VariantInventoryDto inventory = variantInventoryService.setStock(id, quantity);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inventory,
-                String.format("Set variant inventory to %d units", quantity)));
+        return updated(inventory, String.format("Set variant inventory to %d units", quantity));
     }
 
     // Stock Reservation Operations
@@ -122,7 +120,7 @@ public class VariantInventoryController {
                 String.format("Reserved %d units successfully", quantity) :
                 "Failed to reserve stock - insufficient quantity";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(success, message));
+        return success(success, message);
     }
 
     @Operation(summary = "[ADMIN] Release reserved variant stock", description = "Release previously reserved stock for a specific variant")
@@ -141,7 +139,7 @@ public class VariantInventoryController {
                 String.format("Released %d reserved units successfully", quantity) :
                 "Failed to release reserved stock";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(success, message));
+        return success(success, message);
     }
 
     @Operation(summary = "[ADMIN] Fulfill order for variant", description = "Fulfill an order by reducing stock and reserved quantity for a specific variant")
@@ -160,7 +158,7 @@ public class VariantInventoryController {
                 String.format("Fulfilled order for %d units successfully", quantity) :
                 "Failed to fulfill order - insufficient reserved stock";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(success, message));
+        return success(success, message);
     }
 
     @Operation(summary = "Check variant stock availability", description = "Check if sufficient stock is available for a specific variant")
@@ -178,7 +176,7 @@ public class VariantInventoryController {
                 "Stock is available" :
                 "Insufficient stock available";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(available, message));
+        return success(available, message);
     }
 
     @Operation(summary = "Get available quantity for variant", description = "Get the available quantity for a specific variant")
@@ -190,8 +188,7 @@ public class VariantInventoryController {
         log.info("Getting available quantity for variant ID: {}", id);
 
         Integer availableQuantity = variantInventoryService.getAvailableQuantity(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(availableQuantity,
-                String.format("Available quantity: %d units", availableQuantity)));
+        return success(availableQuantity, String.format("Available quantity: %d units", availableQuantity));
     }
 
     @Operation(summary = "Check if variant is in stock", description = "Check if a specific variant is in stock")
@@ -205,6 +202,6 @@ public class VariantInventoryController {
         boolean inStock = variantInventoryService.isVariantInStock(id);
         String message = inStock ? "Variant is in stock" : "Variant is out of stock";
 
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(inStock, message));
+        return success(inStock, message);
     }
 }

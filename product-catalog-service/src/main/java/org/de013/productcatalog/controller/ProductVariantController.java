@@ -9,11 +9,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
+import org.de013.common.controller.BaseController;
 import org.de013.productcatalog.dto.product.ProductVariantDto;
 import org.de013.productcatalog.dto.variant.ProductVariantCreateDto;
 import org.de013.productcatalog.dto.variant.ProductVariantUpdateDto;
 import org.de013.productcatalog.service.ProductVariantService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Product Variants", description = "Product variant management operations")
-public class ProductVariantController {
+public class ProductVariantController extends BaseController {
 
     private final ProductVariantService variantService;
 
@@ -48,8 +48,7 @@ public class ProductVariantController {
         log.info("Creating variant for product ID: {}", id);
 
         ProductVariantDto variant = variantService.createVariant(id, createDto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(org.de013.common.dto.ApiResponse.success(variant, "Variant created successfully"));
+        return created(variant, "Variant created successfully");
     }
 
     @Operation(summary = "[ADMIN] Update product variant", description = "Update an existing product variant")
@@ -70,7 +69,7 @@ public class ProductVariantController {
         log.info("Updating variant with ID: {}", variantId);
 
         ProductVariantDto variant = variantService.updateVariant(variantId, updateDto);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(variant, "Variant updated successfully"));
+        return updated(variant, "Variant updated successfully");
     }
 
     @Operation(summary = "[ADMIN] Delete product variant", description = "Delete a product variant")
@@ -80,14 +79,14 @@ public class ProductVariantController {
     })
     @DeleteMapping(ApiPaths.VARIANTS + ApiPaths.VARIANT_ID_PARAM)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Void>> deleteVariant(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteVariant(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long variantId) {
 
         log.info("Deleting variant with ID: {}", variantId);
 
         variantService.deleteVariant(variantId);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(null, "Variant deleted successfully"));
+        return deleted("Variant deleted successfully");
     }
 
     @Operation(summary = "Get product variant by ID", description = "Retrieve detailed variant information by ID")
@@ -103,7 +102,7 @@ public class ProductVariantController {
         log.info("Getting variant by ID: {}", variantId);
 
         ProductVariantDto variant = variantService.getVariantById(variantId);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(variant));
+        return ok(variant);
     }
 
     @Operation(summary = "Get product variant by SKU", description = "Retrieve variant information by SKU")
@@ -119,7 +118,7 @@ public class ProductVariantController {
         log.info("Getting variant by SKU: {}", sku);
 
         ProductVariantDto variant = variantService.getVariantBySku(sku);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(variant));
+        return ok(variant);
     }
 
     @Operation(summary = "Get product variants", description = "Get all variants for a specific product")
@@ -135,6 +134,6 @@ public class ProductVariantController {
         log.info("Getting variants for product ID: {}", id);
 
         List<ProductVariantDto> variants = variantService.getVariantsByProductId(id);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(variants));
+        return ok(variants);
     }
 }
