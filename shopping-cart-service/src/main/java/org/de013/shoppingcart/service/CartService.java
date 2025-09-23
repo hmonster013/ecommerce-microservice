@@ -1,6 +1,5 @@
 package org.de013.shoppingcart.service;
 
-import org.de013.shoppingcart.dto.request.ApplyCouponDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 
 import java.util.Optional;
@@ -45,18 +44,6 @@ public interface CartService {
      */
     void updateLastActivity(Long cartId);
 
-    // ==================== COUPON MANAGEMENT ====================
-
-    /**
-     * Apply coupon to cart
-     */
-    CartResponseDto applyCoupon(ApplyCouponDto request);
-
-    /**
-     * Remove coupon from cart
-     */
-    CartResponseDto removeCoupon(String userId, String sessionId);
-
     // ==================== CART LIFECYCLE ====================
 
     /**
@@ -68,4 +55,9 @@ public interface CartService {
      * Delete cart
      */
     boolean deleteCart(String userId, String sessionId);
+
+    /**
+     * Cleanup duplicate active carts (admin operation)
+     */
+    int cleanupDuplicateActiveCarts();
 }

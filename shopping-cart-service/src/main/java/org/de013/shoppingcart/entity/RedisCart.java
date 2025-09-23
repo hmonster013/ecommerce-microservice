@@ -65,7 +65,6 @@ public class RedisCart implements Serializable {
     private BigDecimal totalAmount;
     private Integer itemCount;
     private Integer totalQuantity;
-    private String couponCode;
     private String notes;
 
     @Builder.Default
@@ -316,7 +315,6 @@ public class RedisCart implements Serializable {
                 .totalAmount(totalAmount)
                 .itemCount(itemCount)
                 .totalQuantity(totalQuantity)
-                .couponCode(couponCode)
                 .notes(notes)
                 .lastActivityAt(lastActivityAt)
                 .build();
@@ -355,7 +353,6 @@ public class RedisCart implements Serializable {
                 .totalAmount(cart.getTotalAmount())
                 .itemCount(cart.getItemCount())
                 .totalQuantity(cart.getTotalQuantity())
-                .couponCode(cart.getCouponCode())
                 .notes(cart.getNotes())
                 .build();
 

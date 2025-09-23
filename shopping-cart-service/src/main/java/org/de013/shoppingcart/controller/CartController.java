@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
-import org.de013.shoppingcart.dto.request.ApplyCouponDto;
 import org.de013.shoppingcart.dto.request.CartCheckoutDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.service.CartService;
@@ -27,7 +26,7 @@ import java.util.Optional;
 
 /**
  * REST Controller for Cart Operations
- * Provides endpoints for cart management including CRUD operations, coupon management, and checkout preparation
+ * Provides endpoints for cart management including CRUD operations and checkout preparation
  */
 @RestController
 @RequestMapping(ApiPaths.CARTS)
@@ -193,68 +192,7 @@ public class CartController extends BaseController {
         }
     }
 
-    // ==================== COUPON MANAGEMENT ====================
 
-    @Operation(summary = "[ADMIN] Apply coupon", description = "Apply a discount coupon code to the cart. The coupon will be validated and discount applied if valid")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Coupon applied successfully",
-                content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid coupon or request"),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping(ApiPaths.COUPON)
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> applyCoupon(
-            @Parameter(description = "Coupon application request", required = true)
-            @Valid @RequestBody ApplyCouponDto request) {
-
-        try {
-            log.debug("Applying coupon {} to cart", request.getCouponCode());
-
-            CartResponseDto cart = cartService.applyCoupon(request);
-            return ok(cart);
-
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not found")) {
-                return notFound("Cart not found");
-            }
-            log.error("Error applying coupon: {}", e.getMessage(), e);
-            return badRequest("Invalid coupon or request");
-        }
-    }
-
-    @Operation(summary = "[ADMIN] Remove coupon", description = "Remove the currently applied coupon from the cart and recalculate totals without discount")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Coupon removed successfully",
-                content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @DeleteMapping(ApiPaths.COUPON)
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> removeCoupon(
-            @Parameter(description = "User ID for authenticated users")
-            @RequestParam(required = false) String userId,
-            @Parameter(description = "Session ID for guest users")
-            @RequestParam(required = false) String sessionId) {
-
-        try {
-            log.debug("Removing coupon from cart for user: {}, session: {}", userId, sessionId);
-
-            if (userId == null && sessionId == null) {
-                return badRequest("User ID or session ID is required");
-            }
-
-            CartResponseDto cart = cartService.removeCoupon(userId, sessionId);
-            return ok(cart);
-
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not found")) {
-                return notFound("Cart not found");
-            }
-            log.error("Error removing coupon: {}", e.getMessage(), e);
-            return internalServerError("Failed to remove coupon");
-        }
-    }
 
     // ==================== CART VALIDATION ====================
 

@@ -85,9 +85,6 @@ public class Cart extends BaseEntity {
     @Builder.Default
     private Integer totalQuantity = 0;
 
-    @Column(name = "coupon_code", length = 50)
-    private String couponCode;
-
     @Column(name = "notes", length = 1000)
     private String notes;
 

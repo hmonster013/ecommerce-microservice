@@ -61,7 +61,6 @@ public final class ApiPaths {
     public static final String QUANTITY = "/quantity";
     public static final String GIFT = "/gift";
     public static final String CLEAR = "/clear";
-    public static final String COUPON = "/coupon";
     public static final String CHECKOUT = "/checkout";
     public static final String PREPARE = "/prepare";
 

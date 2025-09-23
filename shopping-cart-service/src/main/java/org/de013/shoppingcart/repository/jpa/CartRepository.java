@@ -160,22 +160,7 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
                         @Param("totalQuantity") Integer totalQuantity, 
                         @Param("currentTime") LocalDateTime currentTime);
 
-    /**
-     * Apply coupon to cart
-     */
-    @Modifying
-    @Query("UPDATE Cart c SET c.couponCode = :couponCode, c.discountAmount = :discountAmount, c.updatedAt = :currentTime WHERE c.id = :cartId")
-    int applyCoupon(@Param("cartId") Long cartId, 
-                   @Param("couponCode") String couponCode, 
-                   @Param("discountAmount") BigDecimal discountAmount, 
-                   @Param("currentTime") LocalDateTime currentTime);
 
-    /**
-     * Remove coupon from cart
-     */
-    @Modifying
-    @Query("UPDATE Cart c SET c.couponCode = null, c.discountAmount = 0, c.updatedAt = :currentTime WHERE c.id = :cartId")
-    int removeCoupon(@Param("cartId") Long cartId, @Param("currentTime") LocalDateTime currentTime);
 
     /**
      * Convert cart to order

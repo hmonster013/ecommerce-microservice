@@ -358,7 +358,6 @@ public class CartMergeServiceImpl implements CartMergeService {
                 .totalAmount(cart.getTotalAmount())
                 .itemCount(cart.getItemCount())
                 .totalQuantity(cart.getTotalQuantity())
-                .couponCode(cart.getCouponCode())
                 .createdAt(cart.getCreatedAt())
                 .updatedAt(cart.getUpdatedAt())
                 .lastActivityAt(cart.getLastActivityAt())

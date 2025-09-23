@@ -2,7 +2,6 @@ package org.de013.shoppingcart.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.shoppingcart.dto.request.ApplyCouponDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.entity.Cart;
 import org.de013.shoppingcart.entity.RedisCart;
@@ -256,84 +255,7 @@ public class CartServiceImpl implements CartService {
         }
     }
 
-    // ==================== COUPON MANAGEMENT ====================
 
-    /**
-     * Apply coupon to cart
-     */
-    @Override
-    public CartResponseDto applyCoupon(ApplyCouponDto request) {
-        try {
-            log.debug("Applying coupon {} to cart", request.getCouponCode());
-            
-            // Get cart
-            Optional<CartResponseDto> cartOpt = getActiveCart(request.getUserId(), request.getSessionId());
-            if (cartOpt.isEmpty()) {
-                throw new RuntimeException("Cart not found");
-            }
-            
-            CartResponseDto cart = cartOpt.get();
-            
-            // Validate coupon (placeholder - would integrate with coupon service)
-            BigDecimal discountAmount = calculateCouponDiscount(request.getCouponCode(), cart.getSubtotal());
-            
-            // Apply coupon
-            cartRepository.applyCoupon(cart.getCartId(), request.getCouponCode(), discountAmount, LocalDateTime.now());
-            
-            // Update Redis
-            Optional<RedisCart> redisCart = redisCartRepository.findByCartId(cart.getCartId());
-            if (redisCart.isPresent()) {
-                RedisCart rCart = redisCart.get();
-                rCart.setCouponCode(request.getCouponCode());
-                rCart.setDiscountAmount(discountAmount);
-                rCart.updateCartTotals();
-                redisCartRepository.save(rCart);
-            }
-            
-            log.info("Applied coupon {} to cart {}, discount: {}", 
-                    request.getCouponCode(), cart.getCartId(), discountAmount);
-            
-            return getCartById(cart.getCartId()).orElse(cart);
-            
-        } catch (Exception e) {
-            log.error("Error applying coupon: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to apply coupon", e);
-        }
-    }
-
-    /**
-     * Remove coupon from cart
-     */
-    @Override
-    public CartResponseDto removeCoupon(String userId, String sessionId) {
-        try {
-            Optional<CartResponseDto> cartOpt = getActiveCart(userId, sessionId);
-            if (cartOpt.isEmpty()) {
-                throw new RuntimeException("Cart not found");
-            }
-            
-            CartResponseDto cart = cartOpt.get();
-            
-            // Remove coupon
-            cartRepository.removeCoupon(cart.getCartId(), LocalDateTime.now());
-            
-            // Update Redis
-            Optional<RedisCart> redisCart = redisCartRepository.findByCartId(cart.getCartId());
-            if (redisCart.isPresent()) {
-                RedisCart rCart = redisCart.get();
-                rCart.setCouponCode(null);
-                rCart.setDiscountAmount(BigDecimal.ZERO);
-                rCart.updateCartTotals();
-                redisCartRepository.save(rCart);
-            }
-            
-            return getCartById(cart.getCartId()).orElse(cart);
-
-        } catch (Exception e) {
-            log.error("Error removing coupon: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to remove coupon", e);
-        }
-    }
 
     // ==================== CART LIFECYCLE ====================
 
@@ -670,7 +592,6 @@ public class CartServiceImpl implements CartService {
                 .totalAmount(cart.getTotalAmount())
                 .itemCount(cart.getItemCount())
                 .totalQuantity(cart.getTotalQuantity())
-                .couponCode(cart.getCouponCode())
                 .createdAt(cart.getCreatedAt())
                 .updatedAt(cart.getUpdatedAt())
                 .lastActivityAt(cart.getLastActivityAt())
@@ -690,7 +611,6 @@ public class CartServiceImpl implements CartService {
                 .totalAmount(redisCart.getTotalAmount())
                 .itemCount(redisCart.getItemCount())
                 .totalQuantity(redisCart.getTotalQuantity())
-                .couponCode(redisCart.getCouponCode())
                 .createdAt(redisCart.getCreatedAt())
                 .updatedAt(redisCart.getUpdatedAt())
                 .lastActivityAt(redisCart.getLastActivityAt())
@@ -698,11 +618,4 @@ public class CartServiceImpl implements CartService {
                 .build();
     }
 
-    private BigDecimal calculateCouponDiscount(String couponCode, BigDecimal subtotal) {
-        // Placeholder implementation - would integrate with coupon service
-        if ("SAVE20".equals(couponCode)) {
-            return subtotal.multiply(BigDecimal.valueOf(0.20));
-        }
-        return BigDecimal.ZERO;
-    }
 }

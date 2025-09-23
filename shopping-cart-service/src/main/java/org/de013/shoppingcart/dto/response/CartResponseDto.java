@@ -95,10 +95,6 @@ public class CartResponseDto {
     @JsonProperty("total_quantity")
     private Integer totalQuantity;
 
-    @Schema(description = "Applied coupon code", example = "SAVE20")
-    @JsonProperty("coupon_code")
-    private String couponCode;
-
     @Schema(description = "Cart notes", example = "Birthday gift order")
     private String notes;
 
