@@ -10,20 +10,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.controller.BaseController;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.ApplyCouponDto;
 import org.de013.shoppingcart.dto.request.CartCheckoutDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
-
-
 import org.de013.shoppingcart.service.CartService;
 import org.de013.common.constant.ApiPaths;
-
-
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -39,7 +34,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Cart Management", description = "APIs for shopping cart operations")
-public class CartController {
+public class CartController extends BaseController {
 
     private final CartService cartService;
 
@@ -56,7 +51,7 @@ public class CartController {
     })
     @GetMapping
     // Allow both authenticated users and guests with sessionId
-    public ResponseEntity<CartResponseDto> getOrCreateCart(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> getOrCreateCart(
             @Parameter(description = "Session ID for guest users (optional if user is authenticated)")
             @RequestParam(required = false) String sessionId) {
 
@@ -74,20 +69,19 @@ public class CartController {
             }
 
             if (userId == null && sessionId == null) {
-                return ResponseEntity.badRequest().build();
+                return badRequest("User ID or session ID is required");
             }
 
             CartResponseDto cart = cartService.getOrCreateCart(userId, sessionId);
 
             // Return 201 if cart was just created, 200 if existing
-            HttpStatus status = cart.getCreatedAt().equals(cart.getUpdatedAt()) ?
-                HttpStatus.CREATED : HttpStatus.OK;
+            boolean isNewCart = cart.getCreatedAt().equals(cart.getUpdatedAt());
 
-            return ResponseEntity.status(status).body(cart);
+            return isNewCart ? created(cart, "Cart created successfully") : ok(cart);
 
         } catch (Exception e) {
             log.error("Error getting or creating cart: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to get or create cart");
         }
     }
 
@@ -99,21 +93,21 @@ public class CartController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.CART_ID_PARAM)
-    public ResponseEntity<CartResponseDto> getCartById(
-            @Parameter(description = "Cart ID", required = true) 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> getCartById(
+            @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
-        
+
         try {
             log.debug("Getting cart by ID: {}", cartId);
-            
+
             Optional<CartResponseDto> cart = cartService.getCartById(cartId);
-            
-            return cart.map(ResponseEntity::ok)
-                      .orElse(ResponseEntity.notFound().build());
-            
+
+            return cart.map(this::ok)
+                      .orElse(notFound("Cart not found"));
+
         } catch (Exception e) {
             log.error("Error getting cart by ID {}: {}", cartId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to retrieve cart");
         }
     }
 
@@ -127,59 +121,59 @@ public class CartController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping(ApiPaths.CLEAR)
-    public ResponseEntity<CartResponseDto> clearCart(
-            @Parameter(description = "User ID for authenticated users") 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> clearCart(
+            @Parameter(description = "User ID for authenticated users")
             @RequestParam(required = false) String userId,
-            @Parameter(description = "Session ID for guest users") 
+            @Parameter(description = "Session ID for guest users")
             @RequestParam(required = false) String sessionId) {
-        
+
         try {
             log.debug("Clearing cart for user: {}, session: {}", userId, sessionId);
-            
+
             if (userId == null && sessionId == null) {
-                return ResponseEntity.badRequest().build();
+                return badRequest("User ID or session ID is required");
             }
-            
+
             CartResponseDto cart = cartService.clearCart(userId, sessionId);
-            return ResponseEntity.ok(cart);
-            
+            return ok(cart);
+
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart not found");
             }
             log.error("Error clearing cart: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to clear cart");
         }
     }
 
     @Operation(summary = "[ADMIN] Delete cart", description = "Permanently delete the entire cart and all its items. This action cannot be undone")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Cart deleted successfully"),
+        @ApiResponse(responseCode = "200", description = "Cart deleted successfully"),
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping
-    public ResponseEntity<Void> deleteCart(
-            @Parameter(description = "User ID for authenticated users") 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCart(
+            @Parameter(description = "User ID for authenticated users")
             @RequestParam(required = false) String userId,
-            @Parameter(description = "Session ID for guest users") 
+            @Parameter(description = "Session ID for guest users")
             @RequestParam(required = false) String sessionId) {
-        
+
         try {
             log.debug("Deleting cart for user: {}, session: {}", userId, sessionId);
-            
+
             if (userId == null && sessionId == null) {
-                return ResponseEntity.badRequest().build();
+                return badRequest("User ID or session ID is required");
             }
-            
+
             boolean deleted = cartService.deleteCart(userId, sessionId);
-            
-            return deleted ? ResponseEntity.noContent().build() : 
-                           ResponseEntity.notFound().build();
-            
+
+            return deleted ? deleted("Cart deleted successfully") :
+                           notFound("Cart not found");
+
         } catch (Exception e) {
             log.error("Error deleting cart: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to delete cart");
         }
     }
 
@@ -194,22 +188,22 @@ public class CartController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping(ApiPaths.COUPON)
-    public ResponseEntity<CartResponseDto> applyCoupon(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> applyCoupon(
             @Parameter(description = "Coupon application request", required = true)
             @Valid @RequestBody ApplyCouponDto request) {
-        
+
         try {
             log.debug("Applying coupon {} to cart", request.getCouponCode());
-            
+
             CartResponseDto cart = cartService.applyCoupon(request);
-            return ResponseEntity.ok(cart);
-            
+            return ok(cart);
+
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart not found");
             }
             log.error("Error applying coupon: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().build();
+            return badRequest("Invalid coupon or request");
         }
     }
 
@@ -221,28 +215,28 @@ public class CartController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping(ApiPaths.COUPON)
-    public ResponseEntity<CartResponseDto> removeCoupon(
-            @Parameter(description = "User ID for authenticated users") 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> removeCoupon(
+            @Parameter(description = "User ID for authenticated users")
             @RequestParam(required = false) String userId,
-            @Parameter(description = "Session ID for guest users") 
+            @Parameter(description = "Session ID for guest users")
             @RequestParam(required = false) String sessionId) {
-        
+
         try {
             log.debug("Removing coupon from cart for user: {}, session: {}", userId, sessionId);
-            
+
             if (userId == null && sessionId == null) {
-                return ResponseEntity.badRequest().build();
+                return badRequest("User ID or session ID is required");
             }
-            
+
             CartResponseDto cart = cartService.removeCoupon(userId, sessionId);
-            return ResponseEntity.ok(cart);
-            
+            return ok(cart);
+
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart not found");
             }
             log.error("Error removing coupon: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to remove coupon");
         }
     }
 
@@ -256,7 +250,7 @@ public class CartController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.CART_ID_PARAM + ApiPaths.VALIDATE)
-    public ResponseEntity<Map<String, Object>> validateCart(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> validateCart(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
 
@@ -266,7 +260,7 @@ public class CartController {
             // Simple validation - check if cart exists and has items
             Optional<CartResponseDto> cartOpt = cartService.getCartById(cartId);
             if (cartOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart not found");
             }
 
             CartResponseDto cart = cartOpt.get();
@@ -280,14 +274,14 @@ public class CartController {
                 "isCheckoutReady", isValid
             );
 
-            return ResponseEntity.ok(validation);
+            return ok(validation);
 
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart not found");
             }
             log.error("Error validating cart {}: {}", cartId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to validate cart");
         }
     }
 
@@ -304,20 +298,20 @@ public class CartController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping(ApiPaths.CHECKOUT + ApiPaths.PREPARE)
-    public ResponseEntity<Map<String, Object>> prepareCheckout(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> prepareCheckout(
             @Parameter(description = "Checkout preparation request", required = true)
             @Valid @RequestBody CartCheckoutDto request) {
-        
+
         try {
             log.debug("Preparing checkout for cart");
-            
+
             // This would be implemented in CartService
             // For now, return a placeholder response
-            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-            
+            return internalServerError("Checkout preparation not implemented yet");
+
         } catch (Exception e) {
             log.error("Error preparing checkout: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to prepare checkout");
         }
     }
 
@@ -325,24 +319,24 @@ public class CartController {
 
     @Operation(summary = "[ADMIN] Update cart activity", description = "Update the last activity timestamp for the cart to prevent automatic expiration. Useful for keeping active carts alive during user sessions")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Activity updated successfully"),
+        @ApiResponse(responseCode = "200", description = "Activity updated successfully"),
         @ApiResponse(responseCode = "404", description = "Cart not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping(ApiPaths.CART_ID_PARAM + ApiPaths.ACTIVITY)
-    public ResponseEntity<Void> updateCartActivity(
-            @Parameter(description = "Cart ID", required = true) 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> updateCartActivity(
+            @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
-        
+
         try {
             log.debug("Updating activity for cart: {}", cartId);
-            
+
             cartService.updateLastActivity(cartId);
-            return ResponseEntity.noContent().build();
-            
+            return ok("Cart activity updated successfully");
+
         } catch (Exception e) {
             log.error("Error updating cart activity for {}: {}", cartId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to update cart activity");
         }
     }
 }

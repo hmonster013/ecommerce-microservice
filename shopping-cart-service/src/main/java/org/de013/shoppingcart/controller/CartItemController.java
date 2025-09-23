@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.controller.BaseController;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.AddToCartDto;
@@ -20,7 +21,6 @@ import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.service.CartItemService;
 import org.de013.shoppingcart.service.CartService;
 import org.de013.common.constant.ApiPaths;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,7 +37,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Cart Items", description = "APIs for cart item management")
-public class CartItemController {
+public class CartItemController extends BaseController {
 
     private final CartItemService cartItemService;
     private final CartService cartService;
@@ -55,10 +55,10 @@ public class CartItemController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
-    public ResponseEntity<CartItemResponseDto> addItemToCart(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> addItemToCart(
             @Parameter(description = "Add to cart request", required = true)
             @Valid @RequestBody AddToCartDto request) {
-        
+
         try {
             log.debug("Adding item {} to cart", request.getProductId());
 
@@ -83,18 +83,18 @@ public class CartItemController {
             // Update cart totals
             cartService.updateCartTotals(cart.getCartId());
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(cartItem);
-            
+            return created(cartItem, "Item added to cart successfully");
+
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart or product not found");
             } else if (e.getMessage().contains("already exists")) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+                return conflict("Item already exists in cart");
             } else if (e.getMessage().contains("validation")) {
-                return ResponseEntity.unprocessableEntity().build();
+                return unprocessableEntity("Validation failed", e.getMessage());
             }
             log.error("Error adding item to cart: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to add item to cart");
         }
     }
 
@@ -110,36 +110,36 @@ public class CartItemController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping(ApiPaths.ITEM_ID_PARAM)
-    public ResponseEntity<CartItemResponseDto> updateCartItem(
-            @Parameter(description = "Cart item ID", required = true) 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateCartItem(
+            @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
             @Parameter(description = "Update cart item request", required = true)
             @Valid @RequestBody UpdateCartItemDto request) {
-        
+
         try {
             log.debug("Updating cart item: {}", itemId);
-            
+
             // Set item ID from path parameter
             request.setItemId(itemId);
-            
+
             CartItemResponseDto cartItem = cartItemService.updateCartItem(request);
-            
+
             // Update cart totals if quantity or price changed
             if (request.getQuantity() != null || request.getUnitPrice() != null) {
                 // Get cart ID from the updated item (would need to be returned from service)
                 // cartService.updateCartTotals(cartItem.getCartId());
             }
-            
-            return ResponseEntity.ok(cartItem);
-            
+
+            return updated(cartItem, "Cart item updated successfully");
+
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart item not found");
             } else if (e.getMessage().contains("validation")) {
-                return ResponseEntity.unprocessableEntity().build();
+                return unprocessableEntity("Validation failed", e.getMessage());
             }
             log.error("Error updating cart item {}: {}", itemId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to update cart item");
         }
     }
 
@@ -152,33 +152,33 @@ public class CartItemController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping(ApiPaths.ITEM_ID_PARAM + ApiPaths.QUANTITY)
-    public ResponseEntity<CartItemResponseDto> updateItemQuantity(
-            @Parameter(description = "Cart item ID", required = true) 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateItemQuantity(
+            @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
             @Parameter(description = "New quantity", required = true)
             @RequestParam Integer quantity) {
-        
+
         try {
             log.debug("Updating quantity for cart item {}: {}", itemId, quantity);
-            
+
             if (quantity <= 0) {
-                return ResponseEntity.badRequest().build();
+                return badRequest("Quantity must be greater than 0");
             }
-            
+
             UpdateCartItemDto request = UpdateCartItemDto.builder()
                     .itemId(itemId)
                     .quantity(quantity)
                     .build();
-            
+
             CartItemResponseDto cartItem = cartItemService.updateCartItem(request);
-            return ResponseEntity.ok(cartItem);
-            
+            return updated(cartItem, "Item quantity updated successfully");
+
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart item not found");
             }
             log.error("Error updating item quantity for {}: {}", itemId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to update item quantity");
         }
     }
 
@@ -186,55 +186,55 @@ public class CartItemController {
 
     @Operation(summary = "Remove item from cart", description = "Remove a specific item from the cart")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Item removed successfully"),
+        @ApiResponse(responseCode = "200", description = "Item removed successfully"),
         @ApiResponse(responseCode = "404", description = "Cart item not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping(ApiPaths.ITEM_ID_PARAM)
-    public ResponseEntity<Void> removeCartItem(
-            @Parameter(description = "Cart item ID", required = true) 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> removeCartItem(
+            @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId) {
-        
+
         try {
             log.debug("Removing cart item: {}", itemId);
-            
+
             RemoveFromCartDto request = RemoveFromCartDto.builder()
                     .itemId(itemId)
                     .build();
-            
+
             boolean removed = cartItemService.removeItemFromCart(request);
-            
-            return removed ? ResponseEntity.noContent().build() : 
-                           ResponseEntity.notFound().build();
-            
+
+            return removed ? deleted("Item removed from cart successfully") :
+                           notFound("Cart item not found");
+
         } catch (Exception e) {
             log.error("Error removing cart item {}: {}", itemId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to remove cart item");
         }
     }
 
     @Operation(summary = "Remove multiple items", description = "Remove multiple items from cart in bulk")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Items removed successfully"),
+        @ApiResponse(responseCode = "200", description = "Items removed successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping(ApiPaths.BULK)
-    public ResponseEntity<Void> removeMultipleItems(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> removeMultipleItems(
             @Parameter(description = "Bulk removal request", required = true)
             @Valid @RequestBody RemoveFromCartDto request) {
-        
+
         try {
             log.debug("Removing multiple cart items");
-            
+
             boolean removed = cartItemService.removeItemFromCart(request);
-            
-            return removed ? ResponseEntity.noContent().build() : 
-                           ResponseEntity.badRequest().build();
-            
+
+            return removed ? deleted("Items removed from cart successfully") :
+                           badRequest("Invalid request data");
+
         } catch (Exception e) {
             log.error("Error removing multiple cart items: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to remove cart items");
         }
     }
 
@@ -247,19 +247,19 @@ public class CartItemController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.CART + ApiPaths.CART_ID_PARAM)
-    public ResponseEntity<List<CartItemResponseDto>> getCartItems(
-            @Parameter(description = "Cart ID", required = true) 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<List<CartItemResponseDto>>> getCartItems(
+            @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
-        
+
         try {
             log.debug("Getting items for cart: {}", cartId);
-            
+
             List<CartItemResponseDto> items = cartItemService.getCartItems(cartId);
-            return ResponseEntity.ok(items);
-            
+            return ok(items);
+
         } catch (Exception e) {
             log.error("Error getting cart items for cart {}: {}", cartId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to retrieve cart items");
         }
     }
 
@@ -271,7 +271,7 @@ public class CartItemController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.ITEM_ID_PARAM)
-    public ResponseEntity<CartItemResponseDto> getCartItemById(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> getCartItemById(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId) {
 
@@ -280,12 +280,12 @@ public class CartItemController {
 
             Optional<CartItemResponseDto> cartItem = cartItemService.getCartItemById(itemId);
 
-            return cartItem.map(ResponseEntity::ok)
-                          .orElse(ResponseEntity.notFound().build());
+            return cartItem.map(this::ok)
+                          .orElse(notFound("Cart item not found"));
 
         } catch (Exception e) {
             log.error("Error getting cart item {}: {}", itemId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to retrieve cart item");
         }
     }
 
@@ -298,19 +298,19 @@ public class CartItemController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{itemId}/validate")
-    public ResponseEntity<Map<String, Object>> validateCartItem(
-            @Parameter(description = "Cart item ID", required = true) 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> validateCartItem(
+            @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId) {
-        
+
         try {
             log.debug("Validating cart item: {}", itemId);
-            
+
             // This would need to be implemented
-            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-            
+            return internalServerError("Cart item validation not implemented yet");
+
         } catch (Exception e) {
             log.error("Error validating cart item {}: {}", itemId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to validate cart item");
         }
     }
 
@@ -324,31 +324,31 @@ public class CartItemController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping(ApiPaths.ITEM_ID_PARAM + ApiPaths.GIFT)
-    public ResponseEntity<CartItemResponseDto> updateGiftOptions(
-            @Parameter(description = "Cart item ID", required = true) 
+    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateGiftOptions(
+            @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
             @Parameter(description = "Gift options", required = true)
             @RequestBody Map<String, Object> giftOptions) {
-        
+
         try {
             log.debug("Updating gift options for cart item: {}", itemId);
-            
+
             UpdateCartItemDto request = UpdateCartItemDto.builder()
                     .itemId(itemId)
                     .isGift((Boolean) giftOptions.get("isGift"))
                     .giftMessage((String) giftOptions.get("giftMessage"))
                     .giftWrapType((String) giftOptions.get("giftWrapType"))
                     .build();
-            
+
             CartItemResponseDto cartItem = cartItemService.updateCartItem(request);
-            return ResponseEntity.ok(cartItem);
-            
+            return updated(cartItem, "Gift options updated successfully");
+
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
+                return notFound("Cart item not found");
             }
             log.error("Error updating gift options for item {}: {}", itemId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return internalServerError("Failed to update gift options");
         }
     }
 }
