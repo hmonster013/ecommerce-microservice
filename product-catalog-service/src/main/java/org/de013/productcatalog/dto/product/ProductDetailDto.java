@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import org.de013.productcatalog.dto.category.CategorySummaryDto;
-import org.de013.productcatalog.dto.inventory.InventoryResponseDto;
+import org.de013.common.dto.InventoryDto;
 
 import org.de013.productcatalog.entity.enums.ProductStatus;
 
@@ -88,7 +88,7 @@ public class ProductDetailDto {
     private List<ProductVariantGroupDto> variantGroups;
 
     @Schema(description = "Inventory information")
-    private InventoryResponseDto inventory;
+    private InventoryDto inventory;
 
 
 

@@ -1,7 +1,7 @@
 package org.de013.productcatalog.service;
 
 import org.de013.productcatalog.dto.inventory.VariantInventoryCreateDto;
-import org.de013.productcatalog.dto.inventory.VariantInventoryDto;
+import org.de013.common.dto.VariantInventoryDto;
 import org.de013.productcatalog.dto.inventory.VariantInventoryUpdateDto;
 import org.de013.productcatalog.entity.enums.VariantType;
 

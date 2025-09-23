@@ -2,7 +2,7 @@ package org.de013.productcatalog.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.productcatalog.dto.inventory.InventoryResponseDto;
+import org.de013.common.dto.InventoryDto;
 import org.de013.productcatalog.entity.Inventory;
 import org.de013.productcatalog.repository.InventoryRepository;
 import org.de013.productcatalog.service.InventoryService;
@@ -23,11 +23,11 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Cacheable(value = "inventory", key = "#productId")
-    public InventoryResponseDto getInventoryByProductId(Long productId) {
+    public InventoryDto getInventoryByProductId(Long productId) {
         log.debug("Getting inventory for product ID: {}", productId);
-        
+
         Inventory inventory = findInventoryByProductId(productId);
-        return inventoryMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryDto(inventory);
     }
 
 
@@ -39,7 +39,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     @CacheEvict(value = "inventory", key = "#productId")
-    public InventoryResponseDto addStock(Long productId, Integer quantity) {
+    public InventoryDto addStock(Long productId, Integer quantity) {
         log.info("Adding {} stock to product ID: {}", quantity, productId);
         
         if (quantity <= 0) {
@@ -52,13 +52,13 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = inventoryRepository.save(inventory);
         
         log.info("Added {} stock to product ID: {}, new quantity: {}", quantity, productId, inventory.getQuantity());
-        return inventoryMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryDto(inventory);
     }
 
     @Override
     @Transactional
     @CacheEvict(value = "inventory", key = "#productId")
-    public InventoryResponseDto removeStock(Long productId, Integer quantity) {
+    public InventoryDto removeStock(Long productId, Integer quantity) {
         log.info("Removing {} stock from product ID: {}", quantity, productId);
         
         if (quantity <= 0) {
@@ -71,7 +71,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = inventoryRepository.save(inventory);
         
         log.info("Removed {} stock from product ID: {}, new quantity: {}", quantity, productId, inventory.getQuantity());
-        return inventoryMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryDto(inventory);
     }
 
 
@@ -79,20 +79,20 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     @CacheEvict(value = "inventory", key = "#productId")
-    public InventoryResponseDto setStock(Long productId, Integer quantity) {
+    public InventoryDto setStock(Long productId, Integer quantity) {
         log.info("Setting stock to {} for product ID: {}", quantity, productId);
-        
+
         if (quantity < 0) {
             throw new IllegalArgumentException("Quantity cannot be negative");
         }
-        
+
         Inventory inventory = findInventoryByProductId(productId);
         inventory.setQuantity(quantity);
-        
+
         inventory = inventoryRepository.save(inventory);
-        
+
         log.info("Set stock to {} for product ID: {}", quantity, productId);
-        return inventoryMapper.toInventoryResponseDto(inventory);
+        return inventoryMapper.toInventoryDto(inventory);
     }
 
     @Override

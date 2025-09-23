@@ -2,6 +2,7 @@ package org.de013.shoppingcart.client;
 
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ProductDetailDto;
+import org.de013.common.dto.InventoryDto;
 import org.de013.common.dto.ApiResponse;
 import org.springframework.stereotype.Component;
 
@@ -295,7 +296,7 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
                 .price(BigDecimal.ZERO)
                 .comparePrice(BigDecimal.ZERO)
                 .status("UNAVAILABLE")
-                .inventory(ProductDetailDto.InventoryResponseDto.builder()
+                .inventory(InventoryDto.builder()
                         .availableQuantity(0)
                         .inStock(false)
                         .build())

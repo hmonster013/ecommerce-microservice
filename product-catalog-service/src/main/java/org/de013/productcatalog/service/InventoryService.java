@@ -1,18 +1,18 @@
 package org.de013.productcatalog.service;
 
-import org.de013.productcatalog.dto.inventory.InventoryResponseDto;
+import org.de013.common.dto.InventoryDto;
 
 public interface InventoryService {
 
     // Core CRUD Operations
-    InventoryResponseDto getInventoryByProductId(Long productId);
+    InventoryDto getInventoryByProductId(Long productId);
 
     // Core Stock Management Operations
-    InventoryResponseDto addStock(Long productId, Integer quantity);
+    InventoryDto addStock(Long productId, Integer quantity);
 
-    InventoryResponseDto removeStock(Long productId, Integer quantity);
+    InventoryDto removeStock(Long productId, Integer quantity);
 
-    InventoryResponseDto setStock(Long productId, Integer quantity);
+    InventoryDto setStock(Long productId, Integer quantity);
 
     // Core Stock Reservation Operations
     boolean reserveStock(Long productId, Integer quantity);

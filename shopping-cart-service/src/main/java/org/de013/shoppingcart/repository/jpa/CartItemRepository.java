@@ -254,6 +254,13 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<CartItem> findOrphanedItems();
 
     /**
+     * Delete all items in a cart
+     */
+    @Modifying
+    @Query("DELETE FROM CartItem ci WHERE ci.cart.id = :cartId")
+    void deleteByCartId(@Param("cartId") Long cartId);
+
+    /**
      * Clean up old deleted items
      */
     @Modifying

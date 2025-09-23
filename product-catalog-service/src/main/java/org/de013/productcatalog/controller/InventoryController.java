@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
-import org.de013.productcatalog.dto.inventory.InventoryResponseDto;
+import org.de013.common.dto.InventoryDto;
 import org.de013.productcatalog.service.InventoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,13 +29,13 @@ public class InventoryController extends BaseController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product or inventory not found")
     })
     @GetMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY)
-    public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> getProductInventory(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> getProductInventory(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id) {
-        
+
         log.info("Getting inventory for product ID: {}", id);
-        
-        InventoryResponseDto inventory = inventoryService.getInventoryByProductId(id);
+
+        InventoryDto inventory = inventoryService.getInventoryByProductId(id);
         return ok(inventory);
     }
 
@@ -43,7 +43,7 @@ public class InventoryController extends BaseController {
     @Operation(summary = "[ADMIN] Add stock", description = "Add stock to a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.ADD)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> addStock(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> addStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Quantity to add", required = true)
@@ -51,14 +51,14 @@ public class InventoryController extends BaseController {
 
         log.info("Adding {} stock to product ID: {}", quantity, id);
 
-        InventoryResponseDto inventory = inventoryService.addStock(id, quantity);
+        InventoryDto inventory = inventoryService.addStock(id, quantity);
         return updated(inventory, String.format("Added %d units to inventory", quantity));
     }
 
     @Operation(summary = "[ADMIN] Remove stock", description = "Remove stock from a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.REMOVE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> removeStock(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> removeStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Quantity to remove", required = true)
@@ -66,14 +66,14 @@ public class InventoryController extends BaseController {
 
         log.info("Removing {} stock from product ID: {}", quantity, id);
 
-        InventoryResponseDto inventory = inventoryService.removeStock(id, quantity);
+        InventoryDto inventory = inventoryService.removeStock(id, quantity);
         return updated(inventory, String.format("Removed %d units from inventory", quantity));
     }
 
     @Operation(summary = "[ADMIN] Set stock level", description = "Set exact stock level for a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.SET)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryResponseDto>> setStock(
+    public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> setStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "New stock quantity", required = true)
@@ -81,7 +81,7 @@ public class InventoryController extends BaseController {
 
         log.info("Setting stock to {} for product ID: {}", quantity, id);
 
-        InventoryResponseDto inventory = inventoryService.setStock(id, quantity);
+        InventoryDto inventory = inventoryService.setStock(id, quantity);
         return updated(inventory, String.format("Set inventory to %d units", quantity));
     }
 

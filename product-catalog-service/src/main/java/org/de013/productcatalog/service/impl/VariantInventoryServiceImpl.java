@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.exception.ResourceNotFoundException;
 import org.de013.productcatalog.dto.inventory.VariantInventoryCreateDto;
-import org.de013.productcatalog.dto.inventory.VariantInventoryDto;
+import org.de013.common.dto.VariantInventoryDto;
 import org.de013.productcatalog.dto.inventory.VariantInventoryUpdateDto;
 import org.de013.productcatalog.entity.Product;
 import org.de013.productcatalog.entity.ProductVariant;

@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
-import java.math.BigDecimal;
+
 
 /**
  * DTO for adding items to cart
@@ -38,11 +38,7 @@ public class AddToCartDto {
     @JsonProperty("variant_id")
     private String variantId;
 
-    @Schema(description = "Unit price of the product", example = "29.99")
-    @DecimalMin(value = "0.01", message = "{price.positive}")
-    @Digits(integer = 10, fraction = 2, message = "{price.format}")
-    @JsonProperty("unit_price")
-    private BigDecimal unitPrice;
+
 
     @Schema(description = "Special instructions for this item", example = "Please wrap as gift")
     @Size(max = 500, message = "{instructions.size}")

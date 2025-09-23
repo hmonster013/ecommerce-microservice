@@ -82,7 +82,7 @@ public class ProductDetailDto {
     private List<ProductImageDto> images;
 
     @Schema(description = "Inventory information")
-    private InventoryResponseDto inventory;
+    private InventoryDto inventory;
 
     @Schema(description = "Pricing information")
     private PricingInfo pricing;
@@ -135,27 +135,7 @@ public class ProductDetailDto {
         private Integer sortOrder;
     }
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    @Schema(description = "Inventory information")
-    public static class InventoryResponseDto {
-        private Integer totalQuantity;
-        private Integer availableQuantity;
-        private Integer reservedQuantity;
-        private Integer reorderLevel;
-        private Integer maxOrderQuantity;
-        private Boolean trackInventory;
-        private String availabilityStatus;
-        private Boolean inStock;
-        private Boolean allowBackorder;
-        private Boolean lowStock;
-        private Boolean needsReorder;
-        private String stockStatus;
-    }
+
 
     @Getter
     @Setter
@@ -255,6 +235,9 @@ public class ProductDetailDto {
 
     @JsonIgnore
     public Integer getStockQuantity() {
-        return inventory != null ? inventory.getAvailableQuantity() : 0;
+        if (inventory != null && inventory.getAvailableQuantity() != null) {
+            return inventory.getAvailableQuantity();
+        }
+        return 0; // Default to 0 if inventory or availableQuantity is null
     }
 }

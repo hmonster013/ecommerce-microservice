@@ -1,16 +1,16 @@
 package org.de013.productcatalog.mapper;
 
-import org.de013.productcatalog.dto.inventory.InventoryResponseDto;
+import org.de013.common.dto.InventoryDto;
 import org.de013.productcatalog.entity.Inventory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class InventoryMapper {
 
-    public InventoryResponseDto toInventoryResponseDto(Inventory inventory) {
+    public InventoryDto toInventoryDto(Inventory inventory) {
         if (inventory == null) return null;
 
-        return InventoryResponseDto.builder()
+        return InventoryDto.builder()
                 .id(inventory.getId())
                 .productId(inventory.getProduct().getId())
                 .quantity(inventory.getQuantity())
@@ -24,11 +24,17 @@ public class InventoryMapper {
                 .allowBackorder(inventory.getAllowBackorder())
                 .location(inventory.getLocation())
                 .supplierSku(inventory.getSupplierSku())
+                .stockStatus(inventory.getStockStatus())
                 .inStock(inventory.isInStock())
                 .lowStock(inventory.isLowStock())
                 .needsReorder(inventory.needsReorder())
-                .stockStatus(inventory.getStockStatus())
+                .canFulfillOrders(inventory.canFulfillOrder(1))
                 .build();
+    }
+
+    // Backward compatibility method
+    public InventoryDto toInventoryResponseDto(Inventory inventory) {
+        return toInventoryDto(inventory);
     }
 }
 

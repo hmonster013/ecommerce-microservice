@@ -14,7 +14,8 @@ import org.de013.common.controller.BaseController;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.AddToCartDto;
-import org.de013.shoppingcart.dto.request.RemoveFromCartDto;
+import org.de013.shoppingcart.dto.request.GiftOptionsDto;
+
 import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
 import org.de013.shoppingcart.dto.response.CartItemResponseDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
@@ -119,13 +120,10 @@ public class CartItemController extends BaseController {
         try {
             log.debug("Updating cart item: {}", itemId);
 
-            // Set item ID from path parameter
-            request.setItemId(itemId);
+            CartItemResponseDto cartItem = cartItemService.updateCartItem(itemId, request);
 
-            CartItemResponseDto cartItem = cartItemService.updateCartItem(request);
-
-            // Update cart totals if quantity or price changed
-            if (request.getQuantity() != null || request.getUnitPrice() != null) {
+            // Update cart totals if quantity changed
+            if (request.getQuantity() != null) {
                 // Get cart ID from the updated item (would need to be returned from service)
                 // cartService.updateCartTotals(cartItem.getCartId());
             }
@@ -166,11 +164,10 @@ public class CartItemController extends BaseController {
             }
 
             UpdateCartItemDto request = UpdateCartItemDto.builder()
-                    .itemId(itemId)
                     .quantity(quantity)
                     .build();
 
-            CartItemResponseDto cartItem = cartItemService.updateCartItem(request);
+            CartItemResponseDto cartItem = cartItemService.updateCartItem(itemId, request);
             return updated(cartItem, "Item quantity updated successfully");
 
         } catch (RuntimeException e) {
@@ -198,11 +195,7 @@ public class CartItemController extends BaseController {
         try {
             log.debug("Removing cart item: {}", itemId);
 
-            RemoveFromCartDto request = RemoveFromCartDto.builder()
-                    .itemId(itemId)
-                    .build();
-
-            boolean removed = cartItemService.removeItemFromCart(request);
+            boolean removed = cartItemService.removeCartItem(itemId);
 
             return removed ? deleted("Item removed from cart successfully") :
                            notFound("Cart item not found");
@@ -213,30 +206,7 @@ public class CartItemController extends BaseController {
         }
     }
 
-    @Operation(summary = "Remove multiple items", description = "Remove multiple items from cart in bulk")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Items removed successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @DeleteMapping(ApiPaths.BULK)
-    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> removeMultipleItems(
-            @Parameter(description = "Bulk removal request", required = true)
-            @Valid @RequestBody RemoveFromCartDto request) {
 
-        try {
-            log.debug("Removing multiple cart items");
-
-            boolean removed = cartItemService.removeItemFromCart(request);
-
-            return removed ? deleted("Items removed from cart successfully") :
-                           badRequest("Invalid request data");
-
-        } catch (Exception e) {
-            log.error("Error removing multiple cart items: {}", e.getMessage(), e);
-            return internalServerError("Failed to remove cart items");
-        }
-    }
 
     // ==================== ITEM RETRIEVAL ====================
 
@@ -289,30 +259,7 @@ public class CartItemController extends BaseController {
         }
     }
 
-    // ==================== ITEM VALIDATION ====================
 
-    @Operation(summary = "[ADMIN] Validate cart item", description = "Validate a cart item against current product data")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Validation completed"),
-        @ApiResponse(responseCode = "404", description = "Item not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/{itemId}/validate")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> validateCartItem(
-            @Parameter(description = "Cart item ID", required = true)
-            @PathVariable Long itemId) {
-
-        try {
-            log.debug("Validating cart item: {}", itemId);
-
-            // This would need to be implemented
-            return internalServerError("Cart item validation not implemented yet");
-
-        } catch (Exception e) {
-            log.error("Error validating cart item {}: {}", itemId, e.getMessage(), e);
-            return internalServerError("Failed to validate cart item");
-        }
-    }
 
     // ==================== GIFT OPTIONS ====================
 
@@ -320,7 +267,9 @@ public class CartItemController extends BaseController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Gift options updated successfully",
                 content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid gift options data"),
         @ApiResponse(responseCode = "404", description = "Item not found"),
+        @ApiResponse(responseCode = "422", description = "Validation failed"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping(ApiPaths.ITEM_ID_PARAM + ApiPaths.GIFT)
@@ -328,24 +277,19 @@ public class CartItemController extends BaseController {
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
             @Parameter(description = "Gift options", required = true)
-            @RequestBody Map<String, Object> giftOptions) {
+            @Valid @RequestBody GiftOptionsDto giftOptions) {
 
         try {
             log.debug("Updating gift options for cart item: {}", itemId);
 
-            UpdateCartItemDto request = UpdateCartItemDto.builder()
-                    .itemId(itemId)
-                    .isGift((Boolean) giftOptions.get("isGift"))
-                    .giftMessage((String) giftOptions.get("giftMessage"))
-                    .giftWrapType((String) giftOptions.get("giftWrapType"))
-                    .build();
-
-            CartItemResponseDto cartItem = cartItemService.updateCartItem(request);
+            CartItemResponseDto cartItem = cartItemService.updateGiftOptions(itemId, giftOptions);
             return updated(cartItem, "Gift options updated successfully");
 
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
                 return notFound("Cart item not found");
+            } else if (e.getMessage().contains("validation")) {
+                return unprocessableEntity("Validation failed", e.getMessage());
             }
             log.error("Error updating gift options for item {}: {}", itemId, e.getMessage(), e);
             return internalServerError("Failed to update gift options");

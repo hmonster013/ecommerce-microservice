@@ -1,6 +1,6 @@
 package org.de013.productcatalog.mapper;
 
-import org.de013.productcatalog.dto.inventory.VariantInventoryDto;
+import org.de013.common.dto.VariantInventoryDto;
 import org.de013.productcatalog.entity.VariantInventory;
 import org.springframework.stereotype.Component;
 

@@ -1,7 +1,8 @@
 package org.de013.shoppingcart.service;
 
 import org.de013.shoppingcart.dto.request.AddToCartDto;
-import org.de013.shoppingcart.dto.request.RemoveFromCartDto;
+import org.de013.shoppingcart.dto.request.GiftOptionsDto;
+
 import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
 import org.de013.shoppingcart.dto.response.CartItemResponseDto;
 
@@ -27,19 +28,19 @@ public interface CartItemService {
     /**
      * Update cart item
      */
-    CartItemResponseDto updateCartItem(UpdateCartItemDto request);
+    CartItemResponseDto updateCartItem(Long itemId, UpdateCartItemDto request);
+
+    /**
+     * Update gift options for cart item
+     */
+    CartItemResponseDto updateGiftOptions(Long itemId, GiftOptionsDto giftOptions);
 
     // ==================== ITEM REMOVAL ====================
 
     /**
-     * Remove item from cart
+     * Remove cart item by ID
      */
-    boolean removeItemFromCart(RemoveFromCartDto request);
-
-    /**
-     * Remove all items from cart
-     */
-    boolean removeAllItems(Long cartId);
+    boolean removeCartItem(Long itemId);
 
     // ==================== CART CALCULATIONS ====================
 

@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
-import org.de013.productcatalog.dto.inventory.VariantInventoryDto;
+import org.de013.common.dto.VariantInventoryDto;
 import org.de013.productcatalog.service.VariantInventoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

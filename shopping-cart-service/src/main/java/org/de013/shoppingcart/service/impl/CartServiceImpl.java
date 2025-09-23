@@ -7,6 +7,7 @@ import org.de013.shoppingcart.entity.Cart;
 import org.de013.shoppingcart.entity.RedisCart;
 import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.entity.enums.CartType;
+import org.de013.shoppingcart.repository.jpa.CartItemRepository;
 import org.de013.shoppingcart.repository.jpa.CartRepository;
 import org.de013.shoppingcart.repository.redis.RedisCartOperations;
 import org.de013.shoppingcart.repository.redis.RedisCartRepository;
@@ -34,6 +35,7 @@ import java.util.Optional;
 public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
     private final RedisCartRepository redisCartRepository;
     private final RedisCartOperations redisCartOperations;
     private final RedisCartSessionManager sessionManager;
@@ -274,8 +276,8 @@ public class CartServiceImpl implements CartService {
 
             CartResponseDto cart = cartOpt.get();
 
-            // Remove all items
-            cartItemService.removeAllItems(cart.getCartId());
+            // Remove all items - use repository directly for bulk operation
+            cartItemRepository.deleteByCartId(cart.getCartId());
 
             // Update cart totals
             updateCartTotals(cart.getCartId());
