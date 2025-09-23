@@ -146,21 +146,25 @@ public class CartController extends BaseController {
         }
     }
 
-    @Operation(summary = "[ADMIN] Delete cart", description = "Permanently delete the entire cart and all its items. This action cannot be undone")
+    @Operation(summary = "Delete cart with smart strategy",
+               description = "Delete cart with intelligent strategy based on parameters:\n" +
+                           "• Both userId + sessionId: Delete user cart specifically (after login scenario)\n" +
+                           "• Only userId: Delete any active user cart\n" +
+                           "• Only sessionId: Delete guest cart only (before login scenario)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cart deleted successfully"),
         @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+        @ApiResponse(responseCode = "400", description = "Invalid request - user ID or session ID required")
     })
     @DeleteMapping
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCart(
-            @Parameter(description = "User ID for authenticated users")
+            @Parameter(description = "User ID for authenticated users", example = "user-123e4567-e89b-12d3-a456-426614174000")
             @RequestParam(required = false) String userId,
-            @Parameter(description = "Session ID for guest users")
+            @Parameter(description = "Session ID for guest users", example = "sess-123e4567-e89b-12d3-a456-426614174000")
             @RequestParam(required = false) String sessionId) {
 
         try {
-            log.debug("Deleting cart for user: {}, session: {}", userId, sessionId);
+            log.info("Deleting cart for userId={}, sessionId={}", userId, sessionId);
 
             if (userId == null && sessionId == null) {
                 return badRequest("User ID or session ID is required");
@@ -168,12 +172,24 @@ public class CartController extends BaseController {
 
             boolean deleted = cartService.deleteCart(userId, sessionId);
 
-            return deleted ? deleted("Cart deleted successfully") :
-                           notFound("Cart not found");
+            String strategy = determineDeleteStrategy(userId, sessionId);
+            String message = String.format("Cart deleted successfully using %s strategy", strategy);
+
+            return deleted ? deleted(message) : notFound("Cart not found");
 
         } catch (Exception e) {
             log.error("Error deleting cart: {}", e.getMessage(), e);
             return internalServerError("Failed to delete cart");
+        }
+    }
+
+    private String determineDeleteStrategy(String userId, String sessionId) {
+        if (userId != null && sessionId != null) {
+            return "USER_WITH_SESSION (targets user cart specifically)";
+        } else if (userId != null) {
+            return "USER_ONLY (any user cart)";
+        } else {
+            return "GUEST_ONLY (guest cart only)";
         }
     }
 

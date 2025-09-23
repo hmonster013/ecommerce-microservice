@@ -38,10 +38,30 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     Optional<Cart> findBySessionIdAndStatus(@Param("sessionId") String sessionId, @Param("status") CartStatus status);
 
     /**
+     * Find guest cart by session ID (userId is null)
+     */
+    @Query("SELECT c FROM Cart c WHERE c.sessionId = :sessionId AND c.userId IS NULL AND c.status = :status AND c.deleted = false")
+    Optional<Cart> findGuestCartBySessionId(@Param("sessionId") String sessionId, @Param("status") CartStatus status);
+
+    /**
      * Find active cart by user ID and session ID
      */
     @Query("SELECT c FROM Cart c WHERE c.userId = :userId AND c.sessionId = :sessionId AND c.status = :status AND c.deleted = false")
     Optional<Cart> findByUserIdAndSessionIdAndStatus(@Param("userId") String userId, @Param("sessionId") String sessionId, @Param("status") CartStatus status);
+
+    /**
+     * Find active cart by user ID - returns the most recent one if multiple exist
+     * This is a safety method to handle edge cases where duplicates might exist
+     */
+    @Query("SELECT c FROM Cart c WHERE c.userId = :userId AND c.status = :status AND c.deleted = false ORDER BY c.lastActivityAt DESC, c.createdAt DESC")
+    List<Cart> findAllByUserIdAndStatusOrderByActivity(@Param("userId") String userId, @Param("status") CartStatus status);
+
+    /**
+     * Find active cart by session ID - returns the most recent one if multiple exist
+     * This is a safety method to handle edge cases where duplicates might exist
+     */
+    @Query("SELECT c FROM Cart c WHERE c.sessionId = :sessionId AND c.status = :status AND c.deleted = false ORDER BY c.lastActivityAt DESC, c.createdAt DESC")
+    List<Cart> findAllBySessionIdAndStatusOrderByActivity(@Param("sessionId") String sessionId, @Param("status") CartStatus status);
 
     /**
      * Find cart by user ID and cart type
@@ -238,4 +258,18 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      */
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Cart c WHERE c.sessionId = :sessionId AND c.status = :status AND c.deleted = false")
     boolean existsBySessionIdAndStatus(@Param("sessionId") String sessionId, @Param("status") CartStatus status);
+
+    // ==================== DUPLICATE DETECTION QUERIES ====================
+
+    /**
+     * Find session IDs that have multiple active carts
+     */
+    @Query("SELECT c.sessionId FROM Cart c WHERE c.sessionId IS NOT NULL AND c.status = 'ACTIVE' AND c.deleted = false GROUP BY c.sessionId HAVING COUNT(c) > 1")
+    List<String> findDuplicateActiveSessionIds();
+
+    /**
+     * Find user IDs that have multiple active carts
+     */
+    @Query("SELECT c.userId FROM Cart c WHERE c.userId IS NOT NULL AND c.status = 'ACTIVE' AND c.deleted = false GROUP BY c.userId HAVING COUNT(c) > 1")
+    List<String> findDuplicateActiveUserIds();
 }

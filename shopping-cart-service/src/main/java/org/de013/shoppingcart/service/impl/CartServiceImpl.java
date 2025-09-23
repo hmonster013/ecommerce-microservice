@@ -368,7 +368,7 @@ public class CartServiceImpl implements CartService {
     }
 
     /**
-     * Delete cart with improved handling for user/session scenarios
+     * Delete cart with smart handling for guest/user scenarios
      */
     @Override
     public boolean deleteCart(String userId, String sessionId) {
@@ -381,39 +381,7 @@ public class CartServiceImpl implements CartService {
                 return false;
             }
 
-            // Try to find cart to get cartId for database deletion
-            Optional<CartResponseDto> cartOpt = getActiveCart(userId, sessionId);
-            Long cartIdForDb = null;
-            if (cartOpt.isPresent()) {
-                cartIdForDb = cartOpt.get().getCartId();
-            }
-
-            // Delete from Redis using comprehensive cleanup
-            // This handles both user and session carts, and potential key collisions
-            boolean redisDeleted = redisCartOperations.deleteCartByIdentifiers(userId, sessionId);
-
-            // Soft delete in database if we found a cart
-            boolean dbDeleted = false;
-            if (cartIdForDb != null) {
-                try {
-                    cartRepository.batchSoftDelete(List.of(cartIdForDb), LocalDateTime.now(), "USER_REQUEST");
-                    dbDeleted = true;
-                    log.debug("Soft deleted cart {} from database", cartIdForDb);
-                } catch (Exception e) {
-                    log.error("Error soft deleting cart {} from database: {}", cartIdForDb, e.getMessage(), e);
-                }
-            }
-
-            // Consider operation successful if either Redis or DB deletion succeeded
-            boolean success = redisDeleted || dbDeleted;
-
-            if (success) {
-                log.info("Successfully deleted cart for userId={}, sessionId={}, cartId={}", userId, sessionId, cartIdForDb);
-            } else {
-                log.warn("No cart found to delete for userId={}, sessionId={}", userId, sessionId);
-            }
-
-            return success;
+            return deleteCartWithStrategy(userId, sessionId);
 
         } catch (Exception e) {
             log.error("Error deleting cart for userId={}, sessionId={}: {}", userId, sessionId, e.getMessage(), e);
@@ -421,9 +389,245 @@ public class CartServiceImpl implements CartService {
         }
     }
 
+    /**
+     * Smart cart deletion strategy based on user context
+     */
+    private boolean deleteCartWithStrategy(String userId, String sessionId) {
+        if (userId != null && sessionId != null) {
+            // Case 1: Both userId and sessionId provided - delete user's cart specifically
+            return deleteUserCartWithSession(userId, sessionId);
+        } else if (userId != null) {
+            // Case 2: Only userId - delete user's active cart
+            return deleteUserCart(userId);
+        } else {
+            // Case 3: Only sessionId - delete guest cart only
+            return deleteGuestCart(sessionId);
+        }
+    }
 
+    /**
+     * Delete user cart with specific session (after login scenario)
+     */
+    private boolean deleteUserCartWithSession(String userId, String sessionId) {
+        try {
+            log.debug("Deleting user cart for userId={}, sessionId={}", userId, sessionId);
+
+            // Find user cart specifically (not guest cart)
+            Optional<Cart> userCart = cartRepository.findByUserIdAndSessionIdAndStatus(userId, sessionId, CartStatus.ACTIVE);
+
+            if (userCart.isEmpty()) {
+                // Fallback: try to find any user cart
+                userCart = cartRepository.findByUserIdAndStatus(userId, CartStatus.ACTIVE);
+            }
+
+            if (userCart.isPresent()) {
+                return performCartDeletion(userCart.get(), "USER_CART_DELETE");
+            }
+
+            log.warn("No user cart found for userId={}, sessionId={}", userId, sessionId);
+            return false;
+
+        } catch (Exception e) {
+            log.error("Error deleting user cart: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Delete user cart (any active cart for user)
+     */
+    private boolean deleteUserCart(String userId) {
+        try {
+            log.debug("Deleting user cart for userId={}", userId);
+
+            Optional<Cart> userCart = cartRepository.findByUserIdAndStatus(userId, CartStatus.ACTIVE);
+
+            if (userCart.isPresent()) {
+                return performCartDeletion(userCart.get(), "USER_CART_DELETE");
+            }
+
+            log.warn("No user cart found for userId={}", userId);
+            return false;
+
+        } catch (Exception e) {
+            log.error("Error deleting user cart: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Delete guest cart only (before login scenario)
+     */
+    private boolean deleteGuestCart(String sessionId) {
+        try {
+            log.debug("Deleting guest cart for sessionId={}", sessionId);
+
+            // Find guest cart specifically (userId is null)
+            Optional<Cart> guestCart = cartRepository.findGuestCartBySessionId(sessionId, CartStatus.ACTIVE);
+
+            if (guestCart.isPresent()) {
+                return performCartDeletion(guestCart.get(), "GUEST_CART_DELETE");
+            }
+
+            log.warn("No guest cart found for sessionId={}", sessionId);
+            return false;
+
+        } catch (Exception e) {
+            log.error("Error deleting guest cart: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Perform actual cart deletion (both Redis and Database)
+     */
+    private boolean performCartDeletion(Cart cart, String reason) {
+        try {
+            Long cartId = cart.getId();
+            String userId = cart.getUserId();
+            String sessionId = cart.getSessionId();
+
+            log.debug("Performing deletion for cart {} (userId={}, sessionId={}, reason={})",
+                     cartId, userId, sessionId, reason);
+
+            // Delete from Redis
+            boolean redisDeleted = redisCartOperations.deleteCartByIdentifiers(userId, sessionId);
+
+            // Soft delete in database
+            boolean dbDeleted = false;
+            try {
+                cartRepository.batchSoftDelete(List.of(cartId), LocalDateTime.now(), reason);
+                dbDeleted = true;
+                log.debug("Soft deleted cart {} from database", cartId);
+            } catch (Exception e) {
+                log.error("Error soft deleting cart {} from database: {}", cartId, e.getMessage(), e);
+            }
+
+            // Consider operation successful if either Redis or DB deletion succeeded
+            boolean success = redisDeleted || dbDeleted;
+
+            if (success) {
+                log.info("Successfully deleted cart {} for userId={}, sessionId={}, reason={}",
+                        cartId, userId, sessionId, reason);
+            }
+
+            return success;
+
+        } catch (Exception e) {
+            log.error("Error performing cart deletion: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Cleanup duplicate active carts (admin operation)
+     */
+    @Override
+    public int cleanupDuplicateActiveCarts() {
+        try {
+            log.info("Starting cleanup of duplicate active carts");
+            int cleanedUp = 0;
+
+            // Find duplicate carts by sessionId
+            List<String> sessionIds = cartRepository.findDuplicateActiveSessionIds();
+            for (String sessionId : sessionIds) {
+                List<Cart> carts = cartRepository.findAllBySessionIdAndStatusOrderByActivity(sessionId, CartStatus.ACTIVE);
+                if (carts.size() > 1) {
+                    cleanedUp += handleMultipleCarts(carts, "sessionId=" + sessionId).isPresent() ? carts.size() - 1 : 0;
+                }
+            }
+
+            // Find duplicate carts by userId
+            List<String> userIds = cartRepository.findDuplicateActiveUserIds();
+            for (String userId : userIds) {
+                List<Cart> carts = cartRepository.findAllByUserIdAndStatusOrderByActivity(userId, CartStatus.ACTIVE);
+                if (carts.size() > 1) {
+                    cleanedUp += handleMultipleCarts(carts, "userId=" + userId).isPresent() ? carts.size() - 1 : 0;
+                }
+            }
+
+            log.info("Cleanup completed. Merged {} duplicate carts", cleanedUp);
+            return cleanedUp;
+
+        } catch (Exception e) {
+            log.error("Error during duplicate cart cleanup: {}", e.getMessage(), e);
+            return 0;
+        }
+    }
 
     // ==================== HELPER METHODS ====================
+
+    /**
+     * Find single active cart, handling potential duplicates safely
+     * If multiple carts exist, returns the most recent one and merges others
+     */
+    private Optional<Cart> findSingleActiveCart(String userId, String sessionId) {
+        try {
+            if (userId != null) {
+                // Try normal lookup first
+                Optional<Cart> cart = cartRepository.findByUserIdAndStatus(userId, CartStatus.ACTIVE);
+                if (cart.isPresent()) {
+                    return cart;
+                }
+
+                // If that fails, try the safe method that handles duplicates
+                List<Cart> carts = cartRepository.findAllByUserIdAndStatusOrderByActivity(userId, CartStatus.ACTIVE);
+                return handleMultipleCarts(carts, "userId=" + userId);
+
+            } else if (sessionId != null) {
+                // Try normal lookup first
+                Optional<Cart> cart = cartRepository.findBySessionIdAndStatus(sessionId, CartStatus.ACTIVE);
+                if (cart.isPresent()) {
+                    return cart;
+                }
+
+                // If that fails, try the safe method that handles duplicates
+                List<Cart> carts = cartRepository.findAllBySessionIdAndStatusOrderByActivity(sessionId, CartStatus.ACTIVE);
+                return handleMultipleCarts(carts, "sessionId=" + sessionId);
+            }
+
+            return Optional.empty();
+
+        } catch (Exception e) {
+            log.error("Error finding single active cart for userId={}, sessionId={}: {}", userId, sessionId, e.getMessage(), e);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Handle multiple carts by keeping the most recent one and merging others
+     */
+    private Optional<Cart> handleMultipleCarts(List<Cart> carts, String identifier) {
+        if (carts.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (carts.size() == 1) {
+            return Optional.of(carts.get(0));
+        }
+
+        // Multiple carts found - this shouldn't happen with unique constraints
+        log.warn("Found {} active carts for {}, merging duplicates", carts.size(), identifier);
+
+        // Keep the most recent cart (first in the ordered list)
+        Cart primaryCart = carts.get(0);
+
+        // Mark others as merged
+        for (int i = 1; i < carts.size(); i++) {
+            Cart duplicateCart = carts.get(i);
+            try {
+                duplicateCart.setStatus(CartStatus.MERGED);
+                duplicateCart.setMergedToCartId(primaryCart.getId());
+                cartRepository.save(duplicateCart);
+                log.info("Merged duplicate cart {} into primary cart {} for {}",
+                        duplicateCart.getId(), primaryCart.getId(), identifier);
+            } catch (Exception e) {
+                log.error("Error merging duplicate cart {}: {}", duplicateCart.getId(), e.getMessage(), e);
+            }
+        }
+
+        return Optional.of(primaryCart);
+    }
 
     private Optional<RedisCart> getRedisCart(String userId, String sessionId) {
         if (userId != null) {
