@@ -45,19 +45,10 @@ CREATE TABLE refunds (
     CONSTRAINT fk_refunds_payment_id FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
 );
 
--- Create indexes for refunds table
-CREATE INDEX idx_refunds_payment_id ON refunds(payment_id);
-CREATE INDEX idx_refunds_order_id ON refunds(order_id);
-CREATE INDEX idx_refunds_status ON refunds(status);
-CREATE INDEX idx_refunds_stripe_refund_id ON refunds(stripe_refund_id);
-CREATE INDEX idx_refunds_refund_number ON refunds(refund_number);
-CREATE INDEX idx_refunds_created_at ON refunds(created_at);
+-- Indexes are managed by JPA @Index annotations in Refund entity
 
--- Add constraints
+-- Add business constraints
 ALTER TABLE refunds ADD CONSTRAINT chk_refunds_amount_positive CHECK (amount > 0);
-ALTER TABLE refunds ADD CONSTRAINT chk_refunds_status_valid CHECK (status IN ('PENDING', 'SUCCEEDED', 'FAILED', 'CANCELED', 'REQUIRES_ACTION'));
-ALTER TABLE refunds ADD CONSTRAINT chk_refunds_currency_valid CHECK (currency IN ('USD', 'EUR', 'VND', 'GBP', 'JPY', 'SGD', 'AUD', 'CAD'));
-ALTER TABLE refunds ADD CONSTRAINT chk_refunds_type_valid CHECK (refund_type IN ('FULL', 'PARTIAL'));
 
 -- Create trigger to update updated_at timestamp
 CREATE TRIGGER update_refunds_updated_at BEFORE UPDATE ON refunds

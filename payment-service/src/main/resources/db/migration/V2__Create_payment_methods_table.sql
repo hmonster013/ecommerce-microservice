@@ -43,15 +43,9 @@ CREATE TABLE payment_methods (
     updated_by VARCHAR(100)
 );
 
--- Create indexes for payment_methods table
-CREATE INDEX idx_payment_methods_user_id ON payment_methods(user_id);
-CREATE INDEX idx_payment_methods_user_id_is_active ON payment_methods(user_id, is_active);
-CREATE INDEX idx_payment_methods_user_id_is_default ON payment_methods(user_id, is_default);
-CREATE INDEX idx_payment_methods_stripe_payment_method_id ON payment_methods(stripe_payment_method_id);
-CREATE INDEX idx_payment_methods_created_at ON payment_methods(created_at);
+-- Indexes are managed by JPA @Index annotations in PaymentMethod entity
 
--- Add constraints
-ALTER TABLE payment_methods ADD CONSTRAINT chk_payment_methods_type_valid CHECK (type IN ('CARD', 'BANK_ACCOUNT', 'WALLET', 'BUY_NOW_PAY_LATER', 'BANK_TRANSFER', 'OTHER'));
+-- Add business constraints
 ALTER TABLE payment_methods ADD CONSTRAINT chk_payment_methods_expiry_month_valid CHECK (expiry_month IS NULL OR (expiry_month >= 1 AND expiry_month <= 12));
 ALTER TABLE payment_methods ADD CONSTRAINT chk_payment_methods_expiry_year_valid CHECK (expiry_year IS NULL OR expiry_year >= 2020);
 

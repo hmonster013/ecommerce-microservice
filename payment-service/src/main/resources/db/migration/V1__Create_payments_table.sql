@@ -27,20 +27,10 @@ CREATE TABLE payments (
     updated_by VARCHAR(100)
 );
 
--- Create indexes for payments table
-CREATE INDEX idx_payment_number ON payments(payment_number);
-CREATE INDEX idx_order_id ON payments(order_id);
-CREATE INDEX idx_user_id ON payments(user_id);
-CREATE INDEX idx_status ON payments(status);
-CREATE INDEX idx_stripe_payment_intent_id ON payments(stripe_payment_intent_id);
-CREATE INDEX idx_stripe_customer_id ON payments(stripe_customer_id);
-CREATE INDEX idx_created_at ON payments(created_at);
+-- Indexes are managed by JPA @Index annotations in Payment entity
 
--- Add constraints
+-- Add business constraints
 ALTER TABLE payments ADD CONSTRAINT chk_amount_positive CHECK (amount > 0);
-ALTER TABLE payments ADD CONSTRAINT chk_currency_valid CHECK (currency IN ('USD', 'EUR', 'VND', 'GBP', 'JPY', 'SGD', 'AUD', 'CAD'));
-ALTER TABLE payments ADD CONSTRAINT chk_status_valid CHECK (status IN ('PENDING', 'REQUIRES_ACTION', 'REQUIRES_CONFIRMATION', 'REQUIRES_PAYMENT_METHOD', 'SUCCEEDED', 'CANCELED', 'FAILED', 'PROCESSING'));
-ALTER TABLE payments ADD CONSTRAINT chk_method_valid CHECK (method IN ('CARD', 'BANK_ACCOUNT', 'WALLET', 'BUY_NOW_PAY_LATER', 'BANK_TRANSFER', 'OTHER'));
 
 -- Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
