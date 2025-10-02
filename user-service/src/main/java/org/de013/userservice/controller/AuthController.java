@@ -5,16 +5,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResponse;
 import org.de013.userservice.dto.*;
-import org.springframework.security.core.Authentication;
 import org.de013.userservice.service.AuthService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -101,22 +98,24 @@ public class AuthController extends BaseController {
     @PostMapping(ApiPaths.LOGOUT)
     @Operation(
             summary = "User logout",
-            description = "Logout user and invalidate JWT token"
+            description = "Logout user and invalidate access token. Client must send token in request body."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "Logout successful",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request - access token is required",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class))
             )
     })
-    public ResponseEntity<ApiResponse<String>> logout(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            String token = bearerToken.substring(7);
-            authService.logout(token);
-        }
+    public ResponseEntity<ApiResponse<String>> logout(
+            @Valid @RequestBody LogoutRequest request) {
 
+        authService.logout(request);
         return ok("Logout successful");
     }
 }

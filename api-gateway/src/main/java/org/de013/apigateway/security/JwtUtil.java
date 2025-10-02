@@ -3,7 +3,9 @@ package org.de013.apigateway.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.apigateway.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +17,10 @@ import java.util.function.Function;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class JwtUtil {
+
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -123,35 +128,41 @@ public class JwtUtil {
     }
 
     /**
-     * Validate JWT token
+     * Validate JWT token (checks blacklist, format, expiration, issuer)
      */
     public Boolean validateToken(String token) {
         try {
+            // First check if token is blacklisted
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                log.debug("Token is blacklisted");
+                return false;
+            }
+
             Claims claims = extractAllClaims(token);
-            
+
             // Check expiration
             if (isTokenExpired(token)) {
                 log.debug("Token is expired");
                 return false;
             }
-            
+
             // Check issuer
             String issuer = claims.getIssuer();
             if (!jwtIssuer.equals(issuer)) {
                 log.debug("Invalid issuer: expected {}, got {}", jwtIssuer, issuer);
                 return false;
             }
-            
+
             // Check required claims
             String username = claims.getSubject();
             if (username == null || username.trim().isEmpty()) {
                 log.debug("Username claim is missing or empty");
                 return false;
             }
-            
+
             log.debug("Token validation successful for user: {}", username);
             return true;
-            
+
         } catch (Exception e) {
             log.debug("Token validation failed: {}", e.getMessage());
             return false;

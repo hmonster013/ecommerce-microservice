@@ -105,20 +105,33 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponseDto refreshToken(RefreshTokenDto request) {
         log.info("Processing token refresh");
-        
+
         try {
             String refreshToken = request.getRefreshToken();
-            
-            // Validate refresh token
+
+            // Check if refresh token is blacklisted (user logged out)
+            if (tokenBlacklistService.isTokenBlacklisted(refreshToken)) {
+                log.warn("Attempted to use blacklisted refresh token");
+                throw new BusinessException("Refresh token has been invalidated. Please login again.");
+            }
+
+            // Validate refresh token format and expiration
             if (!jwtTokenProvider.validateToken(refreshToken)) {
                 throw new BusinessException("Invalid refresh token");
             }
-            
+
             // Extract username from refresh token
             String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
-            
+
             // Load user
             User user = userManagementService.findUserByUsername(username);
+
+            // Blacklist old refresh token to prevent reuse
+            tokenBlacklistService.blacklistToken(
+                refreshToken,
+                jwtTokenProvider.getExpirationDateFromToken(refreshToken).toInstant()
+            );
+            log.debug("Old refresh token blacklisted for user: {}", username);
 
             // Generate new tokens
             String newAccessToken = jwtTokenProvider.generateTokenFromUserDetails(user);
@@ -126,9 +139,9 @@ public class AuthServiceImpl implements AuthService {
 
             // Get user response
             UserResponse userResponse = userManagementService.getUserByUsername(username);
-            
+
             log.info("Token refreshed successfully for user: {}", username);
-            
+
             return LoginResponseDto.builder()
                     .accessToken(newAccessToken)
                     .tokenType("Bearer")
@@ -136,7 +149,7 @@ public class AuthServiceImpl implements AuthService {
                     .refreshToken(newRefreshToken)
                     .user(userResponse)
                     .build();
-                    
+
         } catch (Exception e) {
             log.error("Token refresh failed: {}", e.getMessage());
             throw new BusinessException("Token refresh failed: " + e.getMessage());
@@ -144,19 +157,26 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void logout(String token) {
+    public void logout(LogoutRequest request) {
         log.info("Processing logout");
-        
+
         try {
-            // Extract username from token for logging
-            String username = jwtTokenProvider.getUsernameFromToken(token);
-            
-            // Blacklist the token to invalidate it
-            tokenBlacklistService.blacklistToken(token, jwtTokenProvider.getExpirationDateFromToken(token).toInstant());
-            
+            String accessToken = request.getAccessToken();
+
+            // Extract username from access token for logging
+            String username = jwtTokenProvider.getUsernameFromToken(accessToken);
+
+            // Blacklist the access token only
+            // RefreshToken will be invalidated through token rotation on next refresh
+            tokenBlacklistService.blacklistToken(
+                accessToken,
+                jwtTokenProvider.getExpirationDateFromToken(accessToken).toInstant()
+            );
+
+            log.debug("Access token blacklisted for user: {}", username);
             logAuthenticationEvent("LOGOUT_SUCCESS", username, null);
             log.info("User logged out successfully: {}", username);
-            
+
         } catch (Exception e) {
             log.error("Logout failed: {}", e.getMessage());
             throw new BusinessException("Logout failed: " + e.getMessage());

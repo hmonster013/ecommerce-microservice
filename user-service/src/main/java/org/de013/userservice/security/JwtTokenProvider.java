@@ -1,12 +1,11 @@
 package org.de013.userservice.security;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.JCode;
-import org.de013.common.constant.MessageConstants;
 import org.de013.userservice.entity.User;
+import org.de013.userservice.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -23,7 +22,10 @@ import java.util.stream.Collectors;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class JwtTokenProvider {
+
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -130,10 +132,17 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Validate JWT token
+     * Validate JWT token (checks format, expiration, and blacklist)
      */
     public boolean validateToken(String token) {
         try {
+            // First check if token is blacklisted
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                log.debug("Token is blacklisted");
+                return false;
+            }
+
+            // Then validate token format and expiration
             getClaimsFromToken(token);
             return true;
         } catch (MalformedJwtException e) {

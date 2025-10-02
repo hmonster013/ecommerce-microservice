@@ -30,10 +30,10 @@ public interface AuthService {
     LoginResponseDto refreshToken(RefreshTokenDto request);
 
     /**
-     * Logout user (invalidate token)
-     * @param token JWT token to invalidate
+     * Logout user (invalidate access token)
+     * @param request Logout request containing access token
      */
-    void logout(String token);
+    void logout(LogoutRequest request);
 
     /**
      * Validate JWT token
