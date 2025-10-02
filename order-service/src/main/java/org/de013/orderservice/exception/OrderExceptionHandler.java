@@ -1,8 +1,6 @@
-package org.de013.userservice.exception;
+package org.de013.orderservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ErrorResponse;
 import org.de013.common.exception.BusinessException;
@@ -22,16 +20,17 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
- * User service specific exception handler
- * Handles validation errors, business exceptions, and security exceptions
+ * Order Service specific exception handler
+ * Handles order-specific exceptions and common exceptions
  */
-@RestControllerAdvice("org.de013.userservice")
+@RestControllerAdvice("org.de013.orderservice")
 @Slf4j
-public class UserExceptionHandler {
+public class OrderExceptionHandler {
+
+    // ========== VALIDATION EXCEPTIONS ==========
 
     /**
      * Handle validation errors from @Valid annotations
@@ -62,36 +61,78 @@ public class UserExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    // ========== ORDER SPECIFIC EXCEPTIONS ==========
+
     /**
-     * Handle constraint violation exceptions
+     * Handle order not found exceptions
      */
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
-            ConstraintViolationException ex, HttpServletRequest request) {
-
-        Map<String, Object> errors = new HashMap<>();
-        Set<ConstraintViolation<?>> violations = ex.getConstraintViolations();
-
-        for (ConstraintViolation<?> violation : violations) {
-            String fieldName = violation.getPropertyPath().toString();
-            String errorMessage = violation.getMessage();
-            errors.put(fieldName, errorMessage);
-        }
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFoundException(
+            NotFoundException ex, HttpServletRequest request) {
 
         String traceId = generateTraceId();
-        log.warn("Constraint violation [{}] for {}: {}", traceId, request.getRequestURI(), errors);
+        log.warn("Not found [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
 
-        ErrorResponse response = ErrorResponse.withMetadata(
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                "ORDER_NOT_FOUND",
+                ex.getMessage(),
+                request.getRequestURI(),
+                request.getMethod(),
+                traceId
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    /**
+     * Handle illegal argument exceptions (e.g., empty cart)
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException ex, HttpServletRequest request) {
+
+        String traceId = generateTraceId();
+        log.warn("Illegal argument [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse response = ErrorResponse.of(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                "VALIDATION_ERROR",
-                "Validation failed",
-                errors,
-                request.getRequestURI()
+                "INVALID_REQUEST",
+                ex.getMessage(),
+                request.getRequestURI(),
+                request.getMethod(),
+                traceId
         );
 
         return ResponseEntity.badRequest().body(response);
     }
+
+    /**
+     * Handle illegal state exceptions
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(
+            IllegalStateException ex, HttpServletRequest request) {
+
+        String traceId = generateTraceId();
+        log.error("Illegal state [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "ILLEGAL_STATE",
+                ex.getMessage(),
+                request.getRequestURI(),
+                request.getMethod(),
+                traceId
+        );
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    // ========== COMMON EXCEPTIONS ==========
 
     /**
      * Handle business exceptions
@@ -139,176 +180,17 @@ public class UserExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
-    /**
-     * Handle user not found exceptions
-     */
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserNotFoundException(
-            UserNotFoundException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("User not found [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.NOT_FOUND.value(),
-                HttpStatus.NOT_FOUND.getReasonPhrase(),
-                "USER_NOT_FOUND",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
+    // ========== SECURITY EXCEPTIONS ==========
 
     /**
-     * Handle email already exists exceptions
+     * Handle authentication exceptions
      */
-    @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleEmailAlreadyExistsException(
-            EmailAlreadyExistsException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("Email already exists [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.CONFLICT.value(),
-                HttpStatus.CONFLICT.getReasonPhrase(),
-                "EMAIL_ALREADY_EXISTS",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-    }
-
-    /**
-     * Handle invalid credentials exceptions
-     */
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidCredentialsException(
-            InvalidCredentialsException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("Invalid credentials [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "INVALID_CREDENTIALS",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
-    /**
-     * Handle invalid token exceptions
-     */
-    @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidTokenException(
-            InvalidTokenException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("Invalid token [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "INVALID_TOKEN",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
-    /**
-     * Handle authentication exceptions (fallback for other auth exceptions)
-     */
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentialsException(
-            BadCredentialsException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("Authentication failed [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "BAD_CREDENTIALS",
-                "Invalid username or password",
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
-    /**
-     * Handle JWT authentication exceptions
-     */
-    @ExceptionHandler(JwtAuthenticationException.class)
-    public ResponseEntity<ErrorResponse> handleJwtAuthenticationException(
-            JwtAuthenticationException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("JWT authentication exception [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "JWT_AUTHENTICATION_ERROR",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
-    /**
-     * Handle account status exceptions
-     */
-    @ExceptionHandler(AccountStatusException.class)
-    public ResponseEntity<ErrorResponse> handleAccountStatusException(
-            AccountStatusException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("Account status exception [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.FORBIDDEN.value(),
-                HttpStatus.FORBIDDEN.getReasonPhrase(),
-                "ACCOUNT_STATUS_ERROR",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-    }
-
-    /**
-     * Handle general authentication exceptions (fallback)
-     */
-    @ExceptionHandler(AuthenticationException.class)
+    @ExceptionHandler({AuthenticationException.class, BadCredentialsException.class})
     public ResponseEntity<ErrorResponse> handleAuthenticationException(
             AuthenticationException ex, HttpServletRequest request) {
 
         String traceId = generateTraceId();
-        log.warn("Authentication exception [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
+        log.warn("Authentication failed [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse response = ErrorResponse.of(
                 HttpStatus.UNAUTHORIZED.value(),
@@ -345,6 +227,8 @@ public class UserExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
+
+    // ========== HTTP EXCEPTIONS ==========
 
     /**
      * Handle missing request parameter exceptions
@@ -448,3 +332,4 @@ public class UserExceptionHandler {
         return UUID.randomUUID().toString().substring(0, 8);
     }
 }
+
