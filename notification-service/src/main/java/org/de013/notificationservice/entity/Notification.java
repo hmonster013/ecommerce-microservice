@@ -2,6 +2,8 @@ package org.de013.notificationservice.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.notificationservice.entity.enums.NotificationChannel;
 import org.de013.notificationservice.entity.enums.NotificationStatus;
 
@@ -22,7 +24,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @ToString
 @EqualsAndHashCode
 public class Notification {

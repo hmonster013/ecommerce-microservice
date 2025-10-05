@@ -1,4 +1,4 @@
-package org.de013.userservice.entity;
+package org.de013.paymentservice.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -42,5 +43,5 @@ public abstract class BaseEntity {
     @LastModifiedBy
     @Column(name = "updated_by", length = 255)
     private String updatedBy;
-}
 
+}

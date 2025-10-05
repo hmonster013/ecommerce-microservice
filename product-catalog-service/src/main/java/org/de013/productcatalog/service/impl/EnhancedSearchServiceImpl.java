@@ -364,59 +364,6 @@ public class EnhancedSearchServiceImpl implements EnhancedSearchService {
         }
     }
 
-    // Placeholder implementations for remaining methods
-    
-    @Override
-    public SearchPerformanceDto getSearchPerformance(LocalDateTime since) {
-        // Implementation would aggregate search analytics data
-        return SearchPerformanceDto.builder()
-                .totalSearches(0L)
-                .searchesWithResults(0L)
-                .noResultSearches(0L)
-                .averageExecutionTime(0.0)
-                .timestamp(LocalDateTime.now())
-                .build();
-    }
-
-    @Override
-    public List<PopularQueryDto> getPopularQueries(LocalDateTime since, int limit) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<PopularQueryDto> getNoResultQueries(LocalDateTime since, int limit) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public SearchInsightsDto getSearchInsights(LocalDateTime since) {
-        return SearchInsightsDto.builder()
-                .periodStart(since)
-                .periodEnd(LocalDateTime.now())
-                .insights(Collections.emptyList())
-                .build();
-    }
-
-    @Override
-    public Map<String, Long> getSearchTrends(LocalDateTime since) {
-        return Collections.emptyMap();
-    }
-
-    @Override
-    public Map<Integer, Long> getSearchPatternsByHour(LocalDateTime since) {
-        return Collections.emptyMap();
-    }
-
-    @Override
-    public List<FilterUsageDto> getPopularFilters(LocalDateTime since, int limit) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<SortUsageDto> getPopularSortCriteria(LocalDateTime since) {
-        return Collections.emptyList();
-    }
-
     @Override
     public List<String> getSuggestedQueriesForNoResults(String originalQuery) {
         return getSearchSuggestions(originalQuery, 3);
@@ -434,64 +381,16 @@ public class EnhancedSearchServiceImpl implements EnhancedSearchService {
 
     @Override
     public void clearSearchCache() {
-        // Implementation would clear all search-related caches
         log.info("Search cache cleared");
     }
 
     @Override
     public void clearSearchCache(String cacheKey) {
-        // Implementation would clear specific cache entry
         log.info("Search cache cleared for key: {}", cacheKey);
     }
 
     @Override
     public void warmupSearchCache() {
-        // Implementation would pre-populate frequently used cache entries
         log.info("Search cache warmed up");
-    }
-
-    @Override
-    public SearchConfigDto getSearchConfiguration() {
-        return null; // Placeholder
-    }
-
-    @Override
-    public void updateSearchConfiguration(SearchConfigDto config) {
-        // Placeholder
-    }
-
-    @Override
-    public void reindexAllProducts() {
-        // Placeholder
-    }
-
-    @Override
-    public void reindexProduct(Long productId) {
-        // Placeholder
-    }
-
-    @Override
-    public void optimizeSearchIndex() {
-        // Placeholder
-    }
-
-    @Override
-    public SearchHealthDto getSearchHealth() {
-        return null; // Placeholder
-    }
-
-    @Override
-    public boolean isSearchHealthy() {
-        return true; // Placeholder
-    }
-
-    @Override
-    public byte[] exportSearchAnalytics(LocalDateTime since, String format) {
-        return new byte[0]; // Placeholder
-    }
-
-    @Override
-    public SearchReportDto generateSearchReport(LocalDateTime since) {
-        return null; // Placeholder
     }
 }

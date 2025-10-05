@@ -26,10 +26,6 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class User extends BaseEntity implements UserDetails {
     
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
     @Column(unique = true, nullable = false)
     private String username;
     
@@ -81,8 +77,6 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "is_enabled")
     @lombok.Builder.Default
     private boolean enabled = true;
-
-
     
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

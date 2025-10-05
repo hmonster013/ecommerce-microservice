@@ -2,6 +2,7 @@ package org.de013.shoppingcart.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,7 +22,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @ToString(exclude = {"cart"})
 @EqualsAndHashCode(callSuper = true, exclude = {"cart"})
 public class CartItem extends BaseEntity {

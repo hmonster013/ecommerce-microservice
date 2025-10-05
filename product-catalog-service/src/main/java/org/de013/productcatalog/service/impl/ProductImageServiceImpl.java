@@ -338,31 +338,4 @@ public class ProductImageServiceImpl implements ProductImageService {
             throw new IllegalArgumentException("Invalid image URL format. URL must be HTTP/HTTPS and end with image extension (jpg, jpeg, png, gif, webp)");
         }
     }
-
-    // Placeholder implementations for remaining methods
-    @Override public List<ProductImageDto> getImagesByProductIdAndType(Long productId, ImageType imageType) { return List.of(); }
-    @Override public List<ProductImageDto> getActiveImagesByProductIdAndType(Long productId, ImageType imageType) { return List.of(); }
-    @Override public ProductImageDto getFirstImageByProductIdAndType(Long productId, ImageType imageType) { return null; }
-    @Override public List<ProductImageDto> getImagesByVariantId(Long variantId) { return List.of(); }
-    @Override public List<ProductImageDto> getActiveImagesByVariantId(Long variantId) { return List.of(); }
-    @Override public List<ProductImageDto> getImagesByProductIdAndVariantId(Long productId, Long variantId) { return List.of(); }
-    @Override public List<ProductImageDto> searchImagesByProductIdAndQuery(Long productId, String query) { return List.of(); }
-    @Override public List<ProductImageDto> getImagesByFileFormat(Long productId, String fileFormat) { return List.of(); }
-    @Override public List<ProductImageDto> getImagesByFileFormat(String fileFormat) { return List.of(); }
-    @Override public List<ProductImageDto> createImages(List<ProductImageCreateDto> createDtos) { return List.of(); }
-    @Override public List<ProductImageDto> updateImages(List<Long> imageIds, List<ProductImageUpdateDto> updateDtos) { return List.of(); }
-    @Override public void deleteImages(List<Long> imageIds) { }
-    @Override public void activateImages(List<Long> imageIds) { }
-    @Override public void deactivateImages(List<Long> imageIds) { }
-    @Override public List<ProductImageDto> getImagesByProductIds(List<Long> productIds) { return List.of(); }
-    @Override public List<ProductImageDto> getMainImagesByProductIds(List<Long> productIds) { return List.of(); }
-    @Override public long getImageCountByProductId(Long productId) { return 0; }
-    @Override public long getActiveImageCountByProductId(Long productId) { return 0; }
-    @Override public long getImageCountByType(Long productId, ImageType imageType) { return 0; }
-    @Override public List<Object[]> getImageCountsByType(Long productId) { return List.of(); }
-    @Override public void reorderImages(Long productId, List<Long> imageIds) { }
-    @Override public void moveImageUp(Long imageId) { }
-    @Override public void moveImageDown(Long imageId) { }
-    @Override public void setMainImage(Long imageId) { }
-    @Override public void unsetMainImage(Long productId) { }
 }

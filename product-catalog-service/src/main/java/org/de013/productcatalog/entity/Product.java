@@ -3,6 +3,8 @@ package org.de013.productcatalog.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.productcatalog.entity.enums.ProductStatus;
 
 import java.math.BigDecimal;
@@ -22,12 +24,8 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Product extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @NotBlank(message = "Product name is required")
     @Size(max = 255, message = "Product name must not exceed 255 characters")
@@ -150,19 +148,10 @@ public class Product extends BaseEntity {
         return BigDecimal.ZERO;
     }
 
-    // Manual getters for critical methods (Lombok backup)
-    public Long getId() {
-        return id;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
     @Override
     public String toString() {
         return "Product{" +
-                "id=" + id +
+                "id=" + super.getId() +
                 ", name='" + name + '\'' +
                 ", sku='" + sku + '\'' +
                 ", price=" + price +
