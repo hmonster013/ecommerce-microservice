@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableJpaAuditing
+@EnableJpaAuditing(auditorAwareRef = "auditorAwareImpl")
 @ComponentScan(basePackages = {"org.de013.userservice", "org.de013.common"})
 public class UserServiceApplication {
     public static void main(String[] args) {
