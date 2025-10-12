@@ -1,10 +1,7 @@
 package org.de013.userservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 
@@ -18,10 +15,6 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class Permission extends BaseEntity {
     
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
     @Column(unique = true, nullable = false)
     private String name;
     
@@ -34,7 +27,6 @@ public class Permission extends BaseEntity {
     private String action;
     
     @Column(name = "is_active")
+    @Builder.Default
     private boolean active = true;
-    
-
 }

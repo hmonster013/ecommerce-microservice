@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.orderservice.entity.enums.OrderStatus;
 import org.de013.orderservice.entity.enums.OrderType;
 import org.de013.orderservice.entity.valueobject.Address;
@@ -41,7 +43,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @ToString(exclude = {"orderItems"})
 @EqualsAndHashCode(callSuper = true, exclude = {"orderItems"})
 public class Order extends BaseEntity {

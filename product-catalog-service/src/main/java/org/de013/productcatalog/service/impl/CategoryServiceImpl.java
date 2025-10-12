@@ -387,7 +387,6 @@ public class CategoryServiceImpl implements CategoryService {
                 children.size(), parentCategoryId);
     }
 
-    // Placeholder implementations for remaining methods
     @Override
     @Cacheable(value = "categories", key = "'path_' + #categoryId")
     public List<CategorySummaryDto> getCategoryPath(Long categoryId) {
@@ -406,16 +405,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .map(categoryMapper::fromPathQueryResult)
                 .collect(Collectors.toList());
     }
-    @Override public List<CategorySummaryDto> getCategoryAncestors(Long categoryId) { return List.of(); }
-    @Override public List<CategorySummaryDto> getCategoryDescendants(Long categoryId) { return List.of(); }
-    @Override public CategoryTreeDto buildCategoryTree(Long rootCategoryId) { return null; }
-    @Override public List<CategoryTreeDto> buildCategoryTrees(List<Long> rootCategoryIds) { return List.of(); }
-    @Override public CategoryTreeDto buildFullCategoryTree() { return null; }
-    @Override public List<CategorySummaryDto> getCategoriesWithProductCount() { return List.of(); }
-    @Override public List<CategorySummaryDto> getRootCategoriesWithProductCount() { return List.of(); }
-    @Override public List<CategorySummaryDto> getChildCategoriesWithProductCount(Long parentId) { return List.of(); }
-    @Override public PageResponse<CategorySummaryDto> getPopularCategories(Pageable pageable) { return null; }
-    @Override public List<CategorySummaryDto> getPopularCategories(int limit) { return List.of(); }
+
     @Override
     @Cacheable(value = "categories", key = "'search_' + (#query != null ? #query : 'all')")
     public List<CategorySummaryDto> searchCategories(String query) {
@@ -431,7 +421,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .map(categoryMapper::toCategorySummaryDto)
                 .collect(Collectors.toList());
     }
-    @Override public PageResponse<CategorySummaryDto> searchCategories(String query, Pageable pageable) { return null; }
+
     @Override
     @Transactional
     @CacheEvict(value = "categories", key = "#id")
@@ -442,16 +432,27 @@ public class CategoryServiceImpl implements CategoryService {
 
         return categoryMapper.toCategoryResponseDto(category);
     }
-    @Override public List<CategoryResponseDto> bulkUpdateActiveStatus(List<Long> categoryIds, boolean active) { return List.of(); }
-    @Override public long getTotalCategoryCount() { return categoryRepository.count(); }
-    @Override public long getActiveCategoryCount() { return categoryRepository.countByIsActiveTrue(); }
-    @Override public long getCategoryCountByLevel(Integer level) { return categoryRepository.countByLevelAndIsActiveTrue(level); }
-    @Override public long getChildCategoryCount(Long parentId) { return categoryRepository.countByParentIdAndIsActiveTrue(parentId); }
-    @Override public List<CategorySummaryDto> getCategoriesByLevel(Integer level) { return List.of(); }
-    @Override public Integer getMaxCategoryLevel() { return 0; }
-    @Override public void updateCategoryLevels(Long parentId) { }
-    @Override public void updateDisplayOrder(Long categoryId, Integer newOrder) { }
-    @Override public void reorderCategories(List<Long> categoryIds) { }
+
+    @Override
+    public long getTotalCategoryCount() {
+        return categoryRepository.count();
+    }
+
+    @Override
+    public long getActiveCategoryCount() {
+        return categoryRepository.countByIsActiveTrue();
+    }
+
+    @Override
+    public long getCategoryCountByLevel(Integer level) {
+        return categoryRepository.countByLevelAndIsActiveTrue(level);
+    }
+
+    @Override
+    public long getChildCategoryCount(Long parentId) {
+        return categoryRepository.countByParentIdAndIsActiveTrue(parentId);
+    }
+
     @Override
     @Transactional
     @CacheEvict(value = "categories", allEntries = true)
@@ -487,25 +488,44 @@ public class CategoryServiceImpl implements CategoryService {
         // Update levels for all descendants recursively
         updateDescendantLevels(categoryId, category.getLevel());
     }
-    @Override public void moveCategoryUp(Long categoryId) { }
-    @Override public void moveCategoryDown(Long categoryId) { }
-    @Override public boolean hasChildren(Long categoryId) { return categoryRepository.existsByParentId(categoryId); }
-    @Override public boolean hasProducts(Long categoryId) { return productCategoryRepository.countByCategoryId(categoryId) > 0; }
-    @Override public boolean canBeDeleted(Long categoryId) { return !hasChildren(categoryId) && !hasProducts(categoryId); }
-    @Override public List<CategorySummaryDto> getRelatedCategories(Long categoryId) { return List.of(); }
-    @Override public List<CategoryResponseDto.CategoryBreadcrumb> getCategoryBreadcrumbs(Long categoryId) { return List.of(); }
-    @Override public String getCategoryPathString(Long categoryId) { return ""; }
-    @Override public void cleanupEmptyCategories() { }
-    @Override public void rebuildCategoryTree() { }
-    @Override public void validateCategoryIntegrity() { }
-    @Override public List<CategorySummaryDto> getCategoriesByIds(List<Long> categoryIds) { return List.of(); }
-    @Override public void bulkDeleteCategories(List<Long> categoryIds) { }
-    @Override @CacheEvict(value = "categories", allEntries = true) public void clearCategoryCache() { }
-    @Override @CacheEvict(value = "categories", key = "#categoryId") public void clearCategoryCache(Long categoryId) { }
-    @Override public void refreshCategoryCache(Long categoryId) { }
-    @Override public List<CategoryTreeDto> exportCategoryTree() { return List.of(); }
-    @Override public void importCategoryTree(List<CategoryTreeDto> categoryTree) { }
-    @Override public boolean existsById(Long id) { return categoryRepository.existsById(id); }
-    @Override public boolean existsBySlug(String slug) { return categoryRepository.existsBySlug(slug); }
-    @Override public boolean existsByParentId(Long parentId) { return categoryRepository.existsByParentId(parentId); }
+
+    @Override
+    public boolean hasChildren(Long categoryId) {
+        return categoryRepository.existsByParentId(categoryId);
+    }
+
+    @Override
+    public boolean hasProducts(Long categoryId) {
+        return productCategoryRepository.countByCategoryId(categoryId) > 0;
+    }
+
+    @Override
+    public boolean canBeDeleted(Long categoryId) {
+        return !hasChildren(categoryId) && !hasProducts(categoryId);
+    }
+
+    @Override
+    @CacheEvict(value = "categories", allEntries = true)
+    public void clearCategoryCache() {
+    }
+
+    @Override
+    @CacheEvict(value = "categories", key = "#categoryId")
+    public void clearCategoryCache(Long categoryId) {
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return categoryRepository.existsById(id);
+    }
+
+    @Override
+    public boolean existsBySlug(String slug) {
+        return categoryRepository.existsBySlug(slug);
+    }
+
+    @Override
+    public boolean existsByParentId(Long parentId) {
+        return categoryRepository.existsByParentId(parentId);
+    }
 }

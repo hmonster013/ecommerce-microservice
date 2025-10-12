@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "inventory", indexes = {
@@ -15,12 +16,8 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Inventory extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @NotNull(message = "Product is required")
     @OneToOne(fetch = FetchType.LAZY)
@@ -170,7 +167,7 @@ public class Inventory extends BaseEntity {
     @Override
     public String toString() {
         return "Inventory{" +
-                "id=" + id +
+                "id=" + super.getId() +
                 ", quantity=" + quantity +
                 ", reservedQuantity=" + reservedQuantity +
                 ", availableQuantity=" + getAvailableQuantity() +

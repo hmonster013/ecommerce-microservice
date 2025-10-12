@@ -3,6 +3,8 @@ package org.de013.productcatalog.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.productcatalog.entity.enums.VariantType;
 
 import java.math.BigDecimal;
@@ -17,12 +19,8 @@ import java.math.BigDecimal;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class ProductVariant extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @NotNull(message = "Product is required")
     @ManyToOne(fetch = FetchType.LAZY)
@@ -99,7 +97,7 @@ public class ProductVariant extends BaseEntity {
     @Override
     public String toString() {
         return "ProductVariant{" +
-                "id=" + id +
+                "id=" + super.getId() +
                 ", variantType=" + variantType +
                 ", name='" + name + '\'' +
                 ", value='" + value + '\'' +

@@ -3,6 +3,7 @@ package org.de013.productcatalog.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
@@ -20,12 +21,8 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class ProductCategory {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@SuperBuilder
+public class ProductCategory extends BaseEntity {
 
     @NotNull(message = "Product is required")
     @ManyToOne(fetch = FetchType.LAZY)
@@ -76,7 +73,7 @@ public class ProductCategory {
     @Override
     public String toString() {
         return "ProductCategory{" +
-                "id=" + id +
+                "id=" + super.getId() +
                 ", productId=" + (product != null ? product.getId() : null) +
                 ", categoryId=" + (category != null ? category.getId() : null) +
                 ", isPrimary=" + isPrimary +

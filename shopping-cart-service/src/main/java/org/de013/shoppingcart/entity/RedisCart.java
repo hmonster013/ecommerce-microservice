@@ -3,6 +3,8 @@ package org.de013.shoppingcart.entity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.entity.enums.CartType;
 import org.springframework.data.annotation.Id;
@@ -25,7 +27,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @ToString
 @EqualsAndHashCode
 public class RedisCart implements Serializable {

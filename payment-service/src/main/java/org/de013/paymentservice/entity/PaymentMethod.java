@@ -1,10 +1,9 @@
 package org.de013.paymentservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.paymentservice.entity.enums.PaymentMethodType;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -22,15 +21,12 @@ import java.time.LocalDateTime;
     @Index(name = "idx_stripe_payment_method_id", columnList = "stripePaymentMethodId", unique = true),
     @Index(name = "idx_created_at", columnList = "createdAt")
 })
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class PaymentMethod {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@SuperBuilder
+public class PaymentMethod extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -112,21 +108,6 @@ public class PaymentMethod {
 
     @Column(name = "last_used_at")
     private LocalDateTime lastUsedAt;
-
-    // Audit fields
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Column(name = "created_by", length = 100)
-    private String createdBy;
-
-    @Column(name = "updated_by", length = 100)
-    private String updatedBy;
 
     // Helper methods
     public String getDisplayName() {

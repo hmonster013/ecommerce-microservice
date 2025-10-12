@@ -354,17 +354,6 @@ public class ProductVariantServiceImpl implements ProductVariantService {
                 .orElse(true);
     }
 
-    // Placeholder implementations for remaining methods
-    @Override public List<ProductVariantDto> getVariantsByProductIdAndType(Long productId, VariantType variantType) { return List.of(); }
-    @Override public List<ProductVariantDto> getActiveVariantsByProductIdAndType(Long productId, VariantType variantType) { return List.of(); }
-    @Override public List<VariantType> getDistinctVariantTypesByProductId(Long productId) { return List.of(); }
-    @Override public List<String> getDistinctValuesByProductIdAndType(Long productId, VariantType variantType) { return List.of(); }
-    @Override public List<ProductVariantDto> searchVariantsByProductIdAndQuery(Long productId, String query) { return List.of(); }
-    @Override public List<ProductVariantDto> getVariantsWithPriceAdjustment(Long productId) { return List.of(); }
-    @Override public List<ProductVariantDto> getVariantsWithImages(Long productId) { return List.of(); }
-    @Override public List<ProductVariantDto> getVariantsWithSku(Long productId) { return List.of(); }
-    @Override public List<ProductVariantDto> createVariants(List<ProductVariantCreateDto> createDtos) { return List.of(); }
-    @Override public List<ProductVariantDto> updateVariants(List<Long> variantIds, List<ProductVariantUpdateDto> updateDtos) { return List.of(); }
     @Override
     @Transactional
     public void deleteVariants(List<Long> variantIds) {
@@ -416,12 +405,4 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
         log.info("Bulk deleted {} variants and reordered display orders", variantsToDelete.size());
     }
-    @Override public void activateVariants(List<Long> variantIds) { }
-    @Override public void deactivateVariants(List<Long> variantIds) { }
-    @Override public long getVariantCountByProductId(Long productId) { return 0; }
-    @Override public long getActiveVariantCountByProductId(Long productId) { return 0; }
-    @Override public long getVariantCountByType(Long productId, VariantType variantType) { return 0; }
-    @Override public void reorderVariants(Long productId, List<Long> variantIds) { }
-    @Override public void moveVariantUp(Long variantId) { }
-    @Override public void moveVariantDown(Long variantId) { }
 }

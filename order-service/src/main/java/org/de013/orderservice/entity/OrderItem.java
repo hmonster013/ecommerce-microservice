@@ -5,9 +5,11 @@ import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.orderservice.entity.valueobject.Money;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -28,12 +30,12 @@ import java.time.LocalDateTime;
     @Index(name = "idx_order_items_sku", columnList = "sku")
 })
 @SQLDelete(sql = "UPDATE order_items SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @ToString(exclude = {"order"})
 @EqualsAndHashCode(callSuper = true, exclude = {"order"})
 public class OrderItem extends BaseEntity {

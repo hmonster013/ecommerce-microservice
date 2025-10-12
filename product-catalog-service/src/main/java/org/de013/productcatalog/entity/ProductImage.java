@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.productcatalog.entity.enums.ImageType;
 
 @Entity
@@ -18,12 +20,8 @@ import org.de013.productcatalog.entity.enums.ImageType;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class ProductImage extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @NotNull(message = "Product is required")
     @ManyToOne(fetch = FetchType.LAZY)
@@ -99,7 +97,7 @@ public class ProductImage extends BaseEntity {
     @Override
     public String toString() {
         return "ProductImage{" +
-                "id=" + id +
+                "id=" + super.getId() +
                 ", url='" + url + '\'' +
                 ", imageType=" + imageType +
                 ", displayOrder=" + displayOrder +
