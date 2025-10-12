@@ -30,12 +30,6 @@ public class InventoryServiceImpl implements InventoryService {
         return inventoryMapper.toInventoryDto(inventory);
     }
 
-
-
-
-
-
-
     @Override
     @Transactional
     @CacheEvict(value = "inventory", key = "#productId")

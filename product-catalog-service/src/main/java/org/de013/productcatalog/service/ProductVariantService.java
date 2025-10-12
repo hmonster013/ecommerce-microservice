@@ -32,59 +32,19 @@ public interface ProductVariantService {
     
     PageResponse<ProductVariantDto> getVariantsByProductId(Long productId, Pageable pageable);
 
-    // Variant Type Operations
-    List<ProductVariantDto> getVariantsByProductIdAndType(Long productId, VariantType variantType);
-    
-    List<ProductVariantDto> getActiveVariantsByProductIdAndType(Long productId, VariantType variantType);
-    
-    List<VariantType> getDistinctVariantTypesByProductId(Long productId);
-    
-    List<String> getDistinctValuesByProductIdAndType(Long productId, VariantType variantType);
-
-    // Search and Filter Operations
-    List<ProductVariantDto> searchVariantsByProductIdAndQuery(Long productId, String query);
-    
-    List<ProductVariantDto> getVariantsWithPriceAdjustment(Long productId);
-    
-    List<ProductVariantDto> getVariantsWithImages(Long productId);
-    
-    List<ProductVariantDto> getVariantsWithSku(Long productId);
-
     // Bulk Operations
-    List<ProductVariantDto> createVariants(List<ProductVariantCreateDto> createDtos);
-    
-    List<ProductVariantDto> updateVariants(List<Long> variantIds, List<ProductVariantUpdateDto> updateDtos);
-    
     void deleteVariants(List<Long> variantIds);
-    
-    void activateVariants(List<Long> variantIds);
-    
-    void deactivateVariants(List<Long> variantIds);
 
     // Validation Operations
     boolean isSkuUnique(String sku);
-    
+
     boolean isSkuUnique(String sku, Long excludeVariantId);
-    
+
     boolean isVariantCombinationUnique(Long productId, VariantType variantType, String value);
-    
+
     boolean isVariantCombinationUnique(Long productId, VariantType variantType, String value, Long excludeVariantId);
-    
+
     void validateVariantData(ProductVariantCreateDto createDto);
-    
+
     void validateVariantData(ProductVariantUpdateDto updateDto, Long variantId);
-
-    // Statistics Operations
-    long getVariantCountByProductId(Long productId);
-    
-    long getActiveVariantCountByProductId(Long productId);
-    
-    long getVariantCountByType(Long productId, VariantType variantType);
-
-    // Display Order Operations
-    void reorderVariants(Long productId, List<Long> variantIds);
-    
-    void moveVariantUp(Long variantId);
-    
-    void moveVariantDown(Long variantId);
 }

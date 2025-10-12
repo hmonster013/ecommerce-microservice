@@ -1,0 +1,115 @@
+spring:
+  # Enable ANSI colors in console output
+  output:
+    ansi:
+      enabled: always
+
+  # Database Configuration for development
+  datasource:
+    url: jdbc:postgresql://localhost:5432/order_service_db
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update  # Use update for development
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 25
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
+        batch_versioned_data: true
+        connection:
+          provider_disables_autocommit: false
+    open-in-view: false
+
+  # Flyway Configuration - disabled for development
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+# Eureka Configuration for development
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+    registry-fetch-interval-seconds: 5  # Faster for development
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+    hostname: localhost
+
+# Management endpoints for development
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,configprops
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    rabbit:
+      enabled: false  # Disable RabbitMQ health check for base version
+    redis:
+      enabled: false  # Disable Redis health check for base version
+  info:
+    env:
+      enabled: true
+
+# OpenAPI/Swagger Configuration for development
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: none
+    display-request-duration: true
+  show-actuator: true
+  group-configs:
+    - group: 'order-service-v1'
+      display-name: 'Order Service API (v1)'
+      paths-to-match:
+        - '/orders/**'
+        - '/actuator/**'
+
+# Development logging configuration
+logging:
+  level:
+    root: INFO
+    '[org.de013.orderservice]': DEBUG
+    '[org.springframework.security]': DEBUG
+    '[org.hibernate.SQL]': DEBUG
+
+# Application configuration
+app:
+  services:
+    shopping-cart:
+      url: http://localhost:8083

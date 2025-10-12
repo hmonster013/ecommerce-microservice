@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
     "org.de013.common"
 })
 @EnableDiscoveryClient
-@EnableJpaAuditing
+@EnableJpaAuditing(auditorAwareRef = "auditorAwareImpl")
 @EnableTransactionManagement
 public class OrderServiceApplication {
 

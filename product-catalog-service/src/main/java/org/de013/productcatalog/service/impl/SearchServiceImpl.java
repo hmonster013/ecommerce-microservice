@@ -1,7 +1,6 @@
 package org.de013.productcatalog.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.ProductSummaryDto;
 import org.de013.productcatalog.dto.search.ProductFilterDto;
@@ -294,15 +293,9 @@ public class SearchServiceImpl implements SearchService {
         
         // Add suggestions if no results
         if (results.getProducts().isEmpty() && StringUtils.hasText(results.getQuery())) {
-            results.setDidYouMean(getDidYouMeanSuggestions(results.getQuery()));
             results.setSuggestions(getSearchSuggestions(results.getQuery()));
         }
-        
-        // Add related searches
-        if (StringUtils.hasText(results.getQuery())) {
-            results.setRelatedSearches(getRelatedSearches(results.getQuery()));
-        }
-        
+
         return results;
     }
 
@@ -394,48 +387,65 @@ public class SearchServiceImpl implements SearchService {
         return List.of();
     }
 
-    // Placeholder implementations for remaining methods
-    @Override public PageResponse<ProductSummaryDto> searchInCategoryTree(Long rootCategoryId, String query, Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> searchByBrands(List<String> brands, String query, Pageable pageable) { return null; }
-    @Override public List<String> suggestBrands(String query) { return List.of(); }
-    @Override public PageResponse<ProductSummaryDto> searchByPriceRange(String query, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> searchByMinRating(Double minRating, Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> searchByMinRating(String query, Double minRating, Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> searchFeaturedProducts(String query, Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> searchInStockProducts(String query, Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> searchOnSaleProducts(String query, Pageable pageable) { return null; }
-    @Override public PageResponse<ProductSummaryDto> searchDigitalProducts(String query, Pageable pageable) { return null; }
-    @Override public List<String> getPopularSearchTerms() { return List.of(); }
-    @Override public List<String> getPopularSearchTerms(int limit) { return List.of(); }
-    @Override public List<String> autocompleteProductNames(String query) { return autocompleteProductNames(query, 10); }
-    @Override public List<String> autocompleteBrands(String query) { return List.of(); }
-    @Override public List<String> autocompleteCategories(String query) { return List.of(); }
-    @Override public List<String> getTrendingSearches() { return List.of(); }
-    @Override public List<String> getTrendingSearches(int limit) { return List.of(); }
-    @Override public List<String> getDidYouMeanSuggestions(String query) { return List.of(); }
-    @Override public List<String> getRelatedSearches(String query) { return List.of(); }
-    @Override public SearchResultDto facetedSearch(ProductSearchDto searchDto) { return searchProducts(searchDto); }
-    @Override public List<ProductFilterDto.CategoryFilter> getCategoryFacets(String query) { return List.of(); }
-    @Override public List<ProductFilterDto.BrandFilter> getBrandFacets(String query) { return List.of(); }
-    @Override public List<ProductFilterDto.PriceRange.PriceRangeOption> getPriceFacets(String query) { return List.of(); }
-    @Override public void indexProduct(Long productId) { }
-    @Override public void indexProducts(List<Long> productIds) { }
-    @Override public void reindexAllProducts() { }
-    @Override public void removeFromIndex(Long productId) { }
-    @Override public SearchResultDto searchWithPerformanceTracking(ProductSearchDto searchDto) { return searchProducts(searchDto); }
-    @Override public long getSearchExecutionTime(ProductSearchDto searchDto) { return 0; }
-    @Override public void optimizeSearchIndex() { }
-    @Override public boolean isValidSearchQuery(String query) { return StringUtils.hasText(query); }
-    @Override public boolean isValidPriceRange(BigDecimal minPrice, BigDecimal maxPrice) { return true; }
-    @Override public boolean isValidRatingRange(Double minRating, Double maxRating) { return true; }
-    @Override public ProductSearchDto sanitizeSearchDto(ProductSearchDto searchDto) { return searchDto; }
-    @Override public SearchResultDto addRecommendations(SearchResultDto results) { return results; }
-    @Override public SearchResultDto addRelatedProducts(SearchResultDto results) { return results; }
-    @Override public SearchResultDto addPopularProducts(SearchResultDto results) { return results; }
-    @Override public void clearSearchCache() { }
-    @Override public void clearSearchCache(String query) { }
-    @Override public void warmupSearchCache() { }
-    @Override public void updateSearchConfiguration(String key, Object value) { }
-    @Override public Object getSearchConfiguration(String key) { return null; }
-    @Override public void resetSearchConfiguration() { }
+    @Override
+    public List<String> autocompleteProductNames(String query) {
+        return autocompleteProductNames(query, 10);
+    }
+
+    @Override
+    public SearchResultDto facetedSearch(ProductSearchDto searchDto) {
+        return searchProducts(searchDto);
+    }
+
+    @Override
+    public SearchResultDto searchWithPerformanceTracking(ProductSearchDto searchDto) {
+        return searchProducts(searchDto);
+    }
+
+    @Override
+    public boolean isValidSearchQuery(String query) {
+        return StringUtils.hasText(query);
+    }
+
+    @Override
+    public boolean isValidPriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
+        return true;
+    }
+
+    @Override
+    public boolean isValidRatingRange(Double minRating, Double maxRating) {
+        return true;
+    }
+
+    @Override
+    public ProductSearchDto sanitizeSearchDto(ProductSearchDto searchDto) {
+        return searchDto;
+    }
+
+    @Override
+    public SearchResultDto addRecommendations(SearchResultDto results) {
+        return results;
+    }
+
+    @Override
+    public SearchResultDto addRelatedProducts(SearchResultDto results) {
+        return results;
+    }
+
+    @Override
+    public SearchResultDto addPopularProducts(SearchResultDto results) {
+        return results;
+    }
+
+    @Override
+    public void clearSearchCache() {
+    }
+
+    @Override
+    public void clearSearchCache(String query) {
+    }
+
+    @Override
+    public void warmupSearchCache() {
+    }
 }

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "variant_inventory", indexes = {
@@ -19,12 +20,8 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class VariantInventory extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @NotNull(message = "Product variant is required")
     @OneToOne(fetch = FetchType.LAZY)
@@ -77,7 +74,7 @@ public class VariantInventory extends BaseEntity {
 
     @Column(name = "sku")
     private String sku; // Variant-specific SKU for inventory tracking
-
+    
     // Helper methods
     public Integer getAvailableQuantity() {
         return Math.max(0, quantity - reservedQuantity);
@@ -188,7 +185,7 @@ public class VariantInventory extends BaseEntity {
     @Override
     public String toString() {
         return "VariantInventory{" +
-                "id=" + id +
+                "id=" + super.getId() +
                 ", variant=" + getVariantDisplayName() +
                 ", quantity=" + quantity +
                 ", reservedQuantity=" + reservedQuantity +

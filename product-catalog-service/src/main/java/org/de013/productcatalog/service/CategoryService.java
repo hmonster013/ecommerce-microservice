@@ -34,34 +34,9 @@ public interface CategoryService {
     List<CategorySummaryDto> getChildCategories(Long parentId);
     
     List<CategorySummaryDto> getCategoryPath(Long categoryId);
-    
-    List<CategorySummaryDto> getCategoryAncestors(Long categoryId);
-    
-    List<CategorySummaryDto> getCategoryDescendants(Long categoryId);
-
-    // Category Tree Building
-    CategoryTreeDto buildCategoryTree(Long rootCategoryId);
-    
-    List<CategoryTreeDto> buildCategoryTrees(List<Long> rootCategoryIds);
-    
-    CategoryTreeDto buildFullCategoryTree();
-
-    // Category with Product Count
-    List<CategorySummaryDto> getCategoriesWithProductCount();
-    
-    List<CategorySummaryDto> getRootCategoriesWithProductCount();
-    
-    List<CategorySummaryDto> getChildCategoriesWithProductCount(Long parentId);
-
-    // Popular Categories
-    PageResponse<CategorySummaryDto> getPopularCategories(Pageable pageable);
-    
-    List<CategorySummaryDto> getPopularCategories(int limit);
 
     // Category Search
     List<CategorySummaryDto> searchCategories(String query);
-    
-    PageResponse<CategorySummaryDto> searchCategories(String query, Pageable pageable);
 
     // Category Validation
     boolean isSlugUnique(String slug);
@@ -83,73 +58,30 @@ public interface CategoryService {
 
     // Category Status Operations
     CategoryResponseDto updateCategoryStatus(Long id, boolean isActive);
-    
-    List<CategoryResponseDto> bulkUpdateActiveStatus(List<Long> categoryIds, boolean active);
 
     // Category Statistics
     long getTotalCategoryCount();
-    
+
     long getActiveCategoryCount();
-    
+
     long getCategoryCountByLevel(Integer level);
-    
+
     long getChildCategoryCount(Long parentId);
 
-    // Category Level Operations
-    List<CategorySummaryDto> getCategoriesByLevel(Integer level);
-    
-    Integer getMaxCategoryLevel();
-    
-    void updateCategoryLevels(Long parentId);
-
     // Category Display Order
-    void updateDisplayOrder(Long categoryId, Integer newOrder);
-    
-    void reorderCategories(List<Long> categoryIds);
-    
     void moveCategory(Long categoryId, Long newParentId);
-    
-    void moveCategoryUp(Long categoryId);
-    
-    void moveCategoryDown(Long categoryId);
 
     // Category Relationships
     boolean hasChildren(Long categoryId);
-    
+
     boolean hasProducts(Long categoryId);
-    
+
     boolean canBeDeleted(Long categoryId);
-    
-    List<CategorySummaryDto> getRelatedCategories(Long categoryId);
-
-    // Breadcrumb Operations
-    List<CategoryResponseDto.CategoryBreadcrumb> getCategoryBreadcrumbs(Long categoryId);
-
-    String getCategoryPathString(Long categoryId);
-
-    // Category Maintenance
-    void cleanupEmptyCategories();
-    
-    void rebuildCategoryTree();
-    
-    void validateCategoryIntegrity();
-
-    // Bulk Operations
-    List<CategorySummaryDto> getCategoriesByIds(List<Long> categoryIds);
-    
-    void bulkDeleteCategories(List<Long> categoryIds);
 
     // Cache Operations
     void clearCategoryCache();
-    
-    void clearCategoryCache(Long categoryId);
-    
-    void refreshCategoryCache(Long categoryId);
 
-    // Category Export/Import
-    List<CategoryTreeDto> exportCategoryTree();
-    
-    void importCategoryTree(List<CategoryTreeDto> categoryTree);
+    void clearCategoryCache(Long categoryId);
 
     // Category Existence Checks
     boolean existsById(Long id);

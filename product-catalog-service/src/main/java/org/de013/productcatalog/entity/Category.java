@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,12 +22,8 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Category extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @NotBlank(message = "Category name is required")
     @Size(max = 255, message = "Category name must not exceed 255 characters")
@@ -92,23 +89,10 @@ public class Category extends BaseEntity {
         }
     }
 
-    // Manual getters for critical methods (Lombok backup)
-    public Long getId() {
-        return id;
-    }
-
-    public void setParent(Category parent) {
-        this.parent = parent;
-    }
-
-    public void setLevel(int level) {
-        this.level = level;
-    }
-
     @Override
     public String toString() {
         return "Category{" +
-                "id=" + id +
+                "id=" + super.getId() +
                 ", name='" + name + '\'' +
                 ", slug='" + slug + '\'' +
                 ", level=" + level +

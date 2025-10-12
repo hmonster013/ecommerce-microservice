@@ -78,6 +78,22 @@ services:
       timeout: 10s
       retries: 3
 
+  # Config Server
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: config-server
+    ports:
+      - "${CONFIG_SERVER_PORT}:8071"
+    depends_on:
+      - eureka-server
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: ${EUREKE_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+    networks:
+      - ecommerce-network
+
   # API Gateway
   api-gateway:
     build:

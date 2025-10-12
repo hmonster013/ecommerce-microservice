@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.productcatalog.exception.dto.ErrorResponse;
+import org.de013.common.dto.ErrorResponse;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,9 +23,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -34,7 +32,7 @@ import java.util.UUID;
  */
 @Slf4j
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class ProductCatalogExceptionHandler {
 
     /**
      * Handle business exceptions
@@ -42,9 +40,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BaseBusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(
             BaseBusinessException ex, HttpServletRequest request) {
-        
+
         String traceId = generateTraceId();
-        
+
         if (ex.shouldLogAsError()) {
             log.error("Business exception [{}]: {}", traceId, ex.getMessage(), ex);
         } else if (ex.shouldLogAsWarning()) {
@@ -52,10 +50,11 @@ public class GlobalExceptionHandler {
         }
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(ex.getHttpStatus().value())
                 .error(ex.getHttpStatus().getReasonPhrase())
-                .errorCode(ex.getErrorCode())
+                .code(ex.getErrorCode())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .method(request.getMethod())
@@ -71,12 +70,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
-        
+
         String traceId = generateTraceId();
         log.warn("Validation exception [{}]: {}", traceId, ex.getMessage());
 
         List<ErrorResponse.ValidationError> validationErrors = new ArrayList<>();
-        
+
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
             ErrorResponse.ValidationError validationError = ErrorResponse.ValidationError.builder()
                     .field(fieldError.getField())
@@ -88,10 +87,11 @@ public class GlobalExceptionHandler {
         }
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .errorCode("VALIDATION_ERROR")
+                .code("VALIDATION_ERROR")
                 .message("Validation failed for one or more fields")
                 .details(String.format("Found %d validation errors", validationErrors.size()))
                 .path(request.getRequestURI())
@@ -109,12 +109,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolationException(
             ConstraintViolationException ex, HttpServletRequest request) {
-        
+
         String traceId = generateTraceId();
         log.warn("Constraint violation [{}]: {}", traceId, ex.getMessage());
 
         List<ErrorResponse.ValidationError> validationErrors = new ArrayList<>();
-        
+
         for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
             ErrorResponse.ValidationError validationError = ErrorResponse.ValidationError.builder()
                     .field(violation.getPropertyPath().toString())
@@ -125,10 +125,11 @@ public class GlobalExceptionHandler {
         }
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .errorCode("CONSTRAINT_VIOLATION")
+                .code("CONSTRAINT_VIOLATION")
                 .message("Constraint validation failed")
                 .path(request.getRequestURI())
                 .method(request.getMethod())
@@ -145,15 +146,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({AuthenticationException.class, BadCredentialsException.class})
     public ResponseEntity<ErrorResponse> handleAuthenticationException(
             AuthenticationException ex, HttpServletRequest request) {
-        
+
         String traceId = generateTraceId();
         log.warn("Authentication failed [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.UNAUTHORIZED.value())
                 .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
-                .errorCode("AUTHENTICATION_FAILED")
+                .code("AUTHENTICATION_FAILED")
                 .message("Authentication failed")
                 .path(request.getRequestURI())
                 .method(request.getMethod())
@@ -169,15 +171,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(
             AccessDeniedException ex, HttpServletRequest request) {
-        
+
         String traceId = generateTraceId();
         log.warn("Access denied [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.FORBIDDEN.value())
                 .error(HttpStatus.FORBIDDEN.getReasonPhrase())
-                .errorCode("ACCESS_DENIED")
+                .code("ACCESS_DENIED")
                 .message("Access denied")
                 .path(request.getRequestURI())
                 .method(request.getMethod())
@@ -193,13 +196,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
             DataIntegrityViolationException ex, HttpServletRequest request) {
-        
+
         String traceId = generateTraceId();
         log.error("Data integrity violation [{}]: {}", traceId, ex.getMessage(), ex);
 
         String message = "Data integrity violation";
         String errorCode = "DATA_INTEGRITY_VIOLATION";
-        
+
         // Try to provide more specific error messages for common cases
         if (ex.getMessage() != null) {
             if (ex.getMessage().contains("unique") || ex.getMessage().contains("duplicate")) {
@@ -212,10 +215,11 @@ public class GlobalExceptionHandler {
         }
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
                 .error(HttpStatus.CONFLICT.getReasonPhrase())
-                .errorCode(errorCode)
+                .code(errorCode)
                 .message(message)
                 .path(request.getRequestURI())
                 .method(request.getMethod())
@@ -236,10 +240,11 @@ public class GlobalExceptionHandler {
         log.warn("Method not supported [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.METHOD_NOT_ALLOWED.value())
                 .error(HttpStatus.METHOD_NOT_ALLOWED.getReasonPhrase())
-                .errorCode("METHOD_NOT_ALLOWED")
+                .code("METHOD_NOT_ALLOWED")
                 .message(String.format("HTTP method '%s' is not supported for this endpoint", request.getMethod()))
                 .details(String.format("Supported methods: %s", String.join(", ", ex.getSupportedMethods())))
                 .path(request.getRequestURI())
@@ -261,10 +266,11 @@ public class GlobalExceptionHandler {
         log.warn("Media type not supported [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value())
                 .error(HttpStatus.UNSUPPORTED_MEDIA_TYPE.getReasonPhrase())
-                .errorCode("UNSUPPORTED_MEDIA_TYPE")
+                .code("UNSUPPORTED_MEDIA_TYPE")
                 .message("Media type not supported")
                 .details(String.format("Supported media types: %s", ex.getSupportedMediaTypes()))
                 .path(request.getRequestURI())
@@ -286,10 +292,11 @@ public class GlobalExceptionHandler {
         log.warn("Missing request parameter [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .errorCode("MISSING_PARAMETER")
+                .code("MISSING_PARAMETER")
                 .message(String.format("Required parameter '%s' is missing", ex.getParameterName()))
                 .details(String.format("Parameter '%s' of type '%s' is required", ex.getParameterName(), ex.getParameterType()))
                 .path(request.getRequestURI())
@@ -311,10 +318,11 @@ public class GlobalExceptionHandler {
         log.warn("Type mismatch [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .errorCode("TYPE_MISMATCH")
+                .code("TYPE_MISMATCH")
                 .message(String.format("Invalid value '%s' for parameter '%s'", ex.getValue(), ex.getName()))
                 .details(String.format("Expected type: %s", ex.getRequiredType().getSimpleName()))
                 .path(request.getRequestURI())
@@ -336,10 +344,11 @@ public class GlobalExceptionHandler {
         log.warn("Message not readable [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .errorCode("MALFORMED_REQUEST")
+                .code("MALFORMED_REQUEST")
                 .message("Malformed JSON request")
                 .details("Request body could not be parsed")
                 .path(request.getRequestURI())
@@ -361,10 +370,11 @@ public class GlobalExceptionHandler {
         log.warn("No handler found [{}]: {}", traceId, ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
                 .error(HttpStatus.NOT_FOUND.getReasonPhrase())
-                .errorCode("ENDPOINT_NOT_FOUND")
+                .code("ENDPOINT_NOT_FOUND")
                 .message(String.format("No endpoint found for %s %s", ex.getHttpMethod(), ex.getRequestURL()))
                 .path(request.getRequestURI())
                 .method(request.getMethod())
@@ -385,10 +395,11 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error [{}]: {}", traceId, ex.getMessage(), ex);
 
         ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
                 .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .errorCode("INTERNAL_SERVER_ERROR")
+                .code("INTERNAL_SERVER_ERROR")
                 .message("An unexpected error occurred")
                 .details("Please contact support if the problem persists")
                 .path(request.getRequestURI())

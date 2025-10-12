@@ -59,13 +59,6 @@ public interface VariantInventoryService {
     
     boolean hasAnyVariantInStock(Long productId);
 
-    // Bulk Operations
-    void bulkAddStock(List<Long> variantIds, Integer quantity);
-    
-    void bulkSetStock(List<Long> variantIds, Integer quantity);
-    
-    List<VariantInventoryDto> bulkReserveStock(List<Long> variantIds, List<Integer> quantities);
-
     // Statistics Operations
     Long getTotalQuantityByProductId(Long productId);
     

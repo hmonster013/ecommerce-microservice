@@ -1,10 +1,9 @@
 package org.de013.paymentservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.de013.paymentservice.entity.enums.TransactionType;
 import org.hibernate.annotations.CreationTimestamp;
@@ -25,15 +24,12 @@ import java.time.LocalDateTime;
     @Index(name = "idx_stripe_transfer_group", columnList = "stripeTransferGroup"),
     @Index(name = "idx_created_at", columnList = "createdAt")
 })
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class PaymentTransaction {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@SuperBuilder
+public class PaymentTransaction extends BaseEntity{
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_id", nullable = false)
@@ -95,21 +91,6 @@ public class PaymentTransaction {
 
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
-
-    // Audit fields
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Column(name = "created_by", length = 100)
-    private String createdBy;
-
-    @Column(name = "updated_by", length = 100)
-    private String updatedBy;
 
     // Helper methods
     public boolean isSuccessful() {

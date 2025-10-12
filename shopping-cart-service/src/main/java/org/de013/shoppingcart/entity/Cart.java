@@ -2,6 +2,8 @@ package org.de013.shoppingcart.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.entity.enums.CartType;
 
@@ -29,7 +31,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @ToString(exclude = {"cartItems"})
 @EqualsAndHashCode(callSuper = true, exclude = {"cartItems"})
 public class Cart extends BaseEntity {

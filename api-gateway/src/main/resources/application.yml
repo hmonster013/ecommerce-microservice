@@ -170,6 +170,20 @@ token:
   blacklist:
     prefix: ${TOKEN_BLACKLIST_PREFIX:auth}
 
+# Global Rate Limiting Configuration
+rate-limit:
+  enabled: ${RATE_LIMIT_ENABLED:true}
+  # Global limits per IP address
+  per-ip:
+    capacity: ${RATE_LIMIT_IP_CAPACITY:1000}        # Max requests
+    refill-tokens: ${RATE_LIMIT_IP_REFILL:1000}     # Tokens to refill
+    refill-period-minutes: ${RATE_LIMIT_IP_PERIOD:1} # Refill period in minutes
+  # Global limits per authenticated user
+  per-user:
+    capacity: ${RATE_LIMIT_USER_CAPACITY:10000}
+    refill-tokens: ${RATE_LIMIT_USER_REFILL:10000}
+    refill-period-minutes: ${RATE_LIMIT_USER_PERIOD:1}
+
 # Eureka configuration for development
 eureka:
   client:

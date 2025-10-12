@@ -441,20 +441,6 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
         return variantInventoryRepository.hasAnyVariantInStock(productId);
     }
 
-    // Bulk Operations - placeholder implementations
-    @Override public void bulkAddStock(List<Long> variantIds, Integer quantity) {
-        // TODO: Implement bulk add stock
-    }
-
-    @Override public void bulkSetStock(List<Long> variantIds, Integer quantity) {
-        // TODO: Implement bulk set stock
-    }
-
-    @Override public List<VariantInventoryDto> bulkReserveStock(List<Long> variantIds, List<Integer> quantities) {
-        // TODO: Implement bulk reserve stock
-        return List.of();
-    }
-
     // Statistics Operations
     @Override
     public Long getTotalQuantityByProductId(Long productId) {

@@ -1,10 +1,7 @@
 package org.de013.notificationservice.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -53,6 +50,7 @@ public abstract class BaseEntity {
     private Long version;
 
     @Column(name = "deleted", nullable = false)
+    @Builder.Default
     private Boolean deleted = false;
 
     @Column(name = "deleted_at")
