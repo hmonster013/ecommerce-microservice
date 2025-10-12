@@ -1,10 +1,7 @@
 package org.de013.userservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -51,7 +48,7 @@ public class User extends BaseEntity implements UserDetails {
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    @lombok.Builder.Default
+    @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
     // Custom getter to ensure roles is never null
@@ -63,19 +60,19 @@ public class User extends BaseEntity implements UserDetails {
     }
 
     @Column(name = "account_non_expired")
-    @lombok.Builder.Default
+    @Builder.Default
     private boolean accountNonExpired = true;
 
     @Column(name = "account_non_locked")
-    @lombok.Builder.Default
+    @Builder.Default
     private boolean accountNonLocked = true;
 
     @Column(name = "credentials_non_expired")
-    @lombok.Builder.Default
+    @Builder.Default
     private boolean credentialsNonExpired = true;
 
     @Column(name = "is_enabled")
-    @lombok.Builder.Default
+    @Builder.Default
     private boolean enabled = true;
     
     @Override

@@ -1,10 +1,7 @@
 package org.de013.shoppingcart.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import org.springframework.data.annotation.CreatedDate;
@@ -50,6 +47,7 @@ public abstract class BaseEntity {
     private Long version;
 
     @Column(name = "deleted", nullable = false)
+    @Builder.Default
     private Boolean deleted = false;
 
     @Column(name = "deleted_at")

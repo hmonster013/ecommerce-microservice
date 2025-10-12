@@ -1,0 +1,168 @@
+spring:
+  # Jackson configuration for proper date/time serialization
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      write-durations-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: UTC
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+
+  # Enable ANSI colors in console output
+  output:
+    ansi:
+      enabled: always
+
+  cloud:
+    compatibility-verifier:
+      enabled: false
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/payment_service_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: false
+    repair: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: false
+    register-with-eureka: false
+    enabled: false
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,configprops
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  info:
+    env:
+      enabled: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}
+  expiration: ${JWT_EXPIRATION:900000}  # 15 minutes
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+  issuer: ${JWT_ISSUER:ecommerce-platform}
+  algorithm: ${JWT_ALGORITHM:HS256}
+
+# Payment Gateway Configuration
+payment:
+  gateways:
+    stripe:
+      enabled: ${STRIPE_ENABLED:true}
+      api-key: ${STRIPE_API_KEY:sk_test_your_stripe_secret_key}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret}
+      api-version: ${STRIPE_API_VERSION:2023-10-16}
+      success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/payment/success}
+      cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/payment/cancel}
+
+  # Payment processing configuration
+  processing:
+    timeout: ${PAYMENT_TIMEOUT:30000}  # 30 seconds
+    retry-attempts: ${PAYMENT_RETRY_ATTEMPTS:3}
+    retry-delay: ${PAYMENT_RETRY_DELAY:1000}  # 1 second
+
+  # Security configuration
+  security:
+    encryption-key: ${PAYMENT_ENCRYPTION_KEY:your_32_character_encryption_key}
+    webhook-timeout: ${WEBHOOK_TIMEOUT:10000}  # 10 seconds
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: none
+    display-request-duration: true
+    default-models-expand-depth: 1
+    default-model-expand-depth: 1
+  show-actuator: true
+  group-configs:
+    - group: 'payment-service-v1'
+      display-name: 'Payment Service API (v1)'
+      paths-to-match:
+        - '/payments/**'
+        - '/payment-methods/**'
+        - '/refunds/**'
+        - '/webhooks/**'
+        - '/actuator/**'
+
+# Feign Configuration
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+        loggerLevel: basic
+        errorDecoder: org.de013.paymentservice.config.FeignErrorDecoder
+        requestInterceptor: org.de013.paymentservice.config.FeignRequestInterceptor
+      order-service:
+        connectTimeout: 3000
+        readTimeout: 10000
+        loggerLevel: full
+        url: http://localhost:8084
+      user-service:
+        connectTimeout: 3000
+        readTimeout: 5000
+        loggerLevel: full
+        url: http://localhost:8081
+  hystrix:
+    enabled: true
+  compression:
+    request:
+      enabled: true
+      mime-types: text/xml,application/xml,application/json
+      min-request-size: 2048
+    response:
+      enabled: true
+
+logging:
+  level:
+    '[org.de013.paymentservice]': DEBUG
+    '[org.springframework.security]': DEBUG
+    '[com.stripe]': INFO
+
+

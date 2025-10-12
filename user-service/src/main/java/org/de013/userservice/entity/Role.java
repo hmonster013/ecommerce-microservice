@@ -1,10 +1,7 @@
 package org.de013.userservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 
@@ -26,6 +23,7 @@ public class Role extends BaseEntity {
     private String description;
 
     @Column(name = "is_active")
+    @Builder.Default
     private boolean active = true;
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -34,7 +32,6 @@ public class Role extends BaseEntity {
         joinColumns = @JoinColumn(name = "role_id"),
         inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
+    @Builder.Default
     private Set<Permission> permissions = new HashSet<>();
-
-
 }

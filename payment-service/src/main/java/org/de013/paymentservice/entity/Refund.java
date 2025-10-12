@@ -1,10 +1,7 @@
 package org.de013.paymentservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import org.de013.paymentservice.entity.enums.RefundStatus;
@@ -26,6 +23,7 @@ import java.time.LocalDateTime;
     @Index(name = "idx_refund_number", columnList = "refundNumber", unique = true),
     @Index(name = "idx_created_at", columnList = "createdAt")
 })
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

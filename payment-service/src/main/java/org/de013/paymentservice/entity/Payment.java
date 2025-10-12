@@ -1,10 +1,7 @@
 package org.de013.paymentservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import org.de013.paymentservice.entity.enums.Currency;
@@ -28,6 +25,7 @@ import java.util.List;
     @Index(name = "idx_stripe_customer_id", columnList = "stripeCustomerId"),
     @Index(name = "idx_created_at", columnList = "createdAt")
 })
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
