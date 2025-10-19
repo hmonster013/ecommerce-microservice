@@ -29,7 +29,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: "refresh,busrefresh"
+        include: "health,refresh,busrefresh"
+  health:
+    readinessstate:
+      enabled: true
+    livenessstate:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 eureka:
   client:
