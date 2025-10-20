@@ -40,130 +40,59 @@ spring:
     gateway:
       discovery:
         locator:
+          # Enable automatic route creation from Eureka discovery
           enabled: true
           lower-case-service-id: true
           predicates:
             - name: Path
               args:
-                pattern: "'/api/' + serviceId + '/**'"
+                pattern: "'/api/'+serviceId+'/**'"
           filters:
-            - name: StripPrefix
+            # Remove /api/{service-id}/ prefix when forwarding to services
+            - name: RewritePath
               args:
-                parts: 2
+                regexp: "'/api/(?<service>[^/]+)/(?<remaining>.*)'"
+                replacement: "'/${remaining}'"
       forwarded:
         enabled: false
       routes:
-        # API Docs routes (must come before general routes)
-        - id: user-service-docs-v1
-          uri: http://localhost:8081
+        # Special routes for API documentation endpoints (these need exact matching)
+        - id: user-service-docs
+          uri: lb://user-service
           predicates:
-            - Path=/api/v1/usersv/v3/api-docs
+            - Path=/api/user-service/v3/api-docs
           filters:
-            - StripPrefix=3
-        - id: product-catalog-service-docs-v1
-          uri: http://localhost:8082
+            - RewritePath=/api/user-service/v3/api-docs, /v3/api-docs
+        - id: product-catalog-service-docs
+          uri: lb://product-catalog-service
           predicates:
-            - Path=/api/v1/productsv/v3/api-docs
+            - Path=/api/product-catalog-service/v3/api-docs
           filters:
-            - StripPrefix=3
-        - id: shopping-cart-service-docs-v1
-          uri: http://localhost:8083
+            - RewritePath=/api/product-catalog-service/v3/api-docs, /v3/api-docs
+        - id: shopping-cart-service-docs
+          uri: lb://shopping-cart-service
           predicates:
-            - Path=/api/v1/cartsv/v3/api-docs
+            - Path=/api/shopping-cart-service/v3/api-docs
           filters:
-            - StripPrefix=3
-        - id: order-service-docs-v1
-          uri: http://localhost:8084
+            - RewritePath=/api/shopping-cart-service/v3/api-docs, /v3/api-docs
+        - id: order-service-docs
+          uri: lb://order-service
           predicates:
-            - Path=/api/v1/ordersv/v3/api-docs
+            - Path=/api/order-service/v3/api-docs
           filters:
-            - StripPrefix=3
-        - id: payment-service-docs-v1
-          uri: http://localhost:8085
+            - RewritePath=/api/order-service/v3/api-docs, /v3/api-docs
+        - id: payment-service-docs
+          uri: lb://payment-service
           predicates:
-            - Path=/api/v1/paymentsv/v3/api-docs
+            - Path=/api/payment-service/v3/api-docs
           filters:
-            - StripPrefix=3
-        - id: notification-service-docs-v1
-          uri: http://localhost:8086
+            - RewritePath=/api/payment-service/v3/api-docs, /v3/api-docs
+        - id: notification-service-docs
+          uri: lb://notification-service
           predicates:
-            - Path=/api/v1/notificationsv/v3/api-docs
+            - Path=/api/notification-service/v3/api-docs
           filters:
-            - StripPrefix=3
-
-        # Manual routes for critical services
-        - id: user-service-manual
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/user-service/**
-          filters:
-            - StripPrefix=2
-
-        # ==================== VERSION 1 ROUTES ====================
-        # New versioned endpoints - /api/v1/{service}/**
-        - id: user-service-v1
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/v1/usersv/**
-          filters:
-            - StripPrefix=3
-        - id: product-catalog-service-v1
-          uri: http://localhost:8082
-          predicates:
-            - Path=/api/v1/productsv/**
-          filters:
-            - RewritePath=/api/v1/productsv/(?<segment>.*), /$\{segment}
-        - id: shopping-cart-service-v1
-          uri: http://localhost:8083
-          predicates:
-            - Path=/api/v1/cartsv/**
-          filters:
-            - StripPrefix=3
-        - id: order-service-v1
-          uri: http://localhost:8084
-          predicates:
-            - Path=/api/v1/ordersv/**
-          filters:
-            - StripPrefix=3
-        - id: payment-service-v1
-          uri: http://localhost:8085
-          predicates:
-            - Path=/api/v1/paymentsv/**
-          filters:
-            - StripPrefix=3
-        - id: notification-service-v1
-          uri: http://localhost:8086
-          predicates:
-            - Path=/api/v1/notificationsv/**
-          filters:
-            - StripPrefix=3
-
-        # ==================== LEGACY ROUTES ====================
-        # Keep existing routes for backward compatibility
-        - id: shopping-cart-service
-          uri: http://localhost:8083
-          predicates:
-            - Path=/api/cartsv/**
-          filters:
-            - StripPrefix=1
-        - id: order-service
-          uri: http://localhost:8084
-          predicates:
-            - Path=/api/ordersv/**
-          filters:
-            - StripPrefix=1
-        - id: payment-service
-          uri: http://localhost:8085
-          predicates:
-            - Path=/api/paymentsv/**
-          filters:
-            - StripPrefix=1
-        - id: notification-service
-          uri: http://localhost:8086
-          predicates:
-            - Path=/api/notificationsv/**
-          filters:
-            - StripPrefix=1
+            - RewritePath=/api/notification-service/v3/api-docs, /v3/api-docs
 
 # Token blacklist configuration
 token:
@@ -188,7 +117,7 @@ rate-limit:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
     fetch-registry: true
     register-with-eureka: true
     registry-fetch-interval-seconds: 5  # Faster discovery for development
@@ -230,19 +159,19 @@ springdoc:
     urls:
       - url: /v3/api-docs
         name: API Gateway
-      # Version 1 APIs
-      - url: /api/v1/usersv/v3/api-docs
-        name: User Service (v1)
-      - url: /api/v1/productsv/v3/api-docs
-        name: Product Catalog Service (v1)
-      - url: /api/v1/cartsv/v3/api-docs
-        name: Shopping Cart Service (v1)
-      - url: /api/v1/ordersv/v3/api-docs
-        name: Order Service (v1)
-      - url: /api/v1/paymentsv/v3/api-docs
-        name: Payment Service (v1)
-      - url: /api/v1/notificationsv/v3/api-docs
-        name: Notification Service (v1)
+      # Service APIs - using automatic discovery pattern /api/{service-name}/**
+      - url: /api/user-service/v3/api-docs
+        name: User Service
+      - url: /api/product-catalog-service/v3/api-docs
+        name: Product Catalog Service
+      - url: /api/shopping-cart-service/v3/api-docs
+        name: Shopping Cart Service
+      - url: /api/order-service/v3/api-docs
+        name: Order Service
+      - url: /api/payment-service/v3/api-docs
+        name: Payment Service
+      - url: /api/notification-service/v3/api-docs
+        name: Notification Service
 
 # JWT Configuration for development (must match user-service configuration)
 jwt:

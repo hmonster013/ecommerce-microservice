@@ -89,10 +89,13 @@ public class OpenApiConfig {
         return List.of(
                 new Server()
                         .url("http://localhost:" + serverPort)
-                        .description("Notification Service (Development)"),
+                        .description("Direct Access (Local Development)"),
                 new Server()
-                        .url("http://localhost:8080/api/v1/notificationsv")
-                        .description("API Gateway (Development)")
+                        .url("http://localhost:8080/api/notification-service")
+                        .description("Via API Gateway (Local)"),
+                new Server()
+                        .url("http://api-gateway:8080/api/notification-service")
+                        .description("Via API Gateway (Docker)")
         );
     }
 

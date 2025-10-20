@@ -17,41 +17,41 @@ public class OpenApiConfig {
     public List<GroupedOpenApi> apis() {
         List<GroupedOpenApi> groups = new ArrayList<>();
 
-        // Version 1 APIs
+        // Service APIs using Eureka discovery pattern
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/v1/usersv/**")
-                .group("user-service-v1")
-                .displayName("User Service (v1)")
+                .pathsToMatch("/api/user-service/**")
+                .group("user-service")
+                .displayName("User Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/v1/productsv/**")
-                .group("product-catalog-service-v1")
-                .displayName("Product Catalog Service (v1)")
+                .pathsToMatch("/api/product-catalog-service/**")
+                .group("product-catalog-service")
+                .displayName("Product Catalog Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/v1/cartsv/**")
-                .group("shopping-cart-service-v1")
-                .displayName("Shopping Cart Service (v1)")
+                .pathsToMatch("/api/shopping-cart-service/**")
+                .group("shopping-cart-service")
+                .displayName("Shopping Cart Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/v1/ordersv/**")
-                .group("order-service-v1")
-                .displayName("Order Service (v1)")
+                .pathsToMatch("/api/order-service/**")
+                .group("order-service")
+                .displayName("Order Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/v1/paymentsv/**")
-                .group("payment-service-v1")
-                .displayName("Payment Service (v1)")
+                .pathsToMatch("/api/payment-service/**")
+                .group("payment-service")
+                .displayName("Payment Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/v1/notificationsv/**")
-                .group("notification-service-v1")
-                .displayName("Notification Service (v1)")
+                .pathsToMatch("/api/notification-service/**")
+                .group("notification-service")
+                .displayName("Notification Service")
                 .build());
 
         return groups;
@@ -64,8 +64,12 @@ public class OpenApiConfig {
                         .title("E-commerce Microservices API")
                         .description("API Gateway for E-commerce Platform")
                         .version("1.0.0"))
-                .addServersItem(new Server()
-                        .url("http://localhost:8080")
-                        .description("API Gateway Server"));
+                .servers(List.of(
+                        new Server()
+                                .url("http://localhost:8080")
+                                .description("API Gateway (Local)"),
+                        new Server()
+                                .url("http://api-gateway:8080")
+                                .description("API Gateway (Docker)")));
     }
 }

@@ -85,8 +85,14 @@ public class OpenApiConfig {
     private List<Server> serverList() {
         return List.of(
                 new Server()
-                        .url("http://localhost:8080/api/v1/usersv")
-                        .description("API Gateway (Development)")
+                        .url("http://localhost:" + serverPort)
+                        .description("Direct Access (Local Development)"),
+                new Server()
+                        .url("http://localhost:8080/api/user-service")
+                        .description("Via API Gateway (Local)"),
+                new Server()
+                        .url("http://api-gateway:8080/api/user-service")
+                        .description("Via API Gateway (Docker)")
         );
     }
 

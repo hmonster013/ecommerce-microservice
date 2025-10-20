@@ -66,8 +66,14 @@ public class OpenApiConfig {
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
                         new Server()
-                                .url("http://localhost:8080/api/v1/cartsv")
-                                .description("API Gateway (Development)")
+                                .url("http://localhost:" + serverPort)
+                                .description("Direct Access (Local Development)"),
+                        new Server()
+                                .url("http://localhost:8080/api/shopping-cart-service")
+                                .description("Via API Gateway (Local)"),
+                        new Server()
+                                .url("http://api-gateway:8080/api/shopping-cart-service")
+                                .description("Via API Gateway (Docker)")
                 ))
                 .tags(List.of(
                         new Tag()
