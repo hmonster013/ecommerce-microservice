@@ -29,7 +29,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(authz -> authz
                         // Public endpoints
-                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
 
                         // Webhook endpoints - public for payment gateway callbacks
