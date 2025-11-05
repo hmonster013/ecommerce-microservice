@@ -65,6 +65,7 @@ data/
 .dockerignore
 docker-compose.override.yml
 docker-compose.local.yml
+.data
 
 # Security & Secrets
 *.key
