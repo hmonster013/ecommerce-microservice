@@ -5,7 +5,7 @@ spring:
   application:
     name: eureka-server
   config:
-    import: "optional:configserver:http://localhost:8071"
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
   cloud:
     config:
       fail-fast: true
@@ -14,3 +14,15 @@ spring:
         max-attempts: 6
         max-interval: 2000
         multiplier: 1.1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,prometheus
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

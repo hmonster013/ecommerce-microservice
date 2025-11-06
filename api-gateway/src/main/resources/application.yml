@@ -5,7 +5,19 @@ spring:
   application:
     name: api-gateway
   config:
-    import: "optional:configserver:http://localhost:8071"
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
   # Development profile - no need for multiple profiles
   profiles:
     active: default
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,prometheus
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

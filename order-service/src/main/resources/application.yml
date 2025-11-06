@@ -9,3 +9,15 @@ spring:
     active: default
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,prometheus
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
