@@ -10,6 +10,16 @@ spring:
   profiles:
     active: default
 
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+  level:
+    root: INFO
+    '[org.springframework.cloud.gateway]': DEBUG
+    '[reactor.netty.http.client]': DEBUG
+    '[org.de013.apigateway.security]': DEBUG
+
 management:
   endpoints:
     web:

@@ -52,6 +52,11 @@ services:
       RABBITMQ_PORT: ${RABBITMQ_PORT}
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      # OpenTelemetry Configuration
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      OTEL_METRICS_EXPORTER: prometheus
+      OTEL_LOGS_EXPORTER: none
+      JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
       
   # Microservice with Redis cache
   microservice-with-redis:
@@ -108,6 +113,12 @@ services:
       RABBITMQ_PORT: ${RABBITMQ_PORT}
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      # OpenTelemetry Configuration
+      OTEL_SERVICE_NAME: config-server
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      OTEL_METRICS_EXPORTER: prometheus
+      OTEL_LOGS_EXPORTER: none
+      JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
 
   # API Gateway base
   gateway-base:
@@ -131,6 +142,12 @@ services:
       JWT_ISSUER: ${JWT_ISSUER}
       # Token Blacklist
       TOKEN_BLACKLIST_PREFIX: ${TOKEN_BLACKLIST_PREFIX}
+      # OpenTelemetry Configuration
+      OTEL_SERVICE_NAME: api-gateway
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      OTEL_METRICS_EXPORTER: prometheus
+      OTEL_LOGS_EXPORTER: none
+      JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
 
 # Define the shared network
 networks:
