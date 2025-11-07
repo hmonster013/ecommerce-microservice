@@ -4,185 +4,30 @@ server:
 spring:
   application:
     name: api-gateway
-
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
   # Development profile - no need for multiple profiles
   profiles:
-    active: dev
+    active: default
 
-  # Enable ANSI colors in console output for better development experience
-  output:
-    ansi:
-      enabled: always
-
-  # Redis Configuration for token blacklist
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      database: ${REDIS_DATABASE:0}
-      timeout: 2000
-      lettuce:
-        pool:
-          max-active: 20
-          max-idle: 10
-          min-idle: 5
-          max-wait: 2000ms
-
-  # Exclude database auto-configuration since API Gateway doesn't need database
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
-  cloud:
-    compatibility-verifier:
-      enabled: false
-    gateway:
-      discovery:
-        locator:
-          # Enable automatic route creation from Eureka discovery
-          enabled: true
-          lower-case-service-id: true
-          predicates:
-            - name: Path
-              args:
-                pattern: "'/api/'+serviceId+'/**'"
-          filters:
-            # Remove /api/{service-id}/ prefix when forwarding to services
-            - name: RewritePath
-              args:
-                regexp: "'/api/(?<service>[^/]+)/(?<remaining>.*)'"
-                replacement: "'/${remaining}'"
-      forwarded:
-        enabled: false
-      routes:
-        # Special routes for API documentation endpoints (these need exact matching)
-        - id: user-service-docs
-          uri: lb://user-service
-          predicates:
-            - Path=/api/user-service/v3/api-docs
-          filters:
-            - RewritePath=/api/user-service/v3/api-docs, /v3/api-docs
-        - id: product-catalog-service-docs
-          uri: lb://product-catalog-service
-          predicates:
-            - Path=/api/product-catalog-service/v3/api-docs
-          filters:
-            - RewritePath=/api/product-catalog-service/v3/api-docs, /v3/api-docs
-        - id: shopping-cart-service-docs
-          uri: lb://shopping-cart-service
-          predicates:
-            - Path=/api/shopping-cart-service/v3/api-docs
-          filters:
-            - RewritePath=/api/shopping-cart-service/v3/api-docs, /v3/api-docs
-        - id: order-service-docs
-          uri: lb://order-service
-          predicates:
-            - Path=/api/order-service/v3/api-docs
-          filters:
-            - RewritePath=/api/order-service/v3/api-docs, /v3/api-docs
-        - id: payment-service-docs
-          uri: lb://payment-service
-          predicates:
-            - Path=/api/payment-service/v3/api-docs
-          filters:
-            - RewritePath=/api/payment-service/v3/api-docs, /v3/api-docs
-        - id: notification-service-docs
-          uri: lb://notification-service
-          predicates:
-            - Path=/api/notification-service/v3/api-docs
-          filters:
-            - RewritePath=/api/notification-service/v3/api-docs, /v3/api-docs
-
-# Token blacklist configuration
-token:
-  blacklist:
-    prefix: ${TOKEN_BLACKLIST_PREFIX:auth}
-
-# Global Rate Limiting Configuration
-rate-limit:
-  enabled: ${RATE_LIMIT_ENABLED:true}
-  # Global limits per IP address
-  per-ip:
-    capacity: ${RATE_LIMIT_IP_CAPACITY:1000}        # Max requests
-    refill-tokens: ${RATE_LIMIT_IP_REFILL:1000}     # Tokens to refill
-    refill-period-minutes: ${RATE_LIMIT_IP_PERIOD:1} # Refill period in minutes
-  # Global limits per authenticated user
-  per-user:
-    capacity: ${RATE_LIMIT_USER_CAPACITY:10000}
-    refill-tokens: ${RATE_LIMIT_USER_REFILL:10000}
-    refill-period-minutes: ${RATE_LIMIT_USER_PERIOD:1}
-
-# Eureka configuration for development
-eureka:
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
-    fetch-registry: true
-    register-with-eureka: true
-    registry-fetch-interval-seconds: 5  # Faster discovery for development
-    initial-instance-info-replication-interval-seconds: 10
-    healthcheck:
-      enabled: true
-  instance:
-    prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 10  # Faster heartbeat for development
-    lease-expiration-duration-in-seconds: 30  # Faster eviction for development
-    hostname: localhost
-
-# Management endpoints for development monitoring
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,gateway,env,configprops
-      base-path: /actuator
-  endpoint:
-    health:
-      show-details: always
-    gateway:
-      enabled: true
-  info:
-    env:
-      enabled: true
-
-# Swagger/OpenAPI Configuration
-springdoc:
-  api-docs:
-    enabled: true
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-    config-url: /v3/api-docs/swagger-config
-    disable-swagger-default-url: true
-
-    urls:
-      - url: /v3/api-docs
-        name: API Gateway
-      # Service APIs - using automatic discovery pattern /api/{service-name}/**
-      - url: /api/user-service/v3/api-docs
-        name: User Service
-      - url: /api/product-catalog-service/v3/api-docs
-        name: Product Catalog Service
-      - url: /api/shopping-cart-service/v3/api-docs
-        name: Shopping Cart Service
-      - url: /api/order-service/v3/api-docs
-        name: Order Service
-      - url: /api/payment-service/v3/api-docs
-        name: Payment Service
-      - url: /api/notification-service/v3/api-docs
-        name: Notification Service
-
-# JWT Configuration for development (must match user-service configuration)
-jwt:
-  secret: ${JWT_SECRET:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}
-  issuer: ${JWT_ISSUER:ecommerce-platform}
-
-# Development logging configuration
 logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
   level:
     root: INFO
     '[org.springframework.cloud.gateway]': DEBUG
     '[reactor.netty.http.client]': DEBUG
     '[org.de013.apigateway.security]': DEBUG
-    '[org.de013.apigateway]': DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,prometheus
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
