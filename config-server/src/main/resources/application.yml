@@ -25,11 +25,22 @@ spring:
     username: ${RABBITMQ_USERNAME:user}
     password: ${RABBITMQ_PASSWORD:password}
 
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+
 management:
   endpoints:
     web:
       exposure:
-        include: "health,refresh,busrefresh"
+        include: health,metrics,info,prometheus
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
   health:
     readinessstate:
       enabled: true
@@ -39,16 +50,6 @@ management:
     health:
       probes:
         enabled: true
-
-eureka:
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
-    fetch-registry: true
-    register-with-eureka: true
-  instance:
-    prefer-ip-address: true
-    instance-id: ${spring.application.name}:${server.port}
 
 #encrypt:
 #  key: "TRANPHUHUYIT"

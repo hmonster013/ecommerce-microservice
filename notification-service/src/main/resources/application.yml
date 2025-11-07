@@ -8,3 +8,22 @@ spring:
     active: default
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+  level:
+    "[org.de013.notificationservice]": DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,prometheus
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

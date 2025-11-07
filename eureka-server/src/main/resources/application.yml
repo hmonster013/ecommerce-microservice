@@ -4,37 +4,33 @@ server:
 spring:
   application:
     name: eureka-server
-
-  output:
-    ansi:
-      enabled: always
-
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
   cloud:
-    compatibility-verifier:
-      enabled: false
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 1000
+        max-attempts: 6
+        max-interval: 2000
+        multiplier: 1.1
 
-eureka:
-  instance:
-    hostname: localhost
-  client:
-    register-with-eureka: false
-    fetch-registry: false
-    service-url:
-      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
-  server:
-    enable-self-preservation: false
-    eviction-interval-timer-in-ms: 10000
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+  level:
+    com.netflix.eureka: DEBUG
+    com.netflix.discovery: DEBUG
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: always
-
-logging:
-  level:
-    com.netflix.eureka: DEBUG
-    com.netflix.discovery: DEBUG
+        include: health,metrics,info,prometheus
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

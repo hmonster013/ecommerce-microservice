@@ -1,8 +1,11 @@
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jre-alpine
 
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl wget
 
 WORKDIR /app
+
+# Download OpenTelemetry Java agent
+RUN wget -q https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.1.0/opentelemetry-javaagent.jar
 
 COPY target/*.jar app.jar
 
