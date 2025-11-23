@@ -39,7 +39,7 @@ public class OrderController {
     /**
      * Create a new order
      */
-    @Operation(summary = "Create order 🔐 (Authenticated)", description = "Create a new order from shopping cart. Converts cart items to order items and initializes order with PENDING status")
+    @Operation(summary = "Create order (Authenticated)", description = "Create a new order from shopping cart. Converts cart items to order items and initializes order with PENDING status. Authorization handled by API Gateway.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Order created successfully",
                 content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -49,7 +49,6 @@ public class OrderController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
-    @PreAuthorize("@orderSecurity.isAuthenticated()")
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse createOrder(
             @Parameter(description = "Order creation request", required = true)
@@ -64,7 +63,7 @@ public class OrderController {
     /**
      * Get order by ID
      */
-    @Operation(summary = "Get order by ID 🔐 (Owner/Admin)", description = "Retrieve order details by its unique identifier. Accessible by order owner or admin only")
+    @Operation(summary = "Get order by ID (Owner/Admin)", description = "Retrieve order details by its unique identifier. Authorization handled by API Gateway.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Order found",
                 content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -74,7 +73,6 @@ public class OrderController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.ORDER_ID_PARAM)
-    @PreAuthorize("@orderSecurity.canAccessOrder(#orderId)")
     public OrderResponse getOrder(
             @Parameter(description = "Order ID", required = true, example = "1")
             @PathVariable Long orderId) {
@@ -85,14 +83,13 @@ public class OrderController {
     /**
      * Get current user's orders
      */
-    @Operation(summary = "Get my orders 🔐 (Authenticated)", description = "Retrieve paginated list of orders for the authenticated user. Returns orders sorted by creation date (newest first)")
+    @Operation(summary = "Get my orders (Authenticated)", description = "Retrieve paginated list of orders for the authenticated user. Returns orders sorted by creation date (newest first). Authorization handled by API Gateway.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.MY_ORDERS)
-    @PreAuthorize("@orderSecurity.isAuthenticated()")
     public Page<OrderResponse> getMyOrders(
             @Parameter(description = "Pagination parameters") Pageable pageable) {
         UserContext userContext = UserContextHolder.requireAuthenticated();
@@ -103,7 +100,7 @@ public class OrderController {
     /**
      * Get orders by user ID (admin only)
      */
-    @Operation(summary = "Get user orders 🔐 (Admin/Owner)", description = "Retrieve paginated list of orders for a specific user. Admin access required or user accessing their own orders")
+    @Operation(summary = "Get user orders (Admin/Owner)", description = "Retrieve paginated list of orders for a specific user. Authorization handled by API Gateway.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
@@ -112,7 +109,6 @@ public class OrderController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM)
-    @PreAuthorize("@orderSecurity.canAccessUserOrders(#userId)")
     public Page<OrderResponse> getUserOrders(
             @Parameter(description = "User ID", required = true, example = "1")
             @PathVariable Long userId,
@@ -124,7 +120,7 @@ public class OrderController {
     /**
      * Get all orders (admin only)
      */
-    @Operation(summary = "Get all orders 🔐 (Admin Only)", description = "Retrieve paginated list of all orders in the system. Useful for order management and reporting")
+    @Operation(summary = "Get all orders (Admin Only)", description = "Retrieve paginated list of all orders in the system. Useful for order management and reporting. Authorization handled by API Gateway.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
@@ -132,7 +128,6 @@ public class OrderController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    @PreAuthorize("@orderSecurity.isAdmin()")
     public Page<OrderResponse> getAllOrders(
             @Parameter(description = "Pagination parameters") Pageable pageable) {
         log.debug("Admin getting all orders");
@@ -142,7 +137,7 @@ public class OrderController {
     /**
      * Get order by order number
      */
-    @Operation(summary = "Get order by number", description = "Retrieve order details by its unique order number (e.g., ORD-12345678). **🔐 (Authenticated Users)** - Accessible by order owner or admin")
+    @Operation(summary = "Get order by number", description = "Retrieve order details by its unique order number (e.g., ORD-12345678). Authorization handled by API Gateway.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Order found",
                 content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -152,7 +147,6 @@ public class OrderController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.NUMBER + ApiPaths.ORDER_NUMBER_PARAM)
-    @PreAuthorize("@orderSecurity.isAuthenticated()")
     public OrderResponse getOrderByNumber(
             @Parameter(description = "Order number", required = true, example = "ORD-12345678")
             @PathVariable String orderNumber) {
@@ -163,7 +157,7 @@ public class OrderController {
     /**
      * Update order (admin only for now)
      */
-    @Operation(summary = "Update order", description = "Update order details such as status, addresses, or customer notes. **🔐 (Admin or Order Owner)** - Admin access required or order owner for limited updates")
+    @Operation(summary = "Update order", description = "Update order details such as status, addresses, or customer notes. Authorization handled by API Gateway.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Order updated successfully",
                 content = @Content(schema = @Schema(implementation = OrderResponse.class))),
@@ -174,7 +168,6 @@ public class OrderController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping(ApiPaths.ORDER_ID_PARAM)
-    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
     public OrderResponse updateOrder(
             @Parameter(description = "Order ID", required = true, example = "1")
             @PathVariable Long orderId,
@@ -187,7 +180,7 @@ public class OrderController {
     /**
      * Cancel order
      */
-    @Operation(summary = "Cancel order", description = "Cancel an existing order. Only allowed for orders in PENDING, CONFIRMED, or PAID status. **🔐 (Admin or Order Owner)** - Cancelled orders cannot be restored")
+    @Operation(summary = "Cancel order", description = "Cancel an existing order. Only allowed for orders in PENDING, CONFIRMED, or PAID status. Cancelled orders cannot be restored. Authorization handled by API Gateway.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Order cancelled successfully"),
         @ApiResponse(responseCode = "400", description = "Order cannot be cancelled in current status"),
@@ -197,7 +190,6 @@ public class OrderController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping(ApiPaths.ORDER_ID_PARAM)
-    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancelOrder(
             @Parameter(description = "Order ID", required = true, example = "1")

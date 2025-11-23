@@ -186,52 +186,6 @@ public class UserExceptionHandler {
     }
 
     /**
-     * Handle invalid credentials exceptions
-     */
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidCredentialsException(
-            InvalidCredentialsException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("Invalid credentials [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "INVALID_CREDENTIALS",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
-    /**
-     * Handle invalid token exceptions
-     */
-    @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidTokenException(
-            InvalidTokenException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("Invalid token [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "INVALID_TOKEN",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
-    /**
      * Handle authentication exceptions (fallback for other auth exceptions)
      */
     @ExceptionHandler(BadCredentialsException.class)
@@ -246,29 +200,6 @@ public class UserExceptionHandler {
                 HttpStatus.UNAUTHORIZED.getReasonPhrase(),
                 "BAD_CREDENTIALS",
                 "Invalid username or password",
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
-    /**
-     * Handle JWT authentication exceptions
-     */
-    @ExceptionHandler(JwtAuthenticationException.class)
-    public ResponseEntity<ErrorResponse> handleJwtAuthenticationException(
-            JwtAuthenticationException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("JWT authentication exception [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "JWT_AUTHENTICATION_ERROR",
-                ex.getMessage(),
                 request.getRequestURI(),
                 request.getMethod(),
                 traceId

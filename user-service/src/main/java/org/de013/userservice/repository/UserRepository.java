@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     // ========== Basic Finder Methods ==========
 
+    Optional<User> findByKeycloakId(String keycloakId);
+
     Optional<User> findByUsername(String username);
 
     Optional<User> findByEmail(String email);
@@ -26,6 +28,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Optional<User> findByUsernameOrEmail(String username, String email);
 
     // ========== Existence Check Methods ==========
+
+    boolean existsByKeycloakId(String keycloakId);
 
     boolean existsByUsername(String username);
 

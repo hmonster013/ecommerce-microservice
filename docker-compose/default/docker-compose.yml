@@ -147,6 +147,15 @@ services:
     environment:
       CONFIG_SERVER_URL: ${CONFIG_SERVER_URL}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      # Keycloak Configuration
+      KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      KEYCLOAK_JWK_SET_URI: ${KEYCLOAK_JWK_SET_URI}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
       # OpenTelemetry
       OTEL_SERVICE_NAME: api-gateway
       OTEL_RESOURCE_ATTRIBUTES: service.name=api-gateway,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
@@ -155,6 +164,8 @@ services:
     depends_on:
       config-server:
         condition: service_healthy
+      keycloak:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"]
       interval: 30s
@@ -326,6 +337,7 @@ services:
   read:
     image: grafana/loki:latest
     command: "-config.file=/etc/loki/config.yaml -target=read"
+    user: "0:0"
     ports:
       - 3101:3100
       - 7946
@@ -347,6 +359,7 @@ services:
   write:
     image: grafana/loki:latest
     command: "-config.file=/etc/loki/config.yaml -target=write"
+    user: "0:0"
     ports:
       - 3102:3100
       - 7946
@@ -510,6 +523,7 @@ services:
 
   backend:
     image: grafana/loki:latest
+    user: "0:0"
     volumes:
       - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
     ports:
@@ -590,12 +604,72 @@ services:
       retries: 5
     networks:
       - ecommerce-network
+# ============================================
+# SECURITY & AUTHENTICATION
+# ============================================
+  keycloak-db:
+    image: postgres:15-alpine
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_password
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - keycloak_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.5
+    container_name: keycloak
+    ports:
+      - "${KEYCLOAK_PORT:-8090}:8080"
+    environment:
+      # Admin credentials
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      # Database configuration
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_password
+      # Keycloak configuration
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HTTP_ENABLED: true
+      KC_HEALTH_ENABLED: true
+      KC_METRICS_ENABLED: true
+      # Logging
+      KC_LOG_LEVEL: INFO
+      KEYCLOAK_LOGLEVEL: INFO
+    volumes:
+      - ../../keycloak/realm-config:/opt/keycloak/data/import
+    command:
+      - start-dev
+      - --import-realm
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
 
 # ============================================
 # VOLUMES
 # ============================================
 volumes:
   postgres_data:
+  keycloak_data:
   prometheus_data:
   tempo_data:
 

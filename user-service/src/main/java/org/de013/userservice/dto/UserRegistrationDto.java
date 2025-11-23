@@ -17,8 +17,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "User registration request")
+@Schema(description = "User registration request - Note: Use Keycloak for actual registration")
 public class UserRegistrationDto {
+
+    @Schema(description = "Keycloak user UUID (optional for legacy support)",
+            example = "550e8400-e29b-41d4-a716-446655440000")
+    private String keycloakId;
 
     @NotBlank(message = "{username.required}")
     @Size(min = 3, max = 50, message = "{username.invalid}")

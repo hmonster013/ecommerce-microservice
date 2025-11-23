@@ -3,16 +3,8 @@ package org.de013.userservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
-import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
@@ -21,16 +13,16 @@ import java.util.stream.Collectors;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User extends BaseEntity implements UserDetails {
+public class User extends BaseEntity {
+    
+    @Column(name = "keycloak_id", unique = true, length = 36)
+    private String keycloakId;
     
     @Column(unique = true, nullable = false)
     private String username;
     
     @Column(unique = true, nullable = false)
     private String email;
-    
-    @Column(nullable = false)
-    private String password;
     
     @Column(name = "first_name")
     private String firstName;
@@ -74,51 +66,4 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "is_enabled")
     @Builder.Default
     private boolean enabled = true;
-    
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        Set<GrantedAuthority> authorities = new HashSet<>();
-
-        // Add role authorities
-        for (Role role : roles) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
-
-            // Add permission authorities
-            for (Permission permission : role.getPermissions()) {
-                authorities.add(new SimpleGrantedAuthority(permission.getName()));
-            }
-        }
-
-        return authorities;
-    }
-    
-    @Override
-    public String getPassword() {
-        return password;
-    }
-    
-    @Override
-    public String getUsername() {
-        return username;
-    }
-    
-    @Override
-    public boolean isAccountNonExpired() {
-        return accountNonExpired;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return accountNonLocked;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return credentialsNonExpired;
-    }
-    
-    @Override
-    public boolean isEnabled() {
-        return enabled;
-    }
 }

@@ -31,23 +31,22 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
 
     /**
      * Create Authentication object from headers
+     * Note: userId here is actually Keycloak UUID (sub claim)
      */
-    public static Authentication createFromHeaders(String userId, String username, String email, String roles) {
-        if (userId == null || username == null) {
+    public static Authentication createFromHeaders(String keycloakId, String username, String email, String roles) {
+        if (keycloakId == null || username == null) {
             return null;
         }
 
         List<SimpleGrantedAuthority> authorities = parseRoles(roles);
         
-        // Create Authentication object with user info
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                username, // principal
-                null,     // credentials (no password needed)
-                authorities // authorities
+                username,
+                null,
+                authorities
         );
         
-        // Set additional details
-        auth.setDetails(new HeaderUserDetails(userId, username, email, roles));
+        auth.setDetails(new HeaderUserDetails(keycloakId, username, email, roles));
         
         return auth;
     }
@@ -68,19 +67,19 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
      * Custom UserDetails to hold additional user information from headers
      */
     public static class HeaderUserDetails {
-        private final String userId;
+        private final String keycloakId;
         private final String username;
         private final String email;
         private final String roles;
 
-        public HeaderUserDetails(String userId, String username, String email, String roles) {
-            this.userId = userId;
+        public HeaderUserDetails(String keycloakId, String username, String email, String roles) {
+            this.keycloakId = keycloakId;
             this.username = username;
             this.email = email;
             this.roles = roles;
         }
 
-        public String getUserId() { return userId; }
+        public String getKeycloakId() { return keycloakId; }
         public String getUsername() { return username; }
         public String getEmail() { return email; }
         public String getRoles() { return roles; }

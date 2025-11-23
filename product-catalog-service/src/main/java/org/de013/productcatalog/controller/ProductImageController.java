@@ -39,7 +39,6 @@ public class ProductImageController extends BaseController {
         @ApiResponse(responseCode = "409", description = "Main image already exists")
     })
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.IMAGES)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductImageDto>> createImage(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -60,7 +59,6 @@ public class ProductImageController extends BaseController {
         @ApiResponse(responseCode = "409", description = "Main image already exists")
     })
     @PutMapping(ApiPaths.IMAGES + ApiPaths.IMAGE_ID_PARAM)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductImageDto>> updateImage(
             @Parameter(description = "Image ID", required = true)
             @PathVariable Long imageId,
@@ -79,7 +77,6 @@ public class ProductImageController extends BaseController {
         @ApiResponse(responseCode = "404", description = "Image not found")
     })
     @DeleteMapping(ApiPaths.IMAGES + ApiPaths.IMAGE_ID_PARAM)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteImage(
             @Parameter(description = "Image ID", required = true)
             @PathVariable Long imageId) {

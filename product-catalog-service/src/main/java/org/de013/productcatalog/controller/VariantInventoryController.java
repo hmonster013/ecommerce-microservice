@@ -60,7 +60,6 @@ public class VariantInventoryController extends BaseController {
     // Stock Management Operations
     @Operation(summary = "[ADMIN] Add stock to variant", description = "Add stock to a specific variant")
     @PostMapping(ApiPaths.VARIANTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.ADD)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<VariantInventoryDto>> addStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
@@ -75,7 +74,6 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Remove stock from variant", description = "Remove stock from a specific variant")
     @PostMapping(ApiPaths.VARIANTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.REMOVE)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<VariantInventoryDto>> removeStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
@@ -90,7 +88,6 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Set stock level for variant", description = "Set exact stock level for a specific variant")
     @PostMapping(ApiPaths.VARIANTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.SET)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<VariantInventoryDto>> setStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
@@ -106,7 +103,6 @@ public class VariantInventoryController extends BaseController {
     // Stock Reservation Operations
     @Operation(summary = "[ADMIN] Reserve variant stock", description = "Reserve stock for a specific variant")
     @PostMapping(ApiPaths.VARIANTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.RESERVE)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> reserveStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
@@ -125,7 +121,6 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Release reserved variant stock", description = "Release previously reserved stock for a specific variant")
     @PostMapping(ApiPaths.VARIANTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.RELEASE)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> releaseReservedStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
@@ -144,7 +139,6 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Fulfill order for variant", description = "Fulfill an order by reducing stock and reserved quantity for a specific variant")
     @PostMapping(ApiPaths.VARIANTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.FULFILL)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> fulfillOrder(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,

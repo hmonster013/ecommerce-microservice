@@ -1,3 +1,14 @@
+# Server Configuration
+server:
+  tomcat:
+    connection-timeout: 30s
+    keep-alive-timeout: 30s
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 10000
+    accept-count: 100
+
 spring:
   # Enable ANSI colors in console output
   output:
@@ -6,9 +17,9 @@ spring:
 
   # Database Configuration for development
   datasource:
-    url: jdbc:postgresql://localhost:5432/order_service_db
-    username: postgres
-    password: password
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/order_service_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -16,7 +27,13 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-
+      
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:user}
+    password: ${RABBITMQ_PASSWORD:password}
+    
   # JPA Configuration
   jpa:
     hibernate:
@@ -46,7 +63,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
     fetch-registry: true
     register-with-eureka: true
     registry-fetch-interval-seconds: 5  # Faster for development
@@ -59,25 +76,11 @@ eureka:
     lease-expiration-duration-in-seconds: 30
     hostname: localhost
 
-# Management endpoints for development
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,env,configprops
-      base-path: /actuator
-  endpoint:
-    health:
-      show-details: always
-      show-components: always
-  health:
-    rabbit:
-      enabled: false  # Disable RabbitMQ health check for base version
-    redis:
-      enabled: false  # Disable Redis health check for base version
-  info:
-    env:
-      enabled: true
+info:
+  app:
+    name: Order Service
+    description: Order processing and management service
+    version: 1.0.0
 
 # OpenAPI/Swagger Configuration for development
 springdoc:
@@ -100,16 +103,40 @@ springdoc:
         - '/orders/**'
         - '/actuator/**'
 
-# Development logging configuration
-logging:
-  level:
-    root: INFO
-    '[org.de013.orderservice]': DEBUG
-    '[org.springframework.security]': DEBUG
-    '[org.hibernate.SQL]': DEBUG
-
 # Application configuration
 app:
   services:
     shopping-cart:
       url: http://localhost:8083
+
+# Feign Client Configuration
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        read-timeout: 5000
+        logger-level: BASIC
+      user-service:
+        connect-timeout: 5000
+        read-timeout: 5000
+        logger-level: FULL
+  httpclient:
+    enabled: true
+    max-connections: 200
+    max-connections-per-route: 50
+  compression:
+    request:
+      enabled: true
+      mime-types: text/xml,application/xml,application/json
+      min-request-size: 2048
+    response:
+      enabled: true
+
+# User Sync Configuration
+user-sync:
+  enabled: true
+  cache-ttl: 3600  # seconds (1 hour)
+  retry:
+    max-attempts: 3
+    backoff-period: 1000  # milliseconds
