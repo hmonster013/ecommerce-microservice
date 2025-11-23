@@ -1,3 +1,14 @@
+# Server Configuration
+server:
+  tomcat:
+    connection-timeout: 30s
+    keep-alive-timeout: 30s
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 10000
+    accept-count: 100
+
 spring:
   # Jackson configuration for proper date/time serialization
   jackson:
@@ -30,7 +41,13 @@ spring:
       connection-timeout: 20000
       max-lifetime: 1200000
       leak-detection-threshold: 60000
-
+      
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:user}
+    password: ${RABBITMQ_PASSWORD:password}
+    
   jpa:
     hibernate:
       ddl-auto: validate
@@ -51,33 +68,27 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
-    fetch-registry: false
-    register-with-eureka: false
-    enabled: false
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+    registry-fetch-interval-seconds: 5
+    initial-instance-info-replication-interval-seconds: 10
+    healthcheck:
+      enabled: true
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+    hostname: localhost
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,env,configprops
-      base-path: /actuator
-  endpoint:
-    health:
-      show-details: always
-      show-components: always
-  info:
-    env:
-      enabled: true
+info:
+  app:
+    name: Payment Service
+    description: Payment processing and transaction management service
+    version: 1.0.0
 
-# JWT Configuration
-jwt:
-  secret: ${JWT_SECRET:CHANGE_THIS_IN_PRODUCTION_MUST_BE_AT_LEAST_256_BITS_LONG_FOR_HS256_ALGORITHM}
-  expiration: ${JWT_EXPIRATION:900000}  # 15 minutes
-  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+# JWT Configuration removed - now using Keycloak for authentication
   issuer: ${JWT_ISSUER:ecommerce-platform}
   algorithm: ${JWT_ALGORITHM:HS256}
 
@@ -159,10 +170,12 @@ feign:
     response:
       enabled: true
 
-logging:
-  level:
-    '[org.de013.paymentservice]': DEBUG
-    '[org.springframework.security]': DEBUG
-    '[com.stripe]': INFO
+# User Sync Configuration
+user-sync:
+  enabled: true
+  cache-ttl: 3600  # seconds (1 hour)
+  retry:
+    max-attempts: 3
+    backoff-period: 1000  # milliseconds
 
 

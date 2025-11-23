@@ -21,17 +21,18 @@ import java.util.stream.Collectors;
 
 /**
  * Filter that reads user context from headers set by API Gateway
- * and creates Spring Security Authentication object for @PreAuthorize to work
+ * 
+ * Note: X-User-Id contains Keycloak UUID (sub claim), not database user ID
+ * API Gateway handles all authentication & authorization, this just reads user context
  */
 @Component
 @Slf4j
 public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
     // Header constants - must match API Gateway
-    private static final String HEADER_USER_ID = "X-User-Id";
+    private static final String HEADER_KEYCLOAK_ID = "X-User-Id";      // Keycloak UUID
     private static final String HEADER_USERNAME = "X-User-Username";
     private static final String HEADER_USER_EMAIL = "X-User-Email";
-    private static final String HEADER_USER_ROLES = "X-User-Roles";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, 
@@ -39,19 +40,18 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
                                   FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            // Read user context from headers
-            String userId = request.getHeader(HEADER_USER_ID);
+            String keycloakId = request.getHeader(HEADER_KEYCLOAK_ID);
             String username = request.getHeader(HEADER_USERNAME);
             String email = request.getHeader(HEADER_USER_EMAIL);
-            String roles = request.getHeader(HEADER_USER_ROLES);
 
-            // If user context exists, create Authentication object
-            if (StringUtils.hasText(userId) && StringUtils.hasText(username)) {
-                Authentication auth = createAuthenticationFromHeaders(userId, username, email, roles);
+            log.debug("Headers received - KeycloakId: {}, Username: {}, Email: {}", keycloakId, username, email);
+
+            if (StringUtils.hasText(keycloakId) && StringUtils.hasText(username)) {
+                Authentication auth = createAuthenticationFromHeaders(keycloakId, username, email);
                 
                 if (auth != null) {
                     SecurityContextHolder.getContext().setAuthentication(auth);
-                    log.debug("Set authentication for user: {} with roles: {}", username, roles);
+                    log.debug("Set authentication for user: {}", username);
                 }
             } else {
                 log.debug("No user context found in headers");
@@ -59,7 +59,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (Exception e) {
             log.warn("Error processing authentication headers: {}", e.getMessage());
-            // Don't fail the request, just continue without authentication
         }
 
         filterChain.doFilter(request, response);
@@ -68,8 +67,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        
-        // Skip filter for public endpoints
         return path.contains("/actuator/") || 
                path.contains("/swagger-ui") || 
                path.contains("/v3/api-docs");
@@ -77,67 +74,40 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Create Authentication object from headers
+     * Authorization already handled by API Gateway, this is just for user context
      */
-    private Authentication createAuthenticationFromHeaders(String userId, String username, String email, String roles) {
-        if (userId == null || username == null) {
+    private Authentication createAuthenticationFromHeaders(String keycloakId, String username, String email) {
+        if (keycloakId == null || username == null) {
             return null;
         }
 
-        List<SimpleGrantedAuthority> authorities = parseRoles(roles);
-        
-        // Create Authentication object with user info
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                username, // principal
-                null,     // credentials (no password needed)
-                authorities // authorities
+                username,
+                null,
+                Collections.emptyList()
         );
         
-        // Set additional details
-        auth.setDetails(new HeaderUserDetails(userId, username, email, roles));
+        auth.setDetails(new HeaderUserDetails(keycloakId, username, email));
         
         return auth;
     }
 
     /**
-     * Parse roles string into authorities
-     */
-    private List<SimpleGrantedAuthority> parseRoles(String roles) {
-        if (!StringUtils.hasText(roles)) {
-            return Collections.emptyList();
-        }
-        
-        return Arrays.stream(roles.split(","))
-                .map(String::trim)
-                .filter(role -> !role.isEmpty())
-                .map(role -> {
-                    // Ensure role has ROLE_ prefix for Spring Security
-                    if (!role.startsWith("ROLE_")) {
-                        return new SimpleGrantedAuthority("ROLE_" + role);
-                    }
-                    return new SimpleGrantedAuthority(role);
-                })
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Custom UserDetails to hold additional user information from headers
+     * Custom UserDetails to hold user information from headers
      */
     public static class HeaderUserDetails {
-        private final String userId;
+        private final String keycloakId;
         private final String username;
         private final String email;
-        private final String roles;
 
-        public HeaderUserDetails(String userId, String username, String email, String roles) {
-            this.userId = userId;
+        public HeaderUserDetails(String keycloakId, String username, String email) {
+            this.keycloakId = keycloakId;
             this.username = username;
             this.email = email;
-            this.roles = roles;
         }
 
-        public String getUserId() { return userId; }
+        public String getKeycloakId() { return keycloakId; }
         public String getUsername() { return username; }
         public String getEmail() { return email; }
-        public String getRoles() { return roles; }
     }
 }

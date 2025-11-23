@@ -42,7 +42,6 @@ public class InventoryController extends BaseController {
     // Stock Management Operations
     @Operation(summary = "[ADMIN] Add stock", description = "Add stock to a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.ADD)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> addStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -57,7 +56,6 @@ public class InventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Remove stock", description = "Remove stock from a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.REMOVE)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> removeStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -72,7 +70,6 @@ public class InventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Set stock level", description = "Set exact stock level for a product")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.SET)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> setStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -88,7 +85,6 @@ public class InventoryController extends BaseController {
     // Stock Reservation Operations
     @Operation(summary = "[ADMIN] Reserve stock", description = "Reserve stock for an order")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.RESERVE)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> reserveStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -107,7 +103,6 @@ public class InventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Release reserved stock", description = "Release previously reserved stock")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.RELEASE)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> releaseReservedStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -126,7 +121,6 @@ public class InventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Fulfill order", description = "Fulfill an order by reducing stock and reserved quantity")
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.FULFILL)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> fulfillOrder(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,

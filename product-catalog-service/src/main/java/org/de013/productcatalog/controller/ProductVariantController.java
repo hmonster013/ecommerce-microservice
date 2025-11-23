@@ -38,7 +38,6 @@ public class ProductVariantController extends BaseController {
         @ApiResponse(responseCode = "409", description = "Variant combination already exists")
     })
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.VARIANTS)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> createVariant(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -59,7 +58,6 @@ public class ProductVariantController extends BaseController {
         @ApiResponse(responseCode = "409", description = "Variant combination already exists")
     })
     @PutMapping(ApiPaths.VARIANTS + ApiPaths.VARIANT_ID_PARAM)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> updateVariant(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long variantId,
@@ -78,7 +76,6 @@ public class ProductVariantController extends BaseController {
         @ApiResponse(responseCode = "404", description = "Variant not found")
     })
     @DeleteMapping(ApiPaths.VARIANTS + ApiPaths.VARIANT_ID_PARAM)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteVariant(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long variantId) {

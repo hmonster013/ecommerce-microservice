@@ -10,7 +10,6 @@ import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResponse;
 import org.de013.userservice.dto.*;
-import org.de013.userservice.service.AuthService;
 import org.de013.userservice.service.UserManagementService;
 import org.de013.common.dto.PageResponse;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +26,6 @@ import org.springframework.web.bind.annotation.*;
 public class UserManagementController extends BaseController {
 
     private final UserManagementService userManagementService;
-    private final AuthService authService;
 
     // ========== Profile Management ==========
 
@@ -50,22 +48,13 @@ public class UserManagementController extends BaseController {
         return ok(updatedUser);
     }
 
-    @PutMapping(ApiPaths.CHANGE_PASSWORD)
-    @Operation(summary = "Change password", description = "Change current user's password")
-    public ResponseEntity<ApiResponse<String>> changePassword(
-            Authentication authentication,
-            @Valid @RequestBody ChangePasswordDto changePasswordRequest) {
-
-        String username = authentication.getName();
-        authService.changePassword(changePasswordRequest, username);
-        return ok("Password changed successfully");
-    }
+    // Note: Password change is now handled by Keycloak directly
+    // Users should change password through Keycloak UI or API
 
     // ========== Admin Only Endpoints ==========
 
     @GetMapping(ApiPaths.ID_PARAM)
-    @Operation(summary = "Get user by ID (Admin only)", description = "Retrieve user information by user ID")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get user by ID (Admin only)", description = "Retrieve user information by user ID. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(
             @Parameter(description = "User ID", required = true)
             @PathVariable Long id) {
@@ -75,8 +64,7 @@ public class UserManagementController extends BaseController {
     }
 
     @GetMapping(ApiPaths.USERNAME_PARAM)
-    @Operation(summary = "Get user by username (Admin only)", description = "Retrieve user information by username")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get user by username (Admin only)", description = "Retrieve user information by username. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<UserResponse>> getUserByUsername(
             @Parameter(description = "Username", required = true)
             @PathVariable String username) {
@@ -86,8 +74,7 @@ public class UserManagementController extends BaseController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all users (Admin only)", description = "Retrieve all users with pagination")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all users (Admin only)", description = "Retrieve all users with pagination. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getAllUsers(
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
@@ -96,8 +83,7 @@ public class UserManagementController extends BaseController {
     }
 
     @GetMapping(ApiPaths.SEARCH)
-    @Operation(summary = "Search users (Admin only)", description = "Search users by keyword")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Search users (Admin only)", description = "Search users by keyword. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> searchUsers(
             @Parameter(description = "Search keyword", required = true)
             @RequestParam String keyword,
@@ -110,24 +96,21 @@ public class UserManagementController extends BaseController {
     // ========== User Status Management (Admin only) ==========
 
     @PutMapping(ApiPaths.ID_PARAM + ApiPaths.ENABLE)
-    @Operation(summary = "Enable user (Admin only)", description = "Enable user account")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Enable user (Admin only)", description = "Enable user account. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<String>> enableUser(@PathVariable Long id) {
         userManagementService.enableUser(id);
         return ok("User enabled successfully");
     }
 
     @PutMapping(ApiPaths.ID_PARAM + ApiPaths.DISABLE)
-    @Operation(summary = "Disable user (Admin only)", description = "Disable user account")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Disable user (Admin only)", description = "Disable user account. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<String>> disableUser(@PathVariable Long id) {
         userManagementService.disableUser(id);
         return ok("User disabled successfully");
     }
 
     @DeleteMapping(ApiPaths.ID_PARAM)
-    @Operation(summary = "Delete user (Admin only)", description = "Delete user account")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete user (Admin only)", description = "Delete user account. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long id) {
         userManagementService.deleteUser(id);
         return ok("User deleted successfully");

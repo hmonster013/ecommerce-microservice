@@ -85,12 +85,7 @@ public interface UserManagementService {
      */
     UserResponse updateUserProfile(String username, UserUpdateDto request);
 
-    /**
-     * Update user password
-     * @param username Username
-     * @param newPassword New password (plain text)
-     */
-    void updatePassword(String username, String newPassword);
+    // Note: Password management is now handled by Keycloak
 
     // ========== User Administration ==========
 

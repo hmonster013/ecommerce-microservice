@@ -1,3 +1,14 @@
+# Server Configuration
+server:
+  tomcat:
+    connection-timeout: 30s
+    keep-alive-timeout: 30s
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 10000
+    accept-count: 100
+
 spring:
   # Enable ANSI colors in console output
   output:
@@ -5,11 +16,17 @@ spring:
       enabled: always
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/notification_service_db
-    username: postgres
-    password: password
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/notification_service_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
-  
+    
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:user}
+    password: ${RABBITMQ_PASSWORD:password}
+    
   jpa:
     hibernate:
       ddl-auto: update
@@ -46,37 +63,22 @@ spring:
         debug: false
     # Test connection on startup
     test-connection: false
-
-# RabbitMQ and Redis disabled for simple notification service
-  # rabbitmq:
-  #   host: ${RABBITMQ_HOST:localhost}
-  # data:
-  #   redis:
-  #     host: ${REDIS_HOST:localhost}
-
+    
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
     fetch-registry: true
     register-with-eureka: true
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,env,configprops
-      base-path: /actuator
-  endpoint:
-    health:
-      show-details: always
-      show-components: always
-  info:
-    env:
-      enabled: true
+info:
+  app:
+    name: Notification Service
+    description: Email and SMS notification service
+    version: 1.0.0
 
 # Swagger/OpenAPI Configuration
 springdoc:
@@ -101,10 +103,6 @@ springdoc:
       paths-to-match:
         - '/api/v1/notificationsv/**'
         - '/actuator/**'
-
-logging:
-  level:
-    "[org.de013.notificationservice]": DEBUG
 
 # Simple notification service configuration
 app:

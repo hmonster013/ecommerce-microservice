@@ -182,7 +182,6 @@ public class ProductController extends BaseController {
                                         """)))
     })
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductResponseDto>> createProduct(
             @Parameter(
                     description = "Product creation data with all required fields",
@@ -214,7 +213,6 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "[ADMIN] Update product", description = "Update existing product")
     @PutMapping(ApiPaths.ID_PARAM)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductResponseDto>> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductUpdateDto updateDto) {
@@ -226,7 +224,6 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "[ADMIN] Delete product", description = "Delete product")
     @DeleteMapping(ApiPaths.ID_PARAM)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteProduct(@PathVariable Long id) {
         log.info("Deleting product with ID: {}", id);
         productService.deleteProduct(id);
