@@ -44,34 +44,4 @@ public final class ExceptionUtils {
             throw AccountStatusException.inactive();
         }
     }
-    
-    /**
-     * Throw InvalidTokenException if token is null or empty
-     */
-    public static void throwIfTokenEmpty(String token) {
-        if (token == null || token.trim().isEmpty()) {
-            throw InvalidTokenException.empty();
-        }
-    }
-    
-    /**
-     * Throw InvalidCredentialsException for authentication failures
-     */
-    public static void throwInvalidCredentials() {
-        throw InvalidCredentialsException.invalidEmailOrPassword();
-    }
-    
-    /**
-     * Throw InvalidCredentialsException for locked account
-     */
-    public static void throwAccountLocked() {
-        throw InvalidCredentialsException.accountLocked();
-    }
-    
-    /**
-     * Throw InvalidCredentialsException for disabled account
-     */
-    public static void throwAccountDisabled() {
-        throw InvalidCredentialsException.accountDisabled();
-    }
 }

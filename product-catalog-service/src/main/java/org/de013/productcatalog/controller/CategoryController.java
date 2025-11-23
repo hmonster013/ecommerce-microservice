@@ -94,7 +94,6 @@ public class CategoryController extends BaseController {
         @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> createCategory(
             @Parameter(description = "Category creation data", required = true)
             @Valid @RequestBody CategoryCreateDto createDto) {
@@ -113,7 +112,6 @@ public class CategoryController extends BaseController {
         @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @PutMapping(ApiPaths.ID_PARAM)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> updateCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id,
@@ -135,7 +133,6 @@ public class CategoryController extends BaseController {
         @ApiResponse(responseCode = "409", description = "Category has children or products")
     })
     @DeleteMapping(ApiPaths.ID_PARAM)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id) {
@@ -229,7 +226,6 @@ public class CategoryController extends BaseController {
     // Admin endpoints
     @Operation(summary = "[ADMIN] Set category active status", description = "Activate or deactivate category")
     @PutMapping(ApiPaths.ID_PARAM + ApiPaths.ACTIVE)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> setActiveStatus(
             @PathVariable Long id,
             @RequestParam Boolean active) {
@@ -243,7 +239,6 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Move category", description = "Move category to different parent")
     @PutMapping(ApiPaths.ID_PARAM + ApiPaths.MOVE)
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> moveCategory(
             @PathVariable Long id,
             @RequestParam(required = false) Long newParentId) {

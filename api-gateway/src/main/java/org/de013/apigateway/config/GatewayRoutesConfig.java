@@ -1,6 +1,8 @@
 package org.de013.apigateway.config;
 
 import org.de013.apigateway.constant.ApiPaths;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
@@ -9,9 +11,11 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class GatewayRoutesConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(GatewayRoutesConfig.class);
+
     @Bean
-    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
-        return builder.routes()
+    public RouteLocator gatewayRoutes(RouteLocatorBuilder builder) {
+        RouteLocator routeLocator = builder.routes()
             // User Service Routes
             .route(ApiPaths.USER_SERVICE, r -> r
                 .path(ApiPaths.ROUTE_USER_SERVICE)
@@ -115,5 +119,7 @@ public class GatewayRoutesConfig {
                 .uri(ApiPaths.LB_NOTIFICATION_SERVICE))
             
             .build();
+
+        return routeLocator;
     }
 }

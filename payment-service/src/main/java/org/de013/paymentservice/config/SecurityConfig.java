@@ -14,6 +14,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+/**
+ * Security configuration for Payment Service
+ * 
+ * Architecture: Trust internal network - API Gateway handles authentication
+ * - Webhooks are public (payment gateway callbacks)
+ * - All other requests trusted from internal network
+ * - User context read from headers forwarded by API Gateway
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -27,31 +35,10 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                .authorizeHttpRequests(authz -> authz
-                        // Public endpoints
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
-
-                        // Webhook endpoints - public for payment gateway callbacks
-                        .requestMatchers(ApiPaths.WEBHOOKS + "/**").permitAll()
-
-                        // Stripe endpoints - public for health checks and integration testing
-                        .requestMatchers(ApiPaths.STRIPE + ApiPaths.HEALTH, ApiPaths.STRIPE + ApiPaths.WEBHOOKS).permitAll()
-
-                        // Payment processing endpoints - require authentication
-                        .requestMatchers(ApiPaths.PAYMENTS + "/**", ApiPaths.PAYMENT_METHODS + "/**", ApiPaths.REFUNDS + "/**").authenticated()
-                        .requestMatchers(ApiPaths.STRIPE + "/**").authenticated()
-
-                        // All other endpoints require authentication
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(authz -> authz.anyRequest().permitAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // Add header authentication filter to process user context from API Gateway
                 .addFilterBefore(headerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-
 }

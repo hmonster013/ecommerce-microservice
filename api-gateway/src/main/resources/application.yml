@@ -24,7 +24,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,metrics,info,prometheus
+        include: health,metrics,info,prometheus,gateway
   info:
     env:
       enabled: true

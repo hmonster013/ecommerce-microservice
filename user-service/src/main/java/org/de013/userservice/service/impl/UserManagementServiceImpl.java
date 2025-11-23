@@ -43,21 +43,21 @@ public class UserManagementServiceImpl implements UserManagementService {
         validateUserRegistration(request);
         
         // Get default CUSTOMER role
+        // Note: User registration should be done through Keycloak
+        // This method creates profile only - password managed by Keycloak
+        
         Role customerRole = roleRepository.findByName("CUSTOMER")
                 .orElseThrow(() -> new BusinessException("Default CUSTOMER role not found"));
         
         User user = User.builder()
+                .keycloakId(request.getKeycloakId()) // Required: Keycloak user UUID
                 .username(request.getUsername())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phone(request.getPhone())
                 .address(request.getAddress())
                 .enabled(true)
-                .accountNonExpired(true)
-                .accountNonLocked(true)
-                .credentialsNonExpired(true)
                 .createdBy("SYSTEM")
                 .build();
 
@@ -75,20 +75,20 @@ public class UserManagementServiceImpl implements UserManagementService {
     public UserResponse createUser(UserRegistrationDto request) {
         log.info("Creating new user: {}", request.getUsername());
         
+        // Note: User creation should be done through Keycloak
+        // This method creates profile only - password managed by Keycloak
+        
         validateUserRegistration(request);
         
         User user = User.builder()
+                .keycloakId(request.getKeycloakId()) // Required: Keycloak user UUID
                 .username(request.getUsername())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phone(request.getPhone())
                 .address(request.getAddress())
                 .enabled(true)
-                .accountNonExpired(true)
-                .accountNonLocked(true)
-                .credentialsNonExpired(true)
                 .createdBy("ADMIN")
                 .build();
         
@@ -182,18 +182,8 @@ public class UserManagementServiceImpl implements UserManagementService {
         return userMapper.convertToUserResponse(user);
     }
 
-    @Override
-    public void updatePassword(String username, String newPassword) {
-        log.info("Updating password for user: {}", username);
-        
-        User user = findUserByUsername(username);
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setUpdatedBy(username);
-        
-        userRepository.save(user);
-        
-        log.info("Password updated successfully for user: {}", username);
-    }
+    // Password management is now handled by Keycloak
+    // Users should change password through Keycloak UI or API
 
     // ========== User Administration ==========
 

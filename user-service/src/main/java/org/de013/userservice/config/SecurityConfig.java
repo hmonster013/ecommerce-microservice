@@ -28,11 +28,11 @@ import java.util.Arrays;
 /**
  * Security configuration for User Service
  *
- * This configuration is designed for API Gateway-First architecture:
- * - All requests should come through API Gateway (localhost:8080)
- * - API Gateway validates JWT and passes user context via headers
- * - Service uses HeaderAuthenticationFilter to read user context
- * - Direct service calls are not supported for security reasons
+ * Architecture: API Gateway-First with Keycloak
+ * - All requests come through API Gateway (validates JWT with Keycloak)
+ * - API Gateway forwards user context via headers (X-User-Id = Keycloak UUID)
+ * - Service trusts internal network and reads user context from headers
+ * - No authentication logic here - Keycloak handles authentication
  */
 @Configuration
 @EnableWebSecurity
@@ -41,25 +41,10 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final HeaderAuthenticationFilter headerAuthenticationFilter;
-    private final UserDetailsService userDetailsService;
-    private final PasswordEncoder passwordEncoder;
 
     @Bean
     public HeaderAuthenticationProvider headerAuthenticationProvider() {
         return new HeaderAuthenticationProvider();
-    }
-
-    @Bean
-    public DaoAuthenticationProvider daoAuthenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return provider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
     }
 
     @Bean
@@ -71,35 +56,17 @@ public class SecurityConfig {
                 // CORS Configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Authorization Rules - Service manages its own security
+                // Trust internal network - API Gateway handles authorization
                 .authorizeHttpRequests(authz -> authz
-                        // Public endpoints - No authentication required
-                        .requestMatchers(ApiPaths.AUTH + "/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
-
-                        // User endpoints - Require authentication, specific authorization via @PreAuthorize
-                        .requestMatchers(ApiPaths.USERS + "/**").authenticated()
-
-                        // Admin endpoints - Require ADMIN role
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-
-                        // Health endpoints
-                        .requestMatchers(ApiPaths.HEALTH).permitAll()
-
-                        // All other requests require authentication
-                        .anyRequest().authenticated()
+                        .requestMatchers(ApiPaths.USERS + "/internal/**").permitAll()
+                        .anyRequest().permitAll()
                 )
 
-                // Session Management
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // Add header authentication filter (for API Gateway calls only)
                 .addFilterBefore(headerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-
-                // Authentication providers
-                .authenticationProvider(headerAuthenticationProvider())
-                .authenticationProvider(daoAuthenticationProvider());
+                .authenticationProvider(headerAuthenticationProvider());
 
         return http.build();
     }

@@ -5,7 +5,6 @@ import io.github.bucket4j.ConsumptionProbe;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.apigateway.config.RateLimitConfig;
 import org.de013.apigateway.exception.dto.ErrorResponse;
-import org.de013.apigateway.security.JwtUtil;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -37,12 +36,10 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
 
     private final RateLimitConfig rateLimitConfig;
     private final ObjectMapper objectMapper;
-    private final JwtUtil jwtUtil;
 
-    public GlobalRateLimitFilter(RateLimitConfig rateLimitConfig, ObjectMapper objectMapper, JwtUtil jwtUtil) {
+    public GlobalRateLimitFilter(RateLimitConfig rateLimitConfig, ObjectMapper objectMapper) {
         this.rateLimitConfig = rateLimitConfig;
         this.objectMapper = objectMapper;
-        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -190,23 +187,38 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
 
     /**
      * Extract user ID from JWT token in Authorization header
+     * Simple extraction without full JWT validation (validation happens in SecurityConfig)
      */
     private String getUserId(ServerHttpRequest request) {
         try {
-            // Get Authorization header
             String authHeader = request.getHeaders().getFirst("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return null;
             }
 
-            // Extract token
+            // Simple JWT parsing - extract sub claim from payload
             String token = authHeader.substring(7);
-
-            // Extract userId from token
-            Long userId = jwtUtil.extractUserId(token);
-            return userId != null ? userId.toString() : null;
+            String[] parts = token.split("\\.");
+            if (parts.length < 2) {
+                return null;
+            }
+            
+            // Decode payload (Base64)
+            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+            
+            // Extract "sub" claim (simple string matching, not full JSON parsing)
+            // This is just for rate limiting, full validation happens later in SecurityConfig
+            if (payload.contains("\"sub\"")) {
+                int subIndex = payload.indexOf("\"sub\"");
+                int valueStart = payload.indexOf("\"", subIndex + 5) + 1;
+                int valueEnd = payload.indexOf("\"", valueStart);
+                if (valueStart > 0 && valueEnd > valueStart) {
+                    return payload.substring(valueStart, valueEnd);
+                }
+            }
+            
+            return null;
         } catch (Exception e) {
-            // If token is invalid, return null (will use IP-based rate limiting)
             log.debug("Could not extract userId from token: {}", e.getMessage());
             return null;
         }
