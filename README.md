@@ -7,8 +7,8 @@ A scalable e-commerce platform built with microservices architecture using Sprin
 ## 🏗️ Architecture
 
 ### Microservices
-- **API Gateway** (8080) - Single entry point with JWT authentication
-- **User Service** (8081) - User management and authentication
+- **API Gateway** (8080) - Single entry point with OAuth2 authentication
+- **User Service** (8081) - User profile management
 - **Product Catalog** (8082) - Product and inventory management
 - **Shopping Cart** (8083) - Shopping cart operations
 - **Order Service** (8084) - Order processing
@@ -16,10 +16,11 @@ A scalable e-commerce platform built with microservices architecture using Sprin
 - **Notification Service** (8086) - Email/SMS notifications
 
 ### Infrastructure
+- **Keycloak** (8090) - Identity and access management (OAuth2/OIDC)
 - **Eureka Server** (8761) - Service discovery
 - **Config Server** (8071) - Centralized configuration
 - **PostgreSQL** (5432) - Primary database (database-per-service)
-- **Redis** (6379) - Caching and session storage
+- **Redis** (6379) - Caching layer
 - **RabbitMQ** (5672, 15672) - Message broker
 - **Kafka** (9092) - Event streaming
 
@@ -44,6 +45,7 @@ docker compose up -d --build
 
 ### Access Services
 - **API Gateway**: http://localhost:8080
+- **Keycloak Admin Console**: http://localhost:8090/admin (admin/admin)
 - **Eureka Dashboard**: http://localhost:8761
 - **Grafana**: http://localhost:3000 (anonymous access enabled)
 - **Prometheus**: http://localhost:9090
@@ -96,10 +98,11 @@ All services are instrumented with OpenTelemetry Java Agent for:
 ### Core
 - **Spring Boot 3.2.5** - Application framework
 - **Spring Cloud 2023.0.1** - Microservices ecosystem
-- **Spring Security + JWT** - Authentication & authorization
+- **Keycloak** - OAuth2/OIDC authentication & authorization
+- **Spring Security OAuth2** - Resource server integration
 - **Spring Data JPA** - Data access
 - **PostgreSQL 15** - Relational database
-- **Redis 7** - Caching & session store
+- **Redis 7** - Caching layer
 - **RabbitMQ 3.13** - Message broker
 - **Apache Kafka 3.7** - Event streaming
 
@@ -130,12 +133,21 @@ Key environment files:
 
 ## 🔐 Security
 
-- **JWT Authentication** - Token-based auth with refresh tokens
+- **Keycloak OAuth2/OIDC** - Enterprise-grade authentication server
+- **JWT Token-Based Auth** - Access tokens with refresh mechanism
 - **API Gateway Security** - Centralized authentication/authorization
-- **Role-Based Access Control (RBAC)** - User/Admin roles
-- **Rate Limiting** - Configurable per-endpoint limits
-- **Token Blacklist** - Redis-based token revocation
-- **Password Policy** - Configurable password requirements
+- **Role-Based Access Control (RBAC)** - Multiple roles (ADMIN, CUSTOMER, MANAGER, SUPPORT)
+- **User Sync** - Automatic synchronization between Keycloak and User Service
+- **Rate Limiting** - API Gateway level rate limiting
+- **Password Policy** - Managed by Keycloak
+
+### Authentication Endpoints
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `POST /api/auth/refresh` - Token refresh
+- `POST /api/auth/logout` - User logout
+
+See [AUTHENTICATION_TEST_GUIDE.md](AUTHENTICATION_TEST_GUIDE.md) for detailed testing guide.
 
 ## 📈 Key Features
 
