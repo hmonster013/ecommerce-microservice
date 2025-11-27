@@ -81,7 +81,7 @@
 				<version>3.4.2</version>
 				<configuration>
 					<to>
-						<image>de013/ecommerce-microservice/${project.artifactId}:s1</image>
+						<image>de013/ecommerce-${project.artifactId}:s3</image>
 					</to>
 				</configuration>
 			</plugin>

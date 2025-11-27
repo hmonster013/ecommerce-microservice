@@ -1,0 +1,186 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  labels:
+    app: payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - name: payment-service
+        image: de013/ecommerce-payment-service:s3
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8085
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: SPRING_PROFILES_ACTIVE
+        - name: SPRING_CONFIG_IMPORT
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: SPRING_CONFIG_IMPORT
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://postgres:5432/payment_service_db"
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: SPRING_DATASOURCE_USERNAME
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: SPRING_DATASOURCE_PASSWORD
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: KAFKA_BOOTSTRAP_SERVERS
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: RABBITMQ_PASSWORD
+        - name: STRIPE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: STRIPE_API_KEY
+        - name: STRIPE_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: STRIPE_WEBHOOK_SECRET
+        # Payment Configuration
+        - name: STRIPE_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: STRIPE_ENABLED
+        - name: STRIPE_API_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: STRIPE_API_VERSION
+        - name: STRIPE_SUCCESS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: STRIPE_SUCCESS_URL
+        - name: STRIPE_CANCEL_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: STRIPE_CANCEL_URL
+        - name: PAYMENT_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: PAYMENT_TIMEOUT
+        - name: PAYMENT_RETRY_ATTEMPTS
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: PAYMENT_RETRY_ATTEMPTS
+        - name: PAYMENT_RETRY_DELAY
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: PAYMENT_RETRY_DELAY
+        - name: PAYMENT_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: PAYMENT_ENCRYPTION_KEY
+        - name: WEBHOOK_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: WEBHOOK_TIMEOUT
+        # JWT Configuration
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: JWT_SECRET
+        - name: JWT_ISSUER
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: JWT_ISSUER
+        # OpenTelemetry Configuration
+        - name: OTEL_SERVICE_NAME
+          value: "payment-service"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "service.name=payment-service,service.namespace=ecommerce,deployment.environment=default"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: OTEL_EXPORTER_OTLP_ENDPOINT
+        - name: OTEL_METRICS_EXPORTER
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: OTEL_METRICS_EXPORTER
+        - name: OTEL_LOGS_EXPORTER
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: OTEL_LOGS_EXPORTER
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8085
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8085
+          initialDelaySeconds: 90
+          periodSeconds: 5
+          failureThreshold: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+spec:
+  selector:
+    app: payment-service
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 8085
+      targetPort: 8085
