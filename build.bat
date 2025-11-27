@@ -1,30 +1,19 @@
 @echo off
 echo Building E-commerce Microservices Platform...
-
 echo.
-echo [1/3] Cleaning previous builds...
+
+echo Cleaning...
 call mvnw.cmd clean
+if %ERRORLEVEL% NEQ 0 exit /b 1
+
+echo Building...
+call mvnw.cmd install -DskipTests
+if %ERRORLEVEL% NEQ 0 exit /b 1
+
+echo Building and pushing Docker images to Docker Hub...
+call mvnw.cmd compile jib:build -DskipTests -pl config-server,eureka-server,api-gateway,user-service,product-catalog-service,shopping-cart-service,order-service,payment-service,notification-service
+if %ERRORLEVEL% NEQ 0 exit /b 1
 
 echo.
-echo [2/3] Building all modules...
-call mvnw.cmd package -DskipTests
-
-echo.
-echo Checking JAR files...
-dir /s target\*.jar
-
-echo.
-echo [3/3] Building Docker images...
-docker-compose build
-
-echo.
-echo Build completed successfully!
-echo.
-echo To start the platform:
-echo   docker-compose up -d
-echo.
-echo To view logs:
-echo   docker-compose logs -f
-echo.
-echo To stop the platform:
-echo   docker-compose down
+echo Build and push completed!
+echo Images pushed to Docker Hub with tag: s1

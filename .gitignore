@@ -75,6 +75,13 @@ docker-compose.local.yml
 secrets/
 keystore/
 
+# Kubernetes Secrets & ConfigMaps (DO NOT COMMIT!)
+kubernetes/secrets.yaml
+kubernetes/secret.yaml
+kubernetes/*-secret.yaml
+kubernetes/**/*-secret.yaml
+kubernetes/configmap.yaml
+
 # OS specific
 .DS_Store
 .DS_Store?

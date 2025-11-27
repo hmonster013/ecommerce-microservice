@@ -24,7 +24,7 @@ import java.util.Optional;
  * - Ensure HeaderAuthenticationFilter is configured to populate SecurityContext
  */
 @Slf4j
-@Component
+@Component("auditorAwareImpl")
 public class AuditorAwareImpl implements AuditorAware<String> {
 
     private static final String SYSTEM_USER = "system";

@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  labels:
+    app: config-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-server
+  template:
+    metadata:
+      labels:
+        app: config-server
+    spec:
+      containers:
+      - name: config-server
+        image: de013/ecommerce-config-server:s3
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8071
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: SPRING_PROFILES_ACTIVE
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: RABBITMQ_PASSWORD
+        # OpenTelemetry Configuration
+        - name: OTEL_SERVICE_NAME
+          value: "config-server"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "service.name=config-server,service.namespace=ecommerce,deployment.environment=default"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: OTEL_EXPORTER_OTLP_ENDPOINT
+        - name: OTEL_METRICS_EXPORTER
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: OTEL_METRICS_EXPORTER
+        - name: OTEL_LOGS_EXPORTER
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-configmap
+              key: OTEL_LOGS_EXPORTER
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8071
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8071
+          initialDelaySeconds: 30
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+spec:
+  selector:
+    app: config-server
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 8071
+      targetPort: 8071

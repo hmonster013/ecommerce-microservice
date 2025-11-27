@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-configmap
+data:
+  # Spring Profiles
+  SPRING_PROFILES_ACTIVE: "default"
+  
+  # Config Server
+  SPRING_CONFIG_IMPORT: "configserver:http://config-server:8071/"
+  CONFIG_SERVER_URL: "http://config-server:8071"
+  
+  # Service Discovery
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka/"
+  EUREKA_URL: "http://eureka-server:8761/eureka/"
+  
+  # Database Configuration
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "ecommerce"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DATABASE: "0"
+  
+  # Kafka Configuration
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  
+  # RabbitMQ Configuration
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USERNAME: "user"
+  
+  # Keycloak Configuration
+  KEYCLOAK_SERVER_URL: "http://keycloak:8080"
+  KEYCLOAK_REALM: "ecommerce-realm"
+  KEYCLOAK_ISSUER_URI: "http://keycloak:8080/realms/ecommerce-realm"
+  KEYCLOAK_JWK_SET_URI: "http://keycloak:8080/realms/ecommerce-realm/protocol/openid-connect/certs"
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI: "http://keycloak:8080/realms/ecommerce-realm/protocol/openid-connect/certs"
+  KC_BOOTSTRAP_ADMIN_USERNAME: "admin"
+  KEYCLOAK_CLIENT_ID: "api-gateway"
+  
+  # JWT Configuration
+  JWT_ISSUER: "ecommerce-platform"
+  JWT_ALGORITHM: "HS256"
+  TOKEN_BLACKLIST_PREFIX: "blacklist:"
+  
+  # Security Configuration
+  PASSWORD_MIN_LENGTH: "8"
+  PASSWORD_REQUIRE_UPPERCASE: "true"
+  PASSWORD_REQUIRE_LOWERCASE: "true"
+  PASSWORD_REQUIRE_DIGIT: "true"
+  PASSWORD_REQUIRE_SPECIAL: "true"
+  SESSION_TIMEOUT: "1800"
+  MAX_CONCURRENT_SESSIONS: "3"
+  RATE_LIMIT_ENABLED: "true"
+  LOGIN_RATE_LIMIT: "5"
+  REGISTRATION_RATE_LIMIT: "3"
+  GENERAL_RATE_LIMIT: "100"
+  CORS_ALLOWED_ORIGINS: "http://localhost:4200,http://localhost:8080"
+  
+  # OpenTelemetry
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo:4318/v1/traces"
+  OTEL_METRICS_EXPORTER: "prometheus"
+  OTEL_LOGS_EXPORTER: "none"
+  
+  # Mail Configuration
+  MAIL_HOST: "smtp.gmail.com"
+  MAIL_PORT: "587"
+  MAIL_USERNAME: "your-email@gmail.com"
+  MAIL_SMTP_AUTH: "true"
+  MAIL_SMTP_STARTTLS_ENABLE: "true"
+  MAIL_TEST_CONNECTION: "false"
+  
+  # Twilio Configuration (Get from https://console.twilio.com/)
+  TWILIO_ACCOUNT_SID: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  TWILIO_PHONE_NUMBER: "+1234567890"
+  SMS_MOCK_MODE: "true"
+  
+  # Notification Settings
+  NOTIFICATION_EMAIL_ENABLED: "true"
+  NOTIFICATION_SMS_ENABLED: "true"
+  EMAIL_RATE_LIMIT: "100"
+  SMS_RATE_LIMIT: "50"
+  EMAIL_MAX_RETRIES: "3"
+  SMS_MAX_RETRIES: "3"
+  EMAIL_RETRY_DELAY_SECONDS: "60"
+  SMS_RETRY_DELAY_SECONDS: "120"
+  
+  # Payment Configuration
+  STRIPE_ENABLED: "true"
+  STRIPE_API_VERSION: "2025-09-06"
+  STRIPE_SUCCESS_URL: "http://localhost:3000/payment/success"
+  STRIPE_CANCEL_URL: "http://localhost:3000/payment/cancel"
+  PAYMENT_TIMEOUT: "30000"
+  PAYMENT_RETRY_ATTEMPTS: "3"
+  PAYMENT_RETRY_DELAY: "1000"
+  WEBHOOK_TIMEOUT: "10000"
