@@ -9,22 +9,6 @@ distributor:
           endpoint: 0.0.0.0:4318
         grpc:
           endpoint: 0.0.0.0:4317
-    jaeger:
-      protocols:
-        thrift_http:
-        grpc:
-        thrift_binary:
-        thrift_compact:
-    zipkin:
-
-ingester:
-  max_block_duration: 5m
-  max_block_bytes: 1_000_000
-  flush_check_period: 10s
-
-compactor:
-  compaction:
-    block_retention: 48h
 
 storage:
   trace:
