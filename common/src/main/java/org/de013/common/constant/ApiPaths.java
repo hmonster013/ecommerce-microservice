@@ -66,6 +66,7 @@ public final class ApiPaths {
 
     // Order specific endpoints
     public static final String MY_ORDERS = "/my-orders";
+    public static final String MY_PAYMENTS = "/my-payments";
     public static final String NUMBER = "/number";
     public static final String USER = "/user";
     public static final String STATUS = "/status";

@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * Simple REST Controller for Notification operations
@@ -474,6 +475,13 @@ public class NotificationController {
             );
             return ResponseEntity.ok(response);
 
+        } catch (NoSuchElementException e) {
+            log.warn("Notification not found while marking as read: id={}, message={}", id, e.getMessage());
+            Map<String, Object> response = Map.of(
+                "success", false,
+                "message", e.getMessage()
+            );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         } catch (Exception e) {
             log.error("Error marking notification as read: {}", e.getMessage(), e);
             Map<String, Object> response = Map.of(

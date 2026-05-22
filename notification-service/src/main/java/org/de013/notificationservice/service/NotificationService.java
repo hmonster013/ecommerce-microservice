@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 /**
@@ -142,7 +143,7 @@ public class NotificationService {
             log.info("Notification marked as read: {}", id);
         } else {
             log.warn("Notification not found: {}", id);
-            throw new RuntimeException("Notification not found: " + id);
+            throw new NoSuchElementException("Notification not found: " + id);
         }
     }
 }

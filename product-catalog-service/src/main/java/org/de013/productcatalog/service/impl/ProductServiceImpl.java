@@ -146,7 +146,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Getting product by SKU: {}", sku);
         
         Product product = productRepository.findBySku(sku)
-                .orElseThrow(() -> new RuntimeException("Product not found with SKU: " + sku));
+                .orElseThrow(() -> new ProductNotFoundException(sku));
         
         return productMapper.toProductDetailDto(product);
     }

@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ErrorResponse;
+import org.de013.common.exception.ResourceNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -376,6 +377,31 @@ public class ProductCatalogExceptionHandler {
                 .error(HttpStatus.NOT_FOUND.getReasonPhrase())
                 .code("ENDPOINT_NOT_FOUND")
                 .message(String.format("No endpoint found for %s %s", ex.getHttpMethod(), ex.getRequestURL()))
+                .path(request.getRequestURI())
+                .method(request.getMethod())
+                .traceId(traceId)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Handle common ResourceNotFoundException from shared module
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleSharedResourceNotFoundException(
+            ResourceNotFoundException ex, HttpServletRequest request) {
+
+        String traceId = generateTraceId();
+        log.warn("Resource not found [{}]: {}", traceId, ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
+                .timestamp(java.time.LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                .code("RESOURCE_NOT_FOUND")
+                .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .method(request.getMethod())
                 .traceId(traceId)

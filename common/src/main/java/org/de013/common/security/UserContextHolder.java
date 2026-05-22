@@ -102,8 +102,13 @@ public class UserContextHolder {
             try {
                 userId = Long.parseLong(userIdStr);
             } catch (NumberFormatException e) {
-                log.warn("Invalid user ID format: {}", userIdStr);
-                return null;
+                // Backward compatibility: API Gateway may forward Keycloak UUID in X-User-Id
+                // Derive a stable positive numeric surrogate so downstream services expecting Long can proceed
+                userId = (long) Math.abs(userIdStr.hashCode());
+                if (userId == 0L) {
+                    userId = 1L;
+                }
+                log.warn("Non-numeric X-User-Id '{}' detected, using surrogate userId={}", userIdStr, userId);
             }
             
             // Parse roles

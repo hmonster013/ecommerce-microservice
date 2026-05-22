@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.PageResponse;
+import org.de013.common.security.UserContext;
+import org.de013.common.security.UserContextHolder;
 import org.de013.paymentservice.constant.PaymentConstants;
 import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.payment.PaymentResponse;
@@ -138,7 +140,23 @@ public class PaymentController extends BaseController {
 
     // ========== PAYMENT RETRIEVAL ==========
 
-    @GetMapping(ApiPaths.PAYMENT_ID_PARAM)
+    @GetMapping(ApiPaths.MY_PAYMENTS)
+    @Operation(summary = "Get my payments", description = "Retrieve paginated payments for the authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Payments retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required")
+    })
+    public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<PaymentResponse>>> getMyPayments(
+            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+        UserContext userContext = UserContextHolder.requireAuthenticated();
+        log.debug("Getting payments for current user: {} with pagination: {}", userContext.getUserId(), pageable);
+
+        Page<PaymentResponse> payments = paymentService.getPaymentsByUserId(userContext.getUserId(), pageable);
+        PageResponse<PaymentResponse> pageResponse = PageResponse.of(payments);
+        return success(pageResponse, PaymentConstants.PAYMENT_RETRIEVED);
+    }
+
+    @GetMapping("/{paymentId:[0-9]+}")
     @Operation(summary = "Get payment by ID", description = "Retrieve payment details by payment ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment found"),
