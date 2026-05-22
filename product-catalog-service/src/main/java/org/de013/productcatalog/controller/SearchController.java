@@ -20,7 +20,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -43,78 +46,78 @@ public class SearchController extends BaseController {
             summary = "Advanced product search",
             description = "Perform advanced product search with filtering and sorting options")
     @ApiResponses(value = {
-        @ApiResponse(
-                responseCode = "200",
-                description = "Search completed successfully",
-                content = @Content(
-                        mediaType = "application/json",
-                        schema = @Schema(implementation = PageResponse.class),
-                        examples = @ExampleObject(
-                                name = "Search Results",
-                                value = """
-                                        {
-                                          "content": [
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Search completed successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = PageResponse.class),
+                            examples = @ExampleObject(
+                                    name = "Search Results",
+                                    value = """
                                             {
-                                              "id": 1,
-                                              "name": "Premium Wireless Headphones",
-                                              "description": "High-quality wireless headphones with noise cancellation",
-                                              "sku": "WH-001",
-                                              "price": 299.99,
-                                              "brand": "TechBrand",
-                                              "status": "ACTIVE",
-                                              "featured": true,
-
-                                              "categories": [
+                                              "content": [
                                                 {
                                                   "id": 1,
-                                                  "name": "Electronics",
-                                                  "slug": "electronics"
+                                                  "name": "Premium Wireless Headphones",
+                                                  "description": "High-quality wireless headphones with noise cancellation",
+                                                  "sku": "WH-001",
+                                                  "price": 299.99,
+                                                  "brand": "TechBrand",
+                                                  "status": "ACTIVE",
+                                                  "featured": true,
+                                            
+                                                  "categories": [
+                                                    {
+                                                      "id": 1,
+                                                      "name": "Electronics",
+                                                      "slug": "electronics"
+                                                    }
+                                                  ],
+                                                  "availability": {
+                                                    "inStock": true,
+                                                    "quantity": 50
+                                                  }
                                                 }
                                               ],
-                                              "availability": {
-                                                "inStock": true,
-                                                "quantity": 50
-                                              }
+                                              "pageable": {
+                                                "pageNumber": 0,
+                                                "pageSize": 20,
+                                                "sort": {
+                                                  "sorted": true,
+                                                  "orderBy": "relevance"
+                                                }
+                                              },
+                                              "totalElements": 156,
+                                              "totalPages": 8,
+                                              "first": true,
+                                              "last": false,
+                                              "numberOfElements": 20
                                             }
-                                          ],
-                                          "pageable": {
-                                            "pageNumber": 0,
-                                            "pageSize": 20,
-                                            "sort": {
-                                              "sorted": true,
-                                              "orderBy": "relevance"
-                                            }
-                                          },
-                                          "totalElements": 156,
-                                          "totalPages": 8,
-                                          "first": true,
-                                          "last": false,
-                                          "numberOfElements": 20
-                                        }
-                                        """))),
-        @ApiResponse(
-                responseCode = "400",
-                description = "Invalid search parameters",
-                content = @Content(
-                        mediaType = "application/json",
-                        examples = @ExampleObject(
-                                name = "Invalid Parameters",
-                                value = """
-                                        {
-                                          "success": false,
-                                          "message": "Invalid search parameters",
-                                          "errors": [
+                                            """))),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid search parameters",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "Invalid Parameters",
+                                    value = """
                                             {
-                                              "field": "minPrice",
-                                              "message": "Minimum price cannot be negative"
-                                            },
-                                            {
-                                              "field": "pageSize",
-                                              "message": "Page size must be between 1 and 100"
+                                              "success": false,
+                                              "message": "Invalid search parameters",
+                                              "errors": [
+                                                {
+                                                  "field": "minPrice",
+                                                  "message": "Minimum price cannot be negative"
+                                                },
+                                                {
+                                                  "field": "pageSize",
+                                                  "message": "Page size must be between 1 and 100"
+                                                }
+                                              ]
                                             }
-                                          ]
-                                        }
-                                        """)))
+                                            """)))
     })
     @GetMapping
     public ResponseEntity<PageResponse<ProductSummaryDto>> searchProducts(
@@ -122,54 +125,53 @@ public class SearchController extends BaseController {
                     description = "Search query - searches across product name, description, brand, and category",
                     example = "wireless headphones")
             @RequestParam(required = false) String query,
-            
+
             @Parameter(
                     description = "Category ID to filter by",
                     example = "1")
             @RequestParam(required = false) Long categoryId,
-            
+
             @Parameter(
                     description = "Brand name to filter by",
                     example = "TechBrand")
             @RequestParam(required = false) String brand,
-            
+
             @Parameter(
                     description = "Minimum price filter",
                     example = "50.00")
             @RequestParam(required = false) BigDecimal minPrice,
-            
+
             @Parameter(
                     description = "Maximum price filter",
                     example = "500.00")
             @RequestParam(required = false) BigDecimal maxPrice,
-            
 
-            
+
             @Parameter(
                     description = "Filter by availability - true for in-stock only",
                     example = "true")
             @RequestParam(required = false) Boolean inStock,
-            
+
             @Parameter(
                     description = "Filter by featured products only",
                     example = "false")
             @RequestParam(required = false) Boolean featured,
-            
+
             @Parameter(
                     description = "Sort field - relevance, price, name, date, popularity",
                     example = "relevance")
             @RequestParam(defaultValue = "relevance") String sortBy,
-            
+
             @Parameter(
                     description = "Sort direction - asc or desc",
                     example = "desc")
             @RequestParam(defaultValue = "desc") String sortDir,
-            
+
             @Parameter(
                     description = "Page number (0-based)",
                     example = "0")
             @RequestParam(defaultValue = "0") int page,
-            
+
             @Parameter(
                     description = "Page size (1-100)",
                     example = "20")
@@ -208,37 +210,37 @@ public class SearchController extends BaseController {
             summary = "Get search suggestions",
             description = "Get search suggestions and autocomplete recommendations")
     @ApiResponses(value = {
-        @ApiResponse(
-                responseCode = "200",
-                description = "Suggestions retrieved successfully",
-                content = @Content(
-                        mediaType = "application/json",
-                        examples = @ExampleObject(
-                                name = "Search Suggestions",
-                                value = """
-                                        {
-                                          "suggestions": [
-                                            "wireless headphones",
-                                            "wireless speakers",
-                                            "wireless earbuds",
-                                            "wireless charger",
-                                            "wireless mouse"
-                                          ],
-                                          "categories": [
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Suggestions retrieved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "Search Suggestions",
+                                    value = """
                                             {
-                                              "id": 1,
-                                              "name": "Electronics",
-                                              "slug": "electronics"
+                                              "suggestions": [
+                                                "wireless headphones",
+                                                "wireless speakers",
+                                                "wireless earbuds",
+                                                "wireless charger",
+                                                "wireless mouse"
+                                              ],
+                                              "categories": [
+                                                {
+                                                  "id": 1,
+                                                  "name": "Electronics",
+                                                  "slug": "electronics"
+                                                }
+                                              ],
+                                              "brands": [
+                                                "TechBrand",
+                                                "AudioPro",
+                                                "SoundMax"
+                                              ],
+                                              "didYouMean": "wireless headphones"
                                             }
-                                          ],
-                                          "brands": [
-                                            "TechBrand",
-                                            "AudioPro",
-                                            "SoundMax"
-                                          ],
-                                          "didYouMean": "wireless headphones"
-                                        }
-                                        """)))
+                                            """)))
     })
     @GetMapping(ApiPaths.SUGGESTIONS)
     public ResponseEntity<Object> getSearchSuggestions(

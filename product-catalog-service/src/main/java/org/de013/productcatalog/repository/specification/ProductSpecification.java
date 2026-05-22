@@ -1,12 +1,13 @@
 package org.de013.productcatalog.repository.specification;
 
-import jakarta.persistence.criteria.*;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import org.de013.productcatalog.dto.search.ProductSearchDto;
-import org.de013.productcatalog.entity.Product;
-import org.de013.productcatalog.entity.ProductCategory;
 import org.de013.productcatalog.entity.Category;
 import org.de013.productcatalog.entity.Inventory;
-
+import org.de013.productcatalog.entity.Product;
+import org.de013.productcatalog.entity.ProductCategory;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -40,8 +41,8 @@ public class ProductSpecification {
                 return criteriaBuilder.conjunction();
             }
             return criteriaBuilder.like(
-                criteriaBuilder.lower(root.get("name")), 
-                "%" + name.toLowerCase() + "%"
+                    criteriaBuilder.lower(root.get("name")),
+                    "%" + name.toLowerCase() + "%"
             );
         };
     }
@@ -52,8 +53,8 @@ public class ProductSpecification {
                 return criteriaBuilder.conjunction();
             }
             return criteriaBuilder.equal(
-                criteriaBuilder.lower(root.get("brand")), 
-                brand.toLowerCase()
+                    criteriaBuilder.lower(root.get("brand")),
+                    brand.toLowerCase()
             );
         };
     }
@@ -64,8 +65,8 @@ public class ProductSpecification {
                 return criteriaBuilder.conjunction();
             }
             List<String> lowerCaseBrands = brands.stream()
-                .map(String::toLowerCase)
-                .toList();
+                    .map(String::toLowerCase)
+                    .toList();
             return criteriaBuilder.lower(root.get("brand")).in(lowerCaseBrands);
         };
     }
@@ -73,15 +74,15 @@ public class ProductSpecification {
     public static Specification<Product> hasPriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            
+
             if (minPrice != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("price"), minPrice));
             }
-            
+
             if (maxPrice != null) {
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
             }
-            
+
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
@@ -109,10 +110,10 @@ public class ProductSpecification {
             if (categoryIds == null || categoryIds.isEmpty()) {
                 return criteriaBuilder.conjunction();
             }
-            
+
             Join<Product, ProductCategory> productCategoryJoin = root.join("productCategories");
             Join<ProductCategory, Category> categoryJoin = productCategoryJoin.join("category");
-            
+
             return categoryJoin.get("id").in(categoryIds);
         };
     }
@@ -122,11 +123,11 @@ public class ProductSpecification {
             if (inStock == null || !inStock) {
                 return criteriaBuilder.conjunction();
             }
-            
+
             Join<Product, Inventory> inventoryJoin = root.join("inventory", JoinType.LEFT);
             return criteriaBuilder.greaterThan(
-                criteriaBuilder.diff(inventoryJoin.get("quantity"), inventoryJoin.get("reservedQuantity")), 
-                0
+                    criteriaBuilder.diff(inventoryJoin.get("quantity"), inventoryJoin.get("reservedQuantity")),
+                    0
             );
         };
     }
@@ -136,14 +137,13 @@ public class ProductSpecification {
             if (onSale == null || !onSale) {
                 return criteriaBuilder.conjunction();
             }
-            
+
             return criteriaBuilder.and(
-                criteriaBuilder.isNotNull(root.get("comparePrice")),
-                criteriaBuilder.greaterThan(root.get("comparePrice"), root.get("price"))
+                    criteriaBuilder.isNotNull(root.get("comparePrice")),
+                    criteriaBuilder.greaterThan(root.get("comparePrice"), root.get("price"))
             );
         };
     }
-
 
 
     public static Specification<Product> searchInFields(String query, ProductSearchDto searchDto) {
@@ -151,45 +151,45 @@ public class ProductSpecification {
             if (query == null || query.trim().isEmpty()) {
                 return criteriaBuilder.conjunction();
             }
-            
+
             String searchTerm = "%" + query.toLowerCase() + "%";
             List<Predicate> searchPredicates = new ArrayList<>();
-            
+
             // Search in name
             if (searchDto.getSearchInName() != null && searchDto.getSearchInName()) {
                 searchPredicates.add(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), searchTerm)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), searchTerm)
                 );
             }
-            
+
             // Search in description
             if (searchDto.getSearchInDescription() != null && searchDto.getSearchInDescription()) {
                 searchPredicates.add(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), searchTerm)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), searchTerm)
                 );
             }
-            
+
             // Search in SKU
             if (searchDto.getSearchInSku() != null && searchDto.getSearchInSku()) {
                 searchPredicates.add(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("sku")), searchTerm)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("sku")), searchTerm)
                 );
             }
-            
+
             // Search in brand
             if (searchDto.getSearchInBrand() != null && searchDto.getSearchInBrand()) {
                 searchPredicates.add(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("brand")), searchTerm)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("brand")), searchTerm)
                 );
             }
-            
+
             // Search in keywords
             if (searchDto.getSearchInKeywords() != null && searchDto.getSearchInKeywords()) {
                 searchPredicates.add(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("searchKeywords")), searchTerm)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("searchKeywords")), searchTerm)
                 );
             }
-            
+
             return criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
         };
     }

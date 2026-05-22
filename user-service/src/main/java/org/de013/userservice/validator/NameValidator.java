@@ -11,37 +11,37 @@ import java.util.regex.Pattern;
  * Validates name format, length, and character restrictions
  */
 public class NameValidator implements ConstraintValidator<ValidName, String> {
-    
+
     // Pattern for names with special characters (apostrophes, hyphens, spaces)
     private static final Pattern NAME_WITH_SPECIAL_PATTERN = Pattern.compile(
-        "^[a-zA-ZÀ-ÿ\\s'-]{2,50}$"
+            "^[a-zA-ZÀ-ÿ\\s'-]{2,50}$"
     );
-    
+
     // Pattern for names without special characters
     private static final Pattern NAME_SIMPLE_PATTERN = Pattern.compile(
-        "^[a-zA-ZÀ-ÿ\\s]{2,50}$"
+            "^[a-zA-ZÀ-ÿ\\s]{2,50}$"
     );
-    
+
     private int min;
     private int max;
     private boolean allowSpecialChars;
-    
+
     @Override
     public void initialize(ValidName constraintAnnotation) {
         this.min = constraintAnnotation.min();
         this.max = constraintAnnotation.max();
         this.allowSpecialChars = constraintAnnotation.allowSpecialChars();
     }
-    
+
     @Override
     public boolean isValid(String name, ConstraintValidatorContext context) {
         if (name == null) {
             return false;
         }
-        
+
         // Trim and normalize whitespace
         name = ValidationUtils.normalizeWhitespace(name);
-        
+
         // Check length
         if (name.length() < min) {
             addConstraintViolation(context, "validation.tooShort");
@@ -57,14 +57,14 @@ public class NameValidator implements ConstraintValidator<ValidName, String> {
             addConstraintViolation(context, "fullName.required");
             return false;
         }
-        
+
         // Check pattern based on special character allowance
         Pattern pattern = allowSpecialChars ? NAME_WITH_SPECIAL_PATTERN : NAME_SIMPLE_PATTERN;
         if (!pattern.matcher(name).matches()) {
             addConstraintViolation(context, "fullName.invalid");
             return false;
         }
-        
+
         // Check for consecutive spaces
         if (name.contains("  ")) {
             addConstraintViolation(context, "fullName.invalid");
@@ -100,10 +100,10 @@ public class NameValidator implements ConstraintValidator<ValidName, String> {
             addConstraintViolation(context, "fullName.invalid");
             return false;
         }
-        
+
         return true;
     }
-    
+
     private void addConstraintViolation(ConstraintValidatorContext context, String message) {
         context.disableDefaultConstraintViolation();
         context.buildConstraintViolationWithTemplate(message).addConstraintViolation();

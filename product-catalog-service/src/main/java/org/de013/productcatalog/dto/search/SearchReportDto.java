@@ -143,10 +143,10 @@ public class SearchReportDto {
     @JsonIgnore
     public String getTextSummary() {
         StringBuilder summary = new StringBuilder();
-        
+
         summary.append("Search Analytics Report\n");
         summary.append("Period: ").append(periodStart).append(" to ").append(periodEnd).append("\n\n");
-        
+
         if (executiveSummary != null) {
             summary.append("Executive Summary:\n");
             summary.append("- Overall Status: ").append(executiveSummary.getOverallStatus()).append("\n");
@@ -154,7 +154,7 @@ public class SearchReportDto {
             summary.append("- Key Achievement: ").append(executiveSummary.getKeyAchievement()).append("\n");
             summary.append("- Primary Concern: ").append(executiveSummary.getPrimaryConcern()).append("\n\n");
         }
-        
+
         if (performance != null) {
             summary.append("Key Metrics:\n");
             summary.append("- Total Searches: ").append(performance.getTotalSearches()).append("\n");
@@ -162,7 +162,7 @@ public class SearchReportDto {
             summary.append("- Click-through Rate: ").append(String.format("%.1f%%", performance.getClickThroughRate())).append("\n");
             summary.append("- Conversion Rate: ").append(String.format("%.1f%%", performance.getConversionRate())).append("\n\n");
         }
-        
+
         if (recommendations != null && !recommendations.isEmpty()) {
             summary.append("Top Recommendations:\n");
             recommendations.stream()
@@ -170,7 +170,7 @@ public class SearchReportDto {
                     .limit(3)
                     .forEach(rec -> summary.append("- ").append(rec.getTitle()).append("\n"));
         }
-        
+
         return summary.toString();
     }
 
@@ -180,9 +180,9 @@ public class SearchReportDto {
     @JsonIgnore
     public boolean showsPositiveTrends() {
         if (comparison == null) return true;
-        
-        return comparison.getOverallTrend() != null && 
-               "IMPROVING".equals(comparison.getOverallTrend());
+
+        return comparison.getOverallTrend() != null &&
+                "IMPROVING".equals(comparison.getOverallTrend());
     }
 
     /**
@@ -191,7 +191,7 @@ public class SearchReportDto {
     @JsonIgnore
     public long getHighPriorityRecommendationsCount() {
         if (recommendations == null) return 0;
-        
+
         return recommendations.stream()
                 .filter(rec -> "HIGH".equals(rec.getPriority()))
                 .count();
@@ -203,7 +203,7 @@ public class SearchReportDto {
     @JsonIgnore
     public long getCriticalIssuesCount() {
         if (problemQueries == null) return 0;
-        
+
         return problemQueries.stream()
                 .filter(query -> query.getSearchCount() > 100) // High volume no-result queries
                 .count();
@@ -216,7 +216,7 @@ public class SearchReportDto {
     public int getCompletenessScore() {
         int score = 0;
         int maxScore = 8;
-        
+
         if (executiveSummary != null) score++;
         if (performance != null) score++;
         if (insights != null) score++;
@@ -225,7 +225,7 @@ public class SearchReportDto {
         if (userBehavior != null) score++;
         if (recommendations != null && !recommendations.isEmpty()) score++;
         if (comparison != null) score++;
-        
+
         return (score * 100) / maxScore;
     }
 
@@ -235,7 +235,7 @@ public class SearchReportDto {
     @JsonIgnore
     public String getQualityAssessment() {
         int completeness = getCompletenessScore();
-        
+
         if (completeness >= 90) return "EXCELLENT";
         if (completeness >= 75) return "GOOD";
         if (completeness >= 60) return "FAIR";

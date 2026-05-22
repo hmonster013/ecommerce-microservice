@@ -83,7 +83,7 @@ public class RedisCart implements Serializable {
     @ToString
     @EqualsAndHashCode
     public static class RedisCartItem implements Serializable {
-        
+
         private Long itemId;
         private String productId;
         private String productSku;
@@ -126,7 +126,7 @@ public class RedisCart implements Serializable {
                 BigDecimal baseTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
                 BigDecimal discount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
                 BigDecimal giftWrap = (Boolean.TRUE.equals(isGift) && giftWrapPrice != null) ? giftWrapPrice : BigDecimal.ZERO;
-                
+
                 this.totalPrice = baseTotal.subtract(discount).add(giftWrap);
             }
         }
@@ -135,8 +135,8 @@ public class RedisCart implements Serializable {
          * Check if item is available
          */
         public boolean isAvailable() {
-            return "AVAILABLE".equals(availabilityStatus) && 
-                   (stockQuantity == null || stockQuantity > 0);
+            return "AVAILABLE".equals(availabilityStatus) &&
+                    (stockQuantity == null || stockQuantity > 0);
         }
 
         /**
@@ -227,12 +227,12 @@ public class RedisCart implements Serializable {
         if (items == null) {
             items = new ArrayList<>();
         }
-        
+
         // Check if item already exists, update quantity if so
         RedisCartItem existingItem = items.stream()
-                .filter(i -> i.getProductId().equals(item.getProductId()) && 
-                           (i.getVariantId() == null ? item.getVariantId() == null : 
-                            i.getVariantId().equals(item.getVariantId())))
+                .filter(i -> i.getProductId().equals(item.getProductId()) &&
+                        (i.getVariantId() == null ? item.getVariantId() == null :
+                                i.getVariantId().equals(item.getVariantId())))
                 .findFirst()
                 .orElse(null);
 
@@ -243,7 +243,7 @@ public class RedisCart implements Serializable {
             item.calculateTotalPrice();
             items.add(item);
         }
-        
+
         updateCartTotals();
     }
 
@@ -251,10 +251,10 @@ public class RedisCart implements Serializable {
      * Remove item from Redis cart
      */
     public boolean removeItem(String productId, String variantId) {
-        boolean removed = items.removeIf(item -> 
-            item.getProductId().equals(productId) && 
-            (variantId == null ? item.getVariantId() == null : variantId.equals(item.getVariantId())));
-        
+        boolean removed = items.removeIf(item ->
+                item.getProductId().equals(productId) &&
+                        (variantId == null ? item.getVariantId() == null : variantId.equals(item.getVariantId())));
+
         if (removed) {
             updateCartTotals();
         }

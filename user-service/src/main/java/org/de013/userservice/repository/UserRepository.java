@@ -65,22 +65,22 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     // ========== Search and Filtering ==========
 
     @Query("SELECT u FROM User u WHERE " +
-           "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<User> searchUsers(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("SELECT u FROM User u WHERE " +
-           "(LOWER(u.firstName) LIKE LOWER(CONCAT('%', :firstName, '%')) OR :firstName IS NULL) AND " +
-           "(LOWER(u.lastName) LIKE LOWER(CONCAT('%', :lastName, '%')) OR :lastName IS NULL) AND " +
-           "(LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')) OR :email IS NULL) AND " +
-           "(u.enabled = :enabled OR :enabled IS NULL)")
+            "(LOWER(u.firstName) LIKE LOWER(CONCAT('%', :firstName, '%')) OR :firstName IS NULL) AND " +
+            "(LOWER(u.lastName) LIKE LOWER(CONCAT('%', :lastName, '%')) OR :lastName IS NULL) AND " +
+            "(LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')) OR :email IS NULL) AND " +
+            "(u.enabled = :enabled OR :enabled IS NULL)")
     Page<User> findUsersWithFilters(@Param("firstName") String firstName,
-                                   @Param("lastName") String lastName,
-                                   @Param("email") String email,
-                                   @Param("enabled") Boolean enabled,
-                                   Pageable pageable);
+                                    @Param("lastName") String lastName,
+                                    @Param("email") String email,
+                                    @Param("enabled") Boolean enabled,
+                                    Pageable pageable);
 
     // ========== Date-based Queries ==========
 
@@ -90,8 +90,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     @Query("SELECT u FROM User u WHERE u.createdAt >= :startDate AND u.createdAt <= :endDate")
     Page<User> findUsersCreatedBetween(@Param("startDate") LocalDateTime startDate,
-                                      @Param("endDate") LocalDateTime endDate,
-                                      Pageable pageable);
+                                       @Param("endDate") LocalDateTime endDate,
+                                       Pageable pageable);
 
     // ========== Statistics Queries ==========
 
@@ -103,5 +103,5 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :startDate AND u.createdAt <= :endDate")
     long countUsersCreatedBetween(@Param("startDate") LocalDateTime startDate,
-                                 @Param("endDate") LocalDateTime endDate);
+                                  @Param("endDate") LocalDateTime endDate);
 }

@@ -18,18 +18,18 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserValidationResponse {
-    
+
     private boolean valid;
     private String message;
     private List<String> errors;
-    
+
     // User details
     private Long userId;
     private String username;
     private String email;
     private String status;
     private String role;
-    
+
     // Validation flags
     private boolean userExists;
     private boolean userActive;
@@ -37,19 +37,19 @@ public class UserValidationResponse {
     private boolean userDeleted;
     private boolean emailVerified;
     private boolean phoneVerified;
-    
+
     // Payment validation
     private boolean canMakePayments;
     private String paymentBlockReason;
     private boolean hasPaymentLimits;
     private boolean withinPaymentLimits;
-    
+
     // Risk assessment
     private String riskLevel;
     private Integer riskScore;
     private boolean requiresVerification;
     private boolean highRiskUser;
-    
+
     // Limits information
     private BigDecimal dailyLimit;
     private BigDecimal monthlyLimit;
@@ -57,12 +57,12 @@ public class UserValidationResponse {
     private BigDecimal remainingDailyLimit;
     private BigDecimal remainingMonthlyLimit;
     private Integer remainingTransactionsToday;
-    
+
     // Activity information
     private LocalDateTime lastPaymentAt;
     private Integer recentPaymentCount;
     private BigDecimal recentPaymentAmount;
-    
+
     // Helper methods
     @JsonIgnore
     public boolean isPaymentAllowed() {
@@ -73,8 +73,8 @@ public class UserValidationResponse {
         if (!hasPaymentLimits) return true;
 
         return (transactionLimit == null || amount.compareTo(transactionLimit) <= 0) &&
-               (remainingDailyLimit == null || amount.compareTo(remainingDailyLimit) <= 0) &&
-               (remainingMonthlyLimit == null || amount.compareTo(remainingMonthlyLimit) <= 0);
+                (remainingDailyLimit == null || amount.compareTo(remainingDailyLimit) <= 0) &&
+                (remainingMonthlyLimit == null || amount.compareTo(remainingMonthlyLimit) <= 0);
     }
 
     @JsonIgnore
@@ -86,7 +86,7 @@ public class UserValidationResponse {
     public boolean hasPaymentRestrictions() {
         return paymentBlockReason != null && !paymentBlockReason.trim().isEmpty();
     }
-    
+
     // Factory methods
     public static UserValidationResponse valid(Long userId, String username, String email) {
         return UserValidationResponse.builder()
@@ -106,7 +106,7 @@ public class UserValidationResponse {
                 .message("User is valid for payment processing")
                 .build();
     }
-    
+
     public static UserValidationResponse invalid(String message, List<String> errors) {
         return UserValidationResponse.builder()
                 .valid(false)
@@ -115,7 +115,7 @@ public class UserValidationResponse {
                 .canMakePayments(false)
                 .build();
     }
-    
+
     public static UserValidationResponse userNotFound(Long userId) {
         return UserValidationResponse.builder()
                 .valid(false)
@@ -125,7 +125,7 @@ public class UserValidationResponse {
                 .message("User not found")
                 .build();
     }
-    
+
     public static UserValidationResponse userBlocked(Long userId, String username, String reason) {
         return UserValidationResponse.builder()
                 .valid(false)
@@ -139,7 +139,7 @@ public class UserValidationResponse {
                 .message("User is blocked from making payments")
                 .build();
     }
-    
+
     public static UserValidationResponse highRisk(Long userId, String username, String riskLevel, String reason) {
         return UserValidationResponse.builder()
                 .valid(false)

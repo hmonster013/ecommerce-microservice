@@ -19,14 +19,14 @@ public class FeignRequestInterceptor implements RequestInterceptor {
         template.header("Accept", "application/json");
         template.header("User-Agent", "payment-service/1.0");
         template.header("X-Service-Name", "payment-service");
-        
+
         // Add correlation ID for tracing
         String correlationId = generateCorrelationId();
         template.header("X-Correlation-ID", correlationId);
-        
+
         log.debug("Added headers to Feign request: {}", template.headers());
     }
-    
+
     private String generateCorrelationId() {
         return "pay-" + System.currentTimeMillis() + "-" + Thread.currentThread().getId();
     }

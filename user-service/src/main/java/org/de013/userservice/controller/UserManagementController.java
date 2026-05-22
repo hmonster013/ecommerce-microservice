@@ -2,20 +2,20 @@ package org.de013.userservice.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResponse;
-import org.de013.userservice.dto.*;
-import org.de013.userservice.service.UserManagementService;
 import org.de013.common.dto.PageResponse;
+import org.de013.userservice.dto.UserProfileDto;
+import org.de013.userservice.dto.UserResponse;
+import org.de013.userservice.dto.UserUpdateDto;
+import org.de013.userservice.service.UserManagementService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 

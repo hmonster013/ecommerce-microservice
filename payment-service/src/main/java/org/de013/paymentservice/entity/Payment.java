@@ -17,13 +17,13 @@ import java.util.List;
  */
 @Entity
 @Table(name = "payments", indexes = {
-    @Index(name = "idx_payment_number", columnList = "paymentNumber", unique = true),
-    @Index(name = "idx_order_id", columnList = "orderId"),
-    @Index(name = "idx_user_id", columnList = "userId"),
-    @Index(name = "idx_status", columnList = "status"),
-    @Index(name = "idx_stripe_payment_intent_id", columnList = "stripePaymentIntentId", unique = true),
-    @Index(name = "idx_stripe_customer_id", columnList = "stripeCustomerId"),
-    @Index(name = "idx_created_at", columnList = "createdAt")
+        @Index(name = "idx_payment_number", columnList = "paymentNumber", unique = true),
+        @Index(name = "idx_order_id", columnList = "orderId"),
+        @Index(name = "idx_user_id", columnList = "userId"),
+        @Index(name = "idx_status", columnList = "status"),
+        @Index(name = "idx_stripe_payment_intent_id", columnList = "stripePaymentIntentId", unique = true),
+        @Index(name = "idx_stripe_customer_id", columnList = "stripeCustomerId"),
+        @Index(name = "idx_created_at", columnList = "createdAt")
 })
 @EqualsAndHashCode(callSuper = true)
 @Data

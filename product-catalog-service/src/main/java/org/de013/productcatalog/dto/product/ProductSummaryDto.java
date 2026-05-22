@@ -75,22 +75,22 @@ public class ProductSummaryDto {
     @Builder
     @Schema(description = "Pricing information")
     public static class PricingInfo {
-        
+
         @Schema(description = "Current price", example = "999.00")
         private BigDecimal currentPrice;
-        
+
         @Schema(description = "Original price", example = "1099.00")
         private BigDecimal originalPrice;
-        
+
         @Schema(description = "Discount amount", example = "100.00")
         private BigDecimal discountAmount;
-        
+
         @Schema(description = "Discount percentage", example = "9.09")
         private BigDecimal discountPercentage;
-        
+
         @Schema(description = "Is on sale", example = "true")
         private Boolean onSale;
-        
+
         @Schema(description = "Savings text", example = "Save $100.00 (9%)")
         private String savingsText;
     }

@@ -40,33 +40,33 @@ public class OpenApiConfig {
         return new Info()
                 .title("Simple Notification Service API")
                 .description("""
-                    **Notification Service** provides simple email and SMS notification capabilities for the e-commerce platform.
-
-                    ## Features
-                    - Email notifications via SMTP
-                    - SMS notifications via Twilio (with mock mode)
-                    - Notification status tracking
-                    - User notification history
-                    - Read/unread status management
-
-                    ## Available Endpoints
-                    - **POST /send-email** - Send email notification
-                    - **POST /send-sms** - Send SMS notification
-                    - **POST /send-both** - Send both email and SMS
-                    - **GET /{id}** - Get notification by ID
-                    - **GET /user/{userId}** - Get user notifications
-                    - **PUT /{id}/read** - Mark notification as read
-                    - **GET /user/{userId}/unread-count** - Get unread count
-
-                    ## Authentication
-                    This API uses JWT (JSON Web Token) for authentication. To access protected endpoints:
-                    1. Obtain JWT token from user-service
-                    2. Use the returned JWT token in the Authorization header
-                    3. Format: `Authorization: Bearer <your-jwt-token>`
-
-                    ## Configuration
-                    Configure email and SMS settings in application.yml
-                    """)
+                        **Notification Service** provides simple email and SMS notification capabilities for the e-commerce platform.
+                        
+                        ## Features
+                        - Email notifications via SMTP
+                        - SMS notifications via Twilio (with mock mode)
+                        - Notification status tracking
+                        - User notification history
+                        - Read/unread status management
+                        
+                        ## Available Endpoints
+                        - **POST /send-email** - Send email notification
+                        - **POST /send-sms** - Send SMS notification
+                        - **POST /send-both** - Send both email and SMS
+                        - **GET /{id}** - Get notification by ID
+                        - **GET /user/{userId}** - Get user notifications
+                        - **PUT /{id}/read** - Mark notification as read
+                        - **GET /user/{userId}/unread-count** - Get unread count
+                        
+                        ## Authentication
+                        This API uses JWT (JSON Web Token) for authentication. To access protected endpoints:
+                        1. Obtain JWT token from user-service
+                        2. Use the returned JWT token in the Authorization header
+                        3. Format: `Authorization: Bearer <your-jwt-token>`
+                        
+                        ## Configuration
+                        Configure email and SMS settings in application.yml
+                        """)
                 .version("1.0.0")
                 .contact(contact())
                 .license(license());
@@ -116,12 +116,12 @@ public class OpenApiConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .description("""
-                    JWT Authorization header using the Bearer scheme.
-
-                    Enter 'Bearer' [space] and then your token in the text input below.
-
-                    Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    """);
+                        JWT Authorization header using the Bearer scheme.
+                        
+                        Enter 'Bearer' [space] and then your token in the text input below.
+                        
+                        Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        """);
     }
 
 

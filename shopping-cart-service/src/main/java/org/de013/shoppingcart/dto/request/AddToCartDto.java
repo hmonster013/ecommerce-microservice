@@ -7,7 +7,6 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 
-
 /**
  * DTO for adding items to cart
  */
@@ -37,7 +36,6 @@ public class AddToCartDto {
     @Size(max = 36, message = "{variant.id.size}")
     @JsonProperty("variant_id")
     private String variantId;
-
 
 
     @Schema(description = "Special instructions for this item", example = "Please wrap as gift")

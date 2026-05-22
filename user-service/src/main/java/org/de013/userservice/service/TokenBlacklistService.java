@@ -7,7 +7,7 @@ public interface TokenBlacklistService {
     /**
      * Adds a token to the blacklist.
      *
-     * @param token The JWT token to be blacklisted.
+     * @param token      The JWT token to be blacklisted.
      * @param expiryTime The expiration time of the token.
      */
     void blacklistToken(String token, Instant expiryTime);

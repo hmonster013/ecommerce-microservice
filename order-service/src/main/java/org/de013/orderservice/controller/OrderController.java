@@ -13,15 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
+import org.de013.orderservice.dto.request.CancelOrderRequest;
 import org.de013.orderservice.dto.request.CreateOrderRequest;
 import org.de013.orderservice.dto.request.UpdateOrderRequest;
-import org.de013.orderservice.dto.request.CancelOrderRequest;
 import org.de013.orderservice.dto.response.OrderResponse;
 import org.de013.orderservice.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -41,12 +40,12 @@ public class OrderController {
      */
     @Operation(summary = "Create order (Authenticated)", description = "Create a new order from shopping cart. Converts cart items to order items and initializes order with PENDING status. Authorization handled by API Gateway.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Order created successfully",
-                content = @Content(schema = @Schema(implementation = OrderResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data or empty cart"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "201", description = "Order created successfully",
+                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data or empty cart"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "404", description = "Cart not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -65,12 +64,12 @@ public class OrderController {
      */
     @Operation(summary = "Get order by ID (Owner/Admin)", description = "Retrieve order details by its unique identifier. Authorization handled by API Gateway.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Order found",
-                content = @Content(schema = @Schema(implementation = OrderResponse.class))),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - not order owner or admin"),
-        @ApiResponse(responseCode = "404", description = "Order not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Order found",
+                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Access denied - not order owner or admin"),
+            @ApiResponse(responseCode = "404", description = "Order not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.ORDER_ID_PARAM)
     public OrderResponse getOrder(
@@ -85,9 +84,9 @@ public class OrderController {
      */
     @Operation(summary = "Get my orders (Authenticated)", description = "Retrieve paginated list of orders for the authenticated user. Returns orders sorted by creation date (newest first). Authorization handled by API Gateway.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.MY_ORDERS)
     public Page<OrderResponse> getMyOrders(
@@ -102,11 +101,11 @@ public class OrderController {
      */
     @Operation(summary = "Get user orders (Admin/Owner)", description = "Retrieve paginated list of orders for a specific user. Authorization handled by API Gateway.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - admin required"),
-        @ApiResponse(responseCode = "404", description = "User not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Access denied - admin required"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM)
     public Page<OrderResponse> getUserOrders(
@@ -122,10 +121,10 @@ public class OrderController {
      */
     @Operation(summary = "Get all orders (Admin Only)", description = "Retrieve paginated list of all orders in the system. Useful for order management and reporting. Authorization handled by API Gateway.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - admin required"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Access denied - admin required"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
     public Page<OrderResponse> getAllOrders(
@@ -139,12 +138,12 @@ public class OrderController {
      */
     @Operation(summary = "Get order by number", description = "Retrieve order details by its unique order number (e.g., ORD-12345678). Authorization handled by API Gateway.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Order found",
-                content = @Content(schema = @Schema(implementation = OrderResponse.class))),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - not order owner or admin"),
-        @ApiResponse(responseCode = "404", description = "Order not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Order found",
+                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Access denied - not order owner or admin"),
+            @ApiResponse(responseCode = "404", description = "Order not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.NUMBER + ApiPaths.ORDER_NUMBER_PARAM)
     public OrderResponse getOrderByNumber(
@@ -159,13 +158,13 @@ public class OrderController {
      */
     @Operation(summary = "Update order", description = "Update order details such as status, addresses, or customer notes. Authorization handled by API Gateway.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Order updated successfully",
-                content = @Content(schema = @Schema(implementation = OrderResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data or update not allowed for current status"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
-        @ApiResponse(responseCode = "404", description = "Order not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Order updated successfully",
+                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data or update not allowed for current status"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Order not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping(ApiPaths.ORDER_ID_PARAM)
     public OrderResponse updateOrder(
@@ -182,12 +181,12 @@ public class OrderController {
      */
     @Operation(summary = "Cancel order", description = "Cancel an existing order. Only allowed for orders in PENDING, CONFIRMED, or PAID status. Cancelled orders cannot be restored. Authorization handled by API Gateway.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Order cancelled successfully"),
-        @ApiResponse(responseCode = "400", description = "Order cannot be cancelled in current status"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
-        @ApiResponse(responseCode = "404", description = "Order not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "204", description = "Order cancelled successfully"),
+            @ApiResponse(responseCode = "400", description = "Order cannot be cancelled in current status"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Access denied - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Order not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping(ApiPaths.ORDER_ID_PARAM)
     @ResponseStatus(HttpStatus.NO_CONTENT)

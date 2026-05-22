@@ -9,9 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
+import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.de013.paymentservice.dto.payment.StripeWebhookRequest;
 import org.de013.paymentservice.service.WebhookService;
-import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,9 +42,9 @@ public class WebhookController extends BaseController {
             @RequestBody String payload,
             @Parameter(description = "Stripe signature header")
             @RequestHeader("Stripe-Signature") String signature) {
-        
+
         log.info("Received Stripe webhook with signature: {}", signature);
-        
+
         try {
             // Process webhook directly (signature verification is done inside)
             webhookService.processStripeWebhook(payload, signature);

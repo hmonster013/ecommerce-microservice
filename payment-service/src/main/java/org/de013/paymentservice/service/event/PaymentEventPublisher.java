@@ -26,7 +26,7 @@ public class PaymentEventPublisher {
      */
     public void publishPaymentCreated(Payment payment) {
         try {
-            log.info("Publishing payment created event: paymentId={}, paymentNumber={}", 
+            log.info("Publishing payment created event: paymentId={}, paymentNumber={}",
                     payment.getId(), payment.getPaymentNumber());
 
             PaymentEvent event = PaymentEvent.paymentCreated(
@@ -56,7 +56,7 @@ public class PaymentEventPublisher {
      */
     public void publishPaymentSucceeded(Payment payment) {
         try {
-            log.info("Publishing payment succeeded event: paymentId={}, paymentNumber={}", 
+            log.info("Publishing payment succeeded event: paymentId={}, paymentNumber={}",
                     payment.getId(), payment.getPaymentNumber());
 
             PaymentEvent event = PaymentEvent.paymentSucceeded(
@@ -86,7 +86,7 @@ public class PaymentEventPublisher {
      */
     public void publishPaymentFailed(Payment payment, String reason) {
         try {
-            log.info("Publishing payment failed event: paymentId={}, reason={}", 
+            log.info("Publishing payment failed event: paymentId={}, reason={}",
                     payment.getId(), reason);
 
             PaymentEvent event = PaymentEvent.paymentFailed(
@@ -117,7 +117,7 @@ public class PaymentEventPublisher {
      */
     public void publishPaymentCanceled(Payment payment, String reason) {
         try {
-            log.info("Publishing payment canceled event: paymentId={}, reason={}", 
+            log.info("Publishing payment canceled event: paymentId={}, reason={}",
                     payment.getId(), reason);
 
             PaymentEvent event = PaymentEvent.paymentCanceled(
@@ -148,7 +148,7 @@ public class PaymentEventPublisher {
      */
     public void publishPaymentRequiresAction(Payment payment, String description) {
         try {
-            log.info("Publishing payment requires action event: paymentId={}, description={}", 
+            log.info("Publishing payment requires action event: paymentId={}, description={}",
                     payment.getId(), description);
 
             PaymentEvent event = PaymentEvent.paymentRequiresAction(
@@ -179,7 +179,7 @@ public class PaymentEventPublisher {
      */
     public void publishRefundCreated(Refund refund) {
         try {
-            log.info("Publishing refund created event: refundId={}, refundNumber={}", 
+            log.info("Publishing refund created event: refundId={}, refundNumber={}",
                     refund.getId(), refund.getRefundNumber());
 
             RefundEvent event = RefundEvent.refundCreated(
@@ -212,7 +212,7 @@ public class PaymentEventPublisher {
      */
     public void publishRefundSucceeded(Refund refund) {
         try {
-            log.info("Publishing refund succeeded event: refundId={}, refundNumber={}", 
+            log.info("Publishing refund succeeded event: refundId={}, refundNumber={}",
                     refund.getId(), refund.getRefundNumber());
 
             RefundEvent event = RefundEvent.refundSucceeded(
@@ -245,7 +245,7 @@ public class PaymentEventPublisher {
      */
     public void publishRefundFailed(Refund refund, String reason) {
         try {
-            log.info("Publishing refund failed event: refundId={}, reason={}", 
+            log.info("Publishing refund failed event: refundId={}, reason={}",
                     refund.getId(), reason);
 
             RefundEvent event = RefundEvent.refundFailed(
@@ -278,7 +278,7 @@ public class PaymentEventPublisher {
      */
     public void publishRefundApproved(Refund refund, String approvedBy) {
         try {
-            log.info("Publishing refund approved event: refundId={}, approvedBy={}", 
+            log.info("Publishing refund approved event: refundId={}, approvedBy={}",
                     refund.getId(), approvedBy);
 
             RefundEvent event = RefundEvent.refundApproved(
@@ -311,7 +311,7 @@ public class PaymentEventPublisher {
      */
     public void publishRefundRejected(Refund refund, String reason, String rejectedBy) {
         try {
-            log.info("Publishing refund rejected event: refundId={}, reason={}, rejectedBy={}", 
+            log.info("Publishing refund rejected event: refundId={}, reason={}, rejectedBy={}",
                     refund.getId(), reason, rejectedBy);
 
             RefundEvent event = RefundEvent.refundRejected(

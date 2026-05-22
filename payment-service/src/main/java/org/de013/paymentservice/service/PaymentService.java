@@ -1,8 +1,8 @@
 package org.de013.paymentservice.service;
 
-import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
+import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.springframework.data.domain.Page;
@@ -217,5 +217,6 @@ public interface PaymentService {
             BigDecimal averageAmount,
             LocalDateTime firstPaymentDate,
             LocalDateTime lastPaymentDate
-    ) {}
+    ) {
+    }
 }

@@ -25,13 +25,13 @@ public class StripeWebhookRequest {
     private String type;
     private Boolean livemode;
     private Long created;
-    
+
     @JsonProperty("api_version")
     private String apiVersion;
-    
+
     private WebhookData data;
     private String request;
-    
+
     @JsonProperty("pending_webhooks")
     private Integer pendingWebhooks;
 
@@ -42,7 +42,7 @@ public class StripeWebhookRequest {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class WebhookData {
         private Map<String, Object> object;
-        
+
         @JsonProperty("previous_attributes")
         private Map<String, Object> previousAttributes;
     }
@@ -78,17 +78,17 @@ public class StripeWebhookRequest {
     public String getPaymentIntentId() {
         if (data != null && data.getObject() != null) {
             Map<String, Object> obj = data.getObject();
-            
+
             // Direct payment_intent object
             if ("payment_intent".equals(obj.get("object"))) {
                 return (String) obj.get("id");
             }
-            
+
             // Payment method attached to payment intent
             if ("payment_method".equals(obj.get("object"))) {
                 return (String) obj.get("payment_intent");
             }
-            
+
             // Charge object
             if ("charge".equals(obj.get("object"))) {
                 return (String) obj.get("payment_intent");
@@ -110,12 +110,12 @@ public class StripeWebhookRequest {
     public String getPaymentMethodId() {
         if (data != null && data.getObject() != null) {
             Map<String, Object> obj = data.getObject();
-            
+
             // Direct payment_method object
             if ("payment_method".equals(obj.get("object"))) {
                 return (String) obj.get("id");
             }
-            
+
             // Payment intent with payment method
             if ("payment_intent".equals(obj.get("object"))) {
                 return (String) obj.get("payment_method");
@@ -175,7 +175,7 @@ public class StripeWebhookRequest {
     @JsonIgnore
     public boolean isRefundEvent() {
         return type != null && type.startsWith("charge.dispute") ||
-               (type != null && type.contains("refund"));
+                (type != null && type.contains("refund"));
     }
 
     // ========== ADDITIONAL GETTERS ==========

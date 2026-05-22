@@ -19,7 +19,7 @@ import java.util.Arrays;
 
 /**
  * Security configuration for Shopping Cart Service
- * 
+ * <p>
  * Architecture: Trust internal network - API Gateway handles authentication
  * - API Gateway validates JWT with Keycloak and forwards user context
  * - This service trusts all internal requests

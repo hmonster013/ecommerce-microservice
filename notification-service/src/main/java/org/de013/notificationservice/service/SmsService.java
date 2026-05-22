@@ -41,7 +41,7 @@ public class SmsService {
     public void sendSms(String phoneNumber, String message) {
         try {
             log.info("Sending SMS to: {}, message length: {}", phoneNumber, message.length());
-            
+
             if (!smsEnabled) {
                 log.warn("SMS service is disabled. Message not sent to: {}", phoneNumber);
                 return;
@@ -68,9 +68,9 @@ public class SmsService {
                         break;
                 }
             }
-            
+
             log.info("SMS sent successfully to: {}", phoneNumber);
-            
+
         } catch (Exception e) {
             log.error("Failed to send SMS to: {}, error: {}", phoneNumber, e.getMessage(), e);
             throw new RuntimeException("Failed to send SMS: " + e.getMessage(), e);

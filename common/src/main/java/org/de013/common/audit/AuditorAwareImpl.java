@@ -12,12 +12,12 @@ import java.util.Optional;
 
 /**
  * Implementation of AuditorAware for JPA Auditing in Microservices Architecture
- * 
+ * <p>
  * This implementation supports multiple authentication sources:
  * 1. User context from API Gateway headers (primary method for microservices)
  * 2. Spring Security Authentication (fallback for services with direct authentication)
  * 3. System default (for background jobs or unauthenticated operations)
- * 
+ * <p>
  * Usage in each service:
  * - Add @EnableJpaAuditing(auditorAwareRef = "auditorAwareImpl") to main application class or config
  * - Ensure this common library is included as a dependency
@@ -83,20 +83,20 @@ public class AuditorAwareImpl implements AuditorAware<String> {
     private String getAuditorFromSecurityContext() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            
+
             if (authentication == null || !authentication.isAuthenticated()) {
                 return null;
             }
 
             String username = authentication.getName();
-            
+
             // Skip anonymous users
             if (ANONYMOUS_USER.equals(username)) {
                 return null;
             }
 
             return username;
-            
+
         } catch (Exception e) {
             log.debug("Could not get user from SecurityContext: {}", e.getMessage());
         }

@@ -4,14 +4,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import lombok.*;
-
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.de013.orderservice.entity.enums.OrderType;
 import org.de013.orderservice.entity.valueobject.Address;
 
 /**
  * Create Order Request DTO - Simplified Base Version
- *
+ * <p>
  * Request object for creating a new order from shopping cart.
  * Contains only essential information for basic order creation.
  *
@@ -83,8 +85,6 @@ public class CreateOrderRequest {
     @Schema(description = "Optional customer notes for the order", example = "Please deliver after 6 PM")
     @Size(max = 500, message = "Customer notes must not exceed 500 characters")
     private String customerNotes;
-    
-
 
 
     /**
@@ -95,7 +95,6 @@ public class CreateOrderRequest {
     public Address getEffectiveBillingAddress() {
         return billingAddress != null ? billingAddress : shippingAddress;
     }
-
 
 
 }

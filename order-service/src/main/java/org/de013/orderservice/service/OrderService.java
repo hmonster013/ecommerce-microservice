@@ -15,8 +15,11 @@ public interface OrderService {
 
     // Read operations
     OrderResponse getOrderById(Long id);
+
     OrderResponse getOrderByNumber(String orderNumber);
+
     Page<OrderResponse> listOrdersByUser(Long userId, Pageable pageable);
+
     Page<OrderResponse> listAllOrders(Pageable pageable);
 
     // Update operations

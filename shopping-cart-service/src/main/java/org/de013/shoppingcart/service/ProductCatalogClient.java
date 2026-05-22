@@ -2,16 +2,16 @@ package org.de013.shoppingcart.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.shoppingcart.client.ProductCatalogFeignClient;
-import org.de013.common.dto.ProductDetailDto;
 import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ProductDetailDto;
+import org.de013.shoppingcart.client.ProductCatalogFeignClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -90,23 +90,23 @@ public class ProductCatalogClient {
     public BigDecimal getCurrentPrice(String productId) {
         try {
             log.debug("Fetching current price for product: {}", productId);
-            
+
             String url = productCatalogServiceUrl + "/api/products/" + productId + "/price";
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> priceData = response.getBody();
                 Object priceObj = priceData.get("currentPrice");
-                
+
                 if (priceObj instanceof Number) {
                     return BigDecimal.valueOf(((Number) priceObj).doubleValue());
                 } else if (priceObj instanceof String) {
                     return new BigDecimal((String) priceObj);
                 }
             }
-            
+
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error fetching current price for {}: {}", productId, e.getMessage(), e);
             return null;
@@ -119,20 +119,20 @@ public class ProductCatalogClient {
     public PricingInfo getProductPricing(String productId, String userId) {
         try {
             log.debug("Fetching pricing info for product: {} and user: {}", productId, userId);
-            
+
             String url = productCatalogServiceUrl + "/api/products/" + productId + "/pricing";
             if (userId != null) {
                 url += "?userId=" + userId;
             }
-            
+
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToPricingInfo(response.getBody());
             }
-            
+
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error fetching pricing info for {}: {}", productId, e.getMessage(), e);
             return null;
@@ -148,16 +148,16 @@ public class ProductCatalogClient {
     public AvailabilityInfo getProductAvailability(String productId) {
         try {
             log.debug("Checking availability for product: {}", productId);
-            
+
             String url = productCatalogServiceUrl + "/api/products/" + productId + "/availability";
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToAvailabilityInfo(response.getBody());
             }
-            
+
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error checking availability for {}: {}", productId, e.getMessage(), e);
             return null;
@@ -170,22 +170,22 @@ public class ProductCatalogClient {
     public boolean reserveProductQuantity(String productId, int quantity, String reservationId) {
         try {
             log.debug("Reserving {} units of product {} with reservation {}", quantity, productId, reservationId);
-            
+
             String url = productCatalogServiceUrl + "/api/products/" + productId + "/reserve";
             Map<String, Object> request = Map.of(
-                "quantity", quantity,
-                "reservationId", reservationId
+                    "quantity", quantity,
+                    "reservationId", reservationId
             );
-            
+
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 return Boolean.TRUE.equals(responseBody.get("success"));
             }
-            
+
             return false;
-            
+
         } catch (Exception e) {
             log.error("Error reserving product quantity for {}: {}", productId, e.getMessage(), e);
             return false;
@@ -198,19 +198,19 @@ public class ProductCatalogClient {
     public boolean releaseProductReservation(String productId, String reservationId) {
         try {
             log.debug("Releasing reservation {} for product {}", reservationId, productId);
-            
+
             String url = productCatalogServiceUrl + "/api/products/" + productId + "/release";
             Map<String, Object> request = Map.of("reservationId", reservationId);
-            
+
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 return Boolean.TRUE.equals(responseBody.get("success"));
             }
-            
+
             return false;
-            
+
         } catch (Exception e) {
             log.error("Error releasing product reservation for {}: {}", productId, e.getMessage(), e);
             return false;
@@ -238,12 +238,12 @@ public class ProductCatalogClient {
     public boolean validateProductVariant(String productId, String variantId) {
         try {
             log.debug("Validating variant {} for product {}", variantId, productId);
-            
+
             String url = productCatalogServiceUrl + "/api/products/" + productId + "/variants/" + variantId;
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             return response.getStatusCode() == HttpStatus.OK;
-            
+
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 return false;
@@ -257,7 +257,6 @@ public class ProductCatalogClient {
     }
 
     // ==================== HELPER METHODS ====================
-
 
 
     private PricingInfo mapToPricingInfo(Map<String, Object> pricingData) {

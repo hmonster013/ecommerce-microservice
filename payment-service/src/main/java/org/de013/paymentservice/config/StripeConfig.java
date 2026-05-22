@@ -68,8 +68,8 @@ public class StripeConfig {
         }
 
         if (stripeConfig.getWebhookSecret() != null &&
-            !stripeConfig.getWebhookSecret().isEmpty() &&
-            !stripeConfig.getWebhookSecret().startsWith("whsec_")) {
+                !stripeConfig.getWebhookSecret().isEmpty() &&
+                !stripeConfig.getWebhookSecret().startsWith("whsec_")) {
             throw new IllegalArgumentException("Invalid Stripe webhook secret format. Must start with 'whsec_'");
         }
     }

@@ -238,5 +238,6 @@ public interface PaymentMethodService {
             Long expiringSoonMethods,
             LocalDateTime oldestMethodDate,
             LocalDateTime newestMethodDate
-    ) {}
+    ) {
+    }
 }

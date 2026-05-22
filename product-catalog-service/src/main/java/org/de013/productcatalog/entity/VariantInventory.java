@@ -74,7 +74,7 @@ public class VariantInventory extends BaseEntity {
 
     @Column(name = "sku")
     private String sku; // Variant-specific SKU for inventory tracking
-    
+
     // Helper methods
     public Integer getAvailableQuantity() {
         return Math.max(0, quantity - reservedQuantity);
@@ -100,11 +100,11 @@ public class VariantInventory extends BaseEntity {
         if (!trackInventory) {
             return true; // If not tracking inventory, assume always available
         }
-        
+
         if (isInStock() && getAvailableQuantity() >= requestedQuantity) {
             return true;
         }
-        
+
         return allowBackorder;
     }
 
@@ -112,7 +112,7 @@ public class VariantInventory extends BaseEntity {
         if (canFulfillOrder(quantityToReserve)) {
             this.reservedQuantity += quantityToReserve;
         } else {
-            throw new IllegalStateException("Cannot reserve " + quantityToReserve + " items for variant " + 
+            throw new IllegalStateException("Cannot reserve " + quantityToReserve + " items for variant " +
                     (variant != null ? variant.getValue() : "unknown") + ". Available: " + getAvailableQuantity());
         }
     }
@@ -126,7 +126,7 @@ public class VariantInventory extends BaseEntity {
             this.reservedQuantity -= quantityToFulfill;
             this.quantity = Math.max(0, this.quantity - quantityToFulfill);
         } else {
-            throw new IllegalStateException("Cannot fulfill " + quantityToFulfill + " items for variant " + 
+            throw new IllegalStateException("Cannot fulfill " + quantityToFulfill + " items for variant " +
                     (variant != null ? variant.getValue() : "unknown") + ". Reserved: " + this.reservedQuantity);
         }
     }
@@ -138,8 +138,8 @@ public class VariantInventory extends BaseEntity {
     public void removeStock(int quantityToRemove) {
         if (quantityToRemove > this.quantity) {
             throw new IllegalArgumentException(
-                String.format("Cannot remove %d items from variant %s. Only %d available in stock",
-                    quantityToRemove, (variant != null ? variant.getValue() : "unknown"), this.quantity)
+                    String.format("Cannot remove %d items from variant %s. Only %d available in stock",
+                            quantityToRemove, (variant != null ? variant.getValue() : "unknown"), this.quantity)
             );
         }
         this.quantity -= quantityToRemove;

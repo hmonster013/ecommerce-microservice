@@ -18,14 +18,14 @@ import java.util.List;
  */
 @Entity
 @Table(name = "carts", indexes = {
-    @Index(name = "idx_cart_user_id", columnList = "user_id"),
-    @Index(name = "idx_cart_session_id", columnList = "session_id"),
-    @Index(name = "idx_cart_status", columnList = "status"),
-    @Index(name = "idx_cart_type", columnList = "cart_type"),
-    @Index(name = "idx_cart_expires_at", columnList = "expires_at"),
-    @Index(name = "idx_cart_created_at", columnList = "created_at"),
-    @Index(name = "idx_cart_user_status", columnList = "user_id, status"),
-    @Index(name = "idx_cart_session_status", columnList = "session_id, status")
+        @Index(name = "idx_cart_user_id", columnList = "user_id"),
+        @Index(name = "idx_cart_session_id", columnList = "session_id"),
+        @Index(name = "idx_cart_status", columnList = "status"),
+        @Index(name = "idx_cart_type", columnList = "cart_type"),
+        @Index(name = "idx_cart_expires_at", columnList = "expires_at"),
+        @Index(name = "idx_cart_created_at", columnList = "created_at"),
+        @Index(name = "idx_cart_user_status", columnList = "user_id, status"),
+        @Index(name = "idx_cart_session_status", columnList = "session_id, status")
 })
 @Getter
 @Setter

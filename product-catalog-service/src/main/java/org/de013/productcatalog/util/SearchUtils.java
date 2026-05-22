@@ -19,17 +19,17 @@ public class SearchUtils {
     private static final Pattern SPECIAL_CHARS = Pattern.compile("[^\\p{L}\\p{N}\\s]");
     private static final Pattern MULTIPLE_SPACES = Pattern.compile("\\s+");
     private static final Set<String> STOP_WORDS = Set.of(
-        "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has", "he", "in", "is", "it",
-        "its", "of", "on", "that", "the", "to", "was", "will", "with", "the", "this", "but", "they",
-        "have", "had", "what", "said", "each", "which", "their", "time", "if", "up", "out", "many",
-        "then", "them", "these", "so", "some", "her", "would", "make", "like", "into", "him", "two",
-        "more", "go", "no", "way", "could", "my", "than", "first", "been", "call", "who", "oil", "sit",
-        "now", "find", "down", "day", "did", "get", "come", "made", "may", "part"
+            "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has", "he", "in", "is", "it",
+            "its", "of", "on", "that", "the", "to", "was", "will", "with", "the", "this", "but", "they",
+            "have", "had", "what", "said", "each", "which", "their", "time", "if", "up", "out", "many",
+            "then", "them", "these", "so", "some", "her", "would", "make", "like", "into", "him", "two",
+            "more", "go", "no", "way", "could", "my", "than", "first", "been", "call", "who", "oil", "sit",
+            "now", "find", "down", "day", "did", "get", "come", "made", "may", "part"
     );
 
     /**
      * Normalize search query for better matching.
-     * 
+     *
      * @param query the search query
      * @return normalized query
      */
@@ -66,13 +66,13 @@ public class SearchUtils {
 
     /**
      * Extract search terms from query, removing stop words.
-     * 
+     *
      * @param query the search query
      * @return list of search terms
      */
     public static List<String> extractSearchTerms(String query) {
         String normalized = normalizeQuery(query);
-        
+
         if (normalized.isEmpty()) {
             return Collections.emptyList();
         }
@@ -86,7 +86,7 @@ public class SearchUtils {
 
     /**
      * Generate search keywords from text for indexing.
-     * 
+     *
      * @param text the text to process
      * @return set of keywords
      */
@@ -122,9 +122,9 @@ public class SearchUtils {
 
     /**
      * Calculate search relevance score between query and text.
-     * 
+     *
      * @param query the search query
-     * @param text the text to match against
+     * @param text  the text to match against
      * @return relevance score (0.0 to 1.0)
      */
     public static double calculateRelevanceScore(String query, String text) {
@@ -176,7 +176,7 @@ public class SearchUtils {
 
     /**
      * Calculate partial match score between two terms.
-     * 
+     *
      * @param term1 first term
      * @param term2 second term
      * @return partial match score (0.0 to 1.0)
@@ -204,7 +204,7 @@ public class SearchUtils {
 
     /**
      * Calculate Levenshtein distance between two strings.
-     * 
+     *
      * @param s1 first string
      * @param s2 second string
      * @return Levenshtein distance
@@ -235,9 +235,9 @@ public class SearchUtils {
 
     /**
      * Generate search suggestions based on query.
-     * 
-     * @param query the partial query
-     * @param candidates list of candidate strings
+     *
+     * @param query          the partial query
+     * @param candidates     list of candidate strings
      * @param maxSuggestions maximum number of suggestions
      * @return list of suggestions
      */
@@ -260,7 +260,7 @@ public class SearchUtils {
 
     /**
      * Check if query is likely a product code or SKU.
-     * 
+     *
      * @param query the search query
      * @return true if query looks like a product code
      */
@@ -291,8 +291,8 @@ public class SearchUtils {
 
     /**
      * Clean and validate search query.
-     * 
-     * @param query the raw query
+     *
+     * @param query     the raw query
      * @param maxLength maximum allowed length
      * @return cleaned query or empty string if invalid
      */
@@ -321,8 +321,8 @@ public class SearchUtils {
 
     /**
      * Extract brand names from search query.
-     * 
-     * @param query the search query
+     *
+     * @param query       the search query
      * @param knownBrands list of known brand names
      * @return list of detected brands
      */

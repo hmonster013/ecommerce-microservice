@@ -18,7 +18,7 @@ import java.util.Map;
 @Slf4j
 @Component
 public class StripeUtils {
-    
+
     /**
      * Converts Stripe PaymentIntent status to our PaymentStatus enum.
      */
@@ -26,7 +26,7 @@ public class StripeUtils {
         if (stripeStatus == null) {
             return PaymentStatus.PENDING;
         }
-        
+
         return switch (stripeStatus.toLowerCase()) {
             case "requires_payment_method" -> PaymentStatus.REQUIRES_PAYMENT_METHOD;
             case "requires_confirmation" -> PaymentStatus.REQUIRES_CONFIRMATION;
@@ -37,7 +37,7 @@ public class StripeUtils {
             default -> PaymentStatus.FAILED;
         };
     }
-    
+
     /**
      * Converts our PaymentStatus enum to Stripe PaymentIntent status.
      */
@@ -45,7 +45,7 @@ public class StripeUtils {
         if (paymentStatus == null) {
             return "requires_payment_method";
         }
-        
+
         return switch (paymentStatus) {
             case REQUIRES_PAYMENT_METHOD -> "requires_payment_method";
             case REQUIRES_CONFIRMATION -> "requires_confirmation";
@@ -57,7 +57,7 @@ public class StripeUtils {
             default -> "requires_payment_method";
         };
     }
-    
+
     /**
      * Converts Stripe Refund status to our RefundStatus enum.
      */
@@ -75,7 +75,7 @@ public class StripeUtils {
             default -> RefundStatus.FAILED;
         };
     }
-    
+
     /**
      * Converts amount from dollars to cents for Stripe API.
      */
@@ -85,7 +85,7 @@ public class StripeUtils {
         }
         return CurrencyUtils.toSmallestUnit(dollars, "USD");
     }
-    
+
     /**
      * Converts amount from cents to dollars from Stripe API.
      */
@@ -95,13 +95,13 @@ public class StripeUtils {
         }
         return CurrencyUtils.fromSmallestUnit(cents, "USD");
     }
-    
+
     /**
      * Creates metadata map for Stripe objects.
      */
     public static Map<String, String> createMetadata(Long userId, Long orderId, String paymentNumber) {
         Map<String, String> metadata = new HashMap<>();
-        
+
         if (userId != null) {
             metadata.put("user_id", userId.toString());
         }
@@ -111,13 +111,13 @@ public class StripeUtils {
         if (paymentNumber != null) {
             metadata.put("payment_number", paymentNumber);
         }
-        
+
         metadata.put("source", "ecommerce-platform");
         metadata.put("created_at", String.valueOf(System.currentTimeMillis()));
-        
+
         return metadata;
     }
-    
+
     /**
      * Extracts user ID from Stripe metadata.
      */
@@ -125,7 +125,7 @@ public class StripeUtils {
         if (metadata == null || !metadata.containsKey("user_id")) {
             return null;
         }
-        
+
         try {
             return Long.parseLong(metadata.get("user_id"));
         } catch (NumberFormatException e) {
@@ -133,7 +133,7 @@ public class StripeUtils {
             return null;
         }
     }
-    
+
     /**
      * Extracts order ID from Stripe metadata.
      */
@@ -141,7 +141,7 @@ public class StripeUtils {
         if (metadata == null || !metadata.containsKey("order_id")) {
             return null;
         }
-        
+
         try {
             return Long.parseLong(metadata.get("order_id"));
         } catch (NumberFormatException e) {
@@ -149,7 +149,7 @@ public class StripeUtils {
             return null;
         }
     }
-    
+
     /**
      * Extracts payment number from Stripe metadata.
      */
@@ -159,21 +159,21 @@ public class StripeUtils {
         }
         return metadata.get("payment_number");
     }
-    
+
     /**
      * Checks if Stripe PaymentIntent is successful.
      */
     public static boolean isPaymentIntentSuccessful(PaymentIntent paymentIntent) {
         return paymentIntent != null && "succeeded".equals(paymentIntent.getStatus());
     }
-    
+
     /**
      * Checks if Stripe PaymentIntent requires action.
      */
     public static boolean paymentIntentRequiresAction(PaymentIntent paymentIntent) {
         return paymentIntent != null && "requires_action".equals(paymentIntent.getStatus());
     }
-    
+
     /**
      * Checks if Stripe PaymentIntent is cancelable.
      */
@@ -181,20 +181,20 @@ public class StripeUtils {
         if (paymentIntent == null) {
             return false;
         }
-        
+
         String status = paymentIntent.getStatus();
         return "requires_payment_method".equals(status) ||
-               "requires_confirmation".equals(status) ||
-               "requires_action".equals(status);
+                "requires_confirmation".equals(status) ||
+                "requires_action".equals(status);
     }
-    
+
     /**
      * Checks if Stripe Refund is successful.
      */
     public static boolean isRefundSuccessful(Refund refund) {
         return refund != null && "succeeded".equals(refund.getStatus());
     }
-    
+
     /**
      * Gets the last 4 digits from a Stripe PaymentMethod card.
      */
@@ -204,7 +204,7 @@ public class StripeUtils {
         }
         return paymentMethod.getCard().getLast4();
     }
-    
+
     /**
      * Gets the card brand from a Stripe PaymentMethod.
      */
@@ -214,7 +214,7 @@ public class StripeUtils {
         }
         return paymentMethod.getCard().getBrand();
     }
-    
+
     /**
      * Gets the card expiry month from a Stripe PaymentMethod.
      */
@@ -224,7 +224,7 @@ public class StripeUtils {
         }
         return paymentMethod.getCard().getExpMonth();
     }
-    
+
     /**
      * Gets the card expiry year from a Stripe PaymentMethod.
      */
@@ -234,7 +234,7 @@ public class StripeUtils {
         }
         return paymentMethod.getCard().getExpYear();
     }
-    
+
     /**
      * Formats Stripe error message for user display.
      */
@@ -242,7 +242,7 @@ public class StripeUtils {
         if (stripeErrorCode == null) {
             return stripeErrorMessage != null ? stripeErrorMessage : "Payment processing failed";
         }
-        
+
         return switch (stripeErrorCode) {
             case "card_declined" -> "Your card was declined. Please try a different payment method.";
             case "insufficient_funds" -> "Insufficient funds on your card. Please try a different payment method.";
@@ -253,7 +253,7 @@ public class StripeUtils {
             default -> stripeErrorMessage != null ? stripeErrorMessage : "Payment processing failed";
         };
     }
-    
+
     /**
      * Checks if a Stripe error is retryable.
      */
@@ -261,13 +261,13 @@ public class StripeUtils {
         if (stripeErrorCode == null) {
             return false;
         }
-        
+
         return switch (stripeErrorCode) {
             case "rate_limit", "processing_error", "api_connection_error" -> true;
             default -> false;
         };
     }
-    
+
     /**
      * Validates Stripe webhook signature format.
      */
@@ -275,11 +275,11 @@ public class StripeUtils {
         if (signature == null || signature.isEmpty()) {
             return false;
         }
-        
+
         // Stripe signature format: t=timestamp,v1=signature
         return signature.matches("^t=\\d+,v1=[a-f0-9]+$");
     }
-    
+
     /**
      * Extracts timestamp from Stripe webhook signature.
      */
@@ -287,7 +287,7 @@ public class StripeUtils {
         if (!isValidWebhookSignature(signature)) {
             return null;
         }
-        
+
         try {
             String timestampPart = signature.split(",")[0];
             return Long.parseLong(timestampPart.substring(2)); // Remove "t="

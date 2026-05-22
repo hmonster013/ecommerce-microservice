@@ -44,6 +44,6 @@ public interface NotificationService {
      * Send notification to multiple channels
      */
     void sendMultiChannelNotification(Long userId, String email, String phoneNumber,
-                                    String subject, String message, Map<String, Object> data,
-                                    boolean sendEmail, boolean sendSms, boolean sendPush);
+                                      String subject, String message, Map<String, Object> data,
+                                      boolean sendEmail, boolean sendSms, boolean sendPush);
 }

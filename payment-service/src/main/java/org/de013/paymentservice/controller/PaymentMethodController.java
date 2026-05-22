@@ -170,7 +170,7 @@ public class PaymentMethodController extends BaseController {
     public ResponseEntity<PaymentMethodResponse> setAsDefaultPaymentMethod(
             @Parameter(description = "Payment method ID") @PathVariable Long paymentMethodId) {
         log.info("Setting payment method as default: {}", paymentMethodId);
-        
+
         PaymentMethodResponse response = paymentMethodService.setAsDefaultPaymentMethod(paymentMethodId);
         return ResponseEntity.ok(response);
     }

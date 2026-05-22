@@ -140,8 +140,8 @@ public class SearchHealthDto {
     @JsonIgnore
     public boolean hasPerformanceIssues() {
         return (averageResponseTime != null && averageResponseTime > 1000) ||
-               (errorRate != null && errorRate > 5.0) ||
-               (successRate != null && successRate < 90.0);
+                (errorRate != null && errorRate > 5.0) ||
+                (successRate != null && successRate < 90.0);
     }
 
     /**
@@ -150,8 +150,8 @@ public class SearchHealthDto {
     @JsonIgnore
     public boolean hasResourceIssues() {
         return (memoryUsage != null && memoryUsage > 90.0) ||
-               (cpuUsage != null && cpuUsage > 90.0) ||
-               (diskUsage != null && diskUsage > 90.0);
+                (cpuUsage != null && cpuUsage > 90.0) ||
+                (diskUsage != null && diskUsage > 90.0);
     }
 
     /**
@@ -195,19 +195,19 @@ public class SearchHealthDto {
         if (isHealthy()) {
             return "Search system is operating normally";
         }
-        
+
         if (hasResourceIssues()) {
             return "Search system has resource constraints";
         }
-        
+
         if (hasPerformanceIssues()) {
             return "Search system has performance issues";
         }
-        
+
         if (isUnderHighLoad()) {
             return "Search system is under high load";
         }
-        
+
         return "Search system status unknown";
     }
 
@@ -217,36 +217,36 @@ public class SearchHealthDto {
     @JsonIgnore
     public List<String> generateRecommendations() {
         List<String> autoRecommendations = new java.util.ArrayList<>();
-        
+
         if (isUnderHighLoad()) {
-            autoRecommendations.add("Consider scaling search infrastructure - current load is " + 
-                                  String.format("%.1f%%", getCapacityUtilization()));
+            autoRecommendations.add("Consider scaling search infrastructure - current load is " +
+                    String.format("%.1f%%", getCapacityUtilization()));
         }
-        
+
         if (averageResponseTime != null && averageResponseTime > 1000) {
-            autoRecommendations.add("Optimize search performance - average response time is " + 
-                                  String.format("%.0fms", averageResponseTime));
+            autoRecommendations.add("Optimize search performance - average response time is " +
+                    String.format("%.0fms", averageResponseTime));
         }
-        
+
         if (cacheHitRate != null && cacheHitRate < 70.0) {
-            autoRecommendations.add("Improve cache strategy - current hit rate is " + 
-                                  String.format("%.1f%%", cacheHitRate));
+            autoRecommendations.add("Improve cache strategy - current hit rate is " +
+                    String.format("%.1f%%", cacheHitRate));
         }
-        
+
         if (errorRate != null && errorRate > 2.0) {
-            autoRecommendations.add("Investigate search errors - current error rate is " + 
-                                  String.format("%.1f%%", errorRate));
+            autoRecommendations.add("Investigate search errors - current error rate is " +
+                    String.format("%.1f%%", errorRate));
         }
-        
+
         if (memoryUsage != null && memoryUsage > 85.0) {
-            autoRecommendations.add("Monitor memory usage - currently at " + 
-                                  String.format("%.1f%%", memoryUsage));
+            autoRecommendations.add("Monitor memory usage - currently at " +
+                    String.format("%.1f%%", memoryUsage));
         }
-        
+
         if (autoRecommendations.isEmpty()) {
             autoRecommendations.add("Search system is performing well - maintain current configuration");
         }
-        
+
         return autoRecommendations;
     }
 }

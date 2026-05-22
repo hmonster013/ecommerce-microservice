@@ -40,7 +40,7 @@ public class InternalUserController {
                             .accountNonLocked(true)
                             .credentialsNonExpired(true)
                             .build();
-                    
+
                     log.info("Creating new user profile for Keycloak user: {}", request.getKeycloakId());
                     return userRepository.save(newUser);
                 });
@@ -64,12 +64,12 @@ public class InternalUserController {
      * Get or create user by Keycloak ID
      * This endpoint supports JIT (Just-In-Time) user synchronization
      * If user doesn't exist, creates a new user profile with default CUSTOMER role
-     * 
+     *
      * @param keycloakId Keycloak user UUID (sub claim from JWT)
-     * @param username Username from Keycloak
-     * @param email Email from Keycloak
-     * @param firstName First name (optional)
-     * @param lastName Last name (optional)
+     * @param username   Username from Keycloak
+     * @param email      Email from Keycloak
+     * @param firstName  First name (optional)
+     * @param lastName   Last name (optional)
      * @return User response with user details
      */
     @GetMapping("/get-or-create")
@@ -79,17 +79,17 @@ public class InternalUserController {
             @RequestParam String email,
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String lastName) {
-        
+
         log.info("Get or create user - keycloakId: {}, username: {}, email: {}", keycloakId, username, email);
 
         // Try to find existing user
         User user = userRepository.findByKeycloakId(keycloakId).orElseGet(() -> {
             log.info("User not found with keycloakId: {}. Creating new user profile.", keycloakId);
-            
+
             // Get default CUSTOMER role
             Role customerRole = roleRepository.findByName("CUSTOMER")
                     .orElseThrow(() -> new RuntimeException("Default CUSTOMER role not found in database"));
-            
+
             // Create new user with default role
             User newUser = User.builder()
                     .keycloakId(keycloakId)
@@ -102,14 +102,14 @@ public class InternalUserController {
                     .accountNonLocked(true)
                     .credentialsNonExpired(true)
                     .build();
-            
+
             // Add default CUSTOMER role
             newUser.getRoles().add(customerRole);
-            
+
             // Save and return
             User savedUser = userRepository.save(newUser);
             log.info("New user profile created successfully: id={}, username={}", savedUser.getId(), savedUser.getUsername());
-            
+
             return savedUser;
         });
 

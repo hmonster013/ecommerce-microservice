@@ -5,22 +5,22 @@ package org.de013.shoppingcart.entity.enums;
  * Defines the type of cart based on user authentication status
  */
 public enum CartType {
-    
+
     /**
      * Cart belongs to an authenticated user
      */
     USER("User Cart", "Cart belongs to an authenticated user", 86400), // 24 hours
-    
+
     /**
      * Cart belongs to a guest session
      */
     GUEST("Guest Cart", "Cart belongs to a guest session", 3600), // 1 hour
-    
+
     /**
      * Cart is saved for later by the user
      */
     SAVED("Saved Cart", "Cart saved for later by the user", 2592000), // 30 days
-    
+
     /**
      * Cart is a wishlist
      */

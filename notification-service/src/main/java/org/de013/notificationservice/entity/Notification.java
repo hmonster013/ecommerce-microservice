@@ -15,10 +15,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "notifications", indexes = {
-    @Index(name = "idx_notification_user_id", columnList = "user_id"),
-    @Index(name = "idx_notification_status", columnList = "status"),
-    @Index(name = "idx_notification_channel", columnList = "channel"),
-    @Index(name = "idx_notification_created_at", columnList = "created_at")
+        @Index(name = "idx_notification_user_id", columnList = "user_id"),
+        @Index(name = "idx_notification_status", columnList = "status"),
+        @Index(name = "idx_notification_channel", columnList = "channel"),
+        @Index(name = "idx_notification_created_at", columnList = "created_at")
 })
 @Getter
 @Setter

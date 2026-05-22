@@ -5,7 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.PageResponse;
 import org.de013.common.exception.BusinessException;
 import org.de013.common.exception.ResourceNotFoundException;
-import org.de013.userservice.dto.*;
+import org.de013.userservice.dto.UserProfileDto;
+import org.de013.userservice.dto.UserRegistrationDto;
+import org.de013.userservice.dto.UserResponse;
+import org.de013.userservice.dto.UserUpdateDto;
 import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
 import org.de013.userservice.mapper.UserMapper;
@@ -39,16 +42,16 @@ public class UserManagementServiceImpl implements UserManagementService {
     @Override
     public UserResponse registerUser(UserRegistrationDto request) {
         log.info("Registering new user: {}", request.getUsername());
-        
+
         validateUserRegistration(request);
-        
+
         // Get default CUSTOMER role
         // Note: User registration should be done through Keycloak
         // This method creates profile only - password managed by Keycloak
-        
+
         Role customerRole = roleRepository.findByName("CUSTOMER")
                 .orElseThrow(() -> new BusinessException("Default CUSTOMER role not found"));
-        
+
         User user = User.builder()
                 .keycloakId(request.getKeycloakId()) // Required: Keycloak user UUID
                 .username(request.getUsername())
@@ -63,23 +66,23 @@ public class UserManagementServiceImpl implements UserManagementService {
 
         // Add default role
         user.getRoles().add(customerRole);
-        
+
         user = userRepository.save(user);
-        
+
         log.info("User registered successfully: {}", user.getUsername());
-        
+
         return userMapper.convertToUserResponse(user);
     }
 
     @Override
     public UserResponse createUser(UserRegistrationDto request) {
         log.info("Creating new user: {}", request.getUsername());
-        
+
         // Note: User creation should be done through Keycloak
         // This method creates profile only - password managed by Keycloak
-        
+
         validateUserRegistration(request);
-        
+
         User user = User.builder()
                 .keycloakId(request.getKeycloakId()) // Required: Keycloak user UUID
                 .username(request.getUsername())
@@ -91,11 +94,11 @@ public class UserManagementServiceImpl implements UserManagementService {
                 .enabled(true)
                 .createdBy("ADMIN")
                 .build();
-        
+
         user = userRepository.save(user);
-        
+
         log.info("User created successfully: {}", user.getUsername());
-        
+
         return userMapper.convertToUserResponse(user);
     }
 
@@ -149,9 +152,9 @@ public class UserManagementServiceImpl implements UserManagementService {
     @Override
     public UserResponse updateUserProfile(String username, UserUpdateDto request) {
         log.info("Updating profile for user: {}", username);
-        
+
         User user = findUserByUsername(username);
-        
+
         // Validate email uniqueness if changed
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (!isEmailAvailableForUpdate(request.getEmail(), user.getId())) {
@@ -159,7 +162,7 @@ public class UserManagementServiceImpl implements UserManagementService {
             }
             user.setEmail(request.getEmail());
         }
-        
+
         // Update other fields
         if (request.getFirstName() != null) {
             user.setFirstName(request.getFirstName());
@@ -173,12 +176,12 @@ public class UserManagementServiceImpl implements UserManagementService {
         if (request.getAddress() != null) {
             user.setAddress(request.getAddress());
         }
-        
+
         user.setUpdatedBy(username);
         user = userRepository.save(user);
-        
+
         log.info("Profile updated successfully for user: {}", username);
-        
+
         return userMapper.convertToUserResponse(user);
     }
 
@@ -274,44 +277,44 @@ public class UserManagementServiceImpl implements UserManagementService {
     @Override
     public void assignRole(Long userId, String roleName) {
         log.info("Assigning role {} to user: {}", roleName, userId);
-        
+
         User user = findUserById(userId);
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
 
         user.getRoles().add(role);
         userRepository.save(user);
-        
+
         log.info("Role {} assigned successfully to user: {}", roleName, userId);
     }
 
     @Override
     public void removeRole(Long userId, String roleName) {
         log.info("Removing role {} from user: {}", roleName, userId);
-        
+
         User user = findUserById(userId);
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
 
         user.getRoles().remove(role);
         userRepository.save(user);
-        
+
         log.info("Role {} removed successfully from user: {}", roleName, userId);
     }
 
     @Override
     public void updateUserRoles(Long userId, List<String> roleNames) {
         log.info("Updating roles for user: {} with roles: {}", userId, roleNames);
-        
+
         User user = findUserById(userId);
         Set<Role> roles = roleNames.stream()
                 .map(roleName -> roleRepository.findByName(roleName)
                         .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName)))
                 .collect(Collectors.toSet());
-        
+
         user.setRoles(roles);
         userRepository.save(user);
-        
+
         log.info("Roles updated successfully for user: {}", userId);
     }
 
@@ -364,7 +367,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         if (existsByUsername(request.getUsername())) {
             throw new BusinessException("Username already exists: " + request.getUsername());
         }
-        
+
         if (existsByEmail(request.getEmail())) {
             throw new BusinessException("Email already exists: " + request.getEmail());
         }

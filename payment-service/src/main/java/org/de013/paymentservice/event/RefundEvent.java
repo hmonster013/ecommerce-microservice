@@ -17,13 +17,13 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RefundEvent {
-    
+
     private String eventId;
     private String eventType;
     private LocalDateTime timestamp;
     private String source;
     private String version;
-    
+
     // Refund details
     private Long refundId;
     private String refundNumber;
@@ -36,30 +36,30 @@ public class RefundEvent {
     private String status;
     private String previousStatus;
     private String refundType; // FULL, PARTIAL
-    
+
     // User details
     private String userEmail;
     private String userName;
-    
+
     // Order details
     private String orderNumber;
-    
+
     // Refund details
     private String refundReason;
     private String initiatedBy;
     private BigDecimal originalPaymentAmount;
     private BigDecimal totalRefundedAmount;
     private BigDecimal remainingRefundableAmount;
-    
+
     // Additional metadata
     private Map<String, Object> metadata;
     private String description;
-    
+
     // Notification preferences
     private boolean sendEmailNotification;
     private boolean sendSmsNotification;
     private boolean sendPushNotification;
-    
+
     // Event types
     public static final String REFUND_CREATED = "refund.created";
     public static final String REFUND_PROCESSING = "refund.processing";
@@ -68,11 +68,11 @@ public class RefundEvent {
     public static final String REFUND_CANCELED = "refund.canceled";
     public static final String REFUND_APPROVED = "refund.approved";
     public static final String REFUND_REJECTED = "refund.rejected";
-    
+
     // Factory methods for common events
-    public static RefundEvent refundCreated(Long refundId, String refundNumber, Long paymentId, 
-                                          String paymentNumber, Long orderId, Long userId, 
-                                          BigDecimal amount, String currency, String refundType) {
+    public static RefundEvent refundCreated(Long refundId, String refundNumber, Long paymentId,
+                                            String paymentNumber, Long orderId, Long userId,
+                                            BigDecimal amount, String currency, String refundType) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
                 .eventType(REFUND_CREATED)
@@ -94,10 +94,10 @@ public class RefundEvent {
                 .sendPushNotification(true)
                 .build();
     }
-    
-    public static RefundEvent refundSucceeded(Long refundId, String refundNumber, Long paymentId, 
-                                            String paymentNumber, Long orderId, Long userId, 
-                                            BigDecimal amount, String currency, String refundType) {
+
+    public static RefundEvent refundSucceeded(Long refundId, String refundNumber, Long paymentId,
+                                              String paymentNumber, Long orderId, Long userId,
+                                              BigDecimal amount, String currency, String refundType) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
                 .eventType(REFUND_SUCCEEDED)
@@ -120,10 +120,10 @@ public class RefundEvent {
                 .sendPushNotification(true)
                 .build();
     }
-    
-    public static RefundEvent refundFailed(Long refundId, String refundNumber, Long paymentId, 
-                                         String paymentNumber, Long orderId, Long userId, 
-                                         BigDecimal amount, String currency, String reason) {
+
+    public static RefundEvent refundFailed(Long refundId, String refundNumber, Long paymentId,
+                                           String paymentNumber, Long orderId, Long userId,
+                                           BigDecimal amount, String currency, String reason) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
                 .eventType(REFUND_FAILED)
@@ -146,10 +146,10 @@ public class RefundEvent {
                 .sendPushNotification(true)
                 .build();
     }
-    
-    public static RefundEvent refundApproved(Long refundId, String refundNumber, Long paymentId, 
-                                           String paymentNumber, Long orderId, Long userId, 
-                                           BigDecimal amount, String currency, String approvedBy) {
+
+    public static RefundEvent refundApproved(Long refundId, String refundNumber, Long paymentId,
+                                             String paymentNumber, Long orderId, Long userId,
+                                             BigDecimal amount, String currency, String approvedBy) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
                 .eventType(REFUND_APPROVED)
@@ -172,10 +172,10 @@ public class RefundEvent {
                 .sendPushNotification(true)
                 .build();
     }
-    
-    public static RefundEvent refundRejected(Long refundId, String refundNumber, Long paymentId, 
-                                           String paymentNumber, Long orderId, Long userId, 
-                                           BigDecimal amount, String currency, String reason, String rejectedBy) {
+
+    public static RefundEvent refundRejected(Long refundId, String refundNumber, Long paymentId,
+                                             String paymentNumber, Long orderId, Long userId,
+                                             BigDecimal amount, String currency, String reason, String rejectedBy) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
                 .eventType(REFUND_REJECTED)
@@ -199,8 +199,8 @@ public class RefundEvent {
                 .sendPushNotification(true)
                 .build();
     }
-    
+
     private static String generateEventId() {
-        return "ref_evt_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
+        return "ref_evt_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
     }
 }

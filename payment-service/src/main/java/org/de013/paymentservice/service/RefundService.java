@@ -236,5 +236,6 @@ public interface RefundService {
             BigDecimal averageRefundAmount,
             LocalDateTime firstRefundDate,
             LocalDateTime lastRefundDate
-    ) {}
+    ) {
+    }
 }

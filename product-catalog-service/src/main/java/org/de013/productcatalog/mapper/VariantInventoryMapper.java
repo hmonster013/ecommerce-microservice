@@ -22,7 +22,7 @@ public class VariantInventoryMapper {
                 .variantName(variantInventory.getVariant() != null ? variantInventory.getVariant().getName() : null)
                 .variantValue(variantInventory.getVariant() != null ? variantInventory.getVariant().getValue() : null)
                 .variantType(variantInventory.getVariant() != null && variantInventory.getVariant().getVariantType() != null ?
-                           variantInventory.getVariant().getVariantType().name() : null)
+                        variantInventory.getVariant().getVariantType().name() : null)
                 .quantity(variantInventory.getQuantity())
                 .reservedQuantity(variantInventory.getReservedQuantity())
                 .availableQuantity(variantInventory.getAvailableQuantity())

@@ -33,12 +33,12 @@ public class UserSearchService {
     /**
      * Advanced search with multiple filters using Specifications
      */
-    public Page<User> advancedSearch(String keyword, Boolean enabled, String roleName, 
-                                   LocalDateTime startDate, LocalDateTime endDate, 
-                                   Pageable pageable) {
-        log.debug("Advanced search - keyword: {}, enabled: {}, role: {}, dateRange: {} to {}", 
+    public Page<User> advancedSearch(String keyword, Boolean enabled, String roleName,
+                                     LocalDateTime startDate, LocalDateTime endDate,
+                                     Pageable pageable) {
+        log.debug("Advanced search - keyword: {}, enabled: {}, role: {}, dateRange: {} to {}",
                 keyword, enabled, roleName, startDate, endDate);
-        
+
         Specification<User> spec = UserSpecification.withFilters(keyword, enabled, roleName, startDate, endDate);
         return userRepository.findAll(spec, pageable);
     }
@@ -72,12 +72,12 @@ public class UserSearchService {
      */
     public UserStatistics getUserStatistics() {
         log.debug("Getting user statistics");
-        
+
         long totalUsers = userRepository.count();
         long activeUsers = userRepository.countActiveUsers();
         long adminUsers = userRepository.countByRoleName("ADMIN");
         long customerUsers = userRepository.countByRoleName("CUSTOMER");
-        
+
         return UserStatistics.builder()
                 .totalUsers(totalUsers)
                 .activeUsers(activeUsers)

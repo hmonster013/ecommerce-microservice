@@ -35,7 +35,7 @@ public class NotificationService {
     @Transactional
     public Notification sendEmail(Long userId, String recipient, String subject, String content) {
         log.info("Sending email notification to: {}", recipient);
-        
+
         Notification notification = Notification.builder()
                 .userId(userId)
                 .channel(NotificationChannel.EMAIL)
@@ -44,9 +44,9 @@ public class NotificationService {
                 .content(content)
                 .status(NotificationStatus.PENDING)
                 .build();
-        
+
         notification = notificationRepository.save(notification);
-        
+
         try {
             emailService.sendEmail(recipient, subject, content);
             notification.setStatus(NotificationStatus.SENT);
@@ -57,7 +57,7 @@ public class NotificationService {
             notification.setErrorMessage(e.getMessage());
             log.error("Failed to send email to {}: {}", recipient, e.getMessage());
         }
-        
+
         return notificationRepository.save(notification);
     }
 
@@ -67,7 +67,7 @@ public class NotificationService {
     @Transactional
     public Notification sendSms(Long userId, String phoneNumber, String message) {
         log.info("Sending SMS notification to: {}", phoneNumber);
-        
+
         Notification notification = Notification.builder()
                 .userId(userId)
                 .channel(NotificationChannel.SMS)
@@ -75,9 +75,9 @@ public class NotificationService {
                 .content(message)
                 .status(NotificationStatus.PENDING)
                 .build();
-        
+
         notification = notificationRepository.save(notification);
-        
+
         try {
             smsService.sendSms(phoneNumber, message);
             notification.setStatus(NotificationStatus.SENT);
@@ -88,7 +88,7 @@ public class NotificationService {
             notification.setErrorMessage(e.getMessage());
             log.error("Failed to send SMS to {}: {}", phoneNumber, e.getMessage());
         }
-        
+
         return notificationRepository.save(notification);
     }
 

@@ -1,7 +1,6 @@
 package org.de013.paymentservice.config;
 
 import lombok.RequiredArgsConstructor;
-import org.de013.common.constant.ApiPaths;
 import org.de013.paymentservice.security.HeaderAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +15,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Security configuration for Payment Service
- * 
+ * <p>
  * Architecture: Trust internal network - API Gateway handles authentication
  * - Webhooks are public (payment gateway callbacks)
  * - All other requests trusted from internal network

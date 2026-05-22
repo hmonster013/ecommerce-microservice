@@ -12,7 +12,7 @@ import java.util.List;
 
 @Slf4j
 public class UserContextHolder {
-    
+
     // Header names that API Gateway will set
     private static final String USER_ID_HEADER = "X-User-Id";
     private static final String USERNAME_HEADER = "X-User-Username";
@@ -20,7 +20,7 @@ public class UserContextHolder {
     private static final String FIRST_NAME_HEADER = "X-User-FirstName";
     private static final String LAST_NAME_HEADER = "X-User-LastName";
     private static final String ROLES_HEADER = "X-User-Roles";
-    
+
     /**
      * Get current user context from request headers
      */
@@ -31,15 +31,15 @@ public class UserContextHolder {
                 log.debug("No current request found");
                 return null;
             }
-            
+
             return extractUserContextFromRequest(request);
-            
+
         } catch (Exception e) {
             log.error("Error getting current user context", e);
             return null;
         }
     }
-    
+
     /**
      * Get current user ID
      */
@@ -47,7 +47,7 @@ public class UserContextHolder {
         UserContext userContext = getCurrentUser();
         return userContext != null ? userContext.getUserId() : null;
     }
-    
+
     /**
      * Get current username
      */
@@ -55,7 +55,7 @@ public class UserContextHolder {
         UserContext userContext = getCurrentUser();
         return userContext != null ? userContext.getUsername() : null;
     }
-    
+
     /**
      * Check if current user has specific role
      */
@@ -63,7 +63,7 @@ public class UserContextHolder {
         UserContext userContext = getCurrentUser();
         return userContext != null && userContext.hasRole(role);
     }
-    
+
     /**
      * Check if current user is admin
      */
@@ -71,7 +71,7 @@ public class UserContextHolder {
         UserContext userContext = getCurrentUser();
         return userContext != null && userContext.isAdmin();
     }
-    
+
     /**
      * Check if current user is customer
      */
@@ -79,7 +79,7 @@ public class UserContextHolder {
         UserContext userContext = getCurrentUser();
         return userContext != null && userContext.isCustomer();
     }
-    
+
     /**
      * Extract user context from HTTP request headers
      */
@@ -91,13 +91,13 @@ public class UserContextHolder {
             String firstName = request.getHeader(FIRST_NAME_HEADER);
             String lastName = request.getHeader(LAST_NAME_HEADER);
             String rolesStr = request.getHeader(ROLES_HEADER);
-            
+
             // Check if we have minimum required information
             if (!StringUtils.hasText(userIdStr) || !StringUtils.hasText(username)) {
                 log.debug("Missing required user context headers");
                 return null;
             }
-            
+
             Long userId;
             try {
                 userId = Long.parseLong(userIdStr);
@@ -110,17 +110,17 @@ public class UserContextHolder {
                 }
                 log.warn("Non-numeric X-User-Id '{}' detected, using surrogate userId={}", userIdStr, userId);
             }
-            
+
             // Parse roles
             List<String> roles = Collections.emptyList();
             if (StringUtils.hasText(rolesStr)) {
                 roles = Arrays.asList(rolesStr.split(","));
             }
-            
+
             // Handle empty strings
             firstName = StringUtils.hasText(firstName) ? firstName : null;
             lastName = StringUtils.hasText(lastName) ? lastName : null;
-            
+
             UserContext userContext = UserContext.builder()
                     .userId(userId)
                     .username(username)
@@ -129,24 +129,24 @@ public class UserContextHolder {
                     .lastName(lastName)
                     .roles(roles)
                     .build();
-            
-            log.debug("Extracted user context: userId={}, username={}, roles={}", 
+
+            log.debug("Extracted user context: userId={}, username={}, roles={}",
                     userId, username, roles);
-            
+
             return userContext;
-            
+
         } catch (Exception e) {
             log.error("Error extracting user context from request", e);
             return null;
         }
     }
-    
+
     /**
      * Get current HTTP request
      */
     private static HttpServletRequest getCurrentRequest() {
         try {
-            ServletRequestAttributes attributes = 
+            ServletRequestAttributes attributes =
                     (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
             return attributes.getRequest();
         } catch (IllegalStateException e) {
@@ -155,7 +155,7 @@ public class UserContextHolder {
             return null;
         }
     }
-    
+
     /**
      * Require authenticated user (throws exception if not authenticated)
      */
@@ -166,7 +166,7 @@ public class UserContextHolder {
         }
         return userContext;
     }
-    
+
     /**
      * Require specific role (throws exception if user doesn't have role)
      */
@@ -177,7 +177,7 @@ public class UserContextHolder {
         }
         return userContext;
     }
-    
+
     /**
      * Require admin role
      */

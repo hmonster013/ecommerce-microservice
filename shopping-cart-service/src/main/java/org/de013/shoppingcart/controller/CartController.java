@@ -10,13 +10,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.CartCheckoutDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.service.CartService;
-import org.de013.common.constant.ApiPaths;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,12 +41,12 @@ public class CartController extends BaseController {
 
     @Operation(summary = "Get or create cart", description = "Retrieve existing cart or create new one for user/session")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cart retrieved successfully",
-                content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
-        @ApiResponse(responseCode = "201", description = "New cart created",
-                content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Cart retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
+            @ApiResponse(responseCode = "201", description = "New cart created",
+                    content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
     // Allow both authenticated users and guests with sessionId
@@ -62,7 +62,7 @@ public class CartController extends BaseController {
             if (userContext != null) {
                 userId = String.valueOf(userContext.getUserId());
                 log.debug("Getting or creating cart for authenticated user: {} (ID: {})",
-                         userContext.getUsername(), userId);
+                        userContext.getUsername(), userId);
             } else {
                 log.debug("Getting or creating cart for guest session: {}", sessionId);
             }
@@ -86,10 +86,10 @@ public class CartController extends BaseController {
 
     @Operation(summary = "[ADMIN] Get cart by ID", description = "Retrieve cart by its unique identifier. Accessible by cart owner or admin only")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cart found",
-                content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Cart found",
+                    content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Cart not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.CART_ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> getCartById(
@@ -102,7 +102,7 @@ public class CartController extends BaseController {
             Optional<CartResponseDto> cart = cartService.getCartById(cartId);
 
             return cart.map(this::ok)
-                      .orElse(notFound("Cart not found"));
+                    .orElse(notFound("Cart not found"));
 
         } catch (Exception e) {
             log.error("Error getting cart by ID {}: {}", cartId, e.getMessage(), e);
@@ -114,10 +114,10 @@ public class CartController extends BaseController {
 
     @Operation(summary = "[ADMIN] Clear cart", description = "Remove all items from the cart while keeping the cart structure intact. This action cannot be undone")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cart cleared successfully",
-                content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Cart cleared successfully",
+                    content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Cart not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping(ApiPaths.CLEAR)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> clearCart(
@@ -146,14 +146,14 @@ public class CartController extends BaseController {
     }
 
     @Operation(summary = "Delete cart with smart strategy",
-               description = "Delete cart with intelligent strategy based on parameters:\n" +
-                           "• Both userId + sessionId: Delete user cart specifically (after login scenario)\n" +
-                           "• Only userId: Delete any active user cart\n" +
-                           "• Only sessionId: Delete guest cart only (before login scenario)")
+            description = "Delete cart with intelligent strategy based on parameters:\n" +
+                    "• Both userId + sessionId: Delete user cart specifically (after login scenario)\n" +
+                    "• Only userId: Delete any active user cart\n" +
+                    "• Only sessionId: Delete guest cart only (before login scenario)")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cart deleted successfully"),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "400", description = "Invalid request - user ID or session ID required")
+            @ApiResponse(responseCode = "200", description = "Cart deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Cart not found"),
+            @ApiResponse(responseCode = "400", description = "Invalid request - user ID or session ID required")
     })
     @DeleteMapping
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCart(
@@ -193,15 +193,14 @@ public class CartController extends BaseController {
     }
 
 
-
     // ==================== CART VALIDATION ====================
 
     @Operation(summary = "[ADMIN] Validate cart", description = "Perform comprehensive cart validation including item availability, pricing, and business rules. Returns validation results and any issues found")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Validation completed",
-                content = @Content(schema = @Schema(implementation = Map.class))),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Validation completed",
+                    content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "404", description = "Cart not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.CART_ID_PARAM + ApiPaths.VALIDATE)
     public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> validateCart(
@@ -221,11 +220,11 @@ public class CartController extends BaseController {
             boolean isValid = cart.getItemCount() > 0 && cart.getTotalAmount().compareTo(BigDecimal.ZERO) > 0;
 
             Map<String, Object> validation = Map.of(
-                "cartId", cartId,
-                "isValid", isValid,
-                "itemCount", cart.getItemCount(),
-                "totalAmount", cart.getTotalAmount(),
-                "isCheckoutReady", isValid
+                    "cartId", cartId,
+                    "isValid", isValid,
+                    "itemCount", cart.getItemCount(),
+                    "totalAmount", cart.getTotalAmount(),
+                    "isCheckoutReady", isValid
             );
 
             return ok(validation);
@@ -240,16 +239,15 @@ public class CartController extends BaseController {
     }
 
 
-
     // ==================== CHECKOUT PREPARATION ====================
 
     @Operation(summary = "[ADMIN] Prepare checkout", description = "Prepare cart for checkout by validating items, calculating final totals, taxes, and shipping costs. Returns checkout summary with all necessary information for order creation")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Checkout prepared successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid checkout data"),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "422", description = "Cart validation failed"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Checkout prepared successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid checkout data"),
+            @ApiResponse(responseCode = "404", description = "Cart not found"),
+            @ApiResponse(responseCode = "422", description = "Cart validation failed"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping(ApiPaths.CHECKOUT + ApiPaths.PREPARE)
     public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> prepareCheckout(
@@ -273,9 +271,9 @@ public class CartController extends BaseController {
 
     @Operation(summary = "[ADMIN] Update cart activity", description = "Update the last activity timestamp for the cart to prevent automatic expiration. Useful for keeping active carts alive during user sessions")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Activity updated successfully"),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Activity updated successfully"),
+            @ApiResponse(responseCode = "404", description = "Cart not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping(ApiPaths.CART_ID_PARAM + ApiPaths.ACTIVITY)
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> updateCartActivity(

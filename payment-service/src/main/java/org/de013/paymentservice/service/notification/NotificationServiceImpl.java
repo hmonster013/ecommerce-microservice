@@ -2,10 +2,10 @@ package org.de013.paymentservice.service.notification;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.paymentservice.dto.external.UserDto;
 import org.de013.paymentservice.event.PaymentEvent;
 import org.de013.paymentservice.event.RefundEvent;
 import org.de013.paymentservice.service.external.UserValidationService;
-import org.de013.paymentservice.dto.external.UserDto;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -25,7 +25,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void sendPaymentNotification(PaymentEvent event) {
         try {
-            log.info("Sending payment notification: eventType={}, paymentId={}, userId={}", 
+            log.info("Sending payment notification: eventType={}, paymentId={}, userId={}",
                     event.getEventType(), event.getPaymentId(), event.getUserId());
 
             // Get user details if not provided
@@ -35,33 +35,33 @@ public class NotificationServiceImpl implements NotificationService {
 
             // Prepare notification data
             Map<String, Object> templateData = createPaymentTemplateData(event);
-            
+
             // Send notifications based on preferences
             if (event.isSendEmailNotification() && event.getUserEmail() != null) {
                 sendPaymentEmailNotification(event, templateData);
             }
-            
+
             if (event.isSendSmsNotification()) {
                 sendPaymentSmsNotification(event);
             }
-            
+
             if (event.isSendPushNotification()) {
                 sendPaymentPushNotification(event, templateData);
             }
 
-            log.info("Payment notification sent successfully: eventType={}, paymentId={}", 
+            log.info("Payment notification sent successfully: eventType={}, paymentId={}",
                     event.getEventType(), event.getPaymentId());
 
         } catch (Exception e) {
-            log.error("Error sending payment notification: eventType={}, paymentId={}", 
-                     event.getEventType(), event.getPaymentId(), e);
+            log.error("Error sending payment notification: eventType={}, paymentId={}",
+                    event.getEventType(), event.getPaymentId(), e);
         }
     }
 
     @Override
     public void sendRefundNotification(RefundEvent event) {
         try {
-            log.info("Sending refund notification: eventType={}, refundId={}, userId={}", 
+            log.info("Sending refund notification: eventType={}, refundId={}, userId={}",
                     event.getEventType(), event.getRefundId(), event.getUserId());
 
             // Get user details if not provided
@@ -71,26 +71,26 @@ public class NotificationServiceImpl implements NotificationService {
 
             // Prepare notification data
             Map<String, Object> templateData = createRefundTemplateData(event);
-            
+
             // Send notifications based on preferences
             if (event.isSendEmailNotification() && event.getUserEmail() != null) {
                 sendRefundEmailNotification(event, templateData);
             }
-            
+
             if (event.isSendSmsNotification()) {
                 sendRefundSmsNotification(event);
             }
-            
+
             if (event.isSendPushNotification()) {
                 sendRefundPushNotification(event, templateData);
             }
 
-            log.info("Refund notification sent successfully: eventType={}, refundId={}", 
+            log.info("Refund notification sent successfully: eventType={}, refundId={}",
                     event.getEventType(), event.getRefundId());
 
         } catch (Exception e) {
-            log.error("Error sending refund notification: eventType={}, refundId={}", 
-                     event.getEventType(), event.getRefundId(), e);
+            log.error("Error sending refund notification: eventType={}, refundId={}",
+                    event.getEventType(), event.getRefundId(), e);
         }
     }
 
@@ -98,15 +98,15 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendEmailNotification(String to, String subject, String body, String templateName, Map<String, Object> templateData) {
         try {
             log.info("Sending email notification: to={}, subject={}, template={}", to, subject, templateName);
-            
+
             // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
             // For now, just log the notification
             log.info("EMAIL NOTIFICATION - To: {}, Subject: {}, Body: {}", to, subject, body);
-            
+
             if (templateData != null) {
                 log.debug("Email template data: {}", templateData);
             }
-            
+
         } catch (Exception e) {
             log.error("Error sending email notification: to={}, subject={}", to, subject, e);
         }
@@ -116,11 +116,11 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendSmsNotification(String phoneNumber, String message) {
         try {
             log.info("Sending SMS notification: to={}, message length={}", phoneNumber, message.length());
-            
+
             // TODO: Integrate with SMS service (Twilio, AWS SNS, etc.)
             // For now, just log the notification
             log.info("SMS NOTIFICATION - To: {}, Message: {}", phoneNumber, message);
-            
+
         } catch (Exception e) {
             log.error("Error sending SMS notification: to={}", phoneNumber, e);
         }
@@ -130,15 +130,15 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendPushNotification(Long userId, String title, String message, Map<String, Object> data) {
         try {
             log.info("Sending push notification: userId={}, title={}", userId, title);
-            
+
             // TODO: Integrate with push notification service (Firebase, AWS SNS, etc.)
             // For now, just log the notification
             log.info("PUSH NOTIFICATION - UserId: {}, Title: {}, Message: {}", userId, title, message);
-            
+
             if (data != null) {
                 log.debug("Push notification data: {}", data);
             }
-            
+
         } catch (Exception e) {
             log.error("Error sending push notification: userId={}, title={}", userId, title, e);
         }
@@ -148,32 +148,32 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendWebhookNotification(String webhookUrl, Object payload) {
         try {
             log.info("Sending webhook notification: url={}", webhookUrl);
-            
+
             // TODO: Implement HTTP POST to webhook URL
             // For now, just log the notification
             log.info("WEBHOOK NOTIFICATION - URL: {}, Payload: {}", webhookUrl, payload);
-            
+
         } catch (Exception e) {
             log.error("Error sending webhook notification: url={}", webhookUrl, e);
         }
     }
 
     @Override
-    public void sendMultiChannelNotification(Long userId, String email, String phoneNumber, 
-                                           String subject, String message, Map<String, Object> data,
-                                           boolean sendEmail, boolean sendSms, boolean sendPush) {
+    public void sendMultiChannelNotification(Long userId, String email, String phoneNumber,
+                                             String subject, String message, Map<String, Object> data,
+                                             boolean sendEmail, boolean sendSms, boolean sendPush) {
         try {
-            log.info("Sending multi-channel notification: userId={}, email={}, sms={}, push={}", 
+            log.info("Sending multi-channel notification: userId={}, email={}, sms={}, push={}",
                     userId, sendEmail, sendSms, sendPush);
 
             if (sendEmail && email != null) {
                 sendEmailNotification(email, subject, message, null, data);
             }
-            
+
             if (sendSms && phoneNumber != null) {
                 sendSmsNotification(phoneNumber, message);
             }
-            
+
             if (sendPush && userId != null) {
                 sendPushNotification(userId, subject, message, data);
             }
@@ -246,7 +246,7 @@ public class NotificationServiceImpl implements NotificationService {
         String subject = getPaymentEmailSubject(event);
         String body = getPaymentEmailBody(event);
         String templateName = getPaymentEmailTemplate(event);
-        
+
         sendEmailNotification(event.getUserEmail(), subject, body, templateName, templateData);
     }
 
@@ -254,7 +254,7 @@ public class NotificationServiceImpl implements NotificationService {
         String message = getPaymentSmsMessage(event);
         // TODO: Get user phone number from user service
         String phoneNumber = null; // userValidationService.getUserPhoneNumber(event.getUserId());
-        
+
         if (phoneNumber != null) {
             sendSmsNotification(phoneNumber, message);
         }
@@ -263,7 +263,7 @@ public class NotificationServiceImpl implements NotificationService {
     private void sendPaymentPushNotification(PaymentEvent event, Map<String, Object> templateData) {
         String title = getPaymentPushTitle(event);
         String message = getPaymentPushMessage(event);
-        
+
         sendPushNotification(event.getUserId(), title, message, templateData);
     }
 
@@ -271,7 +271,7 @@ public class NotificationServiceImpl implements NotificationService {
         String subject = getRefundEmailSubject(event);
         String body = getRefundEmailBody(event);
         String templateName = getRefundEmailTemplate(event);
-        
+
         sendEmailNotification(event.getUserEmail(), subject, body, templateName, templateData);
     }
 
@@ -279,7 +279,7 @@ public class NotificationServiceImpl implements NotificationService {
         String message = getRefundSmsMessage(event);
         // TODO: Get user phone number from user service
         String phoneNumber = null; // userValidationService.getUserPhoneNumber(event.getUserId());
-        
+
         if (phoneNumber != null) {
             sendSmsNotification(phoneNumber, message);
         }
@@ -288,7 +288,7 @@ public class NotificationServiceImpl implements NotificationService {
     private void sendRefundPushNotification(RefundEvent event, Map<String, Object> templateData) {
         String title = getRefundPushTitle(event);
         String message = getRefundPushMessage(event);
-        
+
         sendPushNotification(event.getUserId(), title, message, templateData);
     }
 
@@ -306,7 +306,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private String getPaymentEmailBody(PaymentEvent event) {
         return String.format("Dear %s,\n\nYour payment of %s %s for order #%s has been %s.\n\nPayment Number: %s\n\nThank you for your business!",
-                event.getUserName(), event.getAmount(), event.getCurrency(), 
+                event.getUserName(), event.getAmount(), event.getCurrency(),
                 event.getOrderNumber(), event.getStatus().toLowerCase(), event.getPaymentNumber());
     }
 
@@ -320,8 +320,8 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private String getPaymentSmsMessage(PaymentEvent event) {
-        return String.format("Payment %s: %s %s for order #%s. Payment #%s", 
-                event.getStatus().toLowerCase(), event.getAmount(), event.getCurrency(), 
+        return String.format("Payment %s: %s %s for order #%s. Payment #%s",
+                event.getStatus().toLowerCase(), event.getAmount(), event.getCurrency(),
                 event.getOrderNumber(), event.getPaymentNumber());
     }
 
@@ -335,7 +335,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private String getPaymentPushMessage(PaymentEvent event) {
-        return String.format("Your payment of %s %s for order #%s has been %s", 
+        return String.format("Your payment of %s %s for order #%s has been %s",
                 event.getAmount(), event.getCurrency(), event.getOrderNumber(), event.getStatus().toLowerCase());
     }
 
@@ -352,8 +352,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     private String getRefundEmailBody(RefundEvent event) {
         return String.format("Dear %s,\n\nYour refund of %s %s for order #%s has been %s.\n\nRefund Number: %s\nOriginal Payment: %s\n\nThank you!",
-                event.getUserName(), event.getAmount(), event.getCurrency(), 
-                event.getOrderNumber(), event.getStatus().toLowerCase(), 
+                event.getUserName(), event.getAmount(), event.getCurrency(),
+                event.getOrderNumber(), event.getStatus().toLowerCase(),
                 event.getRefundNumber(), event.getPaymentNumber());
     }
 
@@ -368,8 +368,8 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private String getRefundSmsMessage(RefundEvent event) {
-        return String.format("Refund %s: %s %s for order #%s. Refund #%s", 
-                event.getStatus().toLowerCase(), event.getAmount(), event.getCurrency(), 
+        return String.format("Refund %s: %s %s for order #%s. Refund #%s",
+                event.getStatus().toLowerCase(), event.getAmount(), event.getCurrency(),
                 event.getOrderNumber(), event.getRefundNumber());
     }
 
@@ -384,7 +384,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private String getRefundPushMessage(RefundEvent event) {
-        return String.format("Your refund of %s %s for order #%s has been %s", 
+        return String.format("Your refund of %s %s for order #%s has been %s",
                 event.getAmount(), event.getCurrency(), event.getOrderNumber(), event.getStatus().toLowerCase());
     }
 }

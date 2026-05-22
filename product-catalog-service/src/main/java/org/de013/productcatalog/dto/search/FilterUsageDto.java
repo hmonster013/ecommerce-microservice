@@ -55,7 +55,7 @@ public class FilterUsageDto {
     @JsonIgnore
     public boolean isHighImpact() {
         return usagePercentage != null && usagePercentage > 5.0 &&
-               clickThroughRate != null && clickThroughRate > 50.0;
+                clickThroughRate != null && clickThroughRate > 50.0;
     }
 
     /**
@@ -64,7 +64,7 @@ public class FilterUsageDto {
     @JsonIgnore
     public boolean improvesResults() {
         return clickThroughRate != null && clickThroughRate > 60.0 &&
-               conversionRate != null && conversionRate > 8.0;
+                conversionRate != null && conversionRate > 8.0;
     }
 
     /**
@@ -73,7 +73,7 @@ public class FilterUsageDto {
     @JsonIgnore
     public String getFilterCategory() {
         if (filterType == null) return "UNKNOWN";
-        
+
         switch (filterType.toLowerCase()) {
             case "category":
             case "subcategory":
@@ -105,22 +105,22 @@ public class FilterUsageDto {
     @JsonIgnore
     public Integer calculateEffectivenessScore() {
         double score = 0.0;
-        
+
         // Usage component (30%)
         if (usagePercentage != null) {
             score += Math.min(usagePercentage * 3, 30); // Cap at 30 for scoring
         }
-        
+
         // Click-through rate component (40%)
         if (clickThroughRate != null) {
             score += clickThroughRate * 0.4;
         }
-        
+
         // Conversion rate component (30%)
         if (conversionRate != null) {
             score += Math.min(conversionRate * 2, 30); // Scale and cap conversion rate
         }
-        
+
         return Math.max(0, Math.min(100, (int) Math.round(score)));
     }
 
@@ -132,20 +132,20 @@ public class FilterUsageDto {
         if (isHighImpact() && improvesResults()) {
             return "PROMOTE - This filter is highly effective and should be prominently featured";
         }
-        
-        if (usagePercentage != null && usagePercentage > 10.0 && 
-            (clickThroughRate == null || clickThroughRate < 40.0)) {
+
+        if (usagePercentage != null && usagePercentage > 10.0 &&
+                (clickThroughRate == null || clickThroughRate < 40.0)) {
             return "OPTIMIZE - Popular filter but low performance, needs improvement";
         }
-        
+
         if (usagePercentage != null && usagePercentage < 1.0) {
             return "EVALUATE - Low usage filter, consider removing or repositioning";
         }
-        
+
         if (improvesResults()) {
             return "MAINTAIN - Good performing filter, keep current implementation";
         }
-        
+
         return "MONITOR - Continue tracking performance";
     }
 }

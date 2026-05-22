@@ -13,7 +13,6 @@ public class PaymentNotFoundException extends ResourceNotFoundException {
     }
 
 
-
     /**
      * Creates a PaymentNotFoundException for a payment ID.
      */

@@ -1,9 +1,9 @@
 package org.de013.shoppingcart.client;
 
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.dto.ProductDetailDto;
-import org.de013.common.dto.InventoryDto;
 import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.InventoryDto;
+import org.de013.common.dto.ProductDetailDto;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -50,11 +50,11 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> getProductPrice(String productId) {
         log.warn("Product Catalog Service unavailable, using fallback pricing for: {}", productId);
         return Map.of(
-            "productId", productId,
-            "price", BigDecimal.ZERO,
-            "currency", "USD",
-            "available", false,
-            "fallback", true
+                "productId", productId,
+                "price", BigDecimal.ZERO,
+                "currency", "USD",
+                "available", false,
+                "fallback", true
         );
     }
 
@@ -72,11 +72,11 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> checkAvailability(String productId) {
         log.warn("Product Catalog Service unavailable, using fallback availability for: {}", productId);
         return Map.of(
-            "productId", productId,
-            "available", false,
-            "stockQuantity", 0,
-            "status", "UNAVAILABLE",
-            "fallback", true
+                "productId", productId,
+                "available", false,
+                "stockQuantity", 0,
+                "status", "UNAVAILABLE",
+                "fallback", true
         );
     }
 
@@ -96,11 +96,11 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> getStockLevel(String productId) {
         log.warn("Product Catalog Service unavailable, using fallback stock level for: {}", productId);
         return Map.of(
-            "productId", productId,
-            "stockQuantity", 0,
-            "reserved", 0,
-            "available", 0,
-            "fallback", true
+                "productId", productId,
+                "stockQuantity", 0,
+                "reserved", 0,
+                "available", 0,
+                "fallback", true
         );
     }
 
@@ -108,12 +108,12 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> reserveQuantity(String productId, Integer quantity, Long cartId, Integer ttlMinutes) {
         log.warn("Product Catalog Service unavailable, cannot reserve quantity for product: {}", productId);
         return Map.of(
-            "success", false,
-            "productId", productId,
-            "quantity", quantity,
-            "cartId", cartId,
-            "error", "Service unavailable",
-            "fallback", true
+                "success", false,
+                "productId", productId,
+                "quantity", quantity,
+                "cartId", cartId,
+                "error", "Service unavailable",
+                "fallback", true
         );
     }
 
@@ -121,11 +121,11 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> releaseReservation(String productId, Long cartId) {
         log.warn("Product Catalog Service unavailable, cannot release reservation for product: {}", productId);
         return Map.of(
-            "success", false,
-            "productId", productId,
-            "cartId", cartId,
-            "error", "Service unavailable",
-            "fallback", true
+                "success", false,
+                "productId", productId,
+                "cartId", cartId,
+                "error", "Service unavailable",
+                "fallback", true
         );
     }
 
@@ -133,12 +133,12 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> updateReservation(String productId, Integer quantity, Long cartId) {
         log.warn("Product Catalog Service unavailable, cannot update reservation for product: {}", productId);
         return Map.of(
-            "success", false,
-            "productId", productId,
-            "quantity", quantity,
-            "cartId", cartId,
-            "error", "Service unavailable",
-            "fallback", true
+                "success", false,
+                "productId", productId,
+                "quantity", quantity,
+                "cartId", cartId,
+                "error", "Service unavailable",
+                "fallback", true
         );
     }
 
@@ -148,12 +148,12 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> validateProduct(String productId) {
         log.warn("Product Catalog Service unavailable, using fallback validation for: {}", productId);
         return Map.of(
-            "productId", productId,
-            "valid", false,
-            "active", false,
-            "purchasable", false,
-            "error", "Service unavailable",
-            "fallback", true
+                "productId", productId,
+                "valid", false,
+                "active", false,
+                "purchasable", false,
+                "error", "Service unavailable",
+                "fallback", true
         );
     }
 
@@ -171,11 +171,11 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> isPurchasable(String productId, Integer quantity) {
         log.warn("Product Catalog Service unavailable, using fallback purchasable check for: {}", productId);
         return Map.of(
-            "productId", productId,
-            "quantity", quantity,
-            "purchasable", false,
-            "reason", "Service unavailable",
-            "fallback", true
+                "productId", productId,
+                "quantity", quantity,
+                "purchasable", false,
+                "reason", "Service unavailable",
+                "fallback", true
         );
     }
 
@@ -191,10 +191,10 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> getVariantInfo(String productId, String variantId) {
         log.warn("Product Catalog Service unavailable, using fallback variant info for: {}/{}", productId, variantId);
         return Map.of(
-            "productId", productId,
-            "variantId", variantId,
-            "available", false,
-            "fallback", true
+                "productId", productId,
+                "variantId", variantId,
+                "available", false,
+                "fallback", true
         );
     }
 
@@ -224,10 +224,10 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> calculateDiscount(String productId, Map<String, Object> discountRequest) {
         log.warn("Product Catalog Service unavailable, using fallback discount calculation for: {}", productId);
         return Map.of(
-            "productId", productId,
-            "discountAmount", BigDecimal.ZERO,
-            "discountPercent", 0.0,
-            "fallback", true
+                "productId", productId,
+                "discountAmount", BigDecimal.ZERO,
+                "discountPercent", 0.0,
+                "fallback", true
         );
     }
 
@@ -244,7 +244,6 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
         log.warn("Product Catalog Service unavailable, returning empty frequently bought together for: {}", productId);
         return List.of();
     }
-
 
 
     // ==================== PRODUCT ANALYTICS ====================
@@ -265,9 +264,9 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> getProductConfiguration(String productId) {
         log.warn("Product Catalog Service unavailable, returning empty configuration for: {}", productId);
         return Map.of(
-            "productId", productId,
-            "configuration", Map.of(),
-            "fallback", true
+                "productId", productId,
+                "configuration", Map.of(),
+                "fallback", true
         );
     }
 
@@ -275,10 +274,10 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     public Map<String, Object> validateConfiguration(String productId, Map<String, Object> configuration) {
         log.warn("Product Catalog Service unavailable, using fallback configuration validation for: {}", productId);
         return Map.of(
-            "productId", productId,
-            "valid", false,
-            "errors", List.of("Service unavailable"),
-            "fallback", true
+                "productId", productId,
+                "valid", false,
+                "errors", List.of("Service unavailable"),
+                "fallback", true
         );
     }
 

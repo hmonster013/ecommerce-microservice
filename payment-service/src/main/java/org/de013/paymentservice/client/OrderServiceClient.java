@@ -13,9 +13,9 @@ import java.math.BigDecimal;
  * Feign client for Order Service integration
  */
 @FeignClient(
-    name = "order-service",
-    path = "/api/v1/orders",
-    fallback = OrderServiceClientFallback.class
+        name = "order-service",
+        path = "/api/v1/orders",
+        fallback = OrderServiceClientFallback.class
 )
 public interface OrderServiceClient {
 
@@ -36,8 +36,8 @@ public interface OrderServiceClient {
      */
     @PutMapping("/{orderId}/status")
     ResponseEntity<Void> updateOrderStatus(
-        @PathVariable("orderId") Long orderId,
-        @RequestBody OrderStatusUpdateRequest request
+            @PathVariable("orderId") Long orderId,
+            @RequestBody OrderStatusUpdateRequest request
     );
 
     /**
@@ -57,8 +57,8 @@ public interface OrderServiceClient {
      */
     @GetMapping("/{orderId}/user/{userId}/validate")
     ResponseEntity<Boolean> validateOrderOwnership(
-        @PathVariable("orderId") Long orderId,
-        @PathVariable("userId") Long userId
+            @PathVariable("orderId") Long orderId,
+            @PathVariable("userId") Long userId
     );
 
     /**
@@ -66,9 +66,9 @@ public interface OrderServiceClient {
      */
     @PutMapping("/{orderId}/mark-paid")
     ResponseEntity<Void> markOrderAsPaid(
-        @PathVariable("orderId") Long orderId,
-        @RequestParam("paymentId") Long paymentId,
-        @RequestParam("paymentNumber") String paymentNumber
+            @PathVariable("orderId") Long orderId,
+            @RequestParam("paymentId") Long paymentId,
+            @RequestParam("paymentNumber") String paymentNumber
     );
 
     /**
@@ -76,8 +76,8 @@ public interface OrderServiceClient {
      */
     @PutMapping("/{orderId}/mark-payment-failed")
     ResponseEntity<Void> markOrderPaymentFailed(
-        @PathVariable("orderId") Long orderId,
-        @RequestParam("reason") String reason
+            @PathVariable("orderId") Long orderId,
+            @RequestParam("reason") String reason
     );
 
     /**

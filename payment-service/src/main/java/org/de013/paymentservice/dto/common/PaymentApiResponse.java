@@ -15,17 +15,17 @@ public class PaymentApiResponse<T> extends ApiResponse<T> {
     public static final String PAYMENT_CANCELED = "PAYMENT_CANCELED";
     public static final String PAYMENT_NOT_FOUND = "PAYMENT_NOT_FOUND";
     public static final String PAYMENT_ALREADY_PROCESSED = "PAYMENT_ALREADY_PROCESSED";
-    
+
     public static final String REFUND_SUCCESS = "REFUND_SUCCESS";
     public static final String REFUND_FAILED = "REFUND_FAILED";
     public static final String REFUND_NOT_FOUND = "REFUND_NOT_FOUND";
     public static final String REFUND_AMOUNT_EXCEEDED = "REFUND_AMOUNT_EXCEEDED";
-    
+
     public static final String PAYMENT_METHOD_SUCCESS = "PAYMENT_METHOD_SUCCESS";
     public static final String PAYMENT_METHOD_NOT_FOUND = "PAYMENT_METHOD_NOT_FOUND";
     public static final String PAYMENT_METHOD_EXPIRED = "PAYMENT_METHOD_EXPIRED";
     public static final String PAYMENT_METHOD_INVALID = "PAYMENT_METHOD_INVALID";
-    
+
     public static final String STRIPE_ERROR = "STRIPE_ERROR";
     public static final String WEBHOOK_ERROR = "WEBHOOK_ERROR";
 

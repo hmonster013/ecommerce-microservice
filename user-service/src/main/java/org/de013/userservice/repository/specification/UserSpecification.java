@@ -21,13 +21,13 @@ public class UserSpecification {
             if (keyword == null || keyword.trim().isEmpty()) {
                 return criteriaBuilder.conjunction();
             }
-            
+
             String likePattern = "%" + keyword.toLowerCase() + "%";
             return criteriaBuilder.or(
-                criteriaBuilder.like(criteriaBuilder.lower(root.get("username")), likePattern),
-                criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), likePattern),
-                criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), likePattern),
-                criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), likePattern)
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("username")), likePattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), likePattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), likePattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), likePattern)
             );
         };
     }
@@ -52,7 +52,7 @@ public class UserSpecification {
             if (roleName == null || roleName.trim().isEmpty()) {
                 return criteriaBuilder.conjunction();
             }
-            
+
             Join<User, Role> roleJoin = root.join("roles", JoinType.INNER);
             return criteriaBuilder.equal(criteriaBuilder.lower(roleJoin.get("name")), roleName.toLowerCase());
         };
@@ -64,15 +64,15 @@ public class UserSpecification {
     public static Specification<User> createdBetween(LocalDateTime startDate, LocalDateTime endDate) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            
+
             if (startDate != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), startDate));
             }
-            
+
             if (endDate != null) {
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("createdAt"), endDate));
             }
-            
+
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
@@ -82,16 +82,16 @@ public class UserSpecification {
      */
     public static Specification<User> isActive() {
         return (root, query, criteriaBuilder) -> criteriaBuilder.and(
-            criteriaBuilder.equal(root.get("enabled"), true),
-            criteriaBuilder.equal(root.get("accountNonLocked"), true)
+                criteriaBuilder.equal(root.get("enabled"), true),
+                criteriaBuilder.equal(root.get("accountNonLocked"), true)
         );
     }
 
     /**
      * Complex filter combining multiple criteria
      */
-    public static Specification<User> withFilters(String keyword, Boolean enabled, String roleName, 
-                                                 LocalDateTime startDate, LocalDateTime endDate) {
+    public static Specification<User> withFilters(String keyword, Boolean enabled, String roleName,
+                                                  LocalDateTime startDate, LocalDateTime endDate) {
         return Specification.where(hasKeyword(keyword))
                 .and(hasEnabled(enabled))
                 .and(hasRole(roleName))

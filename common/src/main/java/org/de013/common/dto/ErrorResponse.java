@@ -112,7 +112,7 @@ public class ErrorResponse {
          */
         private String code;
     }
-    
+
     /**
      * Create a simple error response
      */
@@ -131,7 +131,7 @@ public class ErrorResponse {
                 .timestamp(LocalDateTime.now())
                 .build();
     }
-    
+
     /**
      * Create error response with path
      */
@@ -152,7 +152,7 @@ public class ErrorResponse {
                 .timestamp(LocalDateTime.now())
                 .build();
     }
-    
+
     /**
      * Create error response with path and method
      */
@@ -175,7 +175,7 @@ public class ErrorResponse {
                 .timestamp(LocalDateTime.now())
                 .build();
     }
-    
+
     /**
      * Create error response with trace ID
      */
@@ -200,7 +200,7 @@ public class ErrorResponse {
                 .traceId(traceId)
                 .build();
     }
-    
+
     /**
      * Create error response with details
      */
@@ -221,7 +221,7 @@ public class ErrorResponse {
                 .timestamp(LocalDateTime.now())
                 .build();
     }
-    
+
     /**
      * Create error response with details and path
      */
@@ -244,7 +244,7 @@ public class ErrorResponse {
                 .timestamp(LocalDateTime.now())
                 .build();
     }
-    
+
     /**
      * Create error response with metadata (validation errors)
      */
@@ -265,7 +265,7 @@ public class ErrorResponse {
                 .timestamp(LocalDateTime.now())
                 .build();
     }
-    
+
     /**
      * Create error response with metadata and path
      */

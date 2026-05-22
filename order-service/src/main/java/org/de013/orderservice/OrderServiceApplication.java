@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
  * Order Service Application
- *
+ * <p>
  * Main application class for the Order Management microservice.
  * This service handles comprehensive order lifecycle management including:
  * - Order creation from shopping carts
@@ -24,8 +24,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * @version 1.0.0
  */
 @SpringBootApplication(scanBasePackages = {
-    "org.de013.orderservice",
-    "org.de013.common"
+        "org.de013.orderservice",
+        "org.de013.common"
 })
 @EnableDiscoveryClient
 @EnableFeignClients

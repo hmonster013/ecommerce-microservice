@@ -3,7 +3,10 @@ package org.de013.productcatalog.dto.category;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 @Getter
@@ -51,6 +54,6 @@ public class CategoryUpdateDto {
     @JsonIgnore
     public boolean hasUpdates() {
         return name != null || description != null || slug != null ||
-               parentId != null || displayOrder != null || isActive != null;
+                parentId != null || displayOrder != null || isActive != null;
     }
 }

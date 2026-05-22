@@ -92,9 +92,9 @@ public class PaymentMapper {
 
         // Set status flags
         builder.requiresAction(payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.REQUIRES_ACTION ||
-                              payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.REQUIRES_CONFIRMATION)
+                        payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.REQUIRES_CONFIRMATION)
                 .isProcessing(payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.PENDING ||
-                             payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.PROCESSING)
+                        payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.PROCESSING)
                 .isCompleted(payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED)
                 .isFailed(payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.FAILED)
                 .isCanceled(payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.CANCELED);
@@ -104,7 +104,7 @@ public class PaymentMapper {
             PaymentTransaction latestTransaction = payment.getTransactions().stream()
                     .max((t1, t2) -> t1.getCreatedAt().compareTo(t2.getCreatedAt()))
                     .orElse(null);
-            
+
             if (latestTransaction != null) {
                 builder.lastTransactionType(latestTransaction.getType().name())
                         .lastTransactionStatus(latestTransaction.getStatus().name());

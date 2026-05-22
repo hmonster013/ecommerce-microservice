@@ -18,7 +18,7 @@ public class BusinessException extends RuntimeException {
      */
     public static BusinessException invalidOperation(String operation) {
         return new BusinessException(
-            String.format("Invalid operation: %s", operation)
+                String.format("Invalid operation: %s", operation)
         );
     }
 
@@ -27,7 +27,7 @@ public class BusinessException extends RuntimeException {
      */
     public static BusinessException ruleViolation(String rule) {
         return new BusinessException(
-            String.format("Business rule violation: %s", rule)
+                String.format("Business rule violation: %s", rule)
         );
     }
 
@@ -36,7 +36,7 @@ public class BusinessException extends RuntimeException {
      */
     public static BusinessException invalidState(String state) {
         return new BusinessException(
-            String.format("Invalid state: %s", state)
+                String.format("Invalid state: %s", state)
         );
     }
 }

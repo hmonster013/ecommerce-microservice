@@ -3,10 +3,7 @@ package org.de013.paymentservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
 import org.de013.paymentservice.entity.enums.RefundStatus;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,12 +13,12 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "refunds", indexes = {
-    @Index(name = "idx_payment_id", columnList = "paymentId"),
-    @Index(name = "idx_order_id", columnList = "orderId"),
-    @Index(name = "idx_status", columnList = "status"),
-    @Index(name = "idx_stripe_refund_id", columnList = "stripeRefundId", unique = true),
-    @Index(name = "idx_refund_number", columnList = "refundNumber", unique = true),
-    @Index(name = "idx_created_at", columnList = "createdAt")
+        @Index(name = "idx_payment_id", columnList = "paymentId"),
+        @Index(name = "idx_order_id", columnList = "orderId"),
+        @Index(name = "idx_status", columnList = "status"),
+        @Index(name = "idx_stripe_refund_id", columnList = "stripeRefundId", unique = true),
+        @Index(name = "idx_refund_number", columnList = "refundNumber", unique = true),
+        @Index(name = "idx_created_at", columnList = "createdAt")
 })
 @EqualsAndHashCode(callSuper = true)
 @Data

@@ -5,7 +5,6 @@ import jakarta.validation.ConstraintValidatorContext;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 /**
  * Validator implementation for @ValidPrice annotation.
@@ -25,9 +24,9 @@ public class PriceValidator implements ConstraintValidator<ValidPrice, BigDecima
         this.max = constraintAnnotation.max();
         this.allowNull = constraintAnnotation.allowNull();
         this.maxDecimalPlaces = constraintAnnotation.maxDecimalPlaces();
-        
-        log.debug("Initialized Price validator - min: {}, max: {}, allowNull: {}, maxDecimalPlaces: {}", 
-                 min, max, allowNull, maxDecimalPlaces);
+
+        log.debug("Initialized Price validator - min: {}, max: {}, allowNull: {}, maxDecimalPlaces: {}",
+                min, max, allowNull, maxDecimalPlaces);
     }
 
     @Override
@@ -108,6 +107,6 @@ public class PriceValidator implements ConstraintValidator<ValidPrice, BigDecima
     private void addCustomMessage(ConstraintValidatorContext context, String message) {
         context.disableDefaultConstraintViolation();
         context.buildConstraintViolationWithTemplate(message)
-               .addConstraintViolation();
+                .addConstraintViolation();
     }
 }

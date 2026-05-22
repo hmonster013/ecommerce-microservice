@@ -39,18 +39,21 @@ public @interface ValidEmail {
 
     /**
      * The error message template
+     *
      * @return the message template
      */
     String message() default "{email.format}";
 
     /**
      * Validation groups
+     *
      * @return the groups
      */
     Class<?>[] groups() default {};
 
     /**
      * Payload for clients
+     *
      * @return the payload
      */
     Class<? extends Payload>[] payload() default {};

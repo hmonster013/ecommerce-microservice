@@ -265,7 +265,6 @@ public class RefundController extends BaseController {
     }
 
 
-
     @GetMapping(ApiPaths.PAYMENT + ApiPaths.PAYMENT_ID_PARAM + ApiPaths.FAILED)
     @Operation(summary = "Get failed refunds by payment", description = "Get all failed refunds for a payment")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<RefundResponse>>> getFailedRefundsByPaymentId(

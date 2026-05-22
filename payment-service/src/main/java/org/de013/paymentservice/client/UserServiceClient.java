@@ -4,15 +4,17 @@ import org.de013.paymentservice.dto.external.UserDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 
 /**
  * Feign client for User Service integration
  */
 @FeignClient(
-    name = "user-service",
-    path = "/api/v1/users",
-    fallback = UserServiceClientFallback.class
+        name = "user-service",
+        path = "/api/v1/users",
+        fallback = UserServiceClientFallback.class
 )
 public interface UserServiceClient {
 

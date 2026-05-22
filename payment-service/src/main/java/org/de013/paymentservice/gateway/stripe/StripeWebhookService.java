@@ -88,7 +88,7 @@ public class StripeWebhookService {
     private void handlePaymentIntentSucceeded(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
         log.info("Payment intent succeeded: {}", paymentIntentId);
-        
+
         // TODO: Update payment status in database
         // TODO: Send notification to user
         // TODO: Update order status
@@ -100,7 +100,7 @@ public class StripeWebhookService {
     private void handlePaymentIntentFailed(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
         log.info("Payment intent failed: {}", paymentIntentId);
-        
+
         // TODO: Update payment status in database
         // TODO: Send notification to user
         // TODO: Handle failed payment logic
@@ -112,7 +112,7 @@ public class StripeWebhookService {
     private void handlePaymentIntentRequiresAction(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
         log.info("Payment intent requires action: {}", paymentIntentId);
-        
+
         // TODO: Update payment status in database
         // TODO: Send notification to user for required action
     }
@@ -123,7 +123,7 @@ public class StripeWebhookService {
     private void handlePaymentIntentCanceled(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
         log.info("Payment intent canceled: {}", paymentIntentId);
-        
+
         // TODO: Update payment status in database
         // TODO: Handle canceled payment logic
     }
@@ -135,7 +135,7 @@ public class StripeWebhookService {
         String paymentMethodId = webhookRequest.getPaymentMethodId();
         String customerId = webhookRequest.getCustomerId();
         log.info("Payment method {} attached to customer {}", paymentMethodId, customerId);
-        
+
         // TODO: Update payment method in database
     }
 
@@ -145,7 +145,7 @@ public class StripeWebhookService {
     private void handlePaymentMethodDetached(StripeWebhookRequest webhookRequest) {
         String paymentMethodId = webhookRequest.getPaymentMethodId();
         log.info("Payment method detached: {}", paymentMethodId);
-        
+
         // TODO: Update payment method status in database
     }
 
@@ -155,7 +155,7 @@ public class StripeWebhookService {
     private void handleCustomerCreated(StripeWebhookRequest webhookRequest) {
         String customerId = webhookRequest.getCustomerId();
         log.info("Customer created: {}", customerId);
-        
+
         // TODO: Handle customer creation logic if needed
     }
 
@@ -165,7 +165,7 @@ public class StripeWebhookService {
     private void handleCustomerUpdated(StripeWebhookRequest webhookRequest) {
         String customerId = webhookRequest.getCustomerId();
         log.info("Customer updated: {}", customerId);
-        
+
         // TODO: Handle customer update logic if needed
     }
 
@@ -175,7 +175,7 @@ public class StripeWebhookService {
     private void handleCustomerDeleted(StripeWebhookRequest webhookRequest) {
         String customerId = webhookRequest.getCustomerId();
         log.info("Customer deleted: {}", customerId);
-        
+
         // TODO: Handle customer deletion logic
     }
 
@@ -185,7 +185,7 @@ public class StripeWebhookService {
     private void handleChargeSucceeded(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
         log.info("Charge succeeded for payment intent: {}", paymentIntentId);
-        
+
         // TODO: Create payment transaction record
         // TODO: Update payment status if needed
     }
@@ -196,7 +196,7 @@ public class StripeWebhookService {
     private void handleChargeFailed(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
         log.info("Charge failed for payment intent: {}", paymentIntentId);
-        
+
         // TODO: Create failed transaction record
         // TODO: Handle charge failure logic
     }
@@ -225,10 +225,10 @@ public class StripeWebhookService {
     public boolean isValidEventType(String eventType) {
         return eventType != null && (
                 eventType.startsWith("payment_intent.") ||
-                eventType.startsWith("payment_method.") ||
-                eventType.startsWith("customer.") ||
-                eventType.startsWith("charge.") ||
-                eventType.contains("refund")
+                        eventType.startsWith("payment_method.") ||
+                        eventType.startsWith("customer.") ||
+                        eventType.startsWith("charge.") ||
+                        eventType.contains("refund")
         );
     }
 }

@@ -1,7 +1,6 @@
 package org.de013.notificationservice.config;
 
 import lombok.RequiredArgsConstructor;
-import org.de013.common.constant.ApiPaths;
 import org.de013.notificationservice.security.HeaderAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +15,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Security configuration for Notification Service
- * 
+ * <p>
  * Architecture: Trust internal network - API Gateway handles authentication
  * - API Gateway validates JWT with Keycloak and forwards user context
  * - This service trusts all internal requests

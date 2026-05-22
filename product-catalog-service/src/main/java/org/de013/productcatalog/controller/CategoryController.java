@@ -10,7 +10,6 @@ import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
-
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.category.*;
 import org.de013.productcatalog.dto.product.ProductSummaryDto;
@@ -20,7 +19,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,17 +36,17 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "Get all categories", description = "Retrieve paginated list of categories")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Categories retrieved successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request parameters")
+            @ApiResponse(responseCode = "200", description = "Categories retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request parameters")
     })
     @GetMapping
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<CategoryResponseDto>>> getAllCategories(
             @Parameter(description = "Pagination and sorting parameters")
             @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable,
-            
+
             @Parameter(description = "Show only active categories")
             @RequestParam(required = false, defaultValue = "true") Boolean activeOnly) {
-        
+
         log.info("Getting categories with activeOnly: {}", activeOnly);
 
         PageResponse<CategoryResponseDto> categories = categoryService.getAllCategories(pageable);
@@ -57,8 +55,8 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "Get category by ID", description = "Retrieve detailed category information by ID")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Category found"),
-        @ApiResponse(responseCode = "404", description = "Category not found")
+            @ApiResponse(responseCode = "200", description = "Category found"),
+            @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @GetMapping(ApiPaths.ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> getCategoryById(
@@ -73,8 +71,8 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "Get category by slug", description = "Retrieve detailed category information by slug")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Category found"),
-        @ApiResponse(responseCode = "404", description = "Category not found")
+            @ApiResponse(responseCode = "200", description = "Category found"),
+            @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @GetMapping(ApiPaths.SLUG_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> getCategoryBySlug(
@@ -89,9 +87,9 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Create new category", description = "Create a new category")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Category created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid category data"),
-        @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = "201", description = "Category created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid category data"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> createCategory(
@@ -106,10 +104,10 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Update category", description = "Update existing category")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Category updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid category data"),
-        @ApiResponse(responseCode = "403", description = "Access denied"),
-        @ApiResponse(responseCode = "404", description = "Category not found")
+            @ApiResponse(responseCode = "200", description = "Category updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid category data"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @PutMapping(ApiPaths.ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> updateCategory(
@@ -127,10 +125,10 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Delete category", description = "Delete category")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Category deleted successfully"),
-        @ApiResponse(responseCode = "403", description = "Access denied"),
-        @ApiResponse(responseCode = "404", description = "Category not found"),
-        @ApiResponse(responseCode = "409", description = "Category has children or products")
+            @ApiResponse(responseCode = "200", description = "Category deleted successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Category not found"),
+            @ApiResponse(responseCode = "409", description = "Category has children or products")
     })
     @DeleteMapping(ApiPaths.ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCategory(
@@ -145,26 +143,26 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "Get products in category", description = "Retrieve products belonging to a specific category")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Products retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Category not found")
+            @ApiResponse(responseCode = "200", description = "Products retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @GetMapping(ApiPaths.ID_PARAM + ApiPaths.PRODUCTS)
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<ProductSummaryDto>>> getProductsInCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id,
-            
+
             @Parameter(description = "Pagination and sorting parameters")
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        
+
         log.info("Getting products in category ID: {}", id);
-        
+
         PageResponse<ProductSummaryDto> products = productService.getProductsByCategory(id, pageable);
         return ok(products);
     }
 
     @Operation(summary = "Get category tree", description = "Retrieve hierarchical category tree structure")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Category tree retrieved successfully")
+            @ApiResponse(responseCode = "200", description = "Category tree retrieved successfully")
     })
     @GetMapping(ApiPaths.TREE)
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategoryTreeDto>>> getCategoryTree(
@@ -192,9 +190,9 @@ public class CategoryController extends BaseController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategorySummaryDto>>> getChildCategories(
             @Parameter(description = "Parent category ID", required = true)
             @PathVariable Long id) {
-        
+
         log.info("Getting child categories for parent ID: {}", id);
-        
+
         List<CategorySummaryDto> children = categoryService.getChildCategories(id);
         return ok(children);
     }

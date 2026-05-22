@@ -42,10 +42,10 @@ public class OrderSecurityService {
         try {
             OrderResponse order = orderService.getOrderById(orderId);
             boolean isOwner = order.getUserId().equals(userContext.getUserId());
-            log.debug("User {} {} access order {} (owner: {})", 
-                    userContext.getUsername(), 
-                    isOwner ? "granted" : "denied", 
-                    orderId, 
+            log.debug("User {} {} access order {} (owner: {})",
+                    userContext.getUsername(),
+                    isOwner ? "granted" : "denied",
+                    orderId,
                     isOwner);
             return isOwner;
         } catch (Exception e) {
@@ -74,10 +74,10 @@ public class OrderSecurityService {
 
         // Customers can only access their own orders
         boolean isOwnOrders = userContext.getUserId().equals(userId);
-        log.debug("User {} {} access orders for user {} (own orders: {})", 
-                userContext.getUsername(), 
-                isOwnOrders ? "granted" : "denied", 
-                userId, 
+        log.debug("User {} {} access orders for user {} (own orders: {})",
+                userContext.getUsername(),
+                isOwnOrders ? "granted" : "denied",
+                userId,
                 isOwnOrders);
         return isOwnOrders;
     }
@@ -96,10 +96,10 @@ public class OrderSecurityService {
 
         // Currently only admins can modify orders
         boolean canModify = userContext.isAdmin();
-        log.debug("User {} {} modify order {} (admin: {})", 
-                userContext.getUsername(), 
-                canModify ? "can" : "cannot", 
-                orderId, 
+        log.debug("User {} {} modify order {} (admin: {})",
+                userContext.getUsername(),
+                canModify ? "can" : "cannot",
+                orderId,
                 canModify);
         return canModify;
     }

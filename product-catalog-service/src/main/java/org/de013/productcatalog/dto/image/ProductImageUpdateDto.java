@@ -3,7 +3,10 @@ package org.de013.productcatalog.dto.image;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.de013.productcatalog.entity.enums.ImageType;
 
@@ -17,8 +20,8 @@ import org.de013.productcatalog.entity.enums.ImageType;
 public class ProductImageUpdateDto {
 
     @Size(max = 500, message = "{image.url.too.long}")
-    @Pattern(regexp = "^https?://.*\\.(jpg|jpeg|png|gif|webp)$", 
-             message = "{image.url.invalid.format}")
+    @Pattern(regexp = "^https?://.*\\.(jpg|jpeg|png|gif|webp)$",
+            message = "{image.url.invalid.format}")
     @Schema(description = "Image URL", example = "https://example.com/images/iphone-15-pro-main.jpg")
     private String url;
 
@@ -66,10 +69,10 @@ public class ProductImageUpdateDto {
     @JsonIgnore
     @AssertTrue(message = "At least one field must be provided for update")
     public boolean hasUpdates() {
-        return url != null || altText != null || imageType != null || 
-               displayOrder != null || isActive != null || title != null || 
-               description != null || fileSize != null || dimensions != null || 
-               fileFormat != null || variantId != null;
+        return url != null || altText != null || imageType != null ||
+                displayOrder != null || isActive != null || title != null ||
+                description != null || fileSize != null || dimensions != null ||
+                fileFormat != null || variantId != null;
     }
 
     @JsonIgnore
@@ -87,10 +90,10 @@ public class ProductImageUpdateDto {
         if (fileFormat == null || url == null) {
             return true; // Optional fields
         }
-        
+
         String urlExtension = url.substring(url.lastIndexOf('.') + 1).toUpperCase();
-        return fileFormat.equalsIgnoreCase(urlExtension) || 
-               (fileFormat.equals("JPG") && urlExtension.equals("JPEG")) ||
-               (fileFormat.equals("JPEG") && urlExtension.equals("JPG"));
+        return fileFormat.equalsIgnoreCase(urlExtension) ||
+                (fileFormat.equals("JPG") && urlExtension.equals("JPEG")) ||
+                (fileFormat.equals("JPEG") && urlExtension.equals("JPG"));
     }
 }

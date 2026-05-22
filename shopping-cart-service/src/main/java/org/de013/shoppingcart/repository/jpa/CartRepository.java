@@ -106,18 +106,18 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      */
     @Modifying
     @Query("UPDATE Cart c SET c.status = :expiredStatus, c.updatedAt = :currentTime WHERE c.expiresAt < :currentTime AND c.status IN :activeStatuses AND c.deleted = false")
-    int markExpiredCarts(@Param("expiredStatus") CartStatus expiredStatus, 
-                        @Param("currentTime") LocalDateTime currentTime, 
-                        @Param("activeStatuses") List<CartStatus> activeStatuses);
+    int markExpiredCarts(@Param("expiredStatus") CartStatus expiredStatus,
+                         @Param("currentTime") LocalDateTime currentTime,
+                         @Param("activeStatuses") List<CartStatus> activeStatuses);
 
     /**
      * Soft delete old carts
      */
     @Modifying
     @Query("UPDATE Cart c SET c.deleted = true, c.deletedAt = :currentTime, c.deletedBy = 'SYSTEM_CLEANUP' WHERE c.lastActivityAt < :cutoffTime AND c.status IN :statuses")
-    int softDeleteOldCarts(@Param("cutoffTime") LocalDateTime cutoffTime, 
-                          @Param("currentTime") LocalDateTime currentTime, 
-                          @Param("statuses") List<CartStatus> statuses);
+    int softDeleteOldCarts(@Param("cutoffTime") LocalDateTime cutoffTime,
+                           @Param("currentTime") LocalDateTime currentTime,
+                           @Param("statuses") List<CartStatus> statuses);
 
     // ==================== ANALYTICS & REPORTING QUERIES ====================
 
@@ -126,11 +126,6 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      */
     @Query("SELECT COUNT(c) FROM Cart c WHERE c.userId = :userId AND c.status = :status AND c.deleted = false")
     long countActiveCartsByUser(@Param("userId") String userId, @Param("status") CartStatus status);
-
-
-
-
-
 
 
     // ==================== BUSINESS LOGIC QUERIES ====================
@@ -153,13 +148,12 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      */
     @Modifying
     @Query("UPDATE Cart c SET c.subtotal = :subtotal, c.totalAmount = :totalAmount, c.itemCount = :itemCount, c.totalQuantity = :totalQuantity, c.updatedAt = :currentTime WHERE c.id = :cartId")
-    int updateCartTotals(@Param("cartId") Long cartId, 
-                        @Param("subtotal") BigDecimal subtotal, 
-                        @Param("totalAmount") BigDecimal totalAmount, 
-                        @Param("itemCount") Integer itemCount, 
-                        @Param("totalQuantity") Integer totalQuantity, 
-                        @Param("currentTime") LocalDateTime currentTime);
-
+    int updateCartTotals(@Param("cartId") Long cartId,
+                         @Param("subtotal") BigDecimal subtotal,
+                         @Param("totalAmount") BigDecimal totalAmount,
+                         @Param("itemCount") Integer itemCount,
+                         @Param("totalQuantity") Integer totalQuantity,
+                         @Param("currentTime") LocalDateTime currentTime);
 
 
     /**
@@ -167,10 +161,10 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      */
     @Modifying
     @Query("UPDATE Cart c SET c.status = :convertedStatus, c.convertedToOrderId = :orderId, c.updatedAt = :currentTime WHERE c.id = :cartId")
-    int convertToOrder(@Param("cartId") Long cartId, 
-                      @Param("convertedStatus") CartStatus convertedStatus, 
-                      @Param("orderId") String orderId, 
-                      @Param("currentTime") LocalDateTime currentTime);
+    int convertToOrder(@Param("cartId") Long cartId,
+                       @Param("convertedStatus") CartStatus convertedStatus,
+                       @Param("orderId") String orderId,
+                       @Param("currentTime") LocalDateTime currentTime);
 
     // ==================== SEARCH & FILTERING ====================
 
@@ -178,23 +172,23 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      * Search carts by criteria
      */
     @Query("SELECT c FROM Cart c WHERE " +
-           "(:userId IS NULL OR c.userId = :userId) AND " +
-           "(:status IS NULL OR c.status = :status) AND " +
-           "(:cartType IS NULL OR c.cartType = :cartType) AND " +
-           "(:minAmount IS NULL OR c.totalAmount >= :minAmount) AND " +
-           "(:maxAmount IS NULL OR c.totalAmount <= :maxAmount) AND " +
-           "(:startDate IS NULL OR c.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR c.createdAt <= :endDate) AND " +
-           "c.deleted = false " +
-           "ORDER BY c.lastActivityAt DESC")
+            "(:userId IS NULL OR c.userId = :userId) AND " +
+            "(:status IS NULL OR c.status = :status) AND " +
+            "(:cartType IS NULL OR c.cartType = :cartType) AND " +
+            "(:minAmount IS NULL OR c.totalAmount >= :minAmount) AND " +
+            "(:maxAmount IS NULL OR c.totalAmount <= :maxAmount) AND " +
+            "(:startDate IS NULL OR c.createdAt >= :startDate) AND " +
+            "(:endDate IS NULL OR c.createdAt <= :endDate) AND " +
+            "c.deleted = false " +
+            "ORDER BY c.lastActivityAt DESC")
     Page<Cart> searchCarts(@Param("userId") String userId,
-                          @Param("status") CartStatus status,
-                          @Param("cartType") CartType cartType,
-                          @Param("minAmount") BigDecimal minAmount,
-                          @Param("maxAmount") BigDecimal maxAmount,
-                          @Param("startDate") LocalDateTime startDate,
-                          @Param("endDate") LocalDateTime endDate,
-                          Pageable pageable);
+                           @Param("status") CartStatus status,
+                           @Param("cartType") CartType cartType,
+                           @Param("minAmount") BigDecimal minAmount,
+                           @Param("maxAmount") BigDecimal maxAmount,
+                           @Param("startDate") LocalDateTime startDate,
+                           @Param("endDate") LocalDateTime endDate,
+                           Pageable pageable);
 
     /**
      * Find carts by product ID (for product impact analysis)
@@ -206,9 +200,9 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      * Count carts by status and date range
      */
     @Query("SELECT COUNT(c) FROM Cart c WHERE c.status = :status AND c.createdAt BETWEEN :startDate AND :endDate AND c.deleted = false")
-    long countCartsByStatusAndDateRange(@Param("status") CartStatus status, 
-                                       @Param("startDate") LocalDateTime startDate, 
-                                       @Param("endDate") LocalDateTime endDate);
+    long countCartsByStatusAndDateRange(@Param("status") CartStatus status,
+                                        @Param("startDate") LocalDateTime startDate,
+                                        @Param("endDate") LocalDateTime endDate);
 
     // ==================== BATCH OPERATIONS ====================
 
@@ -217,18 +211,18 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      */
     @Modifying
     @Query("UPDATE Cart c SET c.status = :newStatus, c.updatedAt = :currentTime WHERE c.id IN :cartIds")
-    int batchUpdateStatus(@Param("cartIds") List<Long> cartIds, 
-                         @Param("newStatus") CartStatus newStatus, 
-                         @Param("currentTime") LocalDateTime currentTime);
+    int batchUpdateStatus(@Param("cartIds") List<Long> cartIds,
+                          @Param("newStatus") CartStatus newStatus,
+                          @Param("currentTime") LocalDateTime currentTime);
 
     /**
      * Batch soft delete carts
      */
     @Modifying
     @Query("UPDATE Cart c SET c.deleted = true, c.deletedAt = :currentTime, c.deletedBy = :deletedBy WHERE c.id IN :cartIds")
-    int batchSoftDelete(@Param("cartIds") List<Long> cartIds, 
-                       @Param("currentTime") LocalDateTime currentTime, 
-                       @Param("deletedBy") String deletedBy);
+    int batchSoftDelete(@Param("cartIds") List<Long> cartIds,
+                        @Param("currentTime") LocalDateTime currentTime,
+                        @Param("deletedBy") String deletedBy);
 
     // ==================== EXISTENCE CHECKS ====================
 

@@ -15,7 +15,6 @@ import org.de013.productcatalog.dto.variant.ProductVariantCreateDto;
 import org.de013.productcatalog.dto.variant.ProductVariantUpdateDto;
 import org.de013.productcatalog.service.ProductVariantService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,10 +31,10 @@ public class ProductVariantController extends BaseController {
 
     @Operation(summary = "[ADMIN] Create product variant", description = "Create a new variant for a product")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Variant created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid variant data"),
-        @ApiResponse(responseCode = "404", description = "Product not found"),
-        @ApiResponse(responseCode = "409", description = "Variant combination already exists")
+            @ApiResponse(responseCode = "201", description = "Variant created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid variant data"),
+            @ApiResponse(responseCode = "404", description = "Product not found"),
+            @ApiResponse(responseCode = "409", description = "Variant combination already exists")
     })
     @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.VARIANTS)
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> createVariant(
@@ -52,10 +51,10 @@ public class ProductVariantController extends BaseController {
 
     @Operation(summary = "[ADMIN] Update product variant", description = "Update an existing product variant")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Variant updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid variant data"),
-        @ApiResponse(responseCode = "404", description = "Variant not found"),
-        @ApiResponse(responseCode = "409", description = "Variant combination already exists")
+            @ApiResponse(responseCode = "200", description = "Variant updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid variant data"),
+            @ApiResponse(responseCode = "404", description = "Variant not found"),
+            @ApiResponse(responseCode = "409", description = "Variant combination already exists")
     })
     @PutMapping(ApiPaths.VARIANTS + ApiPaths.VARIANT_ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> updateVariant(
@@ -72,8 +71,8 @@ public class ProductVariantController extends BaseController {
 
     @Operation(summary = "[ADMIN] Delete product variant", description = "Delete a product variant")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Variant deleted successfully"),
-        @ApiResponse(responseCode = "404", description = "Variant not found")
+            @ApiResponse(responseCode = "200", description = "Variant deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Variant not found")
     })
     @DeleteMapping(ApiPaths.VARIANTS + ApiPaths.VARIANT_ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteVariant(
@@ -88,8 +87,8 @@ public class ProductVariantController extends BaseController {
 
     @Operation(summary = "Get product variant by ID", description = "Retrieve detailed variant information by ID")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Variant found"),
-        @ApiResponse(responseCode = "404", description = "Variant not found")
+            @ApiResponse(responseCode = "200", description = "Variant found"),
+            @ApiResponse(responseCode = "404", description = "Variant not found")
     })
     @GetMapping(ApiPaths.VARIANTS + ApiPaths.VARIANT_ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> getVariantById(
@@ -104,8 +103,8 @@ public class ProductVariantController extends BaseController {
 
     @Operation(summary = "Get product variant by SKU", description = "Retrieve variant information by SKU")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Variant found"),
-        @ApiResponse(responseCode = "404", description = "Variant not found")
+            @ApiResponse(responseCode = "200", description = "Variant found"),
+            @ApiResponse(responseCode = "404", description = "Variant not found")
     })
     @GetMapping(ApiPaths.VARIANTS + ApiPaths.VARIANT_SKU_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> getVariantBySku(
@@ -120,8 +119,8 @@ public class ProductVariantController extends BaseController {
 
     @Operation(summary = "Get product variants", description = "Get all variants for a specific product")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Variants retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(responseCode = "200", description = "Variants retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Product not found")
     })
     @GetMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.VARIANTS)
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<ProductVariantDto>>> getVariantsByProductId(

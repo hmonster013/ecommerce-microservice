@@ -17,28 +17,28 @@ import java.time.LocalDateTime;
 @RequestMapping(ApiPaths.FALLBACK)
 @Slf4j
 public class FallbackController {
-    
+
     @GetMapping("/{serviceName}")
     public ResponseEntity<ErrorResponse> serviceFallback(
             @PathVariable String serviceName,
             ServerWebExchange exchange) {
-        
-        log.warn("Circuit breaker activated for service: {} - Path: {}", 
+
+        log.warn("Circuit breaker activated for service: {} - Path: {}",
                 serviceName, exchange.getRequest().getPath().value());
-        
+
         ErrorResponse errorResponse = ErrorResponse.builder()
-            .success(false)
-            .status(HttpStatus.SERVICE_UNAVAILABLE.value())
-            .error(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase())
-            .code("SERVICE_UNAVAILABLE")
-            .message(String.format("Service '%s' is temporarily unavailable. Please try again later.", serviceName))
-            .path(exchange.getRequest().getPath().value())
-            .method(exchange.getRequest().getMethod().name())
-            .timestamp(LocalDateTime.now())
-            .traceId(exchange.getRequest().getId())
-            .build();
-        
+                .success(false)
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .error(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase())
+                .code("SERVICE_UNAVAILABLE")
+                .message(String.format("Service '%s' is temporarily unavailable. Please try again later.", serviceName))
+                .path(exchange.getRequest().getPath().value())
+                .method(exchange.getRequest().getMethod().name())
+                .timestamp(LocalDateTime.now())
+                .traceId(exchange.getRequest().getId())
+                .build();
+
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-            .body(errorResponse);
+                .body(errorResponse);
     }
 }

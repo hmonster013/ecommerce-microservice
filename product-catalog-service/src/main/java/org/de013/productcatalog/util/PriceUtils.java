@@ -23,8 +23,8 @@ public class PriceUtils {
 
     /**
      * Format price for display with currency symbol.
-     * 
-     * @param price the price to format
+     *
+     * @param price  the price to format
      * @param locale the locale for formatting
      * @return formatted price string
      */
@@ -44,7 +44,7 @@ public class PriceUtils {
 
     /**
      * Format price for display with default US locale.
-     * 
+     *
      * @param price the price to format
      * @return formatted price string
      */
@@ -54,7 +54,7 @@ public class PriceUtils {
 
     /**
      * Calculate discount amount.
-     * 
+     *
      * @param originalPrice the original price
      * @param discountPrice the discounted price
      * @return discount amount
@@ -73,7 +73,7 @@ public class PriceUtils {
 
     /**
      * Calculate discount percentage.
-     * 
+     *
      * @param originalPrice the original price
      * @param discountPrice the discounted price
      * @return discount percentage (0-100)
@@ -89,16 +89,16 @@ public class PriceUtils {
 
         BigDecimal discountAmount = originalPrice.subtract(discountPrice);
         BigDecimal percentage = discountAmount.divide(originalPrice, 4, DEFAULT_ROUNDING)
-                                            .multiply(BigDecimal.valueOf(100))
-                                            .setScale(DEFAULT_SCALE, DEFAULT_ROUNDING);
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(DEFAULT_SCALE, DEFAULT_ROUNDING);
 
         return percentage;
     }
 
     /**
      * Apply discount percentage to price.
-     * 
-     * @param originalPrice the original price
+     *
+     * @param originalPrice      the original price
      * @param discountPercentage the discount percentage (0-100)
      * @return discounted price
      */
@@ -116,7 +116,7 @@ public class PriceUtils {
         }
 
         BigDecimal discountMultiplier = BigDecimal.ONE.subtract(
-            discountPercentage.divide(BigDecimal.valueOf(100), 4, DEFAULT_ROUNDING)
+                discountPercentage.divide(BigDecimal.valueOf(100), 4, DEFAULT_ROUNDING)
         );
 
         return originalPrice.multiply(discountMultiplier).setScale(DEFAULT_SCALE, DEFAULT_ROUNDING);
@@ -124,8 +124,8 @@ public class PriceUtils {
 
     /**
      * Calculate tax amount.
-     * 
-     * @param price the base price
+     *
+     * @param price   the base price
      * @param taxRate the tax rate (e.g., 0.08 for 8%)
      * @return tax amount
      */
@@ -139,8 +139,8 @@ public class PriceUtils {
 
     /**
      * Calculate price including tax.
-     * 
-     * @param price the base price
+     *
+     * @param price   the base price
      * @param taxRate the tax rate (e.g., 0.08 for 8%)
      * @return price including tax
      */
@@ -155,7 +155,7 @@ public class PriceUtils {
 
     /**
      * Round price to standard currency precision.
-     * 
+     *
      * @param price the price to round
      * @return rounded price
      */
@@ -169,7 +169,7 @@ public class PriceUtils {
 
     /**
      * Check if price is valid (positive and reasonable).
-     * 
+     *
      * @param price the price to validate
      * @return true if price is valid
      */
@@ -198,9 +198,9 @@ public class PriceUtils {
 
     /**
      * Compare prices with tolerance for floating point precision.
-     * 
-     * @param price1 first price
-     * @param price2 second price
+     *
+     * @param price1    first price
+     * @param price2    second price
      * @param tolerance tolerance for comparison
      * @return true if prices are equal within tolerance
      */
@@ -219,7 +219,7 @@ public class PriceUtils {
 
     /**
      * Compare prices with default tolerance (0.01).
-     * 
+     *
      * @param price1 first price
      * @param price2 second price
      * @return true if prices are equal within default tolerance
@@ -230,7 +230,7 @@ public class PriceUtils {
 
     /**
      * Get the higher of two prices.
-     * 
+     *
      * @param price1 first price
      * @param price2 second price
      * @return higher price
@@ -243,7 +243,7 @@ public class PriceUtils {
 
     /**
      * Get the lower of two prices.
-     * 
+     *
      * @param price1 first price
      * @param price2 second price
      * @return lower price
@@ -256,7 +256,7 @@ public class PriceUtils {
 
     /**
      * Calculate average price from array of prices.
-     * 
+     *
      * @param prices array of prices
      * @return average price
      */
@@ -284,10 +284,10 @@ public class PriceUtils {
 
     /**
      * Format price range for display.
-     * 
+     *
      * @param minPrice minimum price
      * @param maxPrice maximum price
-     * @param locale locale for formatting
+     * @param locale   locale for formatting
      * @return formatted price range
      */
     public static String formatPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Locale locale) {
@@ -312,7 +312,7 @@ public class PriceUtils {
 
     /**
      * Format price range with default US locale.
-     * 
+     *
      * @param minPrice minimum price
      * @param maxPrice maximum price
      * @return formatted price range

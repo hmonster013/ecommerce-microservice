@@ -1,7 +1,8 @@
 package org.de013.common.constant;
 
 public final class ApiPaths {
-    private ApiPaths() {}
+    private ApiPaths() {
+    }
 
     // Cấp 1
     public static final String API = "/api";

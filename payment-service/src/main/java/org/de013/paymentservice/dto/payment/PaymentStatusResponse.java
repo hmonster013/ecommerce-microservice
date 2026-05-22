@@ -60,27 +60,27 @@ public class PaymentStatusResponse {
     @JsonIgnore
     public boolean canRetry() {
         return status == PaymentStatus.FAILED ||
-               status == PaymentStatus.REQUIRES_PAYMENT_METHOD;
+                status == PaymentStatus.REQUIRES_PAYMENT_METHOD;
     }
 
     @JsonIgnore
     public boolean needsUserAction() {
         return status == PaymentStatus.REQUIRES_ACTION ||
-               status == PaymentStatus.REQUIRES_CONFIRMATION;
+                status == PaymentStatus.REQUIRES_CONFIRMATION;
     }
 
     @JsonIgnore
     public boolean isInProgress() {
         return status == PaymentStatus.PENDING ||
-               status == PaymentStatus.PROCESSING ||
-               needsUserAction();
+                status == PaymentStatus.PROCESSING ||
+                needsUserAction();
     }
 
     @JsonIgnore
     public boolean isFinalStatus() {
         return status == PaymentStatus.SUCCEEDED ||
-               status == PaymentStatus.FAILED ||
-               status == PaymentStatus.CANCELED;
+                status == PaymentStatus.FAILED ||
+                status == PaymentStatus.CANCELED;
     }
 
     @JsonIgnore

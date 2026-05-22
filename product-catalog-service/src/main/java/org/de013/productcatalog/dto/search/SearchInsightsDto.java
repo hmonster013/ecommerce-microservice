@@ -144,13 +144,13 @@ public class SearchInsightsDto {
             }
         }
 
-        if (performance != null && performance.getSuggestionAcceptanceRate() != null && 
-            performance.getSuggestionAcceptanceRate() < 40.0) {
+        if (performance != null && performance.getSuggestionAcceptanceRate() != null &&
+                performance.getSuggestionAcceptanceRate() < 40.0) {
             return "Improve search suggestions - low acceptance rate indicates poor suggestion quality";
         }
 
-        if (userEngagement != null && userEngagement.getBounceRate() != null && 
-            userEngagement.getBounceRate() > 60.0) {
+        if (userEngagement != null && userEngagement.getBounceRate() != null &&
+                userEngagement.getBounceRate() > 60.0) {
             return "Reduce search bounce rate - users are not finding what they need";
         }
 
@@ -169,11 +169,11 @@ public class SearchInsightsDto {
             if (performance.getSearchSuccessRate() > 90.0) {
                 autoInsights.add("Excellent search success rate - users are finding relevant results");
             }
-            
+
             if (performance.getClickThroughRate() != null && performance.getClickThroughRate() > 70.0) {
                 autoInsights.add("High click-through rate indicates relevant search results");
             }
-            
+
             if (performance.getConversionRate() != null && performance.getConversionRate() > 10.0) {
                 autoInsights.add("Strong search-to-purchase conversion - search drives sales effectively");
             }
@@ -186,7 +186,7 @@ public class SearchInsightsDto {
             if (entries.size() >= 2) {
                 Long firstValue = entries.get(0).getValue();
                 Long lastValue = entries.get(entries.size() - 1).getValue();
-                
+
                 if (lastValue > firstValue * 1.2) {
                     autoInsights.add("Search volume is trending upward - consider scaling search infrastructure");
                 } else if (lastValue < firstValue * 0.8) {
@@ -203,7 +203,7 @@ public class SearchInsightsDto {
                     .map(Map.Entry::getKey)
                     .findFirst()
                     .orElse(12);
-            
+
             autoInsights.add("Peak search activity occurs at " + peakHour + ":00 - optimize for this time");
         }
 

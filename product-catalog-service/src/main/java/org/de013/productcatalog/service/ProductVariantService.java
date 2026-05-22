@@ -14,22 +14,22 @@ public interface ProductVariantService {
 
     // CRUD Operations
     ProductVariantDto createVariant(Long productId, ProductVariantCreateDto createDto);
-    
+
     ProductVariantDto updateVariant(Long variantId, ProductVariantUpdateDto updateDto);
-    
+
     void deleteVariant(Long variantId);
-    
+
     ProductVariantDto getVariantById(Long variantId);
-    
+
     ProductVariantDto getVariantBySku(String sku);
 
     // Product-specific Operations
     List<ProductVariantDto> getVariantsByProductId(Long productId);
-    
+
     List<ProductVariantDto> getActiveVariantsByProductId(Long productId);
-    
+
     List<ProductVariantGroupDto> getVariantGroupsByProductId(Long productId);
-    
+
     PageResponse<ProductVariantDto> getVariantsByProductId(Long productId, Pageable pageable);
 
     // Bulk Operations

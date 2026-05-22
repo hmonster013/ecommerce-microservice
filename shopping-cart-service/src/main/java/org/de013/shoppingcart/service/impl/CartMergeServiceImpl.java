@@ -45,7 +45,7 @@ public class CartMergeServiceImpl implements CartMergeService {
     public CartResponseDto mergeGuestCartToUser(String sessionId, String userId) {
         try {
             log.debug("Merging guest cart from session {} to user {}", sessionId, userId);
-            
+
             // Get guest cart
             Optional<Cart> guestCartOpt = cartRepository.findBySessionIdAndStatus(sessionId, CartStatus.ACTIVE);
             if (guestCartOpt.isEmpty()) {
@@ -53,12 +53,12 @@ public class CartMergeServiceImpl implements CartMergeService {
                 // Return existing user cart or create new one
                 return getOrCreateUserCart(userId);
             }
-            
+
             Cart guestCart = guestCartOpt.get();
-            
+
             // Get existing user cart
             Optional<Cart> userCartOpt = cartRepository.findByUserIdAndStatus(userId, CartStatus.ACTIVE);
-            
+
             Cart resultCart;
             if (userCartOpt.isPresent()) {
                 // Merge guest cart into existing user cart
@@ -67,17 +67,17 @@ public class CartMergeServiceImpl implements CartMergeService {
                 // Convert guest cart to user cart
                 resultCart = convertGuestCartToUserCart(guestCart, userId);
             }
-            
+
             // Update Redis session
             sessionManager.migrateGuestCartToUser(sessionId, userId);
-            
+
             // Analytics removed for basic functionality
-            
-            log.info("Successfully merged guest cart {} to user cart {} for user {}", 
+
+            log.info("Successfully merged guest cart {} to user cart {} for user {}",
                     guestCart.getId(), resultCart.getId(), userId);
-            
+
             return convertToResponseDto(resultCart);
-            
+
         } catch (Exception e) {
             log.error("Error merging guest cart to user: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to merge guest cart to user", e);
@@ -91,47 +91,47 @@ public class CartMergeServiceImpl implements CartMergeService {
     public CartResponseDto mergeUserCarts(String userId, List<Long> cartIdsToMerge, Long targetCartId) {
         try {
             log.debug("Merging carts {} into target cart {} for user {}", cartIdsToMerge, targetCartId, userId);
-            
+
             // Get target cart
             Optional<Cart> targetCartOpt = cartRepository.findByIdWithItems(targetCartId);
             if (targetCartOpt.isEmpty()) {
                 throw new RuntimeException("Target cart not found");
             }
-            
+
             Cart targetCart = targetCartOpt.get();
-            
+
             // Validate target cart belongs to user
             if (!userId.equals(targetCart.getUserId())) {
                 throw new RuntimeException("Target cart does not belong to user");
             }
-            
+
             // Get source carts
             List<Cart> sourceCarts = cartRepository.findAllById(cartIdsToMerge);
-            
+
             // Validate all source carts belong to user
             for (Cart sourceCart : sourceCarts) {
                 if (!userId.equals(sourceCart.getUserId())) {
                     throw new RuntimeException("Source cart does not belong to user: " + sourceCart.getId());
                 }
             }
-            
+
             // Merge each source cart into target
             for (Cart sourceCart : sourceCarts) {
                 if (!sourceCart.getId().equals(targetCartId)) {
                     mergeCartsInternal(sourceCart, targetCart, userId);
-                    
+
                     // Mark source cart as merged
                     sourceCart.setStatus(CartStatus.MERGED);
                     sourceCart.setMergedToCartId(targetCartId);
                     cartRepository.save(sourceCart);
                 }
             }
-            
-            log.info("Successfully merged {} carts into cart {} for user {}", 
+
+            log.info("Successfully merged {} carts into cart {} for user {}",
                     cartIdsToMerge.size(), targetCartId, userId);
-            
+
             return convertToResponseDto(targetCart);
-            
+
         } catch (Exception e) {
             log.error("Error merging user carts: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to merge user carts", e);
@@ -146,29 +146,29 @@ public class CartMergeServiceImpl implements CartMergeService {
     private Cart mergeCartsInternal(Cart sourceCart, Cart targetCart, String userId) {
         try {
             log.debug("Merging cart {} into cart {}", sourceCart.getId(), targetCart.getId());
-            
+
             List<CartItem> sourceItems = cartItemRepository.findByCartId(sourceCart.getId());
             List<CartItem> targetItems = cartItemRepository.findByCartId(targetCart.getId());
-            
+
             List<CartItem> itemsToSave = new ArrayList<>();
-            
+
             // Process each source item
             for (CartItem sourceItem : sourceItems) {
                 // Check if item already exists in target cart
                 Optional<CartItem> existingItemOpt = findMatchingItem(sourceItem, targetItems);
-                
+
                 if (existingItemOpt.isPresent()) {
                     // Merge quantities
                     CartItem existingItem = existingItemOpt.get();
                     int newQuantity = existingItem.getQuantity() + sourceItem.getQuantity();
-                    
+
                     // Validate merged quantity
                     if (newQuantity <= 99) { // Max quantity limit
                         existingItem.updateQuantity(newQuantity);
                         itemsToSave.add(existingItem);
-                        
-                        log.debug("Merged item {}: {} + {} = {}", 
-                                sourceItem.getProductId(), existingItem.getQuantity() - sourceItem.getQuantity(), 
+
+                        log.debug("Merged item {}: {} + {} = {}",
+                                sourceItem.getProductId(), existingItem.getQuantity() - sourceItem.getQuantity(),
                                 sourceItem.getQuantity(), newQuantity);
                     } else {
                         // Keep existing quantity if merge would exceed limit
@@ -178,24 +178,24 @@ public class CartMergeServiceImpl implements CartMergeService {
                     // Move item to target cart
                     sourceItem.setCart(targetCart);
                     itemsToSave.add(sourceItem);
-                    
+
                     log.debug("Moved item {} to target cart", sourceItem.getProductId());
                 }
             }
-            
+
             // Save all modified items
             cartItemRepository.saveAll(itemsToSave);
-            
+
             // Update target cart totals
             updateCartTotals(targetCart);
-            
+
             // Mark source cart as merged
             sourceCart.setStatus(CartStatus.MERGED);
             sourceCart.setMergedToCartId(targetCart.getId());
             cartRepository.save(sourceCart);
-            
+
             return targetCart;
-            
+
         } catch (Exception e) {
             log.error("Error in internal cart merge: {}", e.getMessage(), e);
             throw new RuntimeException("Internal cart merge failed", e);
@@ -208,19 +208,19 @@ public class CartMergeServiceImpl implements CartMergeService {
     private Cart convertGuestCartToUserCart(Cart guestCart, String userId) {
         try {
             log.debug("Converting guest cart {} to user cart for user {}", guestCart.getId(), userId);
-            
+
             // Update cart properties
             guestCart.setUserId(userId);
             guestCart.setCartType(CartType.USER);
             guestCart.setExpirationFromType(); // Extend expiration for user cart
             guestCart.setUpdatedAt(LocalDateTime.now());
-            
+
             // Save updated cart
             Cart userCart = cartRepository.save(guestCart);
-            
+
             log.info("Converted guest cart {} to user cart for user {}", guestCart.getId(), userId);
             return userCart;
-            
+
         } catch (Exception e) {
             log.error("Error converting guest cart to user cart: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to convert guest cart to user cart", e);
@@ -234,10 +234,10 @@ public class CartMergeServiceImpl implements CartMergeService {
      */
     private Optional<CartItem> findMatchingItem(CartItem sourceItem, List<CartItem> targetItems) {
         return targetItems.stream()
-                .filter(targetItem -> 
-                    targetItem.getProductId().equals(sourceItem.getProductId()) &&
-                    Objects.equals(targetItem.getVariantId(), sourceItem.getVariantId()) &&
-                    targetItem.getUnitPrice().equals(sourceItem.getUnitPrice()))
+                .filter(targetItem ->
+                        targetItem.getProductId().equals(sourceItem.getProductId()) &&
+                                Objects.equals(targetItem.getVariantId(), sourceItem.getVariantId()) &&
+                                targetItem.getUnitPrice().equals(sourceItem.getUnitPrice()))
                 .findFirst();
     }
 
@@ -247,12 +247,12 @@ public class CartMergeServiceImpl implements CartMergeService {
     private CartItem mergeItemProperties(CartItem sourceItem, CartItem targetItem) {
         // Merge special instructions
         if (sourceItem.getSpecialInstructions() != null && !sourceItem.getSpecialInstructions().isEmpty()) {
-            String mergedInstructions = targetItem.getSpecialInstructions() != null ? 
-                targetItem.getSpecialInstructions() + "; " + sourceItem.getSpecialInstructions() :
-                sourceItem.getSpecialInstructions();
+            String mergedInstructions = targetItem.getSpecialInstructions() != null ?
+                    targetItem.getSpecialInstructions() + "; " + sourceItem.getSpecialInstructions() :
+                    sourceItem.getSpecialInstructions();
             targetItem.setSpecialInstructions(mergedInstructions);
         }
-        
+
         // Merge gift options (prefer source if it's a gift)
         if (Boolean.TRUE.equals(sourceItem.getIsGift())) {
             targetItem.setIsGift(true);
@@ -263,7 +263,7 @@ public class CartMergeServiceImpl implements CartMergeService {
                 targetItem.setGiftWrapType(sourceItem.getGiftWrapType());
             }
         }
-        
+
         return targetItem;
     }
 
@@ -337,8 +337,8 @@ public class CartMergeServiceImpl implements CartMergeService {
 
         cart.setSubtotal(subtotal);
         cart.setTotalAmount(subtotal.add(cart.getTaxAmount() != null ? cart.getTaxAmount() : BigDecimal.ZERO)
-                                   .add(cart.getShippingAmount() != null ? cart.getShippingAmount() : BigDecimal.ZERO)
-                                   .subtract(cart.getDiscountAmount() != null ? cart.getDiscountAmount() : BigDecimal.ZERO));
+                .add(cart.getShippingAmount() != null ? cart.getShippingAmount() : BigDecimal.ZERO)
+                .subtract(cart.getDiscountAmount() != null ? cart.getDiscountAmount() : BigDecimal.ZERO));
         cart.setItemCount(itemCount);
         cart.setTotalQuantity(totalQuantity);
         cart.setUpdatedAt(LocalDateTime.now());

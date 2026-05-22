@@ -213,14 +213,14 @@ public interface RefundRepository extends JpaRepository<Refund, Long>, JpaSpecif
      * Get refund statistics by payment ID
      */
     @Query("SELECT " +
-           "COUNT(r) as totalRefunds, " +
-           "COUNT(CASE WHEN r.status = 'SUCCEEDED' THEN 1 END) as successfulRefunds, " +
-           "COUNT(CASE WHEN r.status = 'FAILED' THEN 1 END) as failedRefunds, " +
-           "COUNT(CASE WHEN r.status = 'PENDING' THEN 1 END) as pendingRefunds, " +
-           "COUNT(CASE WHEN r.refundType = 'FULL' THEN 1 END) as fullRefunds, " +
-           "COUNT(CASE WHEN r.refundType = 'PARTIAL' THEN 1 END) as partialRefunds, " +
-           "COALESCE(SUM(CASE WHEN r.status = 'SUCCEEDED' THEN r.amount ELSE 0 END), 0) as totalRefundedAmount " +
-           "FROM Refund r WHERE r.paymentId = :paymentId")
+            "COUNT(r) as totalRefunds, " +
+            "COUNT(CASE WHEN r.status = 'SUCCEEDED' THEN 1 END) as successfulRefunds, " +
+            "COUNT(CASE WHEN r.status = 'FAILED' THEN 1 END) as failedRefunds, " +
+            "COUNT(CASE WHEN r.status = 'PENDING' THEN 1 END) as pendingRefunds, " +
+            "COUNT(CASE WHEN r.refundType = 'FULL' THEN 1 END) as fullRefunds, " +
+            "COUNT(CASE WHEN r.refundType = 'PARTIAL' THEN 1 END) as partialRefunds, " +
+            "COALESCE(SUM(CASE WHEN r.status = 'SUCCEEDED' THEN r.amount ELSE 0 END), 0) as totalRefundedAmount " +
+            "FROM Refund r WHERE r.paymentId = :paymentId")
     Object[] getRefundStatisticsByPaymentId(@Param("paymentId") Long paymentId);
 
     // ========== APPROVAL WORKFLOW QUERIES ==========
@@ -311,6 +311,6 @@ public interface RefundRepository extends JpaRepository<Refund, Long>, JpaSpecif
      * Find duplicate refunds by Stripe refund ID
      */
     @Query("SELECT r FROM Refund r WHERE r.stripeRefundId IN " +
-           "(SELECT r2.stripeRefundId FROM Refund r2 WHERE r2.stripeRefundId IS NOT NULL GROUP BY r2.stripeRefundId HAVING COUNT(r2.stripeRefundId) > 1)")
+            "(SELECT r2.stripeRefundId FROM Refund r2 WHERE r2.stripeRefundId IS NOT NULL GROUP BY r2.stripeRefundId HAVING COUNT(r2.stripeRefundId) > 1)")
     List<Refund> findDuplicateRefundsByStripeRefundId();
 }

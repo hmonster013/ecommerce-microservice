@@ -91,11 +91,11 @@ public class Inventory extends BaseEntity {
         if (!trackInventory) {
             return true; // If not tracking inventory, assume always available
         }
-        
+
         if (isInStock() && getAvailableQuantity() >= requestedQuantity) {
             return true;
         }
-        
+
         return allowBackorder;
     }
 
@@ -127,8 +127,8 @@ public class Inventory extends BaseEntity {
     public void removeStock(int quantityToRemove) {
         if (quantityToRemove > this.quantity) {
             throw new IllegalArgumentException(
-                String.format("Cannot remove %d items. Only %d available in stock",
-                    quantityToRemove, this.quantity)
+                    String.format("Cannot remove %d items. Only %d available in stock",
+                            quantityToRemove, this.quantity)
             );
         }
         this.quantity -= quantityToRemove;

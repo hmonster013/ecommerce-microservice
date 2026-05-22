@@ -2,10 +2,10 @@ package org.de013.paymentservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
-
+import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
+import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.de013.paymentservice.exception.PaymentNotFoundException;
@@ -13,7 +13,6 @@ import org.de013.paymentservice.exception.PaymentProcessingException;
 import org.de013.paymentservice.gateway.PaymentGateway;
 import org.de013.paymentservice.gateway.PaymentGatewayFactory;
 import org.de013.paymentservice.gateway.stripe.StripePaymentGateway;
-import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
 import org.de013.paymentservice.mapper.PaymentMapper;
 import org.de013.paymentservice.repository.PaymentRepository;
 import org.de013.paymentservice.util.PaymentNumberGenerator;
@@ -44,12 +43,12 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse processPayment(ProcessPaymentRequest request) {
-        log.info("Processing payment for order: {}, user: {}, amount: {}", 
+        log.info("Processing payment for order: {}, user: {}, amount: {}",
                 request.getOrderId(), request.getUserId(), request.getAmount());
 
         try {
             validatePaymentRequest(request);
-            
+
             Payment payment = createPaymentEntity(request);
             payment = paymentRepository.save(payment);
 
@@ -86,8 +85,8 @@ public class PaymentServiceImpl implements PaymentService {
 
             // Confirm payment intent with Stripe
             StripePaymentResponse stripeResponse = stripeGateway.confirmPaymentIntent(
-                payment.getStripePaymentIntentId(),
-                paymentMethodId
+                    payment.getStripePaymentIntentId(),
+                    paymentMethodId
             );
 
             // Update payment based on Stripe response
@@ -123,11 +122,11 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse cancelPayment(Long paymentId, String reason) {
         Payment payment = getPaymentEntityById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-        
+
         payment.setStatus(PaymentStatus.CANCELED);
         payment.setFailureReason(reason);
         payment = paymentRepository.save(payment);
-        
+
         return paymentMapper.toPaymentResponse(payment);
     }
 
@@ -262,7 +261,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
         Payment payment = paymentOpt.get();
         return payment.getStatus() == PaymentStatus.PENDING ||
-               payment.getStatus() == PaymentStatus.REQUIRES_ACTION;
+                payment.getStatus() == PaymentStatus.REQUIRES_ACTION;
     }
 
     @Override
@@ -297,7 +296,7 @@ public class PaymentServiceImpl implements PaymentService {
             Pageable pageable) {
 
         return paymentRepository.searchPayments(
-                paymentNumber, userId, orderId, status, minAmount, maxAmount, startDate, endDate, pageable)
+                        paymentNumber, userId, orderId, status, minAmount, maxAmount, startDate, endDate, pageable)
                 .map(paymentMapper::toPaymentResponse);
     }
 

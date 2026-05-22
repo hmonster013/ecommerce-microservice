@@ -23,11 +23,11 @@ import java.util.regex.Pattern;
  * @see ConstraintValidator
  */
 public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
-    
+
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
-        "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+            "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
     );
-    
+
     private static final int MAX_EMAIL_LENGTH = 254; // RFC 5321 limit
     private static final int MAX_LOCAL_PART_LENGTH = 64; // RFC 5321 limit
     private static final int MAX_DOMAIN_LENGTH = 253; // RFC 1035 limit
@@ -35,33 +35,33 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
 
     // Common disposable email domains - expanded list for better security
     private static final Set<String> DISPOSABLE_DOMAINS = Set.of(
-        "10minutemail.com", "guerrillamail.com", "mailinator.com",
-        "tempmail.org", "throwaway.email", "temp-mail.org",
-        "yopmail.com", "maildrop.cc", "sharklasers.com",
-        "guerrillamailblock.com", "pokemail.net", "spam4.me",
-        "dispostable.com", "fakeinbox.com", "getnada.com",
-        "harakirimail.com", "incognitomail.org", "jetable.org",
-        "mytrashmail.com", "no-spam.ws", "noclickemail.com",
-        "trashmail.ws", "wegwerfmail.de", "zehnminutenmail.de"
+            "10minutemail.com", "guerrillamail.com", "mailinator.com",
+            "tempmail.org", "throwaway.email", "temp-mail.org",
+            "yopmail.com", "maildrop.cc", "sharklasers.com",
+            "guerrillamailblock.com", "pokemail.net", "spam4.me",
+            "dispostable.com", "fakeinbox.com", "getnada.com",
+            "harakirimail.com", "incognitomail.org", "jetable.org",
+            "mytrashmail.com", "no-spam.ws", "noclickemail.com",
+            "trashmail.ws", "wegwerfmail.de", "zehnminutenmail.de"
     );
 
     // Blocked domains for security and testing reasons
     private static final Set<String> BLOCKED_DOMAINS = Set.of(
-        "example.com", "test.com", "localhost", "invalid.com",
-        "example.org", "example.net", "test.org", "test.net"
+            "example.com", "test.com", "localhost", "invalid.com",
+            "example.org", "example.net", "test.org", "test.net"
     );
-    
+
     private boolean allowDisposable;
 
     @Override
     public void initialize(ValidEmail constraintAnnotation) {
         this.allowDisposable = constraintAnnotation.allowDisposable();
     }
-    
+
     /**
      * Validates the email address according to RFC standards and business rules
      *
-     * @param email the email address to validate
+     * @param email   the email address to validate
      * @param context the constraint validator context for custom error messages
      * @return true if the email is valid, false otherwise
      */
@@ -121,12 +121,12 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
 
         return true;
     }
-    
+
     /**
      * Validates the local part of email (before @) according to RFC 5321
      *
      * @param localPart the local part to validate
-     * @param context the constraint validator context
+     * @param context   the constraint validator context
      * @return true if valid, false otherwise
      */
     private boolean isValidLocalPart(String localPart, ConstraintValidatorContext context) {
@@ -166,11 +166,11 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
 
         return true;
     }
-    
+
     /**
      * Validates the domain part of email (after @) according to RFC 1035
      *
-     * @param domain the domain to validate
+     * @param domain  the domain to validate
      * @param context the constraint validator context
      * @return true if valid, false otherwise
      */

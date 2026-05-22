@@ -38,19 +38,19 @@ public class ProductFilterDto {
     @Builder
     @Schema(description = "Category filter")
     public static class CategoryFilter {
-        
+
         @Schema(description = "Category ID", example = "1")
         private Long id;
-        
+
         @Schema(description = "Category name", example = "Electronics")
         private String name;
-        
+
         @Schema(description = "Category slug", example = "electronics")
         private String slug;
-        
+
         @Schema(description = "Product count", example = "150")
         private Integer productCount;
-        
+
         @Schema(description = "Child categories")
         private List<CategoryFilter> children;
     }
@@ -62,10 +62,10 @@ public class ProductFilterDto {
     @Builder
     @Schema(description = "Brand filter")
     public static class BrandFilter {
-        
+
         @Schema(description = "Brand name", example = "Apple")
         private String name;
-        
+
         @Schema(description = "Product count", example = "25")
         private Integer productCount;
     }
@@ -77,16 +77,16 @@ public class ProductFilterDto {
     @Builder
     @Schema(description = "Price range")
     public static class PriceRange {
-        
+
         @Schema(description = "Minimum price", example = "0.00")
         private BigDecimal min;
-        
+
         @Schema(description = "Maximum price", example = "2999.99")
         private BigDecimal max;
-        
+
         @Schema(description = "Price ranges")
         private List<PriceRangeOption> ranges;
-        
+
         @Getter
         @Setter
         @NoArgsConstructor
@@ -94,16 +94,16 @@ public class ProductFilterDto {
         @Builder
         @Schema(description = "Price range option")
         public static class PriceRangeOption {
-            
+
             @Schema(description = "Range label", example = "$100 - $500")
             private String label;
-            
+
             @Schema(description = "Minimum price", example = "100.00")
             private BigDecimal min;
-            
+
             @Schema(description = "Maximum price", example = "500.00")
             private BigDecimal max;
-            
+
             @Schema(description = "Product count", example = "45")
             private Integer productCount;
         }
@@ -116,13 +116,13 @@ public class ProductFilterDto {
     @Builder
     @Schema(description = "Rating filter")
     public static class RatingFilter {
-        
+
         @Schema(description = "Minimum rating", example = "4")
         private Integer minRating;
-        
+
         @Schema(description = "Rating label", example = "4 stars & up")
         private String label;
-        
+
         @Schema(description = "Product count", example = "120")
         private Integer productCount;
     }
@@ -134,13 +134,13 @@ public class ProductFilterDto {
     @Builder
     @Schema(description = "Feature filter")
     public static class FeatureFilter {
-        
+
         @Schema(description = "Feature name", example = "Featured")
         private String name;
-        
+
         @Schema(description = "Feature key", example = "featured")
         private String key;
-        
+
         @Schema(description = "Product count", example = "15")
         private Integer productCount;
     }

@@ -39,9 +39,9 @@ public class BothNotificationResponse {
     @Schema(description = "Timestamp when the response was created", example = "2023-12-07T10:30:00")
     private LocalDateTime timestamp;
 
-    public static BothNotificationResponse success(String message, 
-                                                  Long emailNotificationId, String emailStatus,
-                                                  Long smsNotificationId, String smsStatus) {
+    public static BothNotificationResponse success(String message,
+                                                   Long emailNotificationId, String emailStatus,
+                                                   Long smsNotificationId, String smsStatus) {
         return BothNotificationResponse.builder()
                 .success(true)
                 .message(message)

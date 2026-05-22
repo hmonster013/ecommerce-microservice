@@ -178,15 +178,15 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
      * Search transactions by criteria
      */
     @Query("SELECT pt FROM PaymentTransaction pt WHERE " +
-           "(:paymentId IS NULL OR pt.paymentId = :paymentId) AND " +
-           "(:type IS NULL OR pt.type = :type) AND " +
-           "(:status IS NULL OR pt.status = :status) AND " +
-           "(:minAmount IS NULL OR pt.amount >= :minAmount) AND " +
-           "(:maxAmount IS NULL OR pt.amount <= :maxAmount) AND " +
-           "(:startDate IS NULL OR pt.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR pt.createdAt <= :endDate) AND " +
-           "(:stripeChargeId IS NULL OR pt.stripeChargeId = :stripeChargeId) " +
-           "ORDER BY pt.createdAt DESC")
+            "(:paymentId IS NULL OR pt.paymentId = :paymentId) AND " +
+            "(:type IS NULL OR pt.type = :type) AND " +
+            "(:status IS NULL OR pt.status = :status) AND " +
+            "(:minAmount IS NULL OR pt.amount >= :minAmount) AND " +
+            "(:maxAmount IS NULL OR pt.amount <= :maxAmount) AND " +
+            "(:startDate IS NULL OR pt.createdAt >= :startDate) AND " +
+            "(:endDate IS NULL OR pt.createdAt <= :endDate) AND " +
+            "(:stripeChargeId IS NULL OR pt.stripeChargeId = :stripeChargeId) " +
+            "ORDER BY pt.createdAt DESC")
     Page<PaymentTransaction> searchTransactions(
             @Param("paymentId") Long paymentId,
             @Param("type") TransactionType type,
@@ -241,13 +241,13 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
      * Get transaction statistics by payment ID
      */
     @Query("SELECT " +
-           "COUNT(pt) as totalTransactions, " +
-           "COUNT(CASE WHEN pt.status = 'SUCCEEDED' THEN 1 END) as successfulTransactions, " +
-           "COUNT(CASE WHEN pt.status = 'FAILED' THEN 1 END) as failedTransactions, " +
-           "COUNT(CASE WHEN pt.type = 'CHARGE' THEN 1 END) as chargeTransactions, " +
-           "COUNT(CASE WHEN pt.type IN ('REFUND', 'PARTIAL_REFUND') THEN 1 END) as refundTransactions, " +
-           "COALESCE(SUM(CASE WHEN pt.status = 'SUCCEEDED' THEN pt.amount ELSE 0 END), 0) as totalSuccessfulAmount " +
-           "FROM PaymentTransaction pt WHERE pt.paymentId = :paymentId")
+            "COUNT(pt) as totalTransactions, " +
+            "COUNT(CASE WHEN pt.status = 'SUCCEEDED' THEN 1 END) as successfulTransactions, " +
+            "COUNT(CASE WHEN pt.status = 'FAILED' THEN 1 END) as failedTransactions, " +
+            "COUNT(CASE WHEN pt.type = 'CHARGE' THEN 1 END) as chargeTransactions, " +
+            "COUNT(CASE WHEN pt.type IN ('REFUND', 'PARTIAL_REFUND') THEN 1 END) as refundTransactions, " +
+            "COALESCE(SUM(CASE WHEN pt.status = 'SUCCEEDED' THEN pt.amount ELSE 0 END), 0) as totalSuccessfulAmount " +
+            "FROM PaymentTransaction pt WHERE pt.paymentId = :paymentId")
     Object[] getTransactionStatisticsByPaymentId(@Param("paymentId") Long paymentId);
 
     // ========== PROCESSING STATUS QUERIES ==========
@@ -307,6 +307,6 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
      * Find duplicate transactions by Stripe charge ID
      */
     @Query("SELECT pt FROM PaymentTransaction pt WHERE pt.stripeChargeId IN " +
-           "(SELECT pt2.stripeChargeId FROM PaymentTransaction pt2 WHERE pt2.stripeChargeId IS NOT NULL GROUP BY pt2.stripeChargeId HAVING COUNT(pt2.stripeChargeId) > 1)")
+            "(SELECT pt2.stripeChargeId FROM PaymentTransaction pt2 WHERE pt2.stripeChargeId IS NOT NULL GROUP BY pt2.stripeChargeId HAVING COUNT(pt2.stripeChargeId) > 1)")
     List<PaymentTransaction> findDuplicateTransactionsByStripeChargeId();
 }

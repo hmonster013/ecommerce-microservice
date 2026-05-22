@@ -11,10 +11,10 @@ public class InventoryNotFoundException extends BaseBusinessException {
 
     public InventoryNotFoundException(Long productId) {
         super(
-            String.format("Inventory not found for product ID %d", productId),
-            ERROR_CODE,
-            HttpStatus.NOT_FOUND,
-            productId
+                String.format("Inventory not found for product ID %d", productId),
+                ERROR_CODE,
+                HttpStatus.NOT_FOUND,
+                productId
         );
     }
 

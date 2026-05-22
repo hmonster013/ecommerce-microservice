@@ -51,9 +51,9 @@ public class StripePaymentMethodService {
 
             // Add billing details if provided
             if (request.hasBillingDetails()) {
-                PaymentMethodCreateParams.BillingDetails.Builder billingBuilder = 
+                PaymentMethodCreateParams.BillingDetails.Builder billingBuilder =
                         PaymentMethodCreateParams.BillingDetails.builder();
-                
+
                 if (request.getBillingDetails().getName() != null) {
                     billingBuilder.setName(request.getBillingDetails().getName());
                 }
@@ -66,7 +66,7 @@ public class StripePaymentMethodService {
 
                 // Add address if provided
                 if (request.getBillingDetails().getAddress() != null) {
-                    PaymentMethodCreateParams.BillingDetails.Address address = 
+                    PaymentMethodCreateParams.BillingDetails.Address address =
                             PaymentMethodCreateParams.BillingDetails.Address.builder()
                                     .setLine1(request.getBillingDetails().getAddress().getLine1())
                                     .setLine2(request.getBillingDetails().getAddress().getLine2())
@@ -141,7 +141,7 @@ public class StripePaymentMethodService {
         try {
             PaymentMethodListParams.Builder paramsBuilder = PaymentMethodListParams.builder()
                     .setCustomer(customerId);
-            
+
             if (type != null) {
                 switch (type.toLowerCase()) {
                     case "card" -> paramsBuilder.setType(PaymentMethodListParams.Type.CARD);
@@ -152,11 +152,11 @@ public class StripePaymentMethodService {
             }
 
             PaymentMethodCollection paymentMethods = PaymentMethod.list(paramsBuilder.build());
-            
+
             return paymentMethods.getData().stream()
                     .map(this::mapToPaymentMethodResponse)
                     .toList();
-                    
+
         } catch (StripeException e) {
             log.error("Failed to list Stripe payment methods for customer: {}", customerId, e);
             throw new PaymentGatewayException("Failed to list payment methods: " + e.getMessage(), e);
@@ -214,7 +214,7 @@ public class StripePaymentMethodService {
                     .network(paymentMethod.getCard().getNetworks() != null ?
                             paymentMethod.getCard().getNetworks().getPreferred() : null)
                     .checks(checks)
-                    .wallet(paymentMethod.getCard().getWallet() != null ? 
+                    .wallet(paymentMethod.getCard().getWallet() != null ?
                             paymentMethod.getCard().getWallet().getType() : null)
                     .build());
         }

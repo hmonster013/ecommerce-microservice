@@ -21,8 +21,8 @@ public class ProductImageCreateDto {
 
     @NotBlank(message = "{image.url.required}")
     @Size(max = 500, message = "{image.url.too.long}")
-    @Pattern(regexp = "^https?://.*\\.(jpg|jpeg|png|gif|webp)$", 
-             message = "{image.url.invalid.format}")
+    @Pattern(regexp = "^https?://.*\\.(jpg|jpeg|png|gif|webp)$",
+            message = "{image.url.invalid.format}")
     @Schema(description = "Image URL", example = "https://example.com/images/iphone-15-pro-main.jpg", required = true)
     private String url;
 
@@ -86,11 +86,11 @@ public class ProductImageCreateDto {
         if (fileFormat == null || url == null) {
             return true; // Optional field
         }
-        
+
         String urlExtension = url.substring(url.lastIndexOf('.') + 1).toUpperCase();
-        return fileFormat.equalsIgnoreCase(urlExtension) || 
-               (fileFormat.equals("JPG") && urlExtension.equals("JPEG")) ||
-               (fileFormat.equals("JPEG") && urlExtension.equals("JPG"));
+        return fileFormat.equalsIgnoreCase(urlExtension) ||
+                (fileFormat.equals("JPG") && urlExtension.equals("JPEG")) ||
+                (fileFormat.equals("JPEG") && urlExtension.equals("JPG"));
     }
 
     @JsonIgnore

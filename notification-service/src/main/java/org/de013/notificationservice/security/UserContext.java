@@ -16,12 +16,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserContext {
-    
+
     private Long userId;
     private String username;
     private String email;
     private List<String> roles;
-    
+
     /**
      * Check if user has a specific role
      */
@@ -29,18 +29,18 @@ public class UserContext {
         if (roles == null) {
             return false;
         }
-        
+
         String roleToCheck = role.startsWith("ROLE_") ? role : "ROLE_" + role;
         return roles.contains(roleToCheck);
     }
-    
+
     /**
      * Check if user has admin role
      */
     public boolean isAdmin() {
         return hasRole("ADMIN");
     }
-    
+
     /**
      * Check if user has user role
      */

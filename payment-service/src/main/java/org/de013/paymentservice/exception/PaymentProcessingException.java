@@ -89,41 +89,41 @@ public class PaymentProcessingException extends BusinessException {
     // Static factory methods for common scenarios
     public static PaymentProcessingException forProcessing(String paymentId, String reason) {
         return new PaymentProcessingException(
-            "Failed to process payment: " + reason,
-            paymentId,
-            "PROCESS"
+                "Failed to process payment: " + reason,
+                paymentId,
+                "PROCESS"
         );
     }
 
     public static PaymentProcessingException forConfirmation(String paymentId, String reason) {
         return new PaymentProcessingException(
-            "Failed to confirm payment: " + reason,
-            paymentId,
-            "CONFIRM"
+                "Failed to confirm payment: " + reason,
+                paymentId,
+                "CONFIRM"
         );
     }
 
     public static PaymentProcessingException forCapture(String paymentId, String reason) {
         return new PaymentProcessingException(
-            "Failed to capture payment: " + reason,
-            paymentId,
-            "CAPTURE"
+                "Failed to capture payment: " + reason,
+                paymentId,
+                "CAPTURE"
         );
     }
 
     public static PaymentProcessingException forCancellation(String paymentId, String reason) {
         return new PaymentProcessingException(
-            "Failed to cancel payment: " + reason,
-            paymentId,
-            "CANCEL"
+                "Failed to cancel payment: " + reason,
+                paymentId,
+                "CANCEL"
         );
     }
 
     public static PaymentProcessingException forSync(String paymentId, String reason) {
         return new PaymentProcessingException(
-            "Failed to sync payment with provider: " + reason,
-            paymentId,
-            "SYNC"
+                "Failed to sync payment with provider: " + reason,
+                paymentId,
+                "SYNC"
         );
     }
 }

@@ -28,9 +28,9 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     private static final String HEADER_USER_ROLES = "X-User-Roles";
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                  HttpServletResponse response, 
-                                  FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
 
         try {
             // Debug logging to see ALL headers received
@@ -76,11 +76,11 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        
+
         // Skip filter for public endpoints
-        return path.contains("/auth/") || 
-               path.contains("/actuator/") || 
-               path.contains("/swagger-ui") || 
-               path.contains("/v3/api-docs");
+        return path.contains("/auth/") ||
+                path.contains("/actuator/") ||
+                path.contains("/swagger-ui") ||
+                path.contains("/v3/api-docs");
     }
 }

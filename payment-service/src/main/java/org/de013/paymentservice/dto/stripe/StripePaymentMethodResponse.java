@@ -154,14 +154,14 @@ public class StripePaymentMethodResponse {
         }
 
         java.time.LocalDate now = java.time.LocalDate.now();
-        return now.getYear() > card.getExpYear() || 
-               (now.getYear() == card.getExpYear() && now.getMonthValue() > card.getExpMonth());
+        return now.getYear() > card.getExpYear() ||
+                (now.getYear() == card.getExpYear() && now.getMonthValue() > card.getExpMonth());
     }
 
     @JsonIgnore
     public String getExpiryString() {
-        if (isCardPaymentMethod() && card != null && 
-            card.getExpMonth() != null && card.getExpYear() != null) {
+        if (isCardPaymentMethod() && card != null &&
+                card.getExpMonth() != null && card.getExpYear() != null) {
             return String.format("%02d/%d", card.getExpMonth(), card.getExpYear());
         }
         return null;
@@ -175,8 +175,8 @@ public class StripePaymentMethodResponse {
 
         StripeChecks checks = card.getChecks();
         return !"fail".equals(checks.getCvcCheck()) &&
-               !"fail".equals(checks.getAddressLine1Check()) &&
-               !"fail".equals(checks.getAddressPostalCodeCheck());
+                !"fail".equals(checks.getAddressLine1Check()) &&
+                !"fail".equals(checks.getAddressPostalCodeCheck());
     }
 
     @JsonIgnore
@@ -187,7 +187,7 @@ public class StripePaymentMethodResponse {
 
         StripeAddress addr = billingDetails.getAddress();
         StringBuilder sb = new StringBuilder();
-        
+
         if (addr.getLine1() != null) sb.append(addr.getLine1());
         if (addr.getLine2() != null) sb.append(", ").append(addr.getLine2());
         if (addr.getCity() != null) sb.append(", ").append(addr.getCity());

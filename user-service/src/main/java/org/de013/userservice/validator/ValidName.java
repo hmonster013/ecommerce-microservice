@@ -14,23 +14,23 @@ import java.lang.annotation.*;
 @Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidName {
-    
+
     String message() default "{firstName.invalid}";
-    
+
     Class<?>[] groups() default {};
-    
+
     Class<? extends Payload>[] payload() default {};
-    
+
     /**
      * Minimum length for the name
      */
     int min() default 2;
-    
+
     /**
      * Maximum length for the name
      */
     int max() default 50;
-    
+
     /**
      * Whether to allow special characters like apostrophes and hyphens
      */

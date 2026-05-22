@@ -86,7 +86,7 @@ public class PaymentResponse {
         private BigDecimal amount;
         private String status;
         private String description;
-        
+
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime createdAt;
     }
@@ -101,7 +101,7 @@ public class PaymentResponse {
         private BigDecimal amount;
         private String status;
         private String reason;
-        
+
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime createdAt;
     }
@@ -114,10 +114,10 @@ public class PaymentResponse {
 
     @JsonIgnore
     public boolean canBeCanceled() {
-        return status == PaymentStatus.PENDING || 
-               status == PaymentStatus.REQUIRES_ACTION ||
-               status == PaymentStatus.REQUIRES_CONFIRMATION ||
-               status == PaymentStatus.REQUIRES_PAYMENT_METHOD;
+        return status == PaymentStatus.PENDING ||
+                status == PaymentStatus.REQUIRES_ACTION ||
+                status == PaymentStatus.REQUIRES_CONFIRMATION ||
+                status == PaymentStatus.REQUIRES_PAYMENT_METHOD;
     }
 
     @JsonIgnore

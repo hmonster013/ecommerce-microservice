@@ -7,21 +7,17 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Filter that reads user context from headers set by API Gateway
- * 
+ * <p>
  * Note: X-User-Id contains Keycloak UUID (sub claim), not database user ID
  * API Gateway handles all authentication & authorization, this just reads user context
  */
@@ -35,9 +31,9 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     private static final String HEADER_USER_EMAIL = "X-User-Email";
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                  HttpServletResponse response, 
-                                  FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
 
         try {
             String keycloakId = request.getHeader(HEADER_KEYCLOAK_ID);
@@ -68,11 +64,11 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        
+
         // Skip filter for public endpoints
-        return path.contains("/actuator/") || 
-               path.contains("/swagger-ui") || 
-               path.contains("/v3/api-docs");
+        return path.contains("/actuator/") ||
+                path.contains("/swagger-ui") ||
+                path.contains("/v3/api-docs");
     }
 
     /**
@@ -89,9 +85,9 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
                 null,
                 Collections.emptyList()
         );
-        
+
         auth.setDetails(new HeaderUserDetails(keycloakId, username, email));
-        
+
         return auth;
     }
 
@@ -109,8 +105,16 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             this.email = email;
         }
 
-        public String getKeycloakId() { return keycloakId; }
-        public String getUsername() { return username; }
-        public String getEmail() { return email; }
+        public String getKeycloakId() {
+            return keycloakId;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getEmail() {
+            return email;
+        }
     }
 }

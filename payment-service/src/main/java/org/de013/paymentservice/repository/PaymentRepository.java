@@ -176,15 +176,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Find payments by search criteria
      */
     @Query("SELECT p FROM Payment p WHERE " +
-           "(:paymentNumber IS NULL OR p.paymentNumber LIKE %:paymentNumber%) AND " +
-           "(:userId IS NULL OR p.userId = :userId) AND " +
-           "(:orderId IS NULL OR p.orderId = :orderId) AND " +
-           "(:status IS NULL OR p.status = :status) AND " +
-           "(:minAmount IS NULL OR p.amount >= :minAmount) AND " +
-           "(:maxAmount IS NULL OR p.amount <= :maxAmount) AND " +
-           "(:startDate IS NULL OR p.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR p.createdAt <= :endDate) " +
-           "ORDER BY p.createdAt DESC")
+            "(:paymentNumber IS NULL OR p.paymentNumber LIKE %:paymentNumber%) AND " +
+            "(:userId IS NULL OR p.userId = :userId) AND " +
+            "(:orderId IS NULL OR p.orderId = :orderId) AND " +
+            "(:status IS NULL OR p.status = :status) AND " +
+            "(:minAmount IS NULL OR p.amount >= :minAmount) AND " +
+            "(:maxAmount IS NULL OR p.amount <= :maxAmount) AND " +
+            "(:startDate IS NULL OR p.createdAt >= :startDate) AND " +
+            "(:endDate IS NULL OR p.createdAt <= :endDate) " +
+            "ORDER BY p.createdAt DESC")
     Page<Payment> searchPayments(
             @Param("paymentNumber") String paymentNumber,
             @Param("userId") Long userId,
@@ -227,11 +227,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Get payment statistics by user ID
      */
     @Query("SELECT " +
-           "COUNT(p) as totalPayments, " +
-           "COALESCE(SUM(CASE WHEN p.status = 'SUCCEEDED' THEN p.amount ELSE 0 END), 0) as totalSuccessfulAmount, " +
-           "COUNT(CASE WHEN p.status = 'SUCCEEDED' THEN 1 END) as successfulPayments, " +
-           "COUNT(CASE WHEN p.status = 'FAILED' THEN 1 END) as failedPayments " +
-           "FROM Payment p WHERE p.userId = :userId")
+            "COUNT(p) as totalPayments, " +
+            "COALESCE(SUM(CASE WHEN p.status = 'SUCCEEDED' THEN p.amount ELSE 0 END), 0) as totalSuccessfulAmount, " +
+            "COUNT(CASE WHEN p.status = 'SUCCEEDED' THEN 1 END) as successfulPayments, " +
+            "COUNT(CASE WHEN p.status = 'FAILED' THEN 1 END) as failedPayments " +
+            "FROM Payment p WHERE p.userId = :userId")
     Object[] getPaymentStatisticsByUserId(@Param("userId") Long userId);
 
     // ========== EXISTENCE CHECKS ==========

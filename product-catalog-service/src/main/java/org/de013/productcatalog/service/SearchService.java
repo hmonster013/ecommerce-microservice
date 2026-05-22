@@ -14,20 +14,20 @@ public interface SearchService {
 
     // Main Search Operations
     SearchResultDto searchProducts(ProductSearchDto searchDto);
-    
+
     PageResponse<ProductSummaryDto> simpleSearch(String query, Pageable pageable);
-    
+
     PageResponse<ProductSummaryDto> fullTextSearch(String query, Pageable pageable);
-    
+
     PageResponse<ProductSummaryDto> advancedSearch(ProductSearchDto searchDto);
 
     // Filter Operations
     ProductFilterDto getAvailableFilters();
-    
+
     ProductFilterDto getAvailableFilters(String query);
-    
+
     ProductFilterDto getAvailableFilters(List<Long> categoryIds);
-    
+
     ProductFilterDto getFiltersForSearchResults(ProductSearchDto searchDto);
 
     // Category-based Search

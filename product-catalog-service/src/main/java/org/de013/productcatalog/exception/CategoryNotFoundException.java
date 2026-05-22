@@ -11,19 +11,19 @@ public class CategoryNotFoundException extends BaseBusinessException {
 
     public CategoryNotFoundException(Long categoryId) {
         super(
-            String.format("Category with ID %d not found", categoryId),
-            ERROR_CODE,
-            HttpStatus.NOT_FOUND,
-            categoryId
+                String.format("Category with ID %d not found", categoryId),
+                ERROR_CODE,
+                HttpStatus.NOT_FOUND,
+                categoryId
         );
     }
 
     public CategoryNotFoundException(String slug) {
         super(
-            String.format("Category with slug '%s' not found", slug),
-            ERROR_CODE,
-            HttpStatus.NOT_FOUND,
-            slug
+                String.format("Category with slug '%s' not found", slug),
+                ERROR_CODE,
+                HttpStatus.NOT_FOUND,
+                slug
         );
     }
 

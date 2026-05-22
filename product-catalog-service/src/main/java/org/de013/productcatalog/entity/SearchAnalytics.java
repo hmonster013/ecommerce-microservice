@@ -12,10 +12,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "search_analytics", indexes = {
-    @Index(name = "idx_search_query", columnList = "search_query"),
-    @Index(name = "idx_search_date", columnList = "search_date"),
-    @Index(name = "idx_result_count", columnList = "result_count"),
-    @Index(name = "idx_user_session", columnList = "user_session_id")
+        @Index(name = "idx_search_query", columnList = "search_query"),
+        @Index(name = "idx_search_date", columnList = "search_date"),
+        @Index(name = "idx_result_count", columnList = "result_count"),
+        @Index(name = "idx_user_session", columnList = "user_session_id")
 })
 @Getter
 @Setter
@@ -211,27 +211,27 @@ public class SearchAnalytics {
      */
     public int getEffectivenessScore() {
         int score = 0;
-        
+
         // Base score for having results
         if (resultCount != null && resultCount > 0) {
             score += 30;
         }
-        
+
         // Bonus for clicks
         if (hadClicks != null && hadClicks) {
             score += 40;
         }
-        
+
         // Bonus for purchase
         if (ledToPurchase != null && ledToPurchase) {
             score += 30;
         }
-        
+
         // Penalty for slow search
         if (isSlowSearch()) {
             score -= 10;
         }
-        
+
         return Math.max(0, Math.min(100, score));
     }
 

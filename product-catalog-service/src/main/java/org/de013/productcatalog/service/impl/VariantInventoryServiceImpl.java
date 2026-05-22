@@ -2,9 +2,9 @@ package org.de013.productcatalog.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.dto.VariantInventoryDto;
 import org.de013.common.exception.ResourceNotFoundException;
 import org.de013.productcatalog.dto.inventory.VariantInventoryCreateDto;
-import org.de013.common.dto.VariantInventoryDto;
 import org.de013.productcatalog.dto.inventory.VariantInventoryUpdateDto;
 import org.de013.productcatalog.entity.Product;
 import org.de013.productcatalog.entity.ProductVariant;
@@ -507,7 +507,7 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
     @Override
     public VariantInventoryDto findBestVariantForOrder(Long productId, VariantType variantType, String preferredValue, Integer quantity) {
         log.debug("Finding best variant for order: product={}, type={}, value={}, quantity={}",
-                 productId, variantType, preferredValue, quantity);
+                productId, variantType, preferredValue, quantity);
 
         // Try to find the preferred variant first
         if (StringUtils.hasText(preferredValue)) {

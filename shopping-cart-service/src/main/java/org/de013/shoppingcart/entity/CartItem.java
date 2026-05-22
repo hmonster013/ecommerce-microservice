@@ -13,10 +13,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "cart_items", indexes = {
-    @Index(name = "idx_cart_item_cart_id", columnList = "cart_id"),
-    @Index(name = "idx_cart_item_product_id", columnList = "product_id"),
-    @Index(name = "idx_cart_item_cart_product", columnList = "cart_id, product_id"),
-    @Index(name = "idx_cart_item_created_at", columnList = "created_at")
+        @Index(name = "idx_cart_item_cart_id", columnList = "cart_id"),
+        @Index(name = "idx_cart_item_product_id", columnList = "product_id"),
+        @Index(name = "idx_cart_item_cart_product", columnList = "cart_id, product_id"),
+        @Index(name = "idx_cart_item_created_at", columnList = "created_at")
 })
 @Getter
 @Setter
@@ -166,8 +166,8 @@ public class CartItem extends BaseEntity {
      * Check if item is available for purchase
      */
     public boolean isAvailable() {
-        return "AVAILABLE".equals(availabilityStatus) && 
-               (stockQuantity == null || stockQuantity > 0);
+        return "AVAILABLE".equals(availabilityStatus) &&
+                (stockQuantity == null || stockQuantity > 0);
     }
 
     /**
@@ -188,8 +188,8 @@ public class CartItem extends BaseEntity {
      * Get discount percentage
      */
     public BigDecimal getDiscountPercentage() {
-        if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0 && 
-            discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+        if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0 &&
+                discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
             return discountAmount.divide(originalPrice, 4, BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
         }

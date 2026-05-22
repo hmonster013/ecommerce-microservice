@@ -1,7 +1,7 @@
 package org.de013.shoppingcart.client;
 
-import org.de013.common.dto.ProductDetailDto;
 import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ProductDetailDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,9 +13,9 @@ import java.util.Map;
  * Provides real-time product information, pricing, and stock data
  */
 @FeignClient(
-    name = "product-catalog-service",
-    path = "/products", // Service-to-service calls use internal paths
-    fallback = ProductCatalogFallback.class
+        name = "product-catalog-service",
+        path = "/products", // Service-to-service calls use internal paths
+        fallback = ProductCatalogFallback.class
 )
 public interface ProductCatalogFeignClient {
 
@@ -191,7 +191,6 @@ public interface ProductCatalogFeignClient {
     List<ProductDetailDto> getFrequentlyBoughtTogether(
             @PathVariable("productId") String productId,
             @RequestParam(value = "limit", defaultValue = "3") Integer limit);
-
 
 
     // ==================== PRODUCT ANALYTICS ====================

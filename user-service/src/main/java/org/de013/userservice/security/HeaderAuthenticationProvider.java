@@ -39,15 +39,15 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
         }
 
         List<SimpleGrantedAuthority> authorities = parseRoles(roles);
-        
+
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 username,
                 null,
                 authorities
         );
-        
+
         auth.setDetails(new HeaderUserDetails(keycloakId, username, email, roles));
-        
+
         return auth;
     }
 
@@ -55,7 +55,7 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
         if (roles == null || roles.trim().isEmpty()) {
             return List.of();
         }
-        
+
         return Arrays.stream(roles.split(","))
                 .map(String::trim)
                 .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
@@ -79,9 +79,20 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
             this.roles = roles;
         }
 
-        public String getKeycloakId() { return keycloakId; }
-        public String getUsername() { return username; }
-        public String getEmail() { return email; }
-        public String getRoles() { return roles; }
+        public String getKeycloakId() {
+            return keycloakId;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public String getRoles() {
+            return roles;
+        }
     }
 }

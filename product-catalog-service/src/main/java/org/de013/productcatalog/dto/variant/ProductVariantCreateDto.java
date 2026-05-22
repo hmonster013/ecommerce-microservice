@@ -57,8 +57,8 @@ public class ProductVariantCreateDto {
     private Boolean isActive = true;
 
     @Size(max = 255, message = "{variant.image.url.too.long}")
-    @Pattern(regexp = "^(https?://.*\\.(jpg|jpeg|png|gif|webp))?$", 
-             message = "{variant.image.url.invalid.format}")
+    @Pattern(regexp = "^(https?://.*\\.(jpg|jpeg|png|gif|webp))?$",
+            message = "{variant.image.url.invalid.format}")
     @Schema(description = "Variant image URL", example = "https://example.com/images/iphone-15-pro-titanium.jpg")
     private String imageUrl;
 

@@ -14,9 +14,9 @@ import org.de013.common.dto.PageResponse;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.paymentservice.constant.PaymentConstants;
-import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
+import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.de013.paymentservice.service.PaymentService;
 import org.springframework.data.domain.Page;
@@ -46,33 +46,33 @@ public class PaymentController extends BaseController {
 
     @PostMapping(ApiPaths.PROCESS)
     @Operation(
-        summary = "Process a payment",
-        description = """
-            Process a new payment for an order using the specified payment method.
-
-            **Payment Flow:**
-            1. Validates order and user information
-            2. Processes payment through selected gateway (Stripe, PayPal, etc.)
-            3. Updates order status
-            4. Sends notifications
-
-            **Supported Payment Methods:**
-            - Credit/Debit Cards (via Stripe)
-            - Bank Accounts
-            - Digital Wallets (PayPal, Apple Pay, Google Pay)
-
-            **Example Request:**
-            ```json
-            {
-              "orderId": 12345,
-              "userId": 67890,
-              "amount": 99.99,
-              "currency": "USD",
-              "paymentMethodId": "pm_1234567890",
-              "gateway": "STRIPE"
-            }
-            ```
-            """)
+            summary = "Process a payment",
+            description = """
+                    Process a new payment for an order using the specified payment method.
+                    
+                    **Payment Flow:**
+                    1. Validates order and user information
+                    2. Processes payment through selected gateway (Stripe, PayPal, etc.)
+                    3. Updates order status
+                    4. Sends notifications
+                    
+                    **Supported Payment Methods:**
+                    - Credit/Debit Cards (via Stripe)
+                    - Bank Accounts
+                    - Digital Wallets (PayPal, Apple Pay, Google Pay)
+                    
+                    **Example Request:**
+                    ```json
+                    {
+                      "orderId": 12345,
+                      "userId": 67890,
+                      "amount": 99.99,
+                      "currency": "USD",
+                      "paymentMethodId": "pm_1234567890",
+                      "gateway": "STRIPE"
+                    }
+                    ```
+                    """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Payment processed successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid payment request or validation failed"),

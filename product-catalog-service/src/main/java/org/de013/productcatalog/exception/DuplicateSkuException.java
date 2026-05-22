@@ -11,19 +11,19 @@ public class DuplicateSkuException extends BaseBusinessException {
 
     public DuplicateSkuException(String sku) {
         super(
-            String.format("Product with SKU '%s' already exists", sku),
-            ERROR_CODE,
-            HttpStatus.CONFLICT,
-            sku
+                String.format("Product with SKU '%s' already exists", sku),
+                ERROR_CODE,
+                HttpStatus.CONFLICT,
+                sku
         );
     }
 
     public DuplicateSkuException(String sku, Long existingProductId) {
         super(
-            String.format("Product with SKU '%s' already exists (Product ID: %d)", sku, existingProductId),
-            ERROR_CODE,
-            HttpStatus.CONFLICT,
-            sku, existingProductId
+                String.format("Product with SKU '%s' already exists (Product ID: %d)", sku, existingProductId),
+                ERROR_CODE,
+                HttpStatus.CONFLICT,
+                sku, existingProductId
         );
     }
 

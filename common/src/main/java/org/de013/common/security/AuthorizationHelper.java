@@ -44,7 +44,7 @@ public class AuthorizationHelper {
             log.debug("No roles found in request headers");
             return false;
         }
-        
+
         List<String> roleList = Arrays.asList(roles.split(","));
         boolean hasRole = roleList.contains(role);
         log.debug("User roles: {}, checking for role: {}, result: {}", roles, role, hasRole);
@@ -181,11 +181,11 @@ public class AuthorizationHelper {
      */
     public void logUserContext(HttpServletRequest request) {
         if (log.isDebugEnabled()) {
-            log.debug("User Context - ID: {}, Username: {}, Email: {}, Roles: {}", 
-                getCurrentUserId(request),
-                getCurrentUsername(request),
-                getCurrentUserEmail(request),
-                getCurrentUserRoles(request));
+            log.debug("User Context - ID: {}, Username: {}, Email: {}, Roles: {}",
+                    getCurrentUserId(request),
+                    getCurrentUsername(request),
+                    getCurrentUserEmail(request),
+                    getCurrentUserRoles(request));
         }
     }
 }

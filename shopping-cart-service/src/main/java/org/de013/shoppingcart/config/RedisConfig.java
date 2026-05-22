@@ -79,13 +79,13 @@ public class RedisConfig {
 
         // Use JSON serializer for values
         Jackson2JsonRedisSerializer<Object> jsonSerializer = new Jackson2JsonRedisSerializer<>(redisObjectMapper(), Object.class);
-        
+
         template.setValueSerializer(jsonSerializer);
         template.setHashValueSerializer(jsonSerializer);
-        
+
         template.setDefaultSerializer(jsonSerializer);
         template.afterPropertiesSet();
-        
+
         return template;
     }
 
@@ -124,19 +124,19 @@ public class RedisConfig {
                         .fromSerializer(new Jackson2JsonRedisSerializer<>(redisObjectMapper(), Object.class)));
 
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
-        
+
         // Active user carts - 24 hours
         cacheConfigurations.put("active-carts", defaultConfig.entryTtl(Duration.ofSeconds(activeCartTtl)));
-        
+
         // Guest carts - 1 hour
         cacheConfigurations.put("guest-carts", defaultConfig.entryTtl(Duration.ofSeconds(guestCartTtl)));
-        
+
         // Session carts - 30 minutes
         cacheConfigurations.put("session-carts", defaultConfig.entryTtl(Duration.ofSeconds(sessionCartTtl)));
-        
+
         // Product info cache - 5 minutes
         cacheConfigurations.put("product-info", defaultConfig.entryTtl(Duration.ofMinutes(5)));
-        
+
         // Cart validation cache - 2 minutes
         cacheConfigurations.put("cart-validation", defaultConfig.entryTtl(Duration.ofMinutes(2)));
 
@@ -153,7 +153,7 @@ public class RedisConfig {
     public org.springframework.data.redis.listener.RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory) {
         org.springframework.data.redis.listener.RedisMessageListenerContainer container =
-            new org.springframework.data.redis.listener.RedisMessageListenerContainer();
+                new org.springframework.data.redis.listener.RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         return container;
     }
@@ -164,13 +164,13 @@ public class RedisConfig {
     @Bean
     public org.springframework.data.redis.core.script.DefaultRedisScript<Long> cartLockScript() {
         org.springframework.data.redis.core.script.DefaultRedisScript<Long> script =
-            new org.springframework.data.redis.core.script.DefaultRedisScript<>();
+                new org.springframework.data.redis.core.script.DefaultRedisScript<>();
         script.setScriptText(
-            "if redis.call('get', KEYS[1]) == ARGV[1] then " +
-            "return redis.call('del', KEYS[1]) " +
-            "else " +
-            "return 0 " +
-            "end"
+                "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+                        "return redis.call('del', KEYS[1]) " +
+                        "else " +
+                        "return 0 " +
+                        "end"
         );
         script.setResultType(Long.class);
         return script;
@@ -182,14 +182,14 @@ public class RedisConfig {
     @Bean
     public org.springframework.data.redis.core.script.DefaultRedisScript<Boolean> extendTtlScript() {
         org.springframework.data.redis.core.script.DefaultRedisScript<Boolean> script =
-            new org.springframework.data.redis.core.script.DefaultRedisScript<>();
+                new org.springframework.data.redis.core.script.DefaultRedisScript<>();
         script.setScriptText(
-            "if redis.call('exists', KEYS[1]) == 1 then " +
-            "redis.call('expire', KEYS[1], ARGV[1]) " +
-            "return true " +
-            "else " +
-            "return false " +
-            "end"
+                "if redis.call('exists', KEYS[1]) == 1 then " +
+                        "redis.call('expire', KEYS[1], ARGV[1]) " +
+                        "return true " +
+                        "else " +
+                        "return false " +
+                        "end"
         );
         script.setResultType(Boolean.class);
         return script;

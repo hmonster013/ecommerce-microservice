@@ -39,10 +39,10 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
      * Find item by cart, product and variant
      */
     @Query("SELECT ci FROM CartItem ci WHERE ci.cart.id = :cartId AND ci.productId = :productId AND " +
-           "(:variantId IS NULL AND ci.variantId IS NULL OR ci.variantId = :variantId) AND ci.deleted = false")
-    Optional<CartItem> findByCartIdAndProductIdAndVariantId(@Param("cartId") Long cartId, 
-                                                           @Param("productId") String productId, 
-                                                           @Param("variantId") String variantId);
+            "(:variantId IS NULL AND ci.variantId IS NULL OR ci.variantId = :variantId) AND ci.deleted = false")
+    Optional<CartItem> findByCartIdAndProductIdAndVariantId(@Param("cartId") Long cartId,
+                                                            @Param("productId") String productId,
+                                                            @Param("variantId") String variantId);
 
     /**
      * Find items by product ID across all carts
@@ -102,8 +102,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     @Modifying
     @Query("UPDATE CartItem ci SET ci.quantity = :quantity, ci.updatedAt = :currentTime WHERE ci.id IN :itemIds")
     int batchUpdateQuantities(@Param("itemIds") List<Long> itemIds,
-                             @Param("quantity") Integer quantity,
-                             @Param("currentTime") LocalDateTime currentTime);
+                              @Param("quantity") Integer quantity,
+                              @Param("currentTime") LocalDateTime currentTime);
 
     /**
      * Batch update item prices
@@ -111,35 +111,35 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     @Modifying
     @Query("UPDATE CartItem ci SET ci.unitPrice = :unitPrice, ci.priceChanged = true, ci.lastPriceCheckAt = :currentTime, ci.updatedAt = :currentTime WHERE ci.id IN :itemIds")
     int batchUpdatePrices(@Param("itemIds") List<Long> itemIds,
-                         @Param("unitPrice") BigDecimal unitPrice,
-                         @Param("currentTime") LocalDateTime currentTime);
+                          @Param("unitPrice") BigDecimal unitPrice,
+                          @Param("currentTime") LocalDateTime currentTime);
 
     /**
      * Batch soft delete items
      */
     @Modifying
     @Query("UPDATE CartItem ci SET ci.deleted = true, ci.deletedAt = :currentTime, ci.deletedBy = :deletedBy WHERE ci.id IN :itemIds")
-    int batchSoftDelete(@Param("itemIds") List<Long> itemIds, 
-                       @Param("currentTime") LocalDateTime currentTime, 
-                       @Param("deletedBy") String deletedBy);
+    int batchSoftDelete(@Param("itemIds") List<Long> itemIds,
+                        @Param("currentTime") LocalDateTime currentTime,
+                        @Param("deletedBy") String deletedBy);
 
     /**
      * Batch delete items by cart ID
      */
     @Modifying
     @Query("UPDATE CartItem ci SET ci.deleted = true, ci.deletedAt = :currentTime, ci.deletedBy = :deletedBy WHERE ci.cart.id = :cartId")
-    int batchSoftDeleteByCartId(@Param("cartId") Long cartId, 
-                               @Param("currentTime") LocalDateTime currentTime, 
-                               @Param("deletedBy") String deletedBy);
+    int batchSoftDeleteByCartId(@Param("cartId") Long cartId,
+                                @Param("currentTime") LocalDateTime currentTime,
+                                @Param("deletedBy") String deletedBy);
 
     /**
      * Batch update availability status
      */
     @Modifying
     @Query("UPDATE CartItem ci SET ci.availabilityStatus = :status, ci.updatedAt = :currentTime WHERE ci.productId IN :productIds")
-    int batchUpdateAvailabilityStatus(@Param("productIds") List<String> productIds, 
-                                     @Param("status") String status, 
-                                     @Param("currentTime") LocalDateTime currentTime);
+    int batchUpdateAvailabilityStatus(@Param("productIds") List<String> productIds,
+                                      @Param("status") String status,
+                                      @Param("currentTime") LocalDateTime currentTime);
 
     // ==================== PRICE MANAGEMENT ====================
 
@@ -160,11 +160,11 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
      */
     @Modifying
     @Query("UPDATE CartItem ci SET ci.unitPrice = :newPrice, " +
-           "ci.priceChanged = CASE WHEN ci.unitPrice != :newPrice THEN true ELSE ci.priceChanged END, " +
-           "ci.lastPriceCheckAt = :currentTime, ci.updatedAt = :currentTime WHERE ci.id = :itemId")
+            "ci.priceChanged = CASE WHEN ci.unitPrice != :newPrice THEN true ELSE ci.priceChanged END, " +
+            "ci.lastPriceCheckAt = :currentTime, ci.updatedAt = :currentTime WHERE ci.id = :itemId")
     int updateItemPrice(@Param("itemId") Long itemId,
-                       @Param("newPrice") BigDecimal newPrice,
-                       @Param("currentTime") LocalDateTime currentTime);
+                        @Param("newPrice") BigDecimal newPrice,
+                        @Param("currentTime") LocalDateTime currentTime);
 
     /**
      * Reset price change flags
@@ -174,33 +174,32 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     int resetPriceChangeFlags(@Param("cartId") Long cartId, @Param("currentTime") LocalDateTime currentTime);
 
 
-
     /**
      * Get category performance
      */
     @Query("SELECT ci.categoryId, ci.categoryName, COUNT(ci), SUM(ci.quantity), AVG(ci.unitPrice), SUM(ci.totalPrice) " +
-           "FROM CartItem ci WHERE ci.addedAt BETWEEN :startDate AND :endDate AND ci.deleted = false " +
-           "GROUP BY ci.categoryId, ci.categoryName ORDER BY SUM(ci.totalPrice) DESC")
-    List<Object[]> getCategoryPerformance(@Param("startDate") LocalDateTime startDate, 
-                                         @Param("endDate") LocalDateTime endDate);
+            "FROM CartItem ci WHERE ci.addedAt BETWEEN :startDate AND :endDate AND ci.deleted = false " +
+            "GROUP BY ci.categoryId, ci.categoryName ORDER BY SUM(ci.totalPrice) DESC")
+    List<Object[]> getCategoryPerformance(@Param("startDate") LocalDateTime startDate,
+                                          @Param("endDate") LocalDateTime endDate);
 
     /**
      * Get average cart item metrics
      */
     @Query("SELECT AVG(ci.quantity), AVG(ci.unitPrice), AVG(ci.totalPrice) " +
-           "FROM CartItem ci WHERE ci.addedAt BETWEEN :startDate AND :endDate AND ci.deleted = false")
-    Object[] getAverageCartItemMetrics(@Param("startDate") LocalDateTime startDate, 
-                                      @Param("endDate") LocalDateTime endDate);
+            "FROM CartItem ci WHERE ci.addedAt BETWEEN :startDate AND :endDate AND ci.deleted = false")
+    Object[] getAverageCartItemMetrics(@Param("startDate") LocalDateTime startDate,
+                                       @Param("endDate") LocalDateTime endDate);
 
     /**
      * Find frequently bought together products
      */
     @Query("SELECT ci1.productId, ci2.productId, COUNT(*) as frequency " +
-           "FROM CartItem ci1 JOIN CartItem ci2 ON ci1.cart.id = ci2.cart.id " +
-           "WHERE ci1.productId < ci2.productId AND ci1.deleted = false AND ci2.deleted = false " +
-           "GROUP BY ci1.productId, ci2.productId " +
-           "HAVING COUNT(*) >= :minFrequency " +
-           "ORDER BY frequency DESC")
+            "FROM CartItem ci1 JOIN CartItem ci2 ON ci1.cart.id = ci2.cart.id " +
+            "WHERE ci1.productId < ci2.productId AND ci1.deleted = false AND ci2.deleted = false " +
+            "GROUP BY ci1.productId, ci2.productId " +
+            "HAVING COUNT(*) >= :minFrequency " +
+            "ORDER BY frequency DESC")
     List<Object[]> findFrequentlyBoughtTogether(@Param("minFrequency") long minFrequency, Pageable pageable);
 
     // ==================== INVENTORY IMPACT ====================
@@ -209,8 +208,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
      * Get total demand for products
      */
     @Query("SELECT ci.productId, SUM(ci.quantity) " +
-           "FROM CartItem ci WHERE ci.cart.status = 'ACTIVE' AND ci.deleted = false " +
-           "GROUP BY ci.productId")
+            "FROM CartItem ci WHERE ci.cart.status = 'ACTIVE' AND ci.deleted = false " +
+            "GROUP BY ci.productId")
     List<Object[]> getProductDemand();
 
     /**
@@ -273,19 +272,19 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
      * Search cart items by criteria
      */
     @Query("SELECT ci FROM CartItem ci WHERE " +
-           "(:cartId IS NULL OR ci.cart.id = :cartId) AND " +
-           "(:productId IS NULL OR ci.productId = :productId) AND " +
-           "(:categoryId IS NULL OR ci.categoryId = :categoryId) AND " +
-           "(:minPrice IS NULL OR ci.unitPrice >= :minPrice) AND " +
-           "(:maxPrice IS NULL OR ci.unitPrice <= :maxPrice) AND " +
-           "(:isGift IS NULL OR ci.isGift = :isGift) AND " +
-           "ci.deleted = false " +
-           "ORDER BY ci.addedAt DESC")
+            "(:cartId IS NULL OR ci.cart.id = :cartId) AND " +
+            "(:productId IS NULL OR ci.productId = :productId) AND " +
+            "(:categoryId IS NULL OR ci.categoryId = :categoryId) AND " +
+            "(:minPrice IS NULL OR ci.unitPrice >= :minPrice) AND " +
+            "(:maxPrice IS NULL OR ci.unitPrice <= :maxPrice) AND " +
+            "(:isGift IS NULL OR ci.isGift = :isGift) AND " +
+            "ci.deleted = false " +
+            "ORDER BY ci.addedAt DESC")
     Page<CartItem> searchCartItems(@Param("cartId") Long cartId,
-                                  @Param("productId") String productId,
-                                  @Param("categoryId") String categoryId,
-                                  @Param("minPrice") BigDecimal minPrice,
-                                  @Param("maxPrice") BigDecimal maxPrice,
-                                  @Param("isGift") Boolean isGift,
-                                  Pageable pageable);
+                                   @Param("productId") String productId,
+                                   @Param("categoryId") String categoryId,
+                                   @Param("minPrice") BigDecimal minPrice,
+                                   @Param("maxPrice") BigDecimal maxPrice,
+                                   @Param("isGift") Boolean isGift,
+                                   Pageable pageable);
 }

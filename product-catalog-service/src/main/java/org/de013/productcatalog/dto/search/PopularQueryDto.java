@@ -58,7 +58,7 @@ public class PopularQueryDto {
     @JsonIgnore
     public boolean isHighPerforming() {
         return clickThroughRate != null && clickThroughRate > 60.0 &&
-               conversionRate != null && conversionRate > 10.0;
+                conversionRate != null && conversionRate > 10.0;
     }
 
     /**
@@ -67,7 +67,7 @@ public class PopularQueryDto {
     @JsonIgnore
     public boolean needsOptimization() {
         return clickThroughRate != null && clickThroughRate < 30.0 ||
-               averageExecutionTime != null && averageExecutionTime > 1000;
+                averageExecutionTime != null && averageExecutionTime > 1000;
     }
 
     /**
@@ -76,21 +76,21 @@ public class PopularQueryDto {
     @JsonIgnore
     public int getPerformanceScore() {
         double score = 0.0;
-        
+
         if (clickThroughRate != null) {
             score += clickThroughRate * 0.4;
         }
-        
+
         if (conversionRate != null) {
             score += Math.min(conversionRate * 3, 30) * 0.4; // Cap at 30 for scoring
         }
-        
+
         if (averageExecutionTime != null) {
             // Performance component - faster is better
             double performanceScore = Math.max(0, 100 - (averageExecutionTime / 10));
             score += performanceScore * 0.2;
         }
-        
+
         return Math.max(0, Math.min(100, (int) Math.round(score)));
     }
 

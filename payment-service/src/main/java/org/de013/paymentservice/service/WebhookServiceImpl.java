@@ -49,7 +49,7 @@ public class WebhookServiceImpl implements WebhookService {
 
             // Parse payload
             StripeWebhookRequest webhookRequest = parseWebhookPayload(payload);
-            
+
             // Log event for debugging
             logWebhookEvent(webhookRequest);
 
@@ -135,7 +135,7 @@ public class WebhookServiceImpl implements WebhookService {
 
             // Update order status
             updateOrderStatus(payment.getOrderId(), "PAID");
-            
+
             log.info("Payment status updated to SUCCEEDED: {}", payment.getPaymentNumber());
         } else {
             log.warn("Payment not found for payment intent: {}", paymentIntentId);
@@ -157,7 +157,7 @@ public class WebhookServiceImpl implements WebhookService {
 
             // Update order status
             updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED");
-            
+
             log.info("Payment status updated to FAILED: {}", payment.getPaymentNumber());
         } else {
             log.warn("Payment not found for payment intent: {}", paymentIntentId);
@@ -174,7 +174,7 @@ public class WebhookServiceImpl implements WebhookService {
             Payment payment = paymentOpt.get();
             payment.setStatus(PaymentStatus.REQUIRES_ACTION);
             paymentRepository.save(payment);
-            
+
             log.info("Payment status updated to REQUIRES_ACTION: {}", payment.getPaymentNumber());
         } else {
             log.warn("Payment not found for payment intent: {}", paymentIntentId);
@@ -194,7 +194,7 @@ public class WebhookServiceImpl implements WebhookService {
 
             // Update order status
             updateOrderStatus(payment.getOrderId(), "PAYMENT_CANCELED");
-            
+
             log.info("Payment status updated to CANCELED: {}", payment.getPaymentNumber());
         } else {
             log.warn("Payment not found for payment intent: {}", paymentIntentId);
@@ -214,7 +214,7 @@ public class WebhookServiceImpl implements WebhookService {
             PaymentMethod paymentMethod = paymentMethodOpt.get();
             paymentMethod.setStripeCustomerId(customerId);
             paymentMethodRepository.save(paymentMethod);
-            
+
             log.info("Payment method updated with customer ID: {}", paymentMethod.getId());
         } else {
             log.debug("Payment method not found in local database: {}", paymentMethodId);
@@ -232,7 +232,7 @@ public class WebhookServiceImpl implements WebhookService {
             paymentMethod.setStripeCustomerId(null);
             paymentMethod.setIsActive(false);
             paymentMethodRepository.save(paymentMethod);
-            
+
             log.info("Payment method detached and deactivated: {}", paymentMethod.getId());
         } else {
             log.debug("Payment method not found in local database: {}", paymentMethodId);
@@ -315,7 +315,7 @@ public class WebhookServiceImpl implements WebhookService {
             // Update refund status based on webhook data
             // TODO: Map Stripe refund status to internal status
             refundRepository.save(refund);
-            
+
             log.info("Refund updated: {}", refund.getRefundNumber());
         } else {
             log.warn("Refund not found for Stripe refund: {}", refundId);
@@ -347,9 +347,9 @@ public class WebhookServiceImpl implements WebhookService {
 
     @Override
     public void handleWebhookError(String payload, String signature, Exception error) {
-        log.error("Webhook processing error - Payload length: {}, Signature: {}, Error: {}", 
+        log.error("Webhook processing error - Payload length: {}, Signature: {}, Error: {}",
                 payload != null ? payload.length() : 0, signature, error.getMessage());
-        
+
         // TODO: Implement error handling logic
         // - Store failed webhook for retry
         // - Send alert to monitoring system

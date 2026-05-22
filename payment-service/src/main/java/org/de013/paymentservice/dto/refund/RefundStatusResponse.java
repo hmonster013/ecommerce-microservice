@@ -79,8 +79,8 @@ public class RefundStatusResponse {
     @JsonIgnore
     public boolean isFinalStatus() {
         return status == RefundStatus.SUCCEEDED ||
-               status == RefundStatus.FAILED ||
-               status == RefundStatus.CANCELED;
+                status == RefundStatus.FAILED ||
+                status == RefundStatus.CANCELED;
     }
 
     @JsonIgnore

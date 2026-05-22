@@ -1,5 +1,8 @@
 package org.de013.apigateway.exception;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.apigateway.exception.dto.ErrorResponse;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
@@ -14,10 +17,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -47,7 +46,7 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
         log.error("Gateway error [{}] for {} {}: {}", traceId, method, path, ex.getMessage(), ex);
 
         ErrorResponse errorResponse = buildErrorResponse(ex, path, method, traceId);
-        
+
         return writeErrorResponse(exchange, errorResponse);
     }
 
@@ -55,35 +54,35 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
      * Build error response based on exception type
      */
     private ErrorResponse buildErrorResponse(
-            Throwable ex, 
-            String path, 
-            String method, 
+            Throwable ex,
+            String path,
+            String method,
             String traceId
     ) {
         // Handle custom Gateway exceptions
         if (ex instanceof GatewayException gatewayEx) {
             return handleGatewayException(gatewayEx, path, method, traceId);
         }
-        
+
         // Handle Spring Cloud Gateway specific exceptions
         if (ex instanceof NotFoundException) {
             return handleNotFoundException(ex, path, method, traceId);
         }
-        
+
         if (ex instanceof TimeoutException) {
             return handleTimeoutException(ex, path, method, traceId);
         }
-        
+
         // Handle ResponseStatusException
         if (ex instanceof ResponseStatusException responseStatusEx) {
             return handleResponseStatusException(responseStatusEx, path, method, traceId);
         }
-        
+
         // Handle connection errors
         if (isConnectionError(ex)) {
             return handleConnectionError(ex, path, method, traceId);
         }
-        
+
         // Handle generic exceptions
         return handleGenericException(ex, path, method, traceId);
     }
@@ -98,13 +97,13 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
             String traceId
     ) {
         HttpStatus status = ex.getHttpStatus();
-        
+
         if (status.is5xxServerError()) {
             log.error("Gateway error [{}]: {}", traceId, ex.getMessage(), ex);
         } else {
             log.warn("Gateway error [{}]: {}", traceId, ex.getMessage());
         }
-        
+
         return ErrorResponse.of(
                 status.value(),
                 status.getReasonPhrase(),
@@ -126,7 +125,7 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
             String traceId
     ) {
         log.warn("Route not found [{}]: {} {}", traceId, method, path);
-        
+
         return ErrorResponse.of(
                 HttpStatus.NOT_FOUND.value(),
                 HttpStatus.NOT_FOUND.getReasonPhrase(),
@@ -148,7 +147,7 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
             String traceId
     ) {
         log.error("Gateway timeout [{}]: {} {}", traceId, method, path);
-        
+
         return ErrorResponse.withDetails(
                 HttpStatus.GATEWAY_TIMEOUT.value(),
                 HttpStatus.GATEWAY_TIMEOUT.getReasonPhrase(),
@@ -174,9 +173,9 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
         if (status == null) {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
-        
+
         log.warn("Response status exception [{}]: {} - {}", traceId, status, ex.getReason());
-        
+
         return ErrorResponse.of(
                 status.value(),
                 status.getReasonPhrase(),
@@ -198,7 +197,7 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
             String traceId
     ) {
         log.error("Connection error [{}]: {}", traceId, ex.getMessage());
-        
+
         return ErrorResponse.withDetails(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                 HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase(),
@@ -221,7 +220,7 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
             String traceId
     ) {
         log.error("Unexpected error [{}]: {}", traceId, ex.getMessage(), ex);
-        
+
         return ErrorResponse.withDetails(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
@@ -242,13 +241,13 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
         if (message == null) {
             return false;
         }
-        
+
         return message.contains("Connection refused") ||
-               message.contains("Connection reset") ||
-               message.contains("No route to host") ||
-               message.contains("Network is unreachable") ||
-               ex instanceof java.net.ConnectException ||
-               ex instanceof java.io.IOException;
+                message.contains("Connection reset") ||
+                message.contains("No route to host") ||
+                message.contains("Network is unreachable") ||
+                ex instanceof java.net.ConnectException ||
+                ex instanceof java.io.IOException;
     }
 
     /**
@@ -256,13 +255,13 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
      */
     private Mono<Void> writeErrorResponse(ServerWebExchange exchange, ErrorResponse errorResponse) {
         ServerHttpResponse response = exchange.getResponse();
-        
+
         // Set status code
         response.setStatusCode(HttpStatus.resolve(errorResponse.getStatus()));
-        
+
         // Set content type
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        
+
         // Serialize error response
         try {
             byte[] bytes = objectMapper.writeValueAsBytes(errorResponse);
@@ -270,7 +269,7 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
             return response.writeWith(Mono.just(buffer));
         } catch (JsonProcessingException e) {
             log.error("Error serializing error response: {}", e.getMessage());
-            
+
             // Fallback to simple error message
             String fallbackMessage = String.format(
                     "{\"success\":false,\"message\":\"Internal server error\",\"code\":\"SERIALIZATION_ERROR\",\"traceId\":\"%s\"}",

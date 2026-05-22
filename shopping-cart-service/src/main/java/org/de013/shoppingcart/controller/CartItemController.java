@@ -10,23 +10,21 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.AddToCartDto;
 import org.de013.shoppingcart.dto.request.GiftOptionsDto;
-
 import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
 import org.de013.shoppingcart.dto.response.CartItemResponseDto;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.service.CartItemService;
 import org.de013.shoppingcart.service.CartService;
-import org.de013.common.constant.ApiPaths;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -47,13 +45,13 @@ public class CartItemController extends BaseController {
 
     @Operation(summary = "Add item to cart", description = "Add a product item to the shopping cart")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Item added successfully",
-                content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "404", description = "Cart or product not found"),
-        @ApiResponse(responseCode = "409", description = "Item already exists in cart"),
-        @ApiResponse(responseCode = "422", description = "Validation failed"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "201", description = "Item added successfully",
+                    content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "404", description = "Cart or product not found"),
+            @ApiResponse(responseCode = "409", description = "Item already exists in cart"),
+            @ApiResponse(responseCode = "422", description = "Validation failed"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> addItemToCart(
@@ -70,7 +68,7 @@ public class CartItemController extends BaseController {
             if (userContext != null) {
                 userId = String.valueOf(userContext.getUserId());
                 log.debug("Adding item for authenticated user: {} (ID: {})",
-                         userContext.getUsername(), userId);
+                        userContext.getUsername(), userId);
             } else {
                 log.debug("Adding item for guest session: {}", request.getSessionId());
             }
@@ -103,12 +101,12 @@ public class CartItemController extends BaseController {
 
     @Operation(summary = "Update cart item", description = "Update quantity, price, or other properties of a cart item")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Item updated successfully",
-                content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "404", description = "Cart item not found"),
-        @ApiResponse(responseCode = "422", description = "Validation failed"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Item updated successfully",
+                    content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "404", description = "Cart item not found"),
+            @ApiResponse(responseCode = "422", description = "Validation failed"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping(ApiPaths.ITEM_ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateCartItem(
@@ -143,11 +141,11 @@ public class CartItemController extends BaseController {
 
     @Operation(summary = "Update item quantity", description = "Update only the quantity of a cart item")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Quantity updated successfully",
-                content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid quantity"),
-        @ApiResponse(responseCode = "404", description = "Cart item not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Quantity updated successfully",
+                    content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid quantity"),
+            @ApiResponse(responseCode = "404", description = "Cart item not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping(ApiPaths.ITEM_ID_PARAM + ApiPaths.QUANTITY)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateItemQuantity(
@@ -183,9 +181,9 @@ public class CartItemController extends BaseController {
 
     @Operation(summary = "Remove item from cart", description = "Remove a specific item from the cart")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Item removed successfully"),
-        @ApiResponse(responseCode = "404", description = "Cart item not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Item removed successfully"),
+            @ApiResponse(responseCode = "404", description = "Cart item not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping(ApiPaths.ITEM_ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> removeCartItem(
@@ -198,7 +196,7 @@ public class CartItemController extends BaseController {
             boolean removed = cartItemService.removeCartItem(itemId);
 
             return removed ? deleted("Item removed from cart successfully") :
-                           notFound("Cart item not found");
+                    notFound("Cart item not found");
 
         } catch (Exception e) {
             log.error("Error removing cart item {}: {}", itemId, e.getMessage(), e);
@@ -207,14 +205,13 @@ public class CartItemController extends BaseController {
     }
 
 
-
     // ==================== ITEM RETRIEVAL ====================
 
     @Operation(summary = "Get cart items", description = "Retrieve all items in a specific cart")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Items retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Cart not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Items retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Cart not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.CART + ApiPaths.CART_ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CartItemResponseDto>>> getCartItems(
@@ -235,10 +232,10 @@ public class CartItemController extends BaseController {
 
     @Operation(summary = "Get item by ID", description = "Retrieve a specific cart item by its ID")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Item found",
-                content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
-        @ApiResponse(responseCode = "404", description = "Item not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Item found",
+                    content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Item not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(ApiPaths.ITEM_ID_PARAM)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> getCartItemById(
@@ -251,7 +248,7 @@ public class CartItemController extends BaseController {
             Optional<CartItemResponseDto> cartItem = cartItemService.getCartItemById(itemId);
 
             return cartItem.map(this::ok)
-                          .orElse(notFound("Cart item not found"));
+                    .orElse(notFound("Cart item not found"));
 
         } catch (Exception e) {
             log.error("Error getting cart item {}: {}", itemId, e.getMessage(), e);
@@ -260,17 +257,16 @@ public class CartItemController extends BaseController {
     }
 
 
-
     // ==================== GIFT OPTIONS ====================
 
     @Operation(summary = "Update gift options", description = "Update gift wrapping and message for a cart item")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Gift options updated successfully",
-                content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid gift options data"),
-        @ApiResponse(responseCode = "404", description = "Item not found"),
-        @ApiResponse(responseCode = "422", description = "Validation failed"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Gift options updated successfully",
+                    content = @Content(schema = @Schema(implementation = CartItemResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid gift options data"),
+            @ApiResponse(responseCode = "404", description = "Item not found"),
+            @ApiResponse(responseCode = "422", description = "Validation failed"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping(ApiPaths.ITEM_ID_PARAM + ApiPaths.GIFT)
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateGiftOptions(

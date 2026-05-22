@@ -136,7 +136,6 @@ public class ProductDetailDto {
     }
 
 
-
     @Getter
     @Setter
     @NoArgsConstructor
@@ -185,9 +184,9 @@ public class ProductDetailDto {
     @JsonIgnore
     public boolean isAvailable() {
         return "ACTIVE".equals(status) &&
-               inventory != null &&
-               inventory.getAvailableQuantity() != null &&
-               inventory.getAvailableQuantity() > 0;
+                inventory != null &&
+                inventory.getAvailableQuantity() != null &&
+                inventory.getAvailableQuantity() > 0;
     }
 
     @JsonIgnore

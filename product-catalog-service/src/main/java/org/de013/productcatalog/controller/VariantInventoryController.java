@@ -11,7 +11,6 @@ import org.de013.common.controller.BaseController;
 import org.de013.common.dto.VariantInventoryDto;
 import org.de013.productcatalog.service.VariantInventoryService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,32 +26,32 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "Get variant inventory", description = "Retrieve inventory information for a specific variant")
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Variant inventory retrieved successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Variant or inventory not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Variant inventory retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Variant or inventory not found")
     })
     @GetMapping(ApiPaths.VARIANTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY)
     public ResponseEntity<org.de013.common.dto.ApiResponse<VariantInventoryDto>> getVariantInventory(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id) {
-        
+
         log.info("Getting inventory for variant ID: {}", id);
-        
+
         VariantInventoryDto inventory = variantInventoryService.getVariantInventoryByVariantId(id);
         return ok(inventory);
     }
 
     @Operation(summary = "Get all variant inventories for product", description = "Retrieve inventory information for all variants of a product")
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Variant inventories retrieved successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Variant inventories retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product not found")
     })
     @GetMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.VARIANTS + ApiPaths.INVENTORY)
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<VariantInventoryDto>>> getProductVariantInventories(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id) {
-        
+
         log.info("Getting variant inventories for product ID: {}", id);
-        
+
         List<VariantInventoryDto> inventories = variantInventoryService.getVariantInventoriesByProductId(id);
         return ok(inventories);
     }

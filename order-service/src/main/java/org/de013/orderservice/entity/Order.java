@@ -20,7 +20,7 @@ import java.util.List;
 
 /**
  * Order Entity
- *
+ * <p>
  * Represents a customer order in the e-commerce system.
  * This is the main aggregate root for order management.
  *
@@ -29,13 +29,13 @@ import java.util.List;
  */
 @Entity
 @Table(name = "orders", indexes = {
-    @Index(name = "idx_order_number", columnList = "orderNumber", unique = true),
-    @Index(name = "idx_user_id", columnList = "userId"),
-    @Index(name = "idx_status", columnList = "status"),
-    @Index(name = "idx_order_type", columnList = "orderType"),
-    @Index(name = "idx_created_at", columnList = "createdAt"),
-    @Index(name = "idx_user_status", columnList = "userId, status"),
-    @Index(name = "idx_status_created", columnList = "status, createdAt")
+        @Index(name = "idx_order_number", columnList = "orderNumber", unique = true),
+        @Index(name = "idx_user_id", columnList = "userId"),
+        @Index(name = "idx_status", columnList = "status"),
+        @Index(name = "idx_order_type", columnList = "orderType"),
+        @Index(name = "idx_created_at", columnList = "createdAt"),
+        @Index(name = "idx_user_status", columnList = "userId, status"),
+        @Index(name = "idx_status_created", columnList = "status, createdAt")
 })
 @SQLDelete(sql = "UPDATE orders SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")
@@ -87,8 +87,8 @@ public class Order extends BaseEntity {
      */
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "total_amount", precision = 19, scale = 4)),
-        @AttributeOverride(name = "currency", column = @Column(name = "currency", length = 3))
+            @AttributeOverride(name = "amount", column = @Column(name = "total_amount", precision = 19, scale = 4)),
+            @AttributeOverride(name = "currency", column = @Column(name = "currency", length = 3))
     })
     @Valid
     @NotNull(message = "Total amount is required")
@@ -99,8 +99,8 @@ public class Order extends BaseEntity {
      */
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "subtotal_amount", precision = 19, scale = 4)),
-        @AttributeOverride(name = "currency", column = @Column(name = "subtotal_currency", length = 3))
+            @AttributeOverride(name = "amount", column = @Column(name = "subtotal_amount", precision = 19, scale = 4)),
+            @AttributeOverride(name = "currency", column = @Column(name = "subtotal_currency", length = 3))
     })
     @Valid
     private Money subtotalAmount;
@@ -110,8 +110,8 @@ public class Order extends BaseEntity {
      */
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "tax_amount", precision = 19, scale = 4)),
-        @AttributeOverride(name = "currency", column = @Column(name = "tax_currency", length = 3))
+            @AttributeOverride(name = "amount", column = @Column(name = "tax_amount", precision = 19, scale = 4)),
+            @AttributeOverride(name = "currency", column = @Column(name = "tax_currency", length = 3))
     })
     @Valid
     private Money taxAmount;
@@ -121,8 +121,8 @@ public class Order extends BaseEntity {
      */
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "shipping_amount", precision = 19, scale = 4)),
-        @AttributeOverride(name = "currency", column = @Column(name = "shipping_currency", length = 3))
+            @AttributeOverride(name = "amount", column = @Column(name = "shipping_amount", precision = 19, scale = 4)),
+            @AttributeOverride(name = "currency", column = @Column(name = "shipping_currency", length = 3))
     })
     @Valid
     private Money shippingAmount;
@@ -132,8 +132,8 @@ public class Order extends BaseEntity {
      */
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "discount_amount", precision = 19, scale = 4)),
-        @AttributeOverride(name = "currency", column = @Column(name = "discount_currency", length = 3))
+            @AttributeOverride(name = "amount", column = @Column(name = "discount_amount", precision = 19, scale = 4)),
+            @AttributeOverride(name = "currency", column = @Column(name = "discount_currency", length = 3))
     })
     @Valid
     private Money discountAmount;
@@ -143,20 +143,20 @@ public class Order extends BaseEntity {
      */
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "firstName", column = @Column(name = "shipping_first_name")),
-        @AttributeOverride(name = "lastName", column = @Column(name = "shipping_last_name")),
-        @AttributeOverride(name = "company", column = @Column(name = "shipping_company")),
-        @AttributeOverride(name = "streetAddress", column = @Column(name = "shipping_street_address")),
-        @AttributeOverride(name = "streetAddress2", column = @Column(name = "shipping_street_address_2")),
-        @AttributeOverride(name = "city", column = @Column(name = "shipping_city")),
-        @AttributeOverride(name = "state", column = @Column(name = "shipping_state")),
-        @AttributeOverride(name = "postalCode", column = @Column(name = "shipping_postal_code")),
-        @AttributeOverride(name = "country", column = @Column(name = "shipping_country")),
-        @AttributeOverride(name = "phone", column = @Column(name = "shipping_phone")),
-        @AttributeOverride(name = "email", column = @Column(name = "shipping_email")),
-        @AttributeOverride(name = "deliveryInstructions", column = @Column(name = "shipping_delivery_instructions")),
-        @AttributeOverride(name = "addressType", column = @Column(name = "shipping_address_type")),
-        @AttributeOverride(name = "isResidential", column = @Column(name = "shipping_is_residential"))
+            @AttributeOverride(name = "firstName", column = @Column(name = "shipping_first_name")),
+            @AttributeOverride(name = "lastName", column = @Column(name = "shipping_last_name")),
+            @AttributeOverride(name = "company", column = @Column(name = "shipping_company")),
+            @AttributeOverride(name = "streetAddress", column = @Column(name = "shipping_street_address")),
+            @AttributeOverride(name = "streetAddress2", column = @Column(name = "shipping_street_address_2")),
+            @AttributeOverride(name = "city", column = @Column(name = "shipping_city")),
+            @AttributeOverride(name = "state", column = @Column(name = "shipping_state")),
+            @AttributeOverride(name = "postalCode", column = @Column(name = "shipping_postal_code")),
+            @AttributeOverride(name = "country", column = @Column(name = "shipping_country")),
+            @AttributeOverride(name = "phone", column = @Column(name = "shipping_phone")),
+            @AttributeOverride(name = "email", column = @Column(name = "shipping_email")),
+            @AttributeOverride(name = "deliveryInstructions", column = @Column(name = "shipping_delivery_instructions")),
+            @AttributeOverride(name = "addressType", column = @Column(name = "shipping_address_type")),
+            @AttributeOverride(name = "isResidential", column = @Column(name = "shipping_is_residential"))
     })
     @Valid
     @NotNull(message = "Shipping address is required")
@@ -167,20 +167,20 @@ public class Order extends BaseEntity {
      */
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "firstName", column = @Column(name = "billing_first_name")),
-        @AttributeOverride(name = "lastName", column = @Column(name = "billing_last_name")),
-        @AttributeOverride(name = "company", column = @Column(name = "billing_company")),
-        @AttributeOverride(name = "streetAddress", column = @Column(name = "billing_street_address")),
-        @AttributeOverride(name = "streetAddress2", column = @Column(name = "billing_street_address_2")),
-        @AttributeOverride(name = "city", column = @Column(name = "billing_city")),
-        @AttributeOverride(name = "state", column = @Column(name = "billing_state")),
-        @AttributeOverride(name = "postalCode", column = @Column(name = "billing_postal_code")),
-        @AttributeOverride(name = "country", column = @Column(name = "billing_country")),
-        @AttributeOverride(name = "phone", column = @Column(name = "billing_phone")),
-        @AttributeOverride(name = "email", column = @Column(name = "billing_email")),
-        @AttributeOverride(name = "deliveryInstructions", column = @Column(name = "billing_delivery_instructions")),
-        @AttributeOverride(name = "addressType", column = @Column(name = "billing_address_type")),
-        @AttributeOverride(name = "isResidential", column = @Column(name = "billing_is_residential"))
+            @AttributeOverride(name = "firstName", column = @Column(name = "billing_first_name")),
+            @AttributeOverride(name = "lastName", column = @Column(name = "billing_last_name")),
+            @AttributeOverride(name = "company", column = @Column(name = "billing_company")),
+            @AttributeOverride(name = "streetAddress", column = @Column(name = "billing_street_address")),
+            @AttributeOverride(name = "streetAddress2", column = @Column(name = "billing_street_address_2")),
+            @AttributeOverride(name = "city", column = @Column(name = "billing_city")),
+            @AttributeOverride(name = "state", column = @Column(name = "billing_state")),
+            @AttributeOverride(name = "postalCode", column = @Column(name = "billing_postal_code")),
+            @AttributeOverride(name = "country", column = @Column(name = "billing_country")),
+            @AttributeOverride(name = "phone", column = @Column(name = "billing_phone")),
+            @AttributeOverride(name = "email", column = @Column(name = "billing_email")),
+            @AttributeOverride(name = "deliveryInstructions", column = @Column(name = "billing_delivery_instructions")),
+            @AttributeOverride(name = "addressType", column = @Column(name = "billing_address_type")),
+            @AttributeOverride(name = "isResidential", column = @Column(name = "billing_is_residential"))
     })
     @Valid
     private Address billingAddress;
@@ -282,7 +282,6 @@ public class Order extends BaseEntity {
     private List<OrderItem> orderItems = new ArrayList<>();
 
 
-
     // ==================== Business Methods ====================
 
     /**
@@ -308,7 +307,6 @@ public class Order extends BaseEntity {
             orderItem.setOrder(null);
         }
     }
-
 
 
     /**
@@ -374,7 +372,6 @@ public class Order extends BaseEntity {
     }
 
 
-
     /**
      * Check if the order is paid (simplified for base version)
      *
@@ -383,7 +380,7 @@ public class Order extends BaseEntity {
     @JsonIgnore
     public boolean isPaid() {
         return status == OrderStatus.PAID || status == OrderStatus.SHIPPED ||
-               status == OrderStatus.DELIVERED || status == OrderStatus.COMPLETED;
+                status == OrderStatus.DELIVERED || status == OrderStatus.COMPLETED;
     }
 
     /**
@@ -434,8 +431,8 @@ public class Order extends BaseEntity {
      */
     public boolean isOverdue() {
         return expectedDeliveryDate != null &&
-               LocalDateTime.now().isAfter(expectedDeliveryDate) &&
-               !isDelivered();
+                LocalDateTime.now().isAfter(expectedDeliveryDate) &&
+                !isDelivered();
     }
 
     /**
@@ -488,7 +485,7 @@ public class Order extends BaseEntity {
             this.status = newStatus;
         } else {
             throw new IllegalArgumentException(
-                String.format("Cannot transition from %s to %s", status, newStatus));
+                    String.format("Cannot transition from %s to %s", status, newStatus));
         }
     }
 

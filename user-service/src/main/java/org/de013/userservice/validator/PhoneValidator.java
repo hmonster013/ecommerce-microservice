@@ -10,27 +10,27 @@ import java.util.regex.Pattern;
  * Validates phone number format for various countries
  */
 public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
-    
+
     // International phone number pattern (E.164 format)
     private static final Pattern INTERNATIONAL_PATTERN = Pattern.compile(
-        "^\\+[1-9]\\d{1,14}$"
+            "^\\+[1-9]\\d{1,14}$"
     );
-    
+
     // Vietnam phone number patterns
     private static final Pattern VN_MOBILE_PATTERN = Pattern.compile(
-        "^(\\+84|84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])\\d{7}$"
+            "^(\\+84|84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])\\d{7}$"
     );
-    
+
     // US phone number pattern
     private static final Pattern US_PATTERN = Pattern.compile(
-        "^(\\+1|1)?[2-9]\\d{2}[2-9]\\d{2}\\d{4}$"
+            "^(\\+1|1)?[2-9]\\d{2}[2-9]\\d{2}\\d{4}$"
     );
-    
+
     // General patterns for common formats
     private static final Pattern GENERAL_PATTERN = Pattern.compile(
-        "^[\\+]?[1-9]\\d{1,14}$"
+            "^[\\+]?[1-9]\\d{1,14}$"
     );
-    
+
     private boolean international;
     private String countryCode;
 
@@ -39,16 +39,16 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
         this.international = constraintAnnotation.international();
         this.countryCode = constraintAnnotation.countryCode().toUpperCase();
     }
-    
+
     @Override
     public boolean isValid(String phone, ConstraintValidatorContext context) {
         if (phone == null || phone.trim().isEmpty()) {
             return true; // Let @NotNull handle null validation
         }
-        
+
         // Clean phone number (remove spaces, dashes, parentheses)
         String cleanPhone = phone.replaceAll("[\\s\\-\\(\\)]", "");
-        
+
         // Check length limits
         if (cleanPhone.length() < 7) {
             addConstraintViolation(context, "phone.tooShort");
@@ -58,12 +58,12 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
             addConstraintViolation(context, "phone.tooLong");
             return false;
         }
-        
+
         // Validate based on country code
         if (!countryCode.isEmpty()) {
             return validateByCountry(cleanPhone, context);
         }
-        
+
         // General validation
         if (international) {
             // Check international format first
@@ -91,10 +91,10 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
                 return false;
             }
         }
-        
+
         return true;
     }
-    
+
     private boolean validateByCountry(String phone, ConstraintValidatorContext context) {
         switch (countryCode) {
             case "VN":
@@ -110,7 +110,7 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
                 return true;
         }
     }
-    
+
     private boolean validateVietnamesePhone(String phone, ConstraintValidatorContext context) {
         if (!VN_MOBILE_PATTERN.matcher(phone).matches()) {
             addConstraintViolation(context, "phone.invalidVietnamese");
@@ -118,7 +118,7 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
         }
         return true;
     }
-    
+
     private boolean validateUSPhone(String phone, ConstraintValidatorContext context) {
         if (!US_PATTERN.matcher(phone).matches()) {
             addConstraintViolation(context, "phone.invalidUS");
@@ -126,7 +126,7 @@ public class PhoneValidator implements ConstraintValidator<ValidPhone, String> {
         }
         return true;
     }
-    
+
     private void addConstraintViolation(ConstraintValidatorContext context, String message) {
         context.disableDefaultConstraintViolation();
         context.buildConstraintViolationWithTemplate(message).addConstraintViolation();

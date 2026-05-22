@@ -25,7 +25,7 @@ public class ForbiddenException extends RuntimeException {
      */
     public static ForbiddenException roleRequired(String role) {
         return new ForbiddenException(
-            String.format("Role '%s' is required to access this resource", role)
+                String.format("Role '%s' is required to access this resource", role)
         );
     }
 
@@ -34,7 +34,7 @@ public class ForbiddenException extends RuntimeException {
      */
     public static ForbiddenException accessDenied(String resource) {
         return new ForbiddenException(
-            String.format("Access denied to resource: %s", resource)
+                String.format("Access denied to resource: %s", resource)
         );
     }
 }

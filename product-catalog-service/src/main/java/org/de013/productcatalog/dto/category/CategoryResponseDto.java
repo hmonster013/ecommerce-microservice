@@ -85,16 +85,16 @@ public class CategoryResponseDto implements Serializable {
     public static class CategoryBreadcrumb implements Serializable {
 
         private static final long serialVersionUID = 1L;
-        
+
         @Schema(description = "Category ID", example = "1")
         private Long id;
-        
+
         @Schema(description = "Category name", example = "Electronics")
         private String name;
-        
+
         @Schema(description = "Category slug", example = "electronics")
         private String slug;
-        
+
         @Schema(description = "Level in hierarchy", example = "0")
         private Integer level;
     }

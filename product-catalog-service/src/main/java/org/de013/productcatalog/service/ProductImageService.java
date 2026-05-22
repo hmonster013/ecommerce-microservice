@@ -13,22 +13,22 @@ public interface ProductImageService {
 
     // CRUD Operations
     ProductImageDto createImage(Long productId, ProductImageCreateDto createDto);
-    
+
     ProductImageDto updateImage(Long imageId, ProductImageUpdateDto updateDto);
-    
+
     void deleteImage(Long imageId);
-    
+
     ProductImageDto getImageById(Long imageId);
 
     // Product-specific Operations
     List<ProductImageDto> getImagesByProductId(Long productId);
-    
+
     List<ProductImageDto> getActiveImagesByProductId(Long productId);
-    
+
     PageResponse<ProductImageDto> getImagesByProductId(Long productId, Pageable pageable);
-    
+
     ProductImageDto getMainImageByProductId(Long productId);
-    
+
     List<ProductImageDto> getGalleryImagesByProductId(Long productId);
 
     // Validation Operations

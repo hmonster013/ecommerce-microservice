@@ -48,8 +48,8 @@ public class ProductVariantUpdateDto {
     private Boolean isActive;
 
     @Size(max = 255, message = "{variant.image.url.too.long}")
-    @Pattern(regexp = "^(https?://.*\\.(jpg|jpeg|png|gif|webp))?$", 
-             message = "{variant.image.url.invalid.format}")
+    @Pattern(regexp = "^(https?://.*\\.(jpg|jpeg|png|gif|webp))?$",
+            message = "{variant.image.url.invalid.format}")
     @Schema(description = "Variant image URL", example = "https://example.com/images/iphone-15-pro-titanium.jpg")
     private String imageUrl;
 
@@ -61,9 +61,9 @@ public class ProductVariantUpdateDto {
     @JsonIgnore
     @AssertTrue(message = "At least one field must be provided for update")
     public boolean hasUpdates() {
-        return variantType != null || name != null || value != null || 
-               priceAdjustment != null || sku != null || displayOrder != null || 
-               isActive != null || imageUrl != null || description != null;
+        return variantType != null || name != null || value != null ||
+                priceAdjustment != null || sku != null || displayOrder != null ||
+                isActive != null || imageUrl != null || description != null;
     }
 
     @JsonIgnore

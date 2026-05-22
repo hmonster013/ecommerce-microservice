@@ -3,10 +3,7 @@ package org.de013.paymentservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
 import org.de013.paymentservice.entity.enums.PaymentMethodType;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -15,11 +12,11 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "payment_methods", indexes = {
-    @Index(name = "idx_user_id", columnList = "userId"),
-    @Index(name = "idx_user_id_is_active", columnList = "userId, isActive"),
-    @Index(name = "idx_user_id_is_default", columnList = "userId, isDefault"),
-    @Index(name = "idx_stripe_payment_method_id", columnList = "stripePaymentMethodId", unique = true),
-    @Index(name = "idx_created_at", columnList = "createdAt")
+        @Index(name = "idx_user_id", columnList = "userId"),
+        @Index(name = "idx_user_id_is_active", columnList = "userId, isActive"),
+        @Index(name = "idx_user_id_is_default", columnList = "userId, isDefault"),
+        @Index(name = "idx_stripe_payment_method_id", columnList = "stripePaymentMethodId", unique = true),
+        @Index(name = "idx_created_at", columnList = "createdAt")
 })
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -114,17 +111,17 @@ public class PaymentMethod extends BaseEntity {
         if (nickname != null && !nickname.trim().isEmpty()) {
             return nickname;
         }
-        
+
         if (type == PaymentMethodType.CARD && maskedCardNumber != null) {
-            return cardBrand != null ? 
-                cardBrand.toUpperCase() + " " + maskedCardNumber : 
-                maskedCardNumber;
+            return cardBrand != null ?
+                    cardBrand.toUpperCase() + " " + maskedCardNumber :
+                    maskedCardNumber;
         }
-        
+
         if (type == PaymentMethodType.WALLET && walletType != null) {
             return walletType.replace("_", " ").toUpperCase();
         }
-        
+
         return type.toString();
     }
 
@@ -132,10 +129,10 @@ public class PaymentMethod extends BaseEntity {
         if (expiryMonth == null || expiryYear == null) {
             return false;
         }
-        
+
         LocalDateTime now = LocalDateTime.now();
-        return now.getYear() > expiryYear || 
-               (now.getYear() == expiryYear && now.getMonthValue() > expiryMonth);
+        return now.getYear() > expiryYear ||
+                (now.getYear() == expiryYear && now.getMonthValue() > expiryMonth);
     }
 
     public void updateLastUsed() {

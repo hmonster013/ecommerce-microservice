@@ -54,18 +54,18 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
     // ========== Search and Filtering ==========
 
     @Query("SELECT r FROM Role r WHERE " +
-           "LOWER(r.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            "LOWER(r.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Role> searchRoles(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("SELECT r FROM Role r WHERE " +
-           "(LOWER(r.name) LIKE LOWER(CONCAT('%', :name, '%')) OR :name IS NULL) AND " +
-           "(LOWER(r.description) LIKE LOWER(CONCAT('%', :description, '%')) OR :description IS NULL) AND " +
-           "(r.active = :active OR :active IS NULL)")
+            "(LOWER(r.name) LIKE LOWER(CONCAT('%', :name, '%')) OR :name IS NULL) AND " +
+            "(LOWER(r.description) LIKE LOWER(CONCAT('%', :description, '%')) OR :description IS NULL) AND " +
+            "(r.active = :active OR :active IS NULL)")
     Page<Role> findRolesWithFilters(@Param("name") String name,
-                                   @Param("description") String description,
-                                   @Param("active") Boolean active,
-                                   Pageable pageable);
+                                    @Param("description") String description,
+                                    @Param("active") Boolean active,
+                                    Pageable pageable);
 
     // ========== Statistics Queries ==========
 

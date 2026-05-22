@@ -36,8 +36,8 @@ public class UserServiceClientFallback implements UserServiceClient {
     public ResponseEntity<UserValidationResponse> validateUserForPayment(Long userId) {
         log.warn("User Service unavailable - using fallback validation for user: {}", userId);
         return ResponseEntity.ok(UserValidationResponse.invalid(
-            "User Service unavailable - cannot validate user",
-            List.of("Service temporarily unavailable", "Please try again later")
+                "User Service unavailable - cannot validate user",
+                List.of("Service temporarily unavailable", "Please try again later")
         ));
     }
 

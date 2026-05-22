@@ -11,7 +11,6 @@ import org.de013.common.controller.BaseController;
 import org.de013.common.dto.InventoryDto;
 import org.de013.productcatalog.service.InventoryService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -25,8 +24,8 @@ public class InventoryController extends BaseController {
 
     @Operation(summary = "Get product inventory", description = "Retrieve inventory information for a specific product")
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Inventory retrieved successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product or inventory not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Inventory retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product or inventory not found")
     })
     @GetMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY)
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> getProductInventory(

@@ -4,11 +4,11 @@ package org.de013.userservice.exception;
  * Utility class for creating and throwing exceptions
  */
 public final class ExceptionUtils {
-    
+
     private ExceptionUtils() {
         // Utility class
     }
-    
+
     /**
      * Throw UserNotFoundException if user is null
      */
@@ -17,7 +17,7 @@ public final class ExceptionUtils {
             throw UserNotFoundException.byId(userId);
         }
     }
-    
+
     /**
      * Throw UserNotFoundException if user is null
      */
@@ -26,7 +26,7 @@ public final class ExceptionUtils {
             throw UserNotFoundException.byEmail(email);
         }
     }
-    
+
     /**
      * Throw EmailAlreadyExistsException if email exists
      */
@@ -35,7 +35,7 @@ public final class ExceptionUtils {
             throw EmailAlreadyExistsException.forEmail(email);
         }
     }
-    
+
     /**
      * Throw AccountStatusException if account is not active
      */

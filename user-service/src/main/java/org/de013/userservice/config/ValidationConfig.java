@@ -28,7 +28,7 @@ public class ValidationConfig {
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setCacheSeconds(300); // Cache for 5 minutes
         messageSource.setFallbackToSystemLocale(false);
-        
+
         log.info("Configured validation message source with custom messages");
         return messageSource;
     }
@@ -41,7 +41,7 @@ public class ValidationConfig {
     public LocalValidatorFactoryBean validator() {
         LocalValidatorFactoryBean validatorFactory = new LocalValidatorFactoryBean();
         validatorFactory.setValidationMessageSource(validationMessageSource());
-        
+
         log.info("Configured custom validator factory");
         return validatorFactory;
     }
@@ -53,7 +53,7 @@ public class ValidationConfig {
     public MethodValidationPostProcessor methodValidationPostProcessor() {
         MethodValidationPostProcessor processor = new MethodValidationPostProcessor();
         processor.setValidator(validator());
-        
+
         log.info("Configured method validation post processor");
         return processor;
     }

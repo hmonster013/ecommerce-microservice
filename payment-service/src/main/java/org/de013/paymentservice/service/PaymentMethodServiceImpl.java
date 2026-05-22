@@ -400,7 +400,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
             String provider, String cardBrand, Pageable pageable) {
 
         return paymentMethodRepository.searchPaymentMethods(
-                userId, type, isActive, isDefault, provider, cardBrand, pageable)
+                        userId, type, isActive, isDefault, provider, cardBrand, pageable)
                 .map(paymentMethodMapper::toPaymentMethodResponse);
     }
 

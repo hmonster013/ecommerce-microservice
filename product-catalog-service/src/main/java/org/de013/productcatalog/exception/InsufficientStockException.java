@@ -11,21 +11,21 @@ public class InsufficientStockException extends BaseBusinessException {
 
     public InsufficientStockException(Long productId, Integer requested, Integer available) {
         super(
-            String.format("Insufficient stock for product %d. Requested: %d, Available: %d", 
-                         productId, requested, available),
-            ERROR_CODE,
-            HttpStatus.CONFLICT,
-            productId, requested, available
+                String.format("Insufficient stock for product %d. Requested: %d, Available: %d",
+                        productId, requested, available),
+                ERROR_CODE,
+                HttpStatus.CONFLICT,
+                productId, requested, available
         );
     }
 
     public InsufficientStockException(String productSku, Integer requested, Integer available) {
         super(
-            String.format("Insufficient stock for product '%s'. Requested: %d, Available: %d", 
-                         productSku, requested, available),
-            ERROR_CODE,
-            HttpStatus.CONFLICT,
-            productSku, requested, available
+                String.format("Insufficient stock for product '%s'. Requested: %d, Available: %d",
+                        productSku, requested, available),
+                ERROR_CODE,
+                HttpStatus.CONFLICT,
+                productSku, requested, available
         );
     }
 

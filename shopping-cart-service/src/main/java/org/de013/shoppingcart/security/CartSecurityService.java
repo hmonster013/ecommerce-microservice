@@ -36,10 +36,10 @@ public class CartSecurityService {
 
         // Customers can only access their own cart
         boolean isOwnCart = userContext.getUserId().equals(userId);
-        log.debug("User {} {} access cart for user {} (own cart: {})", 
-                userContext.getUsername(), 
-                isOwnCart ? "granted" : "denied", 
-                userId, 
+        log.debug("User {} {} access cart for user {} (own cart: {})",
+                userContext.getUsername(),
+                isOwnCart ? "granted" : "denied",
+                userId,
                 isOwnCart);
         return isOwnCart;
     }
@@ -54,7 +54,6 @@ public class CartSecurityService {
     }
 
 
-
     /**
      * Check if current user can access external services
      * - Only admins can access external service endpoints
@@ -67,9 +66,9 @@ public class CartSecurityService {
         }
 
         boolean canAccess = userContext.isAdmin();
-        log.debug("User {} {} access external services (admin: {})", 
-                userContext.getUsername(), 
-                canAccess ? "can" : "cannot", 
+        log.debug("User {} {} access external services (admin: {})",
+                userContext.getUsername(),
+                canAccess ? "can" : "cannot",
                 canAccess);
         return canAccess;
     }
@@ -86,9 +85,9 @@ public class CartSecurityService {
         }
 
         boolean canAccess = userContext.isAdmin();
-        log.debug("User {} {} access monitoring (admin: {})", 
-                userContext.getUsername(), 
-                canAccess ? "can" : "cannot", 
+        log.debug("User {} {} access monitoring (admin: {})",
+                userContext.getUsername(),
+                canAccess ? "can" : "cannot",
                 canAccess);
         return canAccess;
     }

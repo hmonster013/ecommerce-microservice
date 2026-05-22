@@ -114,10 +114,10 @@ public class ProductUpdateDto {
     @JsonIgnore
     public boolean hasUpdates() {
         return name != null || description != null || shortDescription != null ||
-               sku != null || price != null || comparePrice != null || costPrice != null ||
-               brand != null || weight != null || dimensions != null || status != null ||
-               isFeatured != null || isDigital != null || requiresShipping != null ||
-               metaTitle != null || metaDescription != null || searchKeywords != null ||
-               categoryIds != null || primaryCategoryId != null;
+                sku != null || price != null || comparePrice != null || costPrice != null ||
+                brand != null || weight != null || dimensions != null || status != null ||
+                isFeatured != null || isDigital != null || requiresShipping != null ||
+                metaTitle != null || metaDescription != null || searchKeywords != null ||
+                categoryIds != null || primaryCategoryId != null;
     }
 }

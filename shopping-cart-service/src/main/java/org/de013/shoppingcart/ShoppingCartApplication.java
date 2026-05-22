@@ -9,10 +9,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 /**
  * Shopping Cart Service Application
- *
+ * <p>
  * A high-performance microservice for managing shopping carts in an e-commerce platform.
  * Features Redis-based primary storage, PostgreSQL backup, and comprehensive cart management.
- *
+ * <p>
  * Key Features:
  * - Ultra-fast Redis-based cart operations
  * - Session management for guest and authenticated users
@@ -28,8 +28,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @EnableFeignClients
 @EnableJpaAuditing(auditorAwareRef = "auditorAwareImpl")
 @ComponentScan(basePackages = {
-    "org.de013.shoppingcart",
-    "org.de013.common"
+        "org.de013.shoppingcart",
+        "org.de013.common"
 })
 public class ShoppingCartApplication {
 

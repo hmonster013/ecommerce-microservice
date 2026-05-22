@@ -17,7 +17,7 @@ public class TokenBlacklistServiceImpl implements TokenBlacklistService {
     private final String keyPrefix;
 
     public TokenBlacklistServiceImpl(StringRedisTemplate redisTemplate,
-           @Value("${token.blacklist.prefix:auth}") String prefix) {
+                                     @Value("${token.blacklist.prefix:auth}") String prefix) {
         this.redisTemplate = redisTemplate;
         this.keyPrefix = prefix + ":blacklist:";
     }

@@ -21,7 +21,7 @@ public class SlugUtils {
 
     /**
      * Generate a URL-friendly slug from the given text.
-     * 
+     *
      * @param input the input text
      * @return URL-friendly slug
      */
@@ -73,14 +73,14 @@ public class SlugUtils {
 
     /**
      * Generate a unique slug by appending a number if the base slug already exists.
-     * 
-     * @param baseSlug the base slug
+     *
+     * @param baseSlug            the base slug
      * @param existingSlugChecker function to check if slug exists
      * @return unique slug
      */
     public static String generateUniqueSlug(String baseSlug, java.util.function.Function<String, Boolean> existingSlugChecker) {
         String slug = generateSlug(baseSlug);
-        
+
         if (!existingSlugChecker.apply(slug)) {
             return slug;
         }
@@ -102,7 +102,7 @@ public class SlugUtils {
 
     /**
      * Validate if a string is a valid slug format.
-     * 
+     *
      * @param slug the slug to validate
      * @return true if valid slug format
      */
@@ -131,7 +131,7 @@ public class SlugUtils {
 
     /**
      * Extract slug from a full URL path.
-     * 
+     *
      * @param path the URL path
      * @return extracted slug
      */
@@ -188,7 +188,7 @@ public class SlugUtils {
 
     /**
      * Check if slug contains only safe characters for URLs.
-     * 
+     *
      * @param slug the slug to check
      * @return true if slug is URL-safe
      */
@@ -203,7 +203,7 @@ public class SlugUtils {
 
     /**
      * Sanitize slug by removing or replacing unsafe characters.
-     * 
+     *
      * @param slug the slug to sanitize
      * @return sanitized slug
      */
