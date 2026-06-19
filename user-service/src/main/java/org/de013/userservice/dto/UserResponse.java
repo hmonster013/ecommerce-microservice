@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
 
 import java.time.LocalDateTime;
@@ -24,7 +25,6 @@ public class UserResponse {
     private String phone;
     private String address;
     private List<String> roles;
-    private boolean enabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -39,9 +39,8 @@ public class UserResponse {
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .roles(user.getRoles().stream()
-                        .map(role -> role.getName())
+                        .map(Role::getName)
                         .collect(Collectors.toList()))
-                .enabled(user.isEnabled())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

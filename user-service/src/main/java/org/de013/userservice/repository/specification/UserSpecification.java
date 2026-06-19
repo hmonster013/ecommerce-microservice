@@ -33,18 +33,6 @@ public class UserSpecification {
     }
 
     /**
-     * Filter by enabled status
-     */
-    public static Specification<User> hasEnabled(Boolean enabled) {
-        return (root, query, criteriaBuilder) -> {
-            if (enabled == null) {
-                return criteriaBuilder.conjunction();
-            }
-            return criteriaBuilder.equal(root.get("enabled"), enabled);
-        };
-    }
-
-    /**
      * Filter by role name
      */
     public static Specification<User> hasRole(String roleName) {
@@ -78,22 +66,11 @@ public class UserSpecification {
     }
 
     /**
-     * Filter active users (enabled and account not locked)
-     */
-    public static Specification<User> isActive() {
-        return (root, query, criteriaBuilder) -> criteriaBuilder.and(
-                criteriaBuilder.equal(root.get("enabled"), true),
-                criteriaBuilder.equal(root.get("accountNonLocked"), true)
-        );
-    }
-
-    /**
      * Complex filter combining multiple criteria
      */
-    public static Specification<User> withFilters(String keyword, Boolean enabled, String roleName,
+    public static Specification<User> withFilters(String keyword, String roleName,
                                                   LocalDateTime startDate, LocalDateTime endDate) {
         return Specification.where(hasKeyword(keyword))
-                .and(hasEnabled(enabled))
                 .and(hasRole(roleName))
                 .and(createdBetween(startDate, endDate));
     }

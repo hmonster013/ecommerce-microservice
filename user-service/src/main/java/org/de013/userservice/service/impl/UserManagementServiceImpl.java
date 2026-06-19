@@ -17,7 +17,6 @@ import org.de013.userservice.repository.UserRepository;
 import org.de013.userservice.service.UserManagementService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +33,6 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
     // ========== User Registration & Creation ==========
@@ -60,7 +58,6 @@ public class UserManagementServiceImpl implements UserManagementService {
                 .lastName(request.getLastName())
                 .phone(request.getPhone())
                 .address(request.getAddress())
-                .enabled(true)
                 .createdBy("SYSTEM")
                 .build();
 
@@ -91,7 +88,6 @@ public class UserManagementServiceImpl implements UserManagementService {
                 .lastName(request.getLastName())
                 .phone(request.getPhone())
                 .address(request.getAddress())
-                .enabled(true)
                 .createdBy("ADMIN")
                 .build();
 
@@ -220,56 +216,9 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserResponse> getActiveUsers() {
-        List<User> users = userRepository.findAllActiveUsers();
-        return users.stream()
-                .map(userMapper::convertToUserResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public PageResponse<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
         Page<User> users = userRepository.findUsersCreatedBetween(startDate, endDate, pageable);
         return PageResponse.of(users.map(userMapper::convertToUserResponse));
-    }
-
-    // ========== User Status Management ==========
-
-    @Override
-    public void enableUser(Long userId) {
-        log.info("Enabling user: {}", userId);
-        User user = findUserById(userId);
-        user.setEnabled(true);
-        userRepository.save(user);
-        log.info("User enabled successfully: {}", userId);
-    }
-
-    @Override
-    public void disableUser(Long userId) {
-        log.info("Disabling user: {}", userId);
-        User user = findUserById(userId);
-        user.setEnabled(false);
-        userRepository.save(user);
-        log.info("User disabled successfully: {}", userId);
-    }
-
-    @Override
-    public void lockUser(Long userId) {
-        log.info("Locking user: {}", userId);
-        User user = findUserById(userId);
-        user.setAccountNonLocked(false);
-        userRepository.save(user);
-        log.info("User locked successfully: {}", userId);
-    }
-
-    @Override
-    public void unlockUser(Long userId) {
-        log.info("Unlocking user: {}", userId);
-        User user = findUserById(userId);
-        user.setAccountNonLocked(true);
-        userRepository.save(user);
-        log.info("User unlocked successfully: {}", userId);
     }
 
     // ========== User Role Management ==========
@@ -326,13 +275,6 @@ public class UserManagementServiceImpl implements UserManagementService {
         User user = findUserById(userId);
         userRepository.delete(user);
         log.info("User deleted successfully: {}", userId);
-    }
-
-    @Override
-    public void softDeleteUser(Long userId) {
-        log.info("Soft deleting user: {}", userId);
-        disableUser(userId);
-        log.info("User soft deleted successfully: {}", userId);
     }
 
     // ========== Validation Methods ==========

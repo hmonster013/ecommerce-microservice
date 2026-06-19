@@ -51,20 +51,4 @@ public class User extends BaseEntity {
         }
         return this.roles;
     }
-
-    @Column(name = "account_non_expired")
-    @Builder.Default
-    private boolean accountNonExpired = true;
-
-    @Column(name = "account_non_locked")
-    @Builder.Default
-    private boolean accountNonLocked = true;
-
-    @Column(name = "credentials_non_expired")
-    @Builder.Default
-    private boolean credentialsNonExpired = true;
-
-    @Column(name = "is_enabled")
-    @Builder.Default
-    private boolean enabled = true;
 }

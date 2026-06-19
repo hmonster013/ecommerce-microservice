@@ -95,20 +95,6 @@ public class UserManagementController extends BaseController {
 
     // ========== User Status Management (Admin only) ==========
 
-    @PutMapping(ApiPaths.ID_PARAM + ApiPaths.ENABLE)
-    @Operation(summary = "Enable user (Admin only)", description = "Enable user account. Authorization handled by API Gateway.")
-    public ResponseEntity<ApiResponse<String>> enableUser(@PathVariable Long id) {
-        userManagementService.enableUser(id);
-        return ok("User enabled successfully");
-    }
-
-    @PutMapping(ApiPaths.ID_PARAM + ApiPaths.DISABLE)
-    @Operation(summary = "Disable user (Admin only)", description = "Disable user account. Authorization handled by API Gateway.")
-    public ResponseEntity<ApiResponse<String>> disableUser(@PathVariable Long id) {
-        userManagementService.disableUser(id);
-        return ok("User disabled successfully");
-    }
-
     @DeleteMapping(ApiPaths.ID_PARAM)
     @Operation(summary = "Delete user (Admin only)", description = "Delete user account. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long id) {

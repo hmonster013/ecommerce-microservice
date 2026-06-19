@@ -33,13 +33,13 @@ public class UserSearchService {
     /**
      * Advanced search with multiple filters using Specifications
      */
-    public Page<User> advancedSearch(String keyword, Boolean enabled, String roleName,
+    public Page<User> advancedSearch(String keyword, String roleName,
                                      LocalDateTime startDate, LocalDateTime endDate,
                                      Pageable pageable) {
-        log.debug("Advanced search - keyword: {}, enabled: {}, role: {}, dateRange: {} to {}",
-                keyword, enabled, roleName, startDate, endDate);
+        log.debug("Advanced search - keyword: {}, role: {}, dateRange: {} to {}",
+                keyword, roleName, startDate, endDate);
 
-        Specification<User> spec = UserSpecification.withFilters(keyword, enabled, roleName, startDate, endDate);
+        Specification<User> spec = UserSpecification.withFilters(keyword, roleName, startDate, endDate);
         return userRepository.findAll(spec, pageable);
     }
 
@@ -49,14 +49,6 @@ public class UserSearchService {
     public List<User> findUsersByRole(String roleName) {
         log.debug("Finding users by role: {}", roleName);
         return userRepository.findByRoleName(roleName);
-    }
-
-    /**
-     * Find active users
-     */
-    public List<User> findActiveUsers() {
-        log.debug("Finding all active users");
-        return userRepository.findAllActiveUsers();
     }
 
     /**
@@ -74,14 +66,11 @@ public class UserSearchService {
         log.debug("Getting user statistics");
 
         long totalUsers = userRepository.count();
-        long activeUsers = userRepository.countActiveUsers();
         long adminUsers = userRepository.countByRoleName("ADMIN");
         long customerUsers = userRepository.countByRoleName("CUSTOMER");
 
         return UserStatistics.builder()
                 .totalUsers(totalUsers)
-                .activeUsers(activeUsers)
-                .inactiveUsers(totalUsers - activeUsers)
                 .adminUsers(adminUsers)
                 .customerUsers(customerUsers)
                 .build();
@@ -94,8 +83,6 @@ public class UserSearchService {
     @lombok.Builder
     public static class UserStatistics {
         private long totalUsers;
-        private long activeUsers;
-        private long inactiveUsers;
         private long adminUsers;
         private long customerUsers;
     }

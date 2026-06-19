@@ -35,13 +35,4 @@ public final class ExceptionUtils {
             throw EmailAlreadyExistsException.forEmail(email);
         }
     }
-
-    /**
-     * Throw AccountStatusException if account is not active
-     */
-    public static void throwIfAccountInactive(boolean isActive) {
-        if (!isActive) {
-            throw AccountStatusException.inactive();
-        }
-    }
 }

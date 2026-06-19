@@ -39,18 +39,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     boolean existsByEmailAndIdNot(String email, Long id);
 
-    // ========== Status-based Queries ==========
-
-    List<User> findByEnabled(boolean enabled);
-
-    List<User> findByAccountNonLocked(boolean accountNonLocked);
-
-    @Query("SELECT u FROM User u WHERE u.enabled = true AND u.accountNonLocked = true")
-    List<User> findAllActiveUsers();
-
-    @Query("SELECT u FROM User u WHERE u.enabled = false OR u.accountNonLocked = false")
-    List<User> findAllInactiveUsers();
-
     // ========== Role-based Queries ==========
 
     @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName")
@@ -74,12 +62,10 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @Query("SELECT u FROM User u WHERE " +
             "(LOWER(u.firstName) LIKE LOWER(CONCAT('%', :firstName, '%')) OR :firstName IS NULL) AND " +
             "(LOWER(u.lastName) LIKE LOWER(CONCAT('%', :lastName, '%')) OR :lastName IS NULL) AND " +
-            "(LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')) OR :email IS NULL) AND " +
-            "(u.enabled = :enabled OR :enabled IS NULL)")
+            "(LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')) OR :email IS NULL)")
     Page<User> findUsersWithFilters(@Param("firstName") String firstName,
                                     @Param("lastName") String lastName,
                                     @Param("email") String email,
-                                    @Param("enabled") Boolean enabled,
                                     Pageable pageable);
 
     // ========== Date-based Queries ==========
@@ -94,9 +80,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
                                        Pageable pageable);
 
     // ========== Statistics Queries ==========
-
-    @Query("SELECT COUNT(u) FROM User u WHERE u.enabled = true")
-    long countActiveUsers();
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :date")
     long countUsersCreatedAfter(@Param("date") LocalDateTime date);

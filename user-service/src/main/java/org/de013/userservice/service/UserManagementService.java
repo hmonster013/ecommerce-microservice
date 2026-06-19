@@ -126,13 +126,6 @@ public interface UserManagementService {
     List<UserResponse> getUsersByRole(String roleName);
 
     /**
-     * Get active users
-     *
-     * @return List of active user responses
-     */
-    List<UserResponse> getActiveUsers();
-
-    /**
      * Get users created in date range
      *
      * @param startDate Start date
@@ -141,36 +134,6 @@ public interface UserManagementService {
      * @return Page of user responses
      */
     PageResponse<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
-
-    // ========== User Status Management ==========
-
-    /**
-     * Enable user account
-     *
-     * @param userId User ID
-     */
-    void enableUser(Long userId);
-
-    /**
-     * Disable user account
-     *
-     * @param userId User ID
-     */
-    void disableUser(Long userId);
-
-    /**
-     * Lock user account
-     *
-     * @param userId User ID
-     */
-    void lockUser(Long userId);
-
-    /**
-     * Unlock user account
-     *
-     * @param userId User ID
-     */
-    void unlockUser(Long userId);
 
     // ========== User Role Management ==========
 
@@ -206,13 +169,6 @@ public interface UserManagementService {
      * @param userId User ID
      */
     void deleteUser(Long userId);
-
-    /**
-     * Soft delete user (disable instead of actual deletion)
-     *
-     * @param userId User ID
-     */
-    void softDeleteUser(Long userId);
 
     // ========== Validation Methods ==========
 

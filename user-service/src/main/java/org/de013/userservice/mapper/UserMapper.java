@@ -21,7 +21,6 @@ public class UserMapper {
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .roles(user.getRoles().stream().map(Role::getName).collect(Collectors.toList()))
-                .enabled(user.isEnabled())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

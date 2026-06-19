@@ -35,10 +35,6 @@ public class InternalUserController {
                             .email(request.getEmail())
                             .firstName(request.getFirstName() != null ? request.getFirstName() : "N/A")
                             .lastName(request.getLastName() != null ? request.getLastName() : "N/A")
-                            .enabled(true)
-                            .accountNonExpired(true)
-                            .accountNonLocked(true)
-                            .credentialsNonExpired(true)
                             .build();
 
                     log.info("Creating new user profile for Keycloak user: {}", request.getKeycloakId());
@@ -97,10 +93,6 @@ public class InternalUserController {
                     .email(email)
                     .firstName(firstName != null ? firstName : "N/A")
                     .lastName(lastName != null ? lastName : "N/A")
-                    .enabled(true)
-                    .accountNonExpired(true)
-                    .accountNonLocked(true)
-                    .credentialsNonExpired(true)
                     .build();
 
             // Add default CUSTOMER role
