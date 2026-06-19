@@ -56,6 +56,20 @@ public class InternalUserController {
                         .body(ApiResponse.error("User not found with keycloakId: " + keycloakId, "USER_NOT_FOUND")));
     }
 
+    @DeleteMapping("/by-keycloak-id/{keycloakId}")
+    public ResponseEntity<ApiResponse<String>> deleteUserByKeycloakId(@PathVariable String keycloakId) {
+        log.info("Internal request to delete user by keycloakId: {}", keycloakId);
+
+        return userRepository.findByKeycloakId(keycloakId)
+                .map(user -> {
+                    userRepository.delete(user);
+                    log.info("User {} deleted successfully from DB", keycloakId);
+                    return ResponseEntity.ok(ApiResponse.success("User deleted successfully"));
+                })
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found with keycloakId: " + keycloakId, "USER_NOT_FOUND")));
+    }
+
     /**
      * Get or create user by Keycloak ID
      * This endpoint supports JIT (Just-In-Time) user synchronization
