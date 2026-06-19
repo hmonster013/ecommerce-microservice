@@ -42,7 +42,15 @@ public class SecurityConfig {
                     }
 
                     exchanges
+                            // ========== CIRCUIT BREAKER FALLBACK ==========
+                            // Internal error responder for tripped circuit breakers — no sensitive
+                            // data, access control is already enforced on the original route.
+                            .pathMatchers("/fallback/**").permitAll()
+
                             // ========== AUTHENTICATION ENDPOINTS ==========
+                            // Admin user management
+                            .pathMatchers("/api/auth/admin/**").hasRole("ADMIN")
+
                             // Public authentication endpoints (login, register, refresh, logout)
                             .pathMatchers("/api/auth/**").permitAll()
 
