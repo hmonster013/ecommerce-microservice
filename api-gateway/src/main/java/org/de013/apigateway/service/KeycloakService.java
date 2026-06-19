@@ -211,6 +211,78 @@ public class KeycloakService {
     }
 
     /**
+     * Enable or disable user in Keycloak
+     */
+    public Mono<Void> setUserEnabled(String keycloakId, boolean enabled) {
+        return getAdminToken()
+                .flatMap(adminToken -> {
+                    Map<String, Object> user = new HashMap<>();
+                    user.put("enabled", enabled);
+
+                    return webClient
+                            .put()
+                            .uri(serverUrl + "/admin/realms/" + realm + "/users/" + keycloakId)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(user)
+                            .retrieve()
+                            .bodyToMono(Void.class)
+                            .doOnSuccess(v -> log.info("User {} enabled status set to {}", keycloakId, enabled));
+                })
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    log.error("Failed to set user enabled status: {}", e.getResponseBodyAsString());
+                    if (e.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                        return Mono.error(new KeycloakException("User not found"));
+                    }
+                    return Mono.error(new KeycloakException("Failed to update user status"));
+                });
+    }
+
+    /**
+     * Logout all sessions for a specific user
+     */
+    public Mono<Void> logoutAllSessions(String keycloakId) {
+        return getAdminToken()
+                .flatMap(adminToken -> webClient
+                        .post()
+                        .uri(serverUrl + "/admin/realms/" + realm + "/users/" + keycloakId + "/logout")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .retrieve()
+                        .bodyToMono(Void.class)
+                        .doOnSuccess(v -> log.info("All sessions logged out for user {}", keycloakId))
+                )
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    log.error("Failed to logout sessions: {}", e.getResponseBodyAsString());
+                    if (e.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                        return Mono.error(new KeycloakException("User not found"));
+                    }
+                    return Mono.error(new KeycloakException("Failed to logout user sessions"));
+                });
+    }
+
+    /**
+     * Delete user from Keycloak
+     */
+    public Mono<Void> deleteUser(String keycloakId) {
+        return getAdminToken()
+                .flatMap(adminToken -> webClient
+                        .delete()
+                        .uri(serverUrl + "/admin/realms/" + realm + "/users/" + keycloakId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .retrieve()
+                        .bodyToMono(Void.class)
+                        .doOnSuccess(v -> log.info("User {} deleted from Keycloak", keycloakId))
+                )
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    log.error("Failed to delete user: {}", e.getResponseBodyAsString());
+                    if (e.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                        return Mono.error(new KeycloakException("User not found"));
+                    }
+                    return Mono.error(new KeycloakException("Failed to delete user"));
+                });
+    }
+
+    /**
      * Get admin access token for Keycloak Admin API
      */
     private Mono<String> getAdminToken() {
