@@ -22,7 +22,7 @@ ecommerce-microservice/
 ├── order-service/              # 8084 — order processing
 ├── payment-service/            # 8085 — Stripe integration
 ├── notification-service/       # 8086 — email/SMS
-├── docker-compose/             # default/, observability/, prod/
+├── docker/             # default/, observability/, prod/
 ├── kubernetes/                 # K8s manifests
 └── docs/                       # Tài liệu (file này nằm đây)
 ```
@@ -216,7 +216,7 @@ Stack: **OpenTelemetry agent** → **Tempo** (trace) + **Prometheus** (metrics) 
 
 - Mọi service chạy kèm OTel Java Agent → tự động trace HTTP, JDBC, Kafka.
 - Log format chuẩn: `timestamp [service-name] [trace_id,span_id] -LEVEL ...` → Loki dùng `trace_id` để jump sang Tempo (derived fields đã cấu hình sẵn).
-- Compose riêng cho observability: `docker-compose/observability/`.
+- Compose riêng cho observability: `docker/observability/`.
 
 ---
 
@@ -224,13 +224,13 @@ Stack: **OpenTelemetry agent** → **Tempo** (trace) + **Prometheus** (metrics) 
 
 Có 2 profile compose, dùng cho 2 mục đích khác nhau. **File `.env` chỉ nằm ở root project**, nên mọi lệnh `docker compose` phải kèm `--env-file .env` (chạy từ root).
 
-### 7.1 Local development — `docker-compose/default/`
+### 7.1 Local development — `docker/default/`
 
 Compose này **chỉ chứa hạ tầng** (Postgres, Redis, RabbitMQ, Kafka, Keycloak, Eureka, Config Server, observability stack). Các business service (user, product, cart, order, payment, notification) sẽ chạy **trực tiếp trên IntelliJ** để dễ debug, hot-reload, gắn breakpoint.
 
 ```bash
 # Từ root project — start toàn bộ hạ tầng
-docker compose --env-file .env -f docker-compose/default/docker-compose.yml up -d
+docker compose --env-file .env -f docker/default/docker-compose.yml up -d
 
 # Sau đó mở IntelliJ và Run từng business service (hoặc dùng mvn)
 cd user-service && mvn spring-boot:run
@@ -243,16 +243,16 @@ Lưu ý khi chạy service từ IntelliJ:
 - Keycloak issuer: `http://localhost:8090/realms/<realm>`.
 - Dùng Spring profile `dev` (hoặc tương đương) nếu code có phân biệt — để load đúng endpoint `localhost`.
 
-### 7.2 Production / full Docker — `docker-compose/prod/`
+### 7.2 Production / full Docker — `docker/prod/`
 
 Compose này build và chạy **toàn bộ stack trong Docker** (hạ tầng + tất cả business service), dùng cho môi trường gần production hoặc khi muốn demo end-to-end mà không cần IDE.
 
 ```bash
 # Từ root project — build images + start full stack
-docker compose --env-file .env -f docker-compose/prod/docker-compose.yml up -d --build
+docker compose --env-file .env -f docker/prod/docker-compose.yml up -d --build
 
 # Dừng & xoá
-docker compose --env-file .env -f docker-compose/prod/docker-compose.yml down
+docker compose --env-file .env -f docker/prod/docker-compose.yml down
 ```
 
 Khác biệt chính so với `default/`:
@@ -262,7 +262,7 @@ Khác biệt chính so với `default/`:
 - Resource limit (cpu/memory) và restart policy được tighten lại.
 - Log driver có thể trỏ thẳng vào Loki/Alloy.
 
-> Lưu ý: nếu folder `docker-compose/prod/` đang trống, file compose cần được tạo dựa trên `default/docker-compose.yml` + thêm service block cho từng module (xem Dockerfile trong từng service).
+> Lưu ý: nếu folder `docker/prod/` đang trống, file compose cần được tạo dựa trên `default/docker-compose.yml` + thêm service block cho từng module (xem Dockerfile trong từng service).
 
 Endpoint kiểm tra nhanh:
 - Gateway health: <http://localhost:8080/actuator/health>
@@ -281,7 +281,7 @@ Endpoint kiểm tra nhanh:
 4. **Database-per-service**: không join bảng giữa các service. Cần data của service khác → gọi API hoặc consume event.
 5. **JWT chỉ validate ở Gateway** — business service tin JWT đã sạch và đọc claim qua `UserContext`. Đừng expose service ra ngoài Gateway.
 6. **Config thay đổi** thì không cần restart — push lên Git rồi `POST /actuator/busrefresh`.
-7. **`.env` chỉ nằm ở root project** — không còn copy vào `docker-compose/*/`. Mọi lệnh `docker compose` phải kèm `--env-file .env` (chạy từ root), nếu không các biến môi trường sẽ rỗng và service start fail.
+7. **`.env` chỉ nằm ở root project** — không còn copy vào `docker/*/`. Mọi lệnh `docker compose` phải kèm `--env-file .env` (chạy từ root), nếu không các biến môi trường sẽ rỗng và service start fail.
 8. **Hai profile compose khác mục đích**: `default/` = chỉ hạ tầng cho local dev (business service chạy IntelliJ), `prod/` = full Docker. Đừng nhầm — chạy nhầm `default/` mà mong có business service sẽ thấy Gateway không tìm được service.
 9. **Service-to-service client chưa thống nhất** (Feign vs RestTemplate vs WebClient) — khi đụng vào, ưu tiên Feign + fallback.
 
