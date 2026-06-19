@@ -91,6 +91,12 @@ kubernetes/configmap.yaml
 ehthumbs.db
 Thumbs.db
 
+# Personal planning docs & AI agent rules (not for repo)
+docs
+RULES.md
+CLAUDE.md
+AGENTS.md
+
 # Temporary files
 *.tmp
 *.temp
