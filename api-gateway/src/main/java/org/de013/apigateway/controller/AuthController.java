@@ -15,7 +15,6 @@ import org.de013.apigateway.exception.KeycloakException;
 import org.de013.apigateway.exception.dto.ErrorResponse;
 import org.de013.apigateway.service.KeycloakService;
 import org.de013.apigateway.service.UserServiceClient;
-import org.de013.common.constant.ApiPaths;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping(ApiPaths.API + ApiPaths.AUTH)
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Authentication", description = "Authentication endpoints for login, register, logout, and token refresh")
@@ -54,7 +53,7 @@ public class AuthController {
             ),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping(ApiPaths.REGISTER)
+    @PostMapping("/register")
     public Mono<ResponseEntity<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
 
         log.info("Registration request for username: {}", request.getUsername());
@@ -122,7 +121,7 @@ public class AuthController {
             ),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping(ApiPaths.LOGIN)
+    @PostMapping("/login")
     public Mono<ResponseEntity<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
 
         log.info("Login attempt for user: {}", request.getUsername());
@@ -162,7 +161,7 @@ public class AuthController {
             ),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping(ApiPaths.REFRESH)
+    @PostMapping("/refresh")
     public Mono<ResponseEntity<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
 
         log.debug("Token refresh request");
@@ -193,7 +192,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "Logout successful"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping(ApiPaths.LOGOUT)
+    @PostMapping("/logout")
     public Mono<ResponseEntity<Void>> logout(@Valid @RequestBody LogoutRequest request) {
 
         log.info("Logout request");

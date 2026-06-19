@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.ProductSummaryDto;
@@ -35,7 +34,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping(ApiPaths.SEARCH) // Gateway routes /api/v1/products/** to /products/**
+@RequestMapping("/search") // Gateway routes /api/v1/products/** to /products/**
 @RequiredArgsConstructor
 @Tag(name = "Search", description = "Advanced search operations with full-text search, filtering, and analytics")
 public class SearchController extends BaseController {
@@ -242,7 +241,7 @@ public class SearchController extends BaseController {
                                             }
                                             """)))
     })
-    @GetMapping(ApiPaths.SUGGESTIONS)
+    @GetMapping("/suggestions")
     public ResponseEntity<Object> getSearchSuggestions(
             @Parameter(
                     description = "Partial search query for autocomplete",

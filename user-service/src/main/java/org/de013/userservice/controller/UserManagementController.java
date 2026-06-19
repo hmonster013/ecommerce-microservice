@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResponse;
 import org.de013.common.dto.PageResponse;
@@ -20,7 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(ApiPaths.USERS)
+@RequestMapping("/users")
 @RequiredArgsConstructor
 @Tag(name = "User Management", description = "User profile and administration endpoints")
 public class UserManagementController extends BaseController {
@@ -29,7 +28,7 @@ public class UserManagementController extends BaseController {
 
     // ========== Profile Management ==========
 
-    @GetMapping(ApiPaths.PROFILE)
+    @GetMapping("/profile")
     @Operation(summary = "Get user profile", description = "Get current user's profile information")
     public ResponseEntity<ApiResponse<UserProfileDto>> getUserProfile(Authentication authentication) {
         String username = authentication.getName();
@@ -37,7 +36,7 @@ public class UserManagementController extends BaseController {
         return ok(profile);
     }
 
-    @PutMapping(ApiPaths.PROFILE)
+    @PutMapping("/profile")
     @Operation(summary = "Update user profile", description = "Update current user's profile information")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserProfile(
             Authentication authentication,
@@ -53,7 +52,7 @@ public class UserManagementController extends BaseController {
 
     // ========== Admin Only Endpoints ==========
 
-    @GetMapping(ApiPaths.ID_PARAM)
+    @GetMapping("/{id}")
     @Operation(summary = "Get user by ID (Admin only)", description = "Retrieve user information by user ID. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(
             @Parameter(description = "User ID", required = true)
@@ -63,7 +62,7 @@ public class UserManagementController extends BaseController {
         return ok(user);
     }
 
-    @GetMapping(ApiPaths.USERNAME_PARAM)
+    @GetMapping("/username/{username}")
     @Operation(summary = "Get user by username (Admin only)", description = "Retrieve user information by username. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<UserResponse>> getUserByUsername(
             @Parameter(description = "Username", required = true)
@@ -82,7 +81,7 @@ public class UserManagementController extends BaseController {
         return ok(users);
     }
 
-    @GetMapping(ApiPaths.SEARCH)
+    @GetMapping("/search")
     @Operation(summary = "Search users (Admin only)", description = "Search users by keyword. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> searchUsers(
             @Parameter(description = "Search keyword", required = true)
@@ -95,7 +94,7 @@ public class UserManagementController extends BaseController {
 
     // ========== User Status Management (Admin only) ==========
 
-    @DeleteMapping(ApiPaths.ID_PARAM)
+    @DeleteMapping("/{id}")
     @Operation(summary = "Delete user (Admin only)", description = "Delete user account. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long id) {
         userManagementService.deleteUser(id);

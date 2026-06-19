@@ -12,7 +12,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.notificationservice.dto.*;
 import org.de013.notificationservice.entity.Notification;
 import org.de013.notificationservice.service.NotificationService;
@@ -31,7 +30,7 @@ import java.util.NoSuchElementException;
  * Simple REST Controller for Notification operations
  */
 @RestController
-@RequestMapping(ApiPaths.NOTIFICATIONS)
+@RequestMapping("/notifications")
 @RequiredArgsConstructor
 @Slf4j
 @Validated
@@ -43,7 +42,7 @@ public class NotificationController {
     /**
      * Send email notification
      */
-    @PostMapping(ApiPaths.SEND_EMAIL)
+    @PostMapping("/send-email")
     @Operation(
             summary = "Send email notification",
             description = """
@@ -123,7 +122,7 @@ public class NotificationController {
     /**
      * Send SMS notification
      */
-    @PostMapping(ApiPaths.SEND_SMS)
+    @PostMapping("/send-sms")
     @Operation(
             summary = "Send SMS notification",
             description = """
@@ -200,7 +199,7 @@ public class NotificationController {
     /**
      * Send both email and SMS notification
      */
-    @PostMapping(ApiPaths.SEND_BOTH)
+    @PostMapping("/send-both")
     @Operation(
             summary = "Send both email and SMS",
             description = """
@@ -283,7 +282,7 @@ public class NotificationController {
     /**
      * Get notification by ID
      */
-    @GetMapping(ApiPaths.ID_PARAM)
+    @GetMapping("/{id}")
     @Operation(
             summary = "Get notification by ID",
             description = """
@@ -357,7 +356,7 @@ public class NotificationController {
     /**
      * Get notifications for a user (simplified)
      */
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM)
+    @GetMapping("/user/{userId}")
     @Operation(
             summary = "Get user notifications",
             description = """
@@ -436,7 +435,7 @@ public class NotificationController {
     /**
      * Mark notification as read
      */
-    @PutMapping(ApiPaths.ID_PARAM + ApiPaths.READ)
+    @PutMapping("/{id}/read")
     @Operation(
             summary = "Mark notification as read",
             description = """
@@ -493,7 +492,7 @@ public class NotificationController {
     /**
      * Get unread notification count for user
      */
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.UNREAD_COUNT)
+    @GetMapping("/user/{userId}/unread-count")
     @Operation(
             summary = "Get unread notification count",
             description = """

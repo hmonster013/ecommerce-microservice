@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.*;
@@ -27,7 +26,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping(ApiPaths.PRODUCTS)
+@RequestMapping("/products")
 @RequiredArgsConstructor
 @Tag(name = "Products", description = "Product management API")
 public class ProductController extends BaseController {
@@ -76,7 +75,7 @@ public class ProductController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Product found"),
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
-    @GetMapping(ApiPaths.ID_PARAM)
+    @GetMapping("/{id}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductDetailDto>> getProductById(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id) {
@@ -92,7 +91,7 @@ public class ProductController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Product found"),
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
-    @GetMapping(ApiPaths.SKU_PARAM)
+    @GetMapping("/sku/{sku}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductDetailDto>> getProductBySku(
             @Parameter(description = "Product SKU", required = true)
             @PathVariable String sku) {
@@ -209,7 +208,7 @@ public class ProductController extends BaseController {
     }
 
     @Operation(summary = "[ADMIN] Update product", description = "Update existing product")
-    @PutMapping(ApiPaths.ID_PARAM)
+    @PutMapping("/{id}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductResponseDto>> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductUpdateDto updateDto) {
@@ -220,7 +219,7 @@ public class ProductController extends BaseController {
     }
 
     @Operation(summary = "[ADMIN] Delete product", description = "Delete product")
-    @DeleteMapping(ApiPaths.ID_PARAM)
+    @DeleteMapping("/{id}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteProduct(@PathVariable Long id) {
         log.info("Deleting product with ID: {}", id);
         productService.deleteProduct(id);
@@ -228,7 +227,7 @@ public class ProductController extends BaseController {
     }
 
     @Operation(summary = "Get featured products")
-    @GetMapping(ApiPaths.FEATURED)
+    @GetMapping("/featured")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<ProductSummaryDto>>> getFeaturedProducts(
             @RequestParam(required = false, defaultValue = "10") Integer limit,
             @RequestParam(required = false) Long categoryId) {
@@ -242,7 +241,7 @@ public class ProductController extends BaseController {
 
 
     @Operation(summary = "Simple product search")
-    @GetMapping(ApiPaths.SEARCH)
+    @GetMapping("/search")
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<ProductSummaryDto>>> simpleSearch(
             @RequestParam String q,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {

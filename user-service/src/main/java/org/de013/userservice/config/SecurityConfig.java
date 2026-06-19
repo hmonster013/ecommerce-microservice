@@ -1,7 +1,6 @@
 package org.de013.userservice.config;
 
 import lombok.RequiredArgsConstructor;
-import org.de013.common.constant.ApiPaths;
 import org.de013.userservice.security.HeaderAuthenticationFilter;
 import org.de013.userservice.security.HeaderAuthenticationProvider;
 import org.springframework.context.annotation.Bean;
@@ -54,7 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
-                        .requestMatchers(ApiPaths.USERS + "/internal/**").permitAll()
+                        .requestMatchers("/users/internal/**").permitAll()
                         .anyRequest().permitAll()
                 )
 

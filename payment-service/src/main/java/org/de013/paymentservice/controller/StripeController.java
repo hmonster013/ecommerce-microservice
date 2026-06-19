@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.paymentservice.dto.stripe.StripeCustomerRequest;
 import org.de013.paymentservice.dto.stripe.StripeCustomerResponse;
@@ -31,7 +30,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Slf4j
 @RestController
-@RequestMapping(ApiPaths.STRIPE)
+@RequestMapping("/stripe")
 @RequiredArgsConstructor
 @Tag(name = "Stripe", description = "Stripe payment gateway integration operations")
 public class StripeController extends BaseController {
@@ -42,7 +41,7 @@ public class StripeController extends BaseController {
     private final StripePaymentGateway stripePaymentGateway;
     private final StripeCustomerService stripeCustomerService;
 
-    @PostMapping(ApiPaths.WEBHOOKS)
+    @PostMapping("/webhooks")
     @Operation(
             summary = "Handle Stripe webhooks",
             description = """
@@ -108,7 +107,7 @@ public class StripeController extends BaseController {
         }
     }
 
-    @PostMapping(ApiPaths.PAYMENT_INTENTS)
+    @PostMapping("/payment-intents")
     @Operation(
             summary = "Create Stripe Payment Intent",
             description = """
@@ -198,7 +197,7 @@ public class StripeController extends BaseController {
         }
     }
 
-    @GetMapping(ApiPaths.PAYMENT_METHODS + ApiPaths.CUSTOMER_ID_PARAM)
+    @GetMapping("/payment-methods/{customerId}")
     @Operation(
             summary = "Get customer payment methods",
             description = """
@@ -265,7 +264,7 @@ public class StripeController extends BaseController {
         }
     }
 
-    @PostMapping(ApiPaths.CUSTOMERS)
+    @PostMapping("/customers")
     @Operation(
             summary = "Create Stripe customer",
             description = """
@@ -337,7 +336,7 @@ public class StripeController extends BaseController {
         }
     }
 
-    @GetMapping(ApiPaths.HEALTH)
+    @GetMapping("/health")
     @Operation(
             summary = "Check Stripe integration health",
             description = """

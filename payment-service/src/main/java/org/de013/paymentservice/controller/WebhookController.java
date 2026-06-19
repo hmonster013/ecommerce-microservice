@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.de013.paymentservice.dto.payment.StripeWebhookRequest;
@@ -20,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  * REST Controller for webhook operations
  */
 @RestController
-@RequestMapping(ApiPaths.WEBHOOKS)
+@RequestMapping("/webhooks")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Webhook", description = "Webhook handling APIs")
@@ -31,7 +30,7 @@ public class WebhookController extends BaseController {
 
     // ========== STRIPE WEBHOOK ==========
 
-    @PostMapping(ApiPaths.STRIPE)
+    @PostMapping("/stripe")
     @Operation(summary = "Handle Stripe webhook", description = "Process incoming Stripe webhook events")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Webhook processed successfully"),
@@ -61,7 +60,7 @@ public class WebhookController extends BaseController {
 
     // ========== WEBHOOK VALIDATION ==========
 
-    @PostMapping(ApiPaths.STRIPE + ApiPaths.VERIFY)
+    @PostMapping("/stripe/verify")
     @Operation(summary = "Verify Stripe webhook signature", description = "Verify the signature of a Stripe webhook")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Signature verified"),
@@ -84,7 +83,7 @@ public class WebhookController extends BaseController {
         }
     }
 
-    @PostMapping(ApiPaths.STRIPE + ApiPaths.PARSE)
+    @PostMapping("/stripe/parse")
     @Operation(summary = "Parse Stripe webhook payload", description = "Parse and validate Stripe webhook payload")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payload parsed successfully"),
@@ -109,7 +108,7 @@ public class WebhookController extends BaseController {
 
     // ========== WEBHOOK EVENT VALIDATION ==========
 
-    @GetMapping(ApiPaths.STRIPE + ApiPaths.EVENT_TYPES + ApiPaths.EVENT_TYPE_PARAM + ApiPaths.VALID)
+    @GetMapping("/stripe/event-types/{eventType}/valid")
     @Operation(summary = "Check if event type is valid", description = "Check if a Stripe event type is supported")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Event type validation result")
@@ -125,7 +124,7 @@ public class WebhookController extends BaseController {
 
     // ========== WEBHOOK ERROR HANDLING ==========
 
-    @PostMapping(ApiPaths.STRIPE + ApiPaths.ERROR)
+    @PostMapping("/stripe/error")
     @Operation(summary = "Handle webhook error", description = "Log and handle webhook processing errors")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Error handled successfully")
@@ -143,7 +142,7 @@ public class WebhookController extends BaseController {
 
     // ========== WEBHOOK TESTING ==========
 
-    @PostMapping(ApiPaths.STRIPE + ApiPaths.TEST)
+    @PostMapping("/stripe/test")
     @Operation(summary = "Test webhook processing", description = "Test webhook processing with sample data")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Test completed successfully"),

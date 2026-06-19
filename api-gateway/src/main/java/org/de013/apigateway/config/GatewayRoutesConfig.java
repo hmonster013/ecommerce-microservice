@@ -1,6 +1,5 @@
 package org.de013.apigateway.config;
 
-import org.de013.apigateway.constant.ApiPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.route.RouteLocator;
@@ -17,106 +16,106 @@ public class GatewayRoutesConfig {
     public RouteLocator gatewayRoutes(RouteLocatorBuilder builder) {
         RouteLocator routeLocator = builder.routes()
                 // User Service Routes
-                .route(ApiPaths.USER_SERVICE, r -> r
-                        .path(ApiPaths.ROUTE_USER_SERVICE)
+                .route("user-service", r -> r
+                        .path("/api/user-service/**")
                         .filters(f -> f
-                                .rewritePath(ApiPaths.REWRITE_USER_SERVICE, ApiPaths.REMAINING_PATH_REPLACEMENT)
+                                .rewritePath("/api/user-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
-                                        .setName(ApiPaths.CB_USER_SERVICE)
-                                        .setFallbackUri(ApiPaths.FALLBACK_USER_SERVICE))
+                                        .setName("userServiceCircuitBreaker")
+                                        .setFallbackUri("forward:/fallback/user-service"))
                         )
-                        .uri(ApiPaths.LB_USER_SERVICE))
+                        .uri("lb://user-service"))
 
                 // User Service API Docs
-                .route(ApiPaths.USER_SERVICE + "-docs", r -> r
-                        .path(ApiPaths.DOCS_USER_SERVICE)
-                        .filters(f -> f.rewritePath(ApiPaths.DOCS_USER_SERVICE, ApiPaths.API_DOCS))
-                        .uri(ApiPaths.LB_USER_SERVICE))
+                .route("user-service-docs", r -> r
+                        .path("/api/user-service/v3/api-docs")
+                        .filters(f -> f.rewritePath("/api/user-service/v3/api-docs", "/v3/api-docs"))
+                        .uri("lb://user-service"))
 
                 // Product Catalog Service Routes
-                .route(ApiPaths.PRODUCT_CATALOG_SERVICE, r -> r
-                        .path(ApiPaths.ROUTE_PRODUCT_CATALOG_SERVICE)
+                .route("product-catalog-service", r -> r
+                        .path("/api/product-catalog-service/**")
                         .filters(f -> f
-                                .rewritePath(ApiPaths.REWRITE_PRODUCT_CATALOG_SERVICE, ApiPaths.REMAINING_PATH_REPLACEMENT)
+                                .rewritePath("/api/product-catalog-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
-                                        .setName(ApiPaths.CB_PRODUCT_SERVICE)
-                                        .setFallbackUri(ApiPaths.FALLBACK_PRODUCT_CATALOG_SERVICE))
+                                        .setName("productServiceCircuitBreaker")
+                                        .setFallbackUri("forward:/fallback/product-catalog-service"))
                         )
-                        .uri(ApiPaths.LB_PRODUCT_CATALOG_SERVICE))
+                        .uri("lb://product-catalog-service"))
 
                 // Product Catalog Service API Docs
-                .route(ApiPaths.PRODUCT_CATALOG_SERVICE + "-docs", r -> r
-                        .path(ApiPaths.DOCS_PRODUCT_CATALOG_SERVICE)
-                        .filters(f -> f.rewritePath(ApiPaths.DOCS_PRODUCT_CATALOG_SERVICE, ApiPaths.API_DOCS))
-                        .uri(ApiPaths.LB_PRODUCT_CATALOG_SERVICE))
+                .route("product-catalog-service-docs", r -> r
+                        .path("/api/product-catalog-service/v3/api-docs")
+                        .filters(f -> f.rewritePath("/api/product-catalog-service/v3/api-docs", "/v3/api-docs"))
+                        .uri("lb://product-catalog-service"))
 
                 // Shopping Cart Service Routes
-                .route(ApiPaths.SHOPPING_CART_SERVICE, r -> r
-                        .path(ApiPaths.ROUTE_SHOPPING_CART_SERVICE)
+                .route("shopping-cart-service", r -> r
+                        .path("/api/shopping-cart-service/**")
                         .filters(f -> f
-                                .rewritePath(ApiPaths.REWRITE_SHOPPING_CART_SERVICE, ApiPaths.REMAINING_PATH_REPLACEMENT)
+                                .rewritePath("/api/shopping-cart-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
-                                        .setName(ApiPaths.CB_CART_SERVICE)
-                                        .setFallbackUri(ApiPaths.FALLBACK_SHOPPING_CART_SERVICE))
+                                        .setName("cartServiceCircuitBreaker")
+                                        .setFallbackUri("forward:/fallback/shopping-cart-service"))
                         )
-                        .uri(ApiPaths.LB_SHOPPING_CART_SERVICE))
+                        .uri("lb://shopping-cart-service"))
 
                 // Shopping Cart Service API Docs
-                .route(ApiPaths.SHOPPING_CART_SERVICE + "-docs", r -> r
-                        .path(ApiPaths.DOCS_SHOPPING_CART_SERVICE)
-                        .filters(f -> f.rewritePath(ApiPaths.DOCS_SHOPPING_CART_SERVICE, ApiPaths.API_DOCS))
-                        .uri(ApiPaths.LB_SHOPPING_CART_SERVICE))
+                .route("shopping-cart-service-docs", r -> r
+                        .path("/api/shopping-cart-service/v3/api-docs")
+                        .filters(f -> f.rewritePath("/api/shopping-cart-service/v3/api-docs", "/v3/api-docs"))
+                        .uri("lb://shopping-cart-service"))
 
                 // Order Service Routes
-                .route(ApiPaths.ORDER_SERVICE, r -> r
-                        .path(ApiPaths.ROUTE_ORDER_SERVICE)
+                .route("order-service", r -> r
+                        .path("/api/order-service/**")
                         .filters(f -> f
-                                .rewritePath(ApiPaths.REWRITE_ORDER_SERVICE, ApiPaths.REMAINING_PATH_REPLACEMENT)
+                                .rewritePath("/api/order-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
-                                        .setName(ApiPaths.CB_ORDER_SERVICE)
-                                        .setFallbackUri(ApiPaths.FALLBACK_ORDER_SERVICE))
+                                        .setName("orderServiceCircuitBreaker")
+                                        .setFallbackUri("forward:/fallback/order-service"))
                         )
-                        .uri(ApiPaths.LB_ORDER_SERVICE))
+                        .uri("lb://order-service"))
 
                 // Order Service API Docs
-                .route(ApiPaths.ORDER_SERVICE + "-docs", r -> r
-                        .path(ApiPaths.DOCS_ORDER_SERVICE)
-                        .filters(f -> f.rewritePath(ApiPaths.DOCS_ORDER_SERVICE, ApiPaths.API_DOCS))
-                        .uri(ApiPaths.LB_ORDER_SERVICE))
+                .route("order-service-docs", r -> r
+                        .path("/api/order-service/v3/api-docs")
+                        .filters(f -> f.rewritePath("/api/order-service/v3/api-docs", "/v3/api-docs"))
+                        .uri("lb://order-service"))
 
                 // Payment Service Routes
-                .route(ApiPaths.PAYMENT_SERVICE, r -> r
-                        .path(ApiPaths.ROUTE_PAYMENT_SERVICE)
+                .route("payment-service", r -> r
+                        .path("/api/payment-service/**")
                         .filters(f -> f
-                                .rewritePath(ApiPaths.REWRITE_PAYMENT_SERVICE, ApiPaths.REMAINING_PATH_REPLACEMENT)
+                                .rewritePath("/api/payment-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
-                                        .setName(ApiPaths.CB_PAYMENT_SERVICE)
-                                        .setFallbackUri(ApiPaths.FALLBACK_PAYMENT_SERVICE))
+                                        .setName("paymentServiceCircuitBreaker")
+                                        .setFallbackUri("forward:/fallback/payment-service"))
                         )
-                        .uri(ApiPaths.LB_PAYMENT_SERVICE))
+                        .uri("lb://payment-service"))
 
                 // Payment Service API Docs
-                .route(ApiPaths.PAYMENT_SERVICE + "-docs", r -> r
-                        .path(ApiPaths.DOCS_PAYMENT_SERVICE)
-                        .filters(f -> f.rewritePath(ApiPaths.DOCS_PAYMENT_SERVICE, ApiPaths.API_DOCS))
-                        .uri(ApiPaths.LB_PAYMENT_SERVICE))
+                .route("payment-service-docs", r -> r
+                        .path("/api/payment-service/v3/api-docs")
+                        .filters(f -> f.rewritePath("/api/payment-service/v3/api-docs", "/v3/api-docs"))
+                        .uri("lb://payment-service"))
 
                 // Notification Service Routes
-                .route(ApiPaths.NOTIFICATION_SERVICE, r -> r
-                        .path(ApiPaths.ROUTE_NOTIFICATION_SERVICE)
+                .route("notification-service", r -> r
+                        .path("/api/notification-service/**")
                         .filters(f -> f
-                                .rewritePath(ApiPaths.REWRITE_NOTIFICATION_SERVICE, ApiPaths.REMAINING_PATH_REPLACEMENT)
+                                .rewritePath("/api/notification-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
-                                        .setName(ApiPaths.CB_NOTIFICATION_SERVICE)
-                                        .setFallbackUri(ApiPaths.FALLBACK_NOTIFICATION_SERVICE))
+                                        .setName("notificationServiceCircuitBreaker")
+                                        .setFallbackUri("forward:/fallback/notification-service"))
                         )
-                        .uri(ApiPaths.LB_NOTIFICATION_SERVICE))
+                        .uri("lb://notification-service"))
 
                 // Notification Service API Docs
-                .route(ApiPaths.NOTIFICATION_SERVICE + "-docs", r -> r
-                        .path(ApiPaths.DOCS_NOTIFICATION_SERVICE)
-                        .filters(f -> f.rewritePath(ApiPaths.DOCS_NOTIFICATION_SERVICE, ApiPaths.API_DOCS))
-                        .uri(ApiPaths.LB_NOTIFICATION_SERVICE))
+                .route("notification-service-docs", r -> r
+                        .path("/api/notification-service/v3/api-docs")
+                        .filters(f -> f.rewritePath("/api/notification-service/v3/api-docs", "/v3/api-docs"))
+                        .uri("lb://notification-service"))
 
                 .build();
 

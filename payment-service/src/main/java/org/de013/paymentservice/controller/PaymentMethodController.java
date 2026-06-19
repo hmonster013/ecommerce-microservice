@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.paymentservice.constant.PaymentConstants;
 import org.de013.paymentservice.dto.paymentmethod.CreatePaymentMethodRequest;
@@ -29,7 +28,7 @@ import java.util.List;
  * REST Controller for payment method operations
  */
 @RestController
-@RequestMapping(ApiPaths.PAYMENT_METHODS)
+@RequestMapping("/payment-methods")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Payment Method", description = "Payment method management APIs")
@@ -55,7 +54,7 @@ public class PaymentMethodController extends BaseController {
         return created(response, PaymentConstants.PAYMENT_METHOD_CREATED);
     }
 
-    @GetMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM)
+    @GetMapping("/{paymentMethodId}")
     @Operation(summary = "Get payment method by ID", description = "Retrieve payment method details by ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment method found"),
@@ -70,7 +69,7 @@ public class PaymentMethodController extends BaseController {
                 .orElse(notFound(PaymentConstants.PAYMENT_METHOD_NOT_FOUND));
     }
 
-    @PutMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM)
+    @PutMapping("/{paymentMethodId}")
     @Operation(summary = "Update payment method", description = "Update an existing payment method")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment method updated successfully"),
@@ -86,7 +85,7 @@ public class PaymentMethodController extends BaseController {
         return success(response, PaymentConstants.PAYMENT_METHOD_UPDATED);
     }
 
-    @DeleteMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM)
+    @DeleteMapping("/{paymentMethodId}")
     @Operation(summary = "Delete payment method", description = "Delete a payment method")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Payment method deleted successfully"),
@@ -103,7 +102,7 @@ public class PaymentMethodController extends BaseController {
 
     // ========== USER PAYMENT METHODS ==========
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM)
+    @GetMapping("/user/{userId}")
     @Operation(summary = "Get payment methods by user", description = "Get all payment methods for a user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment methods retrieved successfully")
@@ -116,7 +115,7 @@ public class PaymentMethodController extends BaseController {
         return success(paymentMethods, PaymentConstants.PAYMENT_METHOD_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.ACTIVE)
+    @GetMapping("/user/{userId}/active")
     @Operation(summary = "Get active payment methods by user", description = "Get all active payment methods for a user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Active payment methods retrieved successfully")
@@ -129,7 +128,7 @@ public class PaymentMethodController extends BaseController {
         return success(paymentMethods, PaymentConstants.PAYMENT_METHOD_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.TYPE + ApiPaths.TYPE_PARAM)
+    @GetMapping("/user/{userId}/type/{type}")
     @Operation(summary = "Get payment methods by user and type", description = "Get payment methods for a user by type")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment methods retrieved successfully")
@@ -145,7 +144,7 @@ public class PaymentMethodController extends BaseController {
 
     // ========== DEFAULT PAYMENT METHOD ==========
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.DEFAULT)
+    @GetMapping("/user/{userId}/default")
     @Operation(summary = "Get default payment method", description = "Get the default payment method for a user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Default payment method found"),
@@ -160,7 +159,7 @@ public class PaymentMethodController extends BaseController {
                 .orElse(notFound(PaymentConstants.PAYMENT_METHOD_NOT_FOUND));
     }
 
-    @PutMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM + ApiPaths.SET_DEFAULT)
+    @PutMapping("/{paymentMethodId}/set-default")
     @Operation(summary = "Set as default payment method", description = "Set a payment method as default for the user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment method set as default successfully"),
@@ -177,7 +176,7 @@ public class PaymentMethodController extends BaseController {
 
     // ========== PAYMENT METHOD STATUS ==========
 
-    @PutMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM + ApiPaths.ACTIVATE)
+    @PutMapping("/{paymentMethodId}/activate")
     @Operation(summary = "Activate payment method", description = "Activate a payment method")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment method activated successfully"),
@@ -191,7 +190,7 @@ public class PaymentMethodController extends BaseController {
         return success(response, PaymentConstants.PAYMENT_METHOD_ACTIVATED);
     }
 
-    @PutMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM + ApiPaths.DEACTIVATE)
+    @PutMapping("/{paymentMethodId}/deactivate")
     @Operation(summary = "Deactivate payment method", description = "Deactivate a payment method")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment method deactivated successfully"),
@@ -207,7 +206,7 @@ public class PaymentMethodController extends BaseController {
 
     // ========== STRIPE INTEGRATION ==========
 
-    @PostMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM + ApiPaths.ATTACH_CUSTOMER)
+    @PostMapping("/{paymentMethodId}/attach-customer")
     @Operation(summary = "Attach payment method to customer", description = "Attach payment method to Stripe customer")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment method attached successfully"),
@@ -223,7 +222,7 @@ public class PaymentMethodController extends BaseController {
         return success(response, "Payment method attached to customer successfully");
     }
 
-    @PostMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM + ApiPaths.DETACH_CUSTOMER)
+    @PostMapping("/{paymentMethodId}/detach-customer")
     @Operation(summary = "Detach payment method from customer", description = "Detach payment method from Stripe customer")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment method detached successfully"),
@@ -238,7 +237,7 @@ public class PaymentMethodController extends BaseController {
         return success(response, "Payment method detached from customer successfully");
     }
 
-    @PostMapping(ApiPaths.PAYMENT_METHOD_ID_PARAM + ApiPaths.SYNC)
+    @PostMapping("/{paymentMethodId}/sync")
     @Operation(summary = "Sync payment method with Stripe", description = "Synchronize payment method with Stripe")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment method synced successfully"),
@@ -255,7 +254,7 @@ public class PaymentMethodController extends BaseController {
 
     // ========== CARD MANAGEMENT ==========
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.CARDS)
+    @GetMapping("/user/{userId}/cards")
     @Operation(summary = "Get card payment methods", description = "Get all card payment methods for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentMethodResponse>>> getCardPaymentMethodsByUserId(
             @Parameter(description = "User ID") @PathVariable Long userId) {
@@ -265,7 +264,7 @@ public class PaymentMethodController extends BaseController {
         return success(cardMethods, PaymentConstants.PAYMENT_METHOD_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.CARDS + ApiPaths.EXPIRED)
+    @GetMapping("/cards/expired")
     @Operation(summary = "Get expired card payment methods", description = "Get all expired card payment methods")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentMethodResponse>>> getExpiredCardPaymentMethods() {
         log.debug("Getting expired card payment methods");
@@ -276,7 +275,7 @@ public class PaymentMethodController extends BaseController {
 
     // ========== PAYMENT METHOD SEARCH ==========
 
-    @GetMapping(ApiPaths.SEARCH)
+    @GetMapping("/search")
     @Operation(summary = "Search payment methods", description = "Search payment methods with various criteria")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Page<PaymentMethodResponse>>> searchPaymentMethods(
             @Parameter(description = "User ID") @RequestParam(required = false) Long userId,
@@ -297,7 +296,7 @@ public class PaymentMethodController extends BaseController {
 
     // ========== PAYMENT METHOD STATISTICS ==========
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.STATISTICS)
+    @GetMapping("/user/{userId}/statistics")
     @Operation(summary = "Get payment method statistics", description = "Get payment method statistics for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentMethodService.PaymentMethodStatistics>> getPaymentMethodStatisticsByUserId(
             @Parameter(description = "User ID") @PathVariable Long userId) {
@@ -310,7 +309,7 @@ public class PaymentMethodController extends BaseController {
 
     // ========== CLEANUP OPERATIONS ==========
 
-    @PostMapping(ApiPaths.CLEANUP + ApiPaths.INACTIVE)
+    @PostMapping("/cleanup/inactive")
     @Operation(summary = "Cleanup inactive payment methods", description = "Remove inactive payment methods older than specified days")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Void>> cleanupInactivePaymentMethods(
             @Parameter(description = "Days threshold") @RequestParam(defaultValue = "90") int daysThreshold) {
@@ -321,7 +320,7 @@ public class PaymentMethodController extends BaseController {
         return success(null, "Inactive payment methods cleaned up successfully");
     }
 
-    @PostMapping(ApiPaths.CLEANUP + ApiPaths.ORPHANED)
+    @PostMapping("/cleanup/orphaned")
     @Operation(summary = "Cleanup orphaned payment methods", description = "Remove payment methods without valid Stripe references")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Void>> cleanupOrphanedPaymentMethods() {
         log.info("Cleaning up orphaned payment methods");

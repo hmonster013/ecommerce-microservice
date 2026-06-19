@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.paymentservice.constant.PaymentConstants;
 import org.de013.paymentservice.dto.refund.RefundRequest;
@@ -29,7 +28,7 @@ import java.util.List;
  * REST Controller for refund operations
  */
 @RestController
-@RequestMapping(ApiPaths.REFUNDS)
+@RequestMapping("/refunds")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Refund", description = "Refund management APIs")
@@ -55,7 +54,7 @@ public class RefundController extends BaseController {
         return created(response, PaymentConstants.REFUND_CREATED);
     }
 
-    @PostMapping(ApiPaths.REFUND_ID_PARAM + ApiPaths.PROCESS)
+    @PostMapping("/{refundId}/process")
     @Operation(summary = "Process refund", description = "Process a pending refund")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refund processed successfully"),
@@ -70,7 +69,7 @@ public class RefundController extends BaseController {
         return success(response, PaymentConstants.REFUND_PROCESSED);
     }
 
-    @PutMapping(ApiPaths.REFUND_ID_PARAM + ApiPaths.CANCEL)
+    @PutMapping("/{refundId}/cancel")
     @Operation(summary = "Cancel refund", description = "Cancel a pending refund")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refund canceled successfully"),
@@ -88,7 +87,7 @@ public class RefundController extends BaseController {
 
     // ========== REFUND APPROVAL WORKFLOW ==========
 
-    @PostMapping(ApiPaths.REFUND_ID_PARAM + ApiPaths.APPROVE)
+    @PostMapping("/{refundId}/approve")
     @Operation(summary = "Approve refund", description = "Approve a pending refund")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refund approved successfully"),
@@ -104,7 +103,7 @@ public class RefundController extends BaseController {
         return success(response, PaymentConstants.REFUND_APPROVED);
     }
 
-    @PostMapping(ApiPaths.REFUND_ID_PARAM + ApiPaths.REJECT)
+    @PostMapping("/{refundId}/reject")
     @Operation(summary = "Reject refund", description = "Reject a pending refund")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refund rejected successfully"),
@@ -121,7 +120,7 @@ public class RefundController extends BaseController {
         return success(response, PaymentConstants.REFUND_REJECTED);
     }
 
-    @GetMapping(ApiPaths.REQUIRING_APPROVAL)
+    @GetMapping("/requiring-approval")
     @Operation(summary = "Get refunds requiring approval", description = "Get all refunds that require manual approval")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refunds retrieved successfully")
@@ -138,7 +137,7 @@ public class RefundController extends BaseController {
 
     // ========== REFUND RETRIEVAL ==========
 
-    @GetMapping(ApiPaths.REFUND_ID_PARAM)
+    @GetMapping("/{refundId}")
     @Operation(summary = "Get refund by ID", description = "Retrieve refund details by refund ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refund found"),
@@ -153,7 +152,7 @@ public class RefundController extends BaseController {
                 .orElse(notFound(PaymentConstants.REFUND_NOT_FOUND + " with ID: " + refundId));
     }
 
-    @GetMapping(ApiPaths.NUMBER + ApiPaths.REFUND_NUMBER_PARAM)
+    @GetMapping("/number/{refundNumber}")
     @Operation(summary = "Get refund by number", description = "Retrieve refund details by refund number")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refund found"),
@@ -168,7 +167,7 @@ public class RefundController extends BaseController {
                 .orElse(notFound(PaymentConstants.REFUND_NOT_FOUND + " with number: " + refundNumber));
     }
 
-    @GetMapping(ApiPaths.PAYMENT + ApiPaths.PAYMENT_ID_PARAM)
+    @GetMapping("/payment/{paymentId}")
     @Operation(summary = "Get refunds by payment ID", description = "Retrieve all refunds for a payment")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refunds retrieved successfully")
@@ -181,7 +180,7 @@ public class RefundController extends BaseController {
         return success(refunds, PaymentConstants.REFUND_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.ORDER + ApiPaths.ORDER_ID_PARAM)
+    @GetMapping("/order/{orderId}")
     @Operation(summary = "Get refunds by order ID", description = "Retrieve all refunds for an order")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refunds retrieved successfully")
@@ -196,7 +195,7 @@ public class RefundController extends BaseController {
 
     // ========== REFUND STATUS ==========
 
-    @PutMapping(ApiPaths.REFUND_ID_PARAM + ApiPaths.STATUS)
+    @PutMapping("/{refundId}/status")
     @Operation(summary = "Update refund status", description = "Update refund status manually")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refund status updated"),
@@ -212,7 +211,7 @@ public class RefundController extends BaseController {
         return success(response, "Refund status updated successfully");
     }
 
-    @PostMapping(ApiPaths.REFUND_ID_PARAM + ApiPaths.SYNC)
+    @PostMapping("/{refundId}/sync")
     @Operation(summary = "Sync refund with Stripe", description = "Synchronize refund status with Stripe")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refund synced successfully"),
@@ -228,7 +227,7 @@ public class RefundController extends BaseController {
 
     // ========== REFUND SEARCH ==========
 
-    @GetMapping(ApiPaths.SEARCH)
+    @GetMapping("/search")
     @Operation(summary = "Search refunds", description = "Search refunds with various criteria")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refunds retrieved successfully")
@@ -254,7 +253,7 @@ public class RefundController extends BaseController {
         return success(refunds, PaymentConstants.REFUND_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.PAYMENT + ApiPaths.PAYMENT_ID_PARAM + ApiPaths.SUCCESSFUL)
+    @GetMapping("/payment/{paymentId}/successful")
     @Operation(summary = "Get successful refunds by payment", description = "Get all successful refunds for a payment")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<RefundResponse>>> getSuccessfulRefundsByPaymentId(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
@@ -265,7 +264,7 @@ public class RefundController extends BaseController {
     }
 
 
-    @GetMapping(ApiPaths.PAYMENT + ApiPaths.PAYMENT_ID_PARAM + ApiPaths.FAILED)
+    @GetMapping("/payment/{paymentId}/failed")
     @Operation(summary = "Get failed refunds by payment", description = "Get all failed refunds for a payment")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<RefundResponse>>> getFailedRefundsByPaymentId(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
@@ -277,7 +276,7 @@ public class RefundController extends BaseController {
 
     // ========== REFUND STATISTICS ==========
 
-    @GetMapping(ApiPaths.PAYMENT + ApiPaths.PAYMENT_ID_PARAM + ApiPaths.STATISTICS)
+    @GetMapping("/payment/{paymentId}/statistics")
     @Operation(summary = "Get refund statistics by payment", description = "Get refund statistics for a payment")
     public ResponseEntity<org.de013.common.dto.ApiResponse<RefundService.RefundStatistics>> getRefundStatisticsByPaymentId(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
@@ -287,7 +286,7 @@ public class RefundController extends BaseController {
         return success(statistics, PaymentConstants.REFUND_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.STATISTICS)
+    @GetMapping("/statistics")
     @Operation(summary = "Get refund statistics by date range", description = "Get refund statistics for a date range")
     public ResponseEntity<org.de013.common.dto.ApiResponse<RefundService.RefundStatistics>> getRefundStatisticsByDateRange(
             @Parameter(description = "Start date") @RequestParam LocalDateTime startDate,
@@ -298,7 +297,7 @@ public class RefundController extends BaseController {
         return success(statistics, PaymentConstants.REFUND_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.COUNT + ApiPaths.STATUS + ApiPaths.STATUS_PARAM)
+    @GetMapping("/count/status/{status}")
     @Operation(summary = "Get refund count by status", description = "Get count of refunds with specific status")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Long>> getRefundCountByStatus(
             @Parameter(description = "Refund status") @PathVariable RefundStatus status) {
@@ -308,7 +307,7 @@ public class RefundController extends BaseController {
         return success(count, PaymentConstants.REFUND_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.PAYMENT + ApiPaths.PAYMENT_ID_PARAM + ApiPaths.TOTAL_AMOUNT)
+    @GetMapping("/payment/{paymentId}/total-amount")
     @Operation(summary = "Get total refunded amount", description = "Get total refunded amount for a payment")
     public ResponseEntity<org.de013.common.dto.ApiResponse<BigDecimal>> getTotalRefundedAmount(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
@@ -320,7 +319,7 @@ public class RefundController extends BaseController {
 
     // ========== REFUND VALIDATION ==========
 
-    @GetMapping(ApiPaths.PAYMENT + ApiPaths.PAYMENT_ID_PARAM + ApiPaths.CAN_REFUND)
+    @GetMapping("/payment/{paymentId}/can-refund")
     @Operation(summary = "Check if payment can be refunded", description = "Check if a payment can be refunded")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> canRefundPayment(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
@@ -330,7 +329,7 @@ public class RefundController extends BaseController {
         return success(canRefund, "Refund eligibility checked successfully");
     }
 
-    @GetMapping(ApiPaths.PAYMENT + ApiPaths.PAYMENT_ID_PARAM + ApiPaths.VALID_AMOUNT)
+    @GetMapping("/payment/{paymentId}/valid-amount")
     @Operation(summary = "Check if refund amount is valid", description = "Check if refund amount is valid for a payment")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> isValidRefundAmount(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId,

@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.orderservice.dto.request.CancelOrderRequest;
@@ -27,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
  * Basic Order Controller - Core CRUD operations only
  */
 @RestController
-@RequestMapping(ApiPaths.ORDERS)
+@RequestMapping("/orders")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Order Management", description = "APIs for order management including creation, retrieval, updates, and cancellation")
@@ -71,7 +70,7 @@ public class OrderController {
             @ApiResponse(responseCode = "404", description = "Order not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping(ApiPaths.ORDER_ID_PARAM)
+    @GetMapping("/{orderId}")
     public OrderResponse getOrder(
             @Parameter(description = "Order ID", required = true, example = "1")
             @PathVariable Long orderId) {
@@ -88,7 +87,7 @@ public class OrderController {
             @ApiResponse(responseCode = "401", description = "Authentication required"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping(ApiPaths.MY_ORDERS)
+    @GetMapping("/my-orders")
     public Page<OrderResponse> getMyOrders(
             @Parameter(description = "Pagination parameters") Pageable pageable) {
         UserContext userContext = UserContextHolder.requireAuthenticated();
@@ -107,7 +106,7 @@ public class OrderController {
             @ApiResponse(responseCode = "404", description = "User not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM)
+    @GetMapping("/user/{userId}")
     public Page<OrderResponse> getUserOrders(
             @Parameter(description = "User ID", required = true, example = "1")
             @PathVariable Long userId,
@@ -145,7 +144,7 @@ public class OrderController {
             @ApiResponse(responseCode = "404", description = "Order not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping(ApiPaths.NUMBER + ApiPaths.ORDER_NUMBER_PARAM)
+    @GetMapping("/number/{orderNumber}")
     public OrderResponse getOrderByNumber(
             @Parameter(description = "Order number", required = true, example = "ORD-12345678")
             @PathVariable String orderNumber) {
@@ -166,7 +165,7 @@ public class OrderController {
             @ApiResponse(responseCode = "404", description = "Order not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PutMapping(ApiPaths.ORDER_ID_PARAM)
+    @PutMapping("/{orderId}")
     public OrderResponse updateOrder(
             @Parameter(description = "Order ID", required = true, example = "1")
             @PathVariable Long orderId,
@@ -188,7 +187,7 @@ public class OrderController {
             @ApiResponse(responseCode = "404", description = "Order not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @DeleteMapping(ApiPaths.ORDER_ID_PARAM)
+    @DeleteMapping("/{orderId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancelOrder(
             @Parameter(description = "Order ID", required = true, example = "1")

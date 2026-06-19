@@ -1,7 +1,6 @@
 package org.de013.apigateway.controller;
 
 import lombok.extern.slf4j.Slf4j;
-import org.de013.apigateway.constant.ApiPaths;
 import org.de013.apigateway.exception.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +13,7 @@ import org.springframework.web.server.ServerWebExchange;
 import java.time.LocalDateTime;
 
 @RestController
-@RequestMapping(ApiPaths.FALLBACK)
+@RequestMapping("/fallback")
 @Slf4j
 public class FallbackController {
 
