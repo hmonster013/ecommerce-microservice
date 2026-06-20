@@ -41,7 +41,7 @@ public class Notification {
     private LocalDateTime updatedAt;
 
     @Column(name = "user_id")
-    private Long userId;
+    private String userId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false, length = 20)
@@ -85,3 +85,4 @@ public class Notification {
         updatedAt = LocalDateTime.now();
     }
 }
+

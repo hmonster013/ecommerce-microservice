@@ -19,7 +19,7 @@ import java.util.List;
 public class UserServiceClientFallback implements UserServiceClient {
 
     @Override
-    public ResponseEntity<UserDto> getUserById(Long userId) {
+    public ResponseEntity<UserDto> getUserById(String userId) {
         log.warn("User Service unavailable - using fallback for getUserById: {}", userId);
         return ResponseEntity.ok(createFallbackUserDto(userId));
     }
@@ -33,7 +33,7 @@ public class UserServiceClientFallback implements UserServiceClient {
     }
 
     @Override
-    public ResponseEntity<UserValidationResponse> validateUserForPayment(Long userId) {
+    public ResponseEntity<UserValidationResponse> validateUserForPayment(String userId) {
         log.warn("User Service unavailable - using fallback validation for user: {}", userId);
         return ResponseEntity.ok(UserValidationResponse.invalid(
                 "User Service unavailable - cannot validate user",
@@ -42,43 +42,43 @@ public class UserServiceClientFallback implements UserServiceClient {
     }
 
     @Override
-    public ResponseEntity<Boolean> userExists(Long userId) {
+    public ResponseEntity<Boolean> userExists(String userId) {
         log.warn("User Service unavailable - using fallback for userExists: {}", userId);
         return ResponseEntity.ok(false);
     }
 
     @Override
-    public ResponseEntity<Boolean> isUserActive(Long userId) {
+    public ResponseEntity<Boolean> isUserActive(String userId) {
         log.warn("User Service unavailable - using fallback for isUserActive: {}", userId);
         return ResponseEntity.ok(false);
     }
 
     @Override
-    public ResponseEntity<Boolean> canUserMakePayments(Long userId) {
+    public ResponseEntity<Boolean> canUserMakePayments(String userId) {
         log.warn("User Service unavailable - using fallback for canUserMakePayments: {}", userId);
         return ResponseEntity.ok(false);
     }
 
     @Override
-    public ResponseEntity<UserDto.PaymentLimits> getUserPaymentLimits(Long userId) {
+    public ResponseEntity<UserDto.PaymentLimits> getUserPaymentLimits(String userId) {
         log.warn("User Service unavailable - using fallback for getUserPaymentLimits: {}", userId);
         return ResponseEntity.ok(createFallbackPaymentLimits());
     }
 
     @Override
-    public ResponseEntity<Void> updateLastPaymentActivity(Long userId) {
+    public ResponseEntity<Void> updateLastPaymentActivity(String userId) {
         log.warn("User Service unavailable - cannot update last payment activity for user: {}", userId);
         return ResponseEntity.ok().build();
     }
 
     @Override
-    public ResponseEntity<Void> incrementPaymentCount(Long userId) {
+    public ResponseEntity<Void> incrementPaymentCount(String userId) {
         log.warn("User Service unavailable - cannot increment payment count for user: {}", userId);
         return ResponseEntity.ok().build();
     }
 
     @Override
-    public ResponseEntity<UserDto.RiskAssessment> getUserRiskAssessment(Long userId) {
+    public ResponseEntity<UserDto.RiskAssessment> getUserRiskAssessment(String userId) {
         log.warn("User Service unavailable - using fallback for getUserRiskAssessment: {}", userId);
         return ResponseEntity.ok(createFallbackRiskAssessment());
     }
@@ -86,7 +86,7 @@ public class UserServiceClientFallback implements UserServiceClient {
     /**
      * Creates a fallback UserDto with minimal information
      */
-    private UserDto createFallbackUserDto(Long userId) {
+    private UserDto createFallbackUserDto(String userId) {
         return UserDto.builder()
                 .id(userId)
                 .username("fallback-user")
@@ -139,3 +139,4 @@ public class UserServiceClientFallback implements UserServiceClient {
                 .build();
     }
 }
+

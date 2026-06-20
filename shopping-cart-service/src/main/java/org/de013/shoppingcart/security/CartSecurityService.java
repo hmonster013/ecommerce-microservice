@@ -21,7 +21,7 @@ public class CartSecurityService {
      * - Admins can access any cart
      * - Customers can only access their own cart
      */
-    public boolean canAccessCart(Long userId) {
+    public boolean canAccessCart(String userId) {
         UserContext userContext = UserContextHolder.getCurrentUser();
         if (userContext == null) {
             log.debug("No user context found, denying access to cart for user {}", userId);
@@ -49,7 +49,7 @@ public class CartSecurityService {
      * - Admins can modify any cart
      * - Customers can only modify their own cart
      */
-    public boolean canModifyCart(Long userId) {
+    public boolean canModifyCart(String userId) {
         return canAccessCart(userId); // Same logic for now
     }
 
@@ -111,7 +111,7 @@ public class CartSecurityService {
     /**
      * Get current user ID for cart operations
      */
-    public Long getCurrentUserId() {
+    public String getCurrentUserId() {
         UserContext userContext = UserContextHolder.getCurrentUser();
         return userContext != null ? userContext.getUserId() : null;
     }

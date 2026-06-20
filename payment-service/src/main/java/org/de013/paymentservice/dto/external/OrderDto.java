@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class OrderDto {
     private Long id;
     private String orderNumber;
-    private Long userId;
+    private String userId;
     private BigDecimal totalAmount;
     private String currency;
     private String status;
@@ -36,3 +36,4 @@ public class OrderDto {
         return "CANCELED".equals(status);
     }
 }
+

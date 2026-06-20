@@ -25,27 +25,27 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
     /**
      * Find payment methods by user ID
      */
-    List<PaymentMethod> findByUserId(Long userId);
+    List<PaymentMethod> findByUserId(String userId);
 
     /**
      * Find payment methods by user ID with pagination
      */
-    Page<PaymentMethod> findByUserId(Long userId, Pageable pageable);
+    Page<PaymentMethod> findByUserId(String userId, Pageable pageable);
 
     /**
      * Find active payment methods by user ID
      */
-    List<PaymentMethod> findByUserIdAndIsActive(Long userId, Boolean isActive);
+    List<PaymentMethod> findByUserIdAndIsActive(String userId, Boolean isActive);
 
     /**
      * Find active payment methods by user ID with pagination
      */
-    Page<PaymentMethod> findByUserIdAndIsActive(Long userId, Boolean isActive, Pageable pageable);
+    Page<PaymentMethod> findByUserIdAndIsActive(String userId, Boolean isActive, Pageable pageable);
 
     /**
      * Find default payment method by user ID
      */
-    Optional<PaymentMethod> findByUserIdAndIsDefaultAndIsActive(Long userId, Boolean isDefault, Boolean isActive);
+    Optional<PaymentMethod> findByUserIdAndIsDefaultAndIsActive(String userId, Boolean isDefault, Boolean isActive);
 
     /**
      * Find payment methods by type
@@ -55,12 +55,12 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
     /**
      * Find payment methods by user ID and type
      */
-    List<PaymentMethod> findByUserIdAndType(Long userId, PaymentMethodType type);
+    List<PaymentMethod> findByUserIdAndType(String userId, PaymentMethodType type);
 
     /**
      * Find active payment methods by user ID and type
      */
-    List<PaymentMethod> findByUserIdAndTypeAndIsActive(Long userId, PaymentMethodType type, Boolean isActive);
+    List<PaymentMethod> findByUserIdAndTypeAndIsActive(String userId, PaymentMethodType type, Boolean isActive);
 
     // ========== STRIPE-SPECIFIC QUERIES ==========
 
@@ -82,7 +82,7 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
     /**
      * Find payment method by user ID and Stripe payment method ID
      */
-    Optional<PaymentMethod> findByUserIdAndStripePaymentMethodId(Long userId, String stripePaymentMethodId);
+    Optional<PaymentMethod> findByUserIdAndStripePaymentMethodId(String userId, String stripePaymentMethodId);
 
     // ========== DEFAULT PAYMENT METHOD QUERIES ==========
 
@@ -90,20 +90,20 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
      * Find default payment method by user ID (simplified)
      */
     @Query("SELECT pm FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.isDefault = true AND pm.isActive = true")
-    Optional<PaymentMethod> findDefaultByUserId(@Param("userId") Long userId);
+    Optional<PaymentMethod> findDefaultByUserId(@Param("userId") String userId);
 
     /**
      * Find all default payment methods by user ID (for validation)
      */
     @Query("SELECT pm FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.isDefault = true")
-    List<PaymentMethod> findAllDefaultByUserId(@Param("userId") Long userId);
+    List<PaymentMethod> findAllDefaultByUserId(@Param("userId") String userId);
 
     /**
      * Clear default flag for all user's payment methods
      */
     @Modifying
     @Query("UPDATE PaymentMethod pm SET pm.isDefault = false WHERE pm.userId = :userId")
-    void clearDefaultFlagForUser(@Param("userId") Long userId);
+    void clearDefaultFlagForUser(@Param("userId") String userId);
 
     /**
      * Set payment method as default
@@ -118,7 +118,7 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
      * Find card payment methods by user ID
      */
     @Query("SELECT pm FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.type = 'CARD' AND pm.isActive = true ORDER BY pm.createdAt DESC")
-    List<PaymentMethod> findCardPaymentMethodsByUserId(@Param("userId") Long userId);
+    List<PaymentMethod> findCardPaymentMethodsByUserId(@Param("userId") String userId);
 
     /**
      * Find expired card payment methods
@@ -149,7 +149,7 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
             "(:cardBrand IS NULL OR pm.cardBrand LIKE %:cardBrand%) " +
             "ORDER BY pm.isDefault DESC, pm.lastUsedAt DESC NULLS LAST, pm.createdAt DESC")
     Page<PaymentMethod> searchPaymentMethods(
-            @Param("userId") Long userId,
+            @Param("userId") String userId,
             @Param("type") PaymentMethodType type,
             @Param("isActive") Boolean isActive,
             @Param("isDefault") Boolean isDefault,
@@ -163,14 +163,14 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
      */
     @Query("SELECT pm FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.isActive = true AND pm.lastUsedAt IS NOT NULL " +
             "ORDER BY pm.lastUsedAt DESC")
-    List<PaymentMethod> findRecentlyUsedByUserId(@Param("userId") Long userId, Pageable pageable);
+    List<PaymentMethod> findRecentlyUsedByUserId(@Param("userId") String userId, Pageable pageable);
 
     /**
      * Find unused payment methods
      */
     @Query("SELECT pm FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.isActive = true AND pm.lastUsedAt IS NULL " +
             "ORDER BY pm.createdAt DESC")
-    List<PaymentMethod> findUnusedByUserId(@Param("userId") Long userId);
+    List<PaymentMethod> findUnusedByUserId(@Param("userId") String userId);
 
     // ========== STATISTICS QUERIES ==========
 
@@ -178,19 +178,19 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
      * Count payment methods by user ID
      */
     @Query("SELECT COUNT(pm) FROM PaymentMethod pm WHERE pm.userId = :userId")
-    Long countByUserId(@Param("userId") Long userId);
+    Long countByUserId(@Param("userId") String userId);
 
     /**
      * Count active payment methods by user ID
      */
     @Query("SELECT COUNT(pm) FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.isActive = true")
-    Long countActiveByUserId(@Param("userId") Long userId);
+    Long countActiveByUserId(@Param("userId") String userId);
 
     /**
      * Count payment methods by user ID and type
      */
     @Query("SELECT COUNT(pm) FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.type = :type AND pm.isActive = true")
-    Long countByUserIdAndType(@Param("userId") Long userId, @Param("type") PaymentMethodType type);
+    Long countByUserIdAndType(@Param("userId") String userId, @Param("type") PaymentMethodType type);
 
     /**
      * Get payment method statistics by user ID
@@ -202,7 +202,7 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
             "COUNT(CASE WHEN pm.type = 'CARD' THEN 1 END) as cardMethods, " +
             "COUNT(CASE WHEN pm.type = 'WALLET' THEN 1 END) as walletMethods " +
             "FROM PaymentMethod pm WHERE pm.userId = :userId")
-    Object[] getPaymentMethodStatisticsByUserId(@Param("userId") Long userId);
+    Object[] getPaymentMethodStatisticsByUserId(@Param("userId") String userId);
 
     // ========== UPDATE OPERATIONS ==========
 
@@ -245,13 +245,13 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
      * Check if user has default payment method
      */
     @Query("SELECT COUNT(pm) > 0 FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.isDefault = true AND pm.isActive = true")
-    boolean hasDefaultPaymentMethod(@Param("userId") Long userId);
+    boolean hasDefaultPaymentMethod(@Param("userId") String userId);
 
     /**
      * Check if user has active payment methods
      */
     @Query("SELECT COUNT(pm) > 0 FROM PaymentMethod pm WHERE pm.userId = :userId AND pm.isActive = true")
-    boolean hasActivePaymentMethods(@Param("userId") Long userId);
+    boolean hasActivePaymentMethods(@Param("userId") String userId);
 
     // ========== CLEANUP QUERIES ==========
 
@@ -268,3 +268,4 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
             "NOT EXISTS (SELECT 1 FROM Payment p WHERE p.stripePaymentMethodId = pm.stripePaymentMethodId)")
     List<PaymentMethod> findOrphanedPaymentMethods();
 }
+

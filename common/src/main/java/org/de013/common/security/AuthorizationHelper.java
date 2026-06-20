@@ -81,17 +81,12 @@ public class AuthorizationHelper {
     /**
      * Get current user ID
      */
-    public Long getCurrentUserId(HttpServletRequest request) {
+    public String getCurrentUserId(HttpServletRequest request) {
         String userId = request.getHeader(HEADER_USER_ID);
         if (!StringUtils.hasText(userId)) {
             return null;
         }
-        try {
-            return Long.parseLong(userId);
-        } catch (NumberFormatException e) {
-            log.warn("Invalid user ID format: {}", userId);
-            return null;
-        }
+        return userId;
     }
 
     /**
@@ -161,15 +156,15 @@ public class AuthorizationHelper {
     /**
      * Check if current user owns the resource (by user ID)
      */
-    public boolean isOwner(HttpServletRequest request, Long resourceUserId) {
-        Long currentUserId = getCurrentUserId(request);
+    public boolean isOwner(HttpServletRequest request, String resourceUserId) {
+        String currentUserId = getCurrentUserId(request);
         return currentUserId != null && currentUserId.equals(resourceUserId);
     }
 
     /**
      * Require ownership or admin role
      */
-    public void requireOwnershipOrAdmin(HttpServletRequest request, Long resourceUserId) {
+    public void requireOwnershipOrAdmin(HttpServletRequest request, String resourceUserId) {
         requireAuthentication(request);
         if (!isOwner(request, resourceUserId) && !isAdmin(request)) {
             throw new ForbiddenException("Access denied: must be resource owner or admin");

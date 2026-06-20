@@ -30,7 +30,7 @@ public class RefundEvent {
     private Long paymentId;
     private String paymentNumber;
     private Long orderId;
-    private Long userId;
+    private String userId;
     private BigDecimal amount;
     private String currency;
     private String status;
@@ -71,7 +71,7 @@ public class RefundEvent {
 
     // Factory methods for common events
     public static RefundEvent refundCreated(Long refundId, String refundNumber, Long paymentId,
-                                            String paymentNumber, Long orderId, Long userId,
+                                            String paymentNumber, Long orderId, String userId,
                                             BigDecimal amount, String currency, String refundType) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
@@ -96,7 +96,7 @@ public class RefundEvent {
     }
 
     public static RefundEvent refundSucceeded(Long refundId, String refundNumber, Long paymentId,
-                                              String paymentNumber, Long orderId, Long userId,
+                                              String paymentNumber, Long orderId, String userId,
                                               BigDecimal amount, String currency, String refundType) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
@@ -122,7 +122,7 @@ public class RefundEvent {
     }
 
     public static RefundEvent refundFailed(Long refundId, String refundNumber, Long paymentId,
-                                           String paymentNumber, Long orderId, Long userId,
+                                           String paymentNumber, Long orderId, String userId,
                                            BigDecimal amount, String currency, String reason) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
@@ -148,7 +148,7 @@ public class RefundEvent {
     }
 
     public static RefundEvent refundApproved(Long refundId, String refundNumber, Long paymentId,
-                                             String paymentNumber, Long orderId, Long userId,
+                                             String paymentNumber, Long orderId, String userId,
                                              BigDecimal amount, String currency, String approvedBy) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
@@ -174,7 +174,7 @@ public class RefundEvent {
     }
 
     public static RefundEvent refundRejected(Long refundId, String refundNumber, Long paymentId,
-                                             String paymentNumber, Long orderId, Long userId,
+                                             String paymentNumber, Long orderId, String userId,
                                              BigDecimal amount, String currency, String reason, String rejectedBy) {
         return RefundEvent.builder()
                 .eventId(generateEventId())
@@ -204,3 +204,4 @@ public class RefundEvent {
         return "ref_evt_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
     }
 }
+

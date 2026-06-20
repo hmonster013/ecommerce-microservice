@@ -98,7 +98,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderResponse> listOrdersByUser(Long userId, Pageable pageable) {
+    public Page<OrderResponse> listOrdersByUser(String userId, Pageable pageable) {
         log.debug("Getting orders for user: {}", userId);
         return orderRepository.findByUserId(userId, pageable)
                 .map(orderMapper::toResponse);
@@ -156,4 +156,5 @@ public class OrderServiceImpl implements OrderService {
         log.info("Order {} cancelled successfully", id);
     }
 }
+
 

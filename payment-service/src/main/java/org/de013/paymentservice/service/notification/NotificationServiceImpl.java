@@ -127,7 +127,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void sendPushNotification(Long userId, String title, String message, Map<String, Object> data) {
+    public void sendPushNotification(String userId, String title, String message, Map<String, Object> data) {
         try {
             log.info("Sending push notification: userId={}, title={}", userId, title);
 
@@ -159,7 +159,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void sendMultiChannelNotification(Long userId, String email, String phoneNumber,
+    public void sendMultiChannelNotification(String userId, String email, String phoneNumber,
                                              String subject, String message, Map<String, Object> data,
                                              boolean sendEmail, boolean sendSms, boolean sendPush) {
         try {
@@ -388,3 +388,4 @@ public class NotificationServiceImpl implements NotificationService {
                 event.getAmount(), event.getCurrency(), event.getOrderNumber(), event.getStatus().toLowerCase());
     }
 }
+

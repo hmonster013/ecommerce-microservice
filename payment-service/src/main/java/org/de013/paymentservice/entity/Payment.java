@@ -38,8 +38,8 @@ public class Payment extends BaseEntity {
     @Column(name = "order_id", nullable = false)
     private Long orderId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "user_id", nullable = false, length = 36)
+    private String userId;
 
     @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;

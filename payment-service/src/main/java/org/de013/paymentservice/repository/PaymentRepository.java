@@ -40,12 +40,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /**
      * Find payments by user ID
      */
-    List<Payment> findByUserId(Long userId);
+    List<Payment> findByUserId(String userId);
 
     /**
      * Find payments by user ID with pagination
      */
-    Page<Payment> findByUserId(Long userId, Pageable pageable);
+    Page<Payment> findByUserId(String userId, Pageable pageable);
 
     /**
      * Find payments by status
@@ -84,12 +84,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /**
      * Find payments by user ID and status
      */
-    List<Payment> findByUserIdAndStatus(Long userId, PaymentStatus status);
+    List<Payment> findByUserIdAndStatus(String userId, PaymentStatus status);
 
     /**
      * Find payments by user ID and status with pagination
      */
-    Page<Payment> findByUserIdAndStatus(Long userId, PaymentStatus status, Pageable pageable);
+    Page<Payment> findByUserIdAndStatus(String userId, PaymentStatus status, Pageable pageable);
 
     /**
      * Find payments by order ID and status
@@ -99,7 +99,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /**
      * Find payments by user ID and status list
      */
-    List<Payment> findByUserIdAndStatusIn(Long userId, List<PaymentStatus> statuses);
+    List<Payment> findByUserIdAndStatusIn(String userId, List<PaymentStatus> statuses);
 
     /**
      * Find payments by order ID and status list
@@ -121,12 +121,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /**
      * Find payments by user ID and date range
      */
-    List<Payment> findByUserIdAndCreatedAtBetween(Long userId, LocalDateTime startDate, LocalDateTime endDate);
+    List<Payment> findByUserIdAndCreatedAtBetween(String userId, LocalDateTime startDate, LocalDateTime endDate);
 
     /**
      * Find payments by user ID and date range with pagination
      */
-    Page<Payment> findByUserIdAndCreatedAtBetween(Long userId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    Page<Payment> findByUserIdAndCreatedAtBetween(String userId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
     // ========== AMOUNT QUERIES ==========
 
@@ -138,7 +138,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /**
      * Find payments by user ID and amount range
      */
-    List<Payment> findByUserIdAndAmountBetween(Long userId, BigDecimal minAmount, BigDecimal maxAmount);
+    List<Payment> findByUserIdAndAmountBetween(String userId, BigDecimal minAmount, BigDecimal maxAmount);
 
     // ========== CUSTOM QUERIES ==========
 
@@ -146,25 +146,25 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Find successful payments by user ID
      */
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId AND p.status = 'SUCCEEDED' ORDER BY p.createdAt DESC")
-    List<Payment> findSuccessfulPaymentsByUserId(@Param("userId") Long userId);
+    List<Payment> findSuccessfulPaymentsByUserId(@Param("userId") String userId);
 
     /**
      * Find successful payments by user ID with pagination
      */
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId AND p.status = 'SUCCEEDED' ORDER BY p.createdAt DESC")
-    Page<Payment> findSuccessfulPaymentsByUserId(@Param("userId") Long userId, Pageable pageable);
+    Page<Payment> findSuccessfulPaymentsByUserId(@Param("userId") String userId, Pageable pageable);
 
     /**
      * Find failed payments by user ID
      */
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId AND p.status = 'FAILED' ORDER BY p.createdAt DESC")
-    List<Payment> findFailedPaymentsByUserId(@Param("userId") Long userId);
+    List<Payment> findFailedPaymentsByUserId(@Param("userId") String userId);
 
     /**
      * Find pending payments by user ID
      */
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId AND p.status IN ('PENDING', 'PROCESSING', 'REQUIRES_ACTION', 'REQUIRES_CONFIRMATION') ORDER BY p.createdAt DESC")
-    List<Payment> findPendingPaymentsByUserId(@Param("userId") Long userId);
+    List<Payment> findPendingPaymentsByUserId(@Param("userId") String userId);
 
     /**
      * Find payments requiring action
@@ -187,7 +187,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             "ORDER BY p.createdAt DESC")
     Page<Payment> searchPayments(
             @Param("paymentNumber") String paymentNumber,
-            @Param("userId") Long userId,
+            @Param("userId") String userId,
             @Param("orderId") Long orderId,
             @Param("status") PaymentStatus status,
             @Param("minAmount") BigDecimal minAmount,
@@ -209,13 +209,13 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Count payments by user ID and status
      */
     @Query("SELECT COUNT(p) FROM Payment p WHERE p.userId = :userId AND p.status = :status")
-    Long countByUserIdAndStatus(@Param("userId") Long userId, @Param("status") PaymentStatus status);
+    Long countByUserIdAndStatus(@Param("userId") String userId, @Param("status") PaymentStatus status);
 
     /**
      * Sum successful payments by user ID
      */
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.userId = :userId AND p.status = 'SUCCEEDED'")
-    BigDecimal sumSuccessfulPaymentsByUserId(@Param("userId") Long userId);
+    BigDecimal sumSuccessfulPaymentsByUserId(@Param("userId") String userId);
 
     /**
      * Sum successful payments by date range
@@ -232,7 +232,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             "COUNT(CASE WHEN p.status = 'SUCCEEDED' THEN 1 END) as successfulPayments, " +
             "COUNT(CASE WHEN p.status = 'FAILED' THEN 1 END) as failedPayments " +
             "FROM Payment p WHERE p.userId = :userId")
-    Object[] getPaymentStatisticsByUserId(@Param("userId") Long userId);
+    Object[] getPaymentStatisticsByUserId(@Param("userId") String userId);
 
     // ========== EXISTENCE CHECKS ==========
 
@@ -250,7 +250,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Check if user has any successful payments
      */
     @Query("SELECT COUNT(p) > 0 FROM Payment p WHERE p.userId = :userId AND p.status = 'SUCCEEDED'")
-    boolean hasSuccessfulPayments(@Param("userId") Long userId);
+    boolean hasSuccessfulPayments(@Param("userId") String userId);
 
     // ========== CLEANUP QUERIES ==========
 

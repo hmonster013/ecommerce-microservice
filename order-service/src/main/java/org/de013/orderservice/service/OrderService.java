@@ -18,7 +18,7 @@ public interface OrderService {
 
     OrderResponse getOrderByNumber(String orderNumber);
 
-    Page<OrderResponse> listOrdersByUser(Long userId, Pageable pageable);
+    Page<OrderResponse> listOrdersByUser(String userId, Pageable pageable);
 
     Page<OrderResponse> listAllOrders(Pageable pageable);
 
@@ -28,4 +28,5 @@ public interface OrderService {
     // Delete operations
     void cancelOrder(Long id, String reason);
 }
+
 

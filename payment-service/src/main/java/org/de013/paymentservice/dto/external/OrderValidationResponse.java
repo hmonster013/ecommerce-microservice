@@ -26,7 +26,7 @@ public class OrderValidationResponse {
     // Order details for validation
     private Long orderId;
     private String orderNumber;
-    private Long userId;
+    private String userId;
     private String status;
     private BigDecimal totalAmount;
     private String currency;
@@ -119,3 +119,4 @@ public class OrderValidationResponse {
                 .build();
     }
 }
+

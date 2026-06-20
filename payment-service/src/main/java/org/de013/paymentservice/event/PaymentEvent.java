@@ -28,7 +28,7 @@ public class PaymentEvent {
     private Long paymentId;
     private String paymentNumber;
     private Long orderId;
-    private Long userId;
+    private String userId;
     private BigDecimal amount;
     private String currency;
     private String status;
@@ -65,7 +65,7 @@ public class PaymentEvent {
 
     // Factory methods for common events
     public static PaymentEvent paymentCreated(Long paymentId, String paymentNumber, Long orderId,
-                                              Long userId, BigDecimal amount, String currency) {
+                                              String userId, BigDecimal amount, String currency) {
         return PaymentEvent.builder()
                 .eventId(generateEventId())
                 .eventType(PAYMENT_CREATED)
@@ -86,7 +86,7 @@ public class PaymentEvent {
     }
 
     public static PaymentEvent paymentSucceeded(Long paymentId, String paymentNumber, Long orderId,
-                                                Long userId, BigDecimal amount, String currency) {
+                                                String userId, BigDecimal amount, String currency) {
         return PaymentEvent.builder()
                 .eventId(generateEventId())
                 .eventType(PAYMENT_SUCCEEDED)
@@ -108,7 +108,7 @@ public class PaymentEvent {
     }
 
     public static PaymentEvent paymentFailed(Long paymentId, String paymentNumber, Long orderId,
-                                             Long userId, BigDecimal amount, String currency, String reason) {
+                                             String userId, BigDecimal amount, String currency, String reason) {
         return PaymentEvent.builder()
                 .eventId(generateEventId())
                 .eventType(PAYMENT_FAILED)
@@ -131,7 +131,7 @@ public class PaymentEvent {
     }
 
     public static PaymentEvent paymentCanceled(Long paymentId, String paymentNumber, Long orderId,
-                                               Long userId, BigDecimal amount, String currency, String reason) {
+                                               String userId, BigDecimal amount, String currency, String reason) {
         return PaymentEvent.builder()
                 .eventId(generateEventId())
                 .eventType(PAYMENT_CANCELED)
@@ -153,7 +153,7 @@ public class PaymentEvent {
     }
 
     public static PaymentEvent paymentRequiresAction(Long paymentId, String paymentNumber, Long orderId,
-                                                     Long userId, BigDecimal amount, String currency, String description) {
+                                                     String userId, BigDecimal amount, String currency, String description) {
         return PaymentEvent.builder()
                 .eventId(generateEventId())
                 .eventType(PAYMENT_REQUIRES_ACTION)
@@ -179,3 +179,4 @@ public class PaymentEvent {
         return "evt_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
     }
 }
+

@@ -99,7 +99,7 @@ public class StripeUtils {
     /**
      * Creates metadata map for Stripe objects.
      */
-    public static Map<String, String> createMetadata(Long userId, Long orderId, String paymentNumber) {
+    public static Map<String, String> createMetadata(String userId, Long orderId, String paymentNumber) {
         Map<String, String> metadata = new HashMap<>();
 
         if (userId != null) {
@@ -121,17 +121,12 @@ public class StripeUtils {
     /**
      * Extracts user ID from Stripe metadata.
      */
-    public static Long extractUserIdFromMetadata(Map<String, String> metadata) {
+    public static String extractUserIdFromMetadata(Map<String, String> metadata) {
         if (metadata == null || !metadata.containsKey("user_id")) {
             return null;
         }
 
-        try {
-            return Long.parseLong(metadata.get("user_id"));
-        } catch (NumberFormatException e) {
-            log.warn("Invalid user_id in metadata: {}", metadata.get("user_id"));
-            return null;
-        }
+        return metadata.get("user_id");
     }
 
     /**

@@ -25,7 +25,7 @@ public class UserValidationService {
     /**
      * Validate user for payment processing
      */
-    public UserValidationResponse validateUserForPayment(Long userId) {
+    public UserValidationResponse validateUserForPayment(String userId) {
         try {
             log.debug("Validating user for payment: {}", userId);
             ResponseEntity<UserValidationResponse> response = userServiceClient.validateUserForPayment(userId);
@@ -54,7 +54,7 @@ public class UserValidationService {
     /**
      * Get user details by ID
      */
-    public UserDto getUserById(Long userId) {
+    public UserDto getUserById(String userId) {
         try {
             log.debug("Getting user by ID: {}", userId);
             ResponseEntity<UserDto> response = userServiceClient.getUserById(userId);
@@ -73,7 +73,7 @@ public class UserValidationService {
     /**
      * Check if user exists and is active
      */
-    public boolean isUserActiveAndExists(Long userId) {
+    public boolean isUserActiveAndExists(String userId) {
         try {
             log.debug("Checking if user is active and exists: {}", userId);
 
@@ -102,7 +102,7 @@ public class UserValidationService {
     /**
      * Check if user can make payments
      */
-    public boolean canUserMakePayments(Long userId) {
+    public boolean canUserMakePayments(String userId) {
         try {
             log.debug("Checking if user can make payments: {}", userId);
             ResponseEntity<Boolean> response = userServiceClient.canUserMakePayments(userId);
@@ -124,7 +124,7 @@ public class UserValidationService {
     /**
      * Get user payment limits
      */
-    public UserDto.PaymentLimits getUserPaymentLimits(Long userId) {
+    public UserDto.PaymentLimits getUserPaymentLimits(String userId) {
         try {
             log.debug("Getting user payment limits: {}", userId);
             ResponseEntity<UserDto.PaymentLimits> response = userServiceClient.getUserPaymentLimits(userId);
@@ -154,7 +154,7 @@ public class UserValidationService {
     /**
      * Get user risk assessment
      */
-    public UserDto.RiskAssessment getUserRiskAssessment(Long userId) {
+    public UserDto.RiskAssessment getUserRiskAssessment(String userId) {
         try {
             log.debug("Getting user risk assessment: {}", userId);
             ResponseEntity<UserDto.RiskAssessment> response = userServiceClient.getUserRiskAssessment(userId);
@@ -184,7 +184,7 @@ public class UserValidationService {
     /**
      * Validate payment amount against user limits
      */
-    public boolean validatePaymentAmount(Long userId, BigDecimal amount) {
+    public boolean validatePaymentAmount(String userId, BigDecimal amount) {
         try {
             UserDto.PaymentLimits limits = getUserPaymentLimits(userId);
 
@@ -206,7 +206,7 @@ public class UserValidationService {
     /**
      * Update user's last payment activity
      */
-    public void updateLastPaymentActivity(Long userId) {
+    public void updateLastPaymentActivity(String userId) {
         try {
             log.debug("Updating last payment activity: {}", userId);
             ResponseEntity<Void> response = userServiceClient.updateLastPaymentActivity(userId);
@@ -226,7 +226,7 @@ public class UserValidationService {
     /**
      * Increment user's payment count
      */
-    public void incrementPaymentCount(Long userId) {
+    public void incrementPaymentCount(String userId) {
         try {
             log.debug("Incrementing payment count: {}", userId);
             ResponseEntity<Void> response = userServiceClient.incrementPaymentCount(userId);
@@ -246,7 +246,7 @@ public class UserValidationService {
     /**
      * Comprehensive user validation for payment processing
      */
-    public UserValidationResponse comprehensiveUserValidation(Long userId, BigDecimal paymentAmount) {
+    public UserValidationResponse comprehensiveUserValidation(String userId, BigDecimal paymentAmount) {
         try {
             log.debug("Performing comprehensive user validation: userId={}, amount={}", userId, paymentAmount);
 
@@ -287,3 +287,4 @@ public class UserValidationService {
         }
     }
 }
+

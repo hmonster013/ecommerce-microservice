@@ -382,7 +382,7 @@ public class NotificationController {
     })
     public ResponseEntity<Map<String, Object>> getUserNotifications(
             @Parameter(description = "User ID", example = "123", required = true)
-            @PathVariable Long userId,
+            @PathVariable String userId,
             @Parameter(description = "Page number (0-based)", example = "0")
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @Parameter(description = "Page size (max 100)", example = "20")
@@ -528,7 +528,7 @@ public class NotificationController {
     })
     public ResponseEntity<Map<String, Object>> getUnreadCount(
             @Parameter(description = "User ID", example = "123", required = true)
-            @PathVariable Long userId) {
+            @PathVariable String userId) {
 
         log.debug("Getting unread count for user={}", userId);
 
@@ -551,3 +551,4 @@ public class NotificationController {
     }
 
 }
+

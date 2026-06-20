@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 public class UserContext {
 
-    private Long userId;
+    private String userId;
     private String username;
     private String email;
     private String firstName;

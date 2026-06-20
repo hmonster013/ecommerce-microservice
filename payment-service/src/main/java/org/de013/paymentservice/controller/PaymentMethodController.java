@@ -108,7 +108,7 @@ public class PaymentMethodController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payment methods retrieved successfully")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentMethodResponse>>> getPaymentMethodsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting payment methods for user: {}", userId);
 
         List<PaymentMethodResponse> paymentMethods = paymentMethodService.getPaymentMethodsByUserId(userId);
@@ -121,7 +121,7 @@ public class PaymentMethodController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Active payment methods retrieved successfully")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentMethodResponse>>> getActivePaymentMethodsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting active payment methods for user: {}", userId);
 
         List<PaymentMethodResponse> paymentMethods = paymentMethodService.getActivePaymentMethodsByUserId(userId);
@@ -134,7 +134,7 @@ public class PaymentMethodController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payment methods retrieved successfully")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentMethodResponse>>> getPaymentMethodsByUserIdAndType(
-            @Parameter(description = "User ID") @PathVariable Long userId,
+            @Parameter(description = "User ID") @PathVariable String userId,
             @Parameter(description = "Payment method type") @PathVariable PaymentMethodType type) {
         log.debug("Getting payment methods for user: {} and type: {}", userId, type);
 
@@ -151,7 +151,7 @@ public class PaymentMethodController extends BaseController {
             @ApiResponse(responseCode = "404", description = "No default payment method found")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentMethodResponse>> getDefaultPaymentMethodByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting default payment method for user: {}", userId);
 
         return paymentMethodService.getDefaultPaymentMethodByUserId(userId)
@@ -257,7 +257,7 @@ public class PaymentMethodController extends BaseController {
     @GetMapping("/user/{userId}/cards")
     @Operation(summary = "Get card payment methods", description = "Get all card payment methods for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentMethodResponse>>> getCardPaymentMethodsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting card payment methods for user: {}", userId);
 
         List<PaymentMethodResponse> cardMethods = paymentMethodService.getCardPaymentMethodsByUserId(userId);
@@ -278,7 +278,7 @@ public class PaymentMethodController extends BaseController {
     @GetMapping("/search")
     @Operation(summary = "Search payment methods", description = "Search payment methods with various criteria")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Page<PaymentMethodResponse>>> searchPaymentMethods(
-            @Parameter(description = "User ID") @RequestParam(required = false) Long userId,
+            @Parameter(description = "User ID") @RequestParam(required = false) String userId,
             @Parameter(description = "Payment method type") @RequestParam(required = false) PaymentMethodType type,
             @Parameter(description = "Is active") @RequestParam(required = false) Boolean isActive,
             @Parameter(description = "Is default") @RequestParam(required = false) Boolean isDefault,
@@ -299,7 +299,7 @@ public class PaymentMethodController extends BaseController {
     @GetMapping("/user/{userId}/statistics")
     @Operation(summary = "Get payment method statistics", description = "Get payment method statistics for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentMethodService.PaymentMethodStatistics>> getPaymentMethodStatisticsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting payment method statistics for user: {}", userId);
 
         PaymentMethodService.PaymentMethodStatistics statistics =
@@ -329,3 +329,4 @@ public class PaymentMethodController extends BaseController {
         return success(null, "Orphaned payment methods cleaned up successfully");
     }
 }
+

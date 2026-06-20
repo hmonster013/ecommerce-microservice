@@ -58,7 +58,7 @@ public interface OrderServiceClient {
     @GetMapping("/{orderId}/user/{userId}/validate")
     ResponseEntity<Boolean> validateOrderOwnership(
             @PathVariable("orderId") Long orderId,
-            @PathVariable("userId") Long userId
+            @PathVariable("userId") String userId
     );
 
     /**
@@ -92,3 +92,4 @@ public interface OrderServiceClient {
     @PutMapping("/{orderId}/release-reservation")
     ResponseEntity<Void> releaseOrderReservation(@PathVariable("orderId") Long orderId);
 }
+

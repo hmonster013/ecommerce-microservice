@@ -59,7 +59,7 @@ public class CartController extends BaseController {
             String userId = null;
 
             if (userContext != null) {
-                userId = String.valueOf(userContext.getUserId());
+                userId = userContext.getUserId();
                 log.debug("Getting or creating cart for authenticated user: {} (ID: {})",
                         userContext.getUsername(), userId);
             } else {

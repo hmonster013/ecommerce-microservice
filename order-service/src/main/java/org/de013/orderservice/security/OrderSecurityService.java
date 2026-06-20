@@ -59,7 +59,7 @@ public class OrderSecurityService {
      * - Admins can access any user's orders
      * - Customers can only access their own orders
      */
-    public boolean canAccessUserOrders(Long userId) {
+    public boolean canAccessUserOrders(String userId) {
         UserContext userContext = UserContextHolder.getCurrentUser();
         if (userContext == null) {
             log.debug("No user context found, denying access to user {} orders", userId);

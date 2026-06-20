@@ -43,7 +43,7 @@ class ExternalServiceIntegrationTest {
     @Test
     void testUserValidationServiceFallback() {
         // Test fallback behavior when user service is unavailable
-        Long userId = 999999L;
+        String userId = "999999";
 
         UserValidationResponse response = userValidationService.validateUserForPayment(userId);
 
@@ -57,7 +57,7 @@ class ExternalServiceIntegrationTest {
     void testOrderOwnershipValidationFallback() {
         // Test fallback behavior for order ownership validation
         Long orderId = 999999L;
-        Long userId = 999999L;
+        String userId = "999999";
 
         boolean isOwner = orderValidationService.validateOrderOwnership(orderId, userId);
 
@@ -67,7 +67,7 @@ class ExternalServiceIntegrationTest {
     @Test
     void testUserActiveCheckFallback() {
         // Test fallback behavior for user active check
-        Long userId = 999999L;
+        String userId = "999999";
 
         boolean isActive = userValidationService.isUserActiveAndExists(userId);
 
@@ -77,7 +77,7 @@ class ExternalServiceIntegrationTest {
     @Test
     void testPaymentAmountValidationFallback() {
         // Test fallback behavior for payment amount validation
-        Long userId = 999999L;
+        String userId = "999999";
         BigDecimal amount = new BigDecimal("100.00");
 
         boolean isValid = userValidationService.validatePaymentAmount(userId, amount);
@@ -88,7 +88,7 @@ class ExternalServiceIntegrationTest {
     @Test
     void testComprehensiveUserValidationFallback() {
         // Test comprehensive user validation fallback
-        Long userId = 999999L;
+        String userId = "999999";
         BigDecimal amount = new BigDecimal("100.00");
 
         UserValidationResponse response = userValidationService.comprehensiveUserValidation(userId, amount);
@@ -112,7 +112,7 @@ class ExternalServiceIntegrationTest {
     @Test
     void testUserPaymentLimitsFallback() {
         // Test user payment limits fallback
-        Long userId = 999999L;
+        String userId = "999999";
 
         assertDoesNotThrow(() -> {
             UserDto.PaymentLimits limits = userValidationService.getUserPaymentLimits(userId);
@@ -125,7 +125,7 @@ class ExternalServiceIntegrationTest {
     @Test
     void testUserRiskAssessmentFallback() {
         // Test user risk assessment fallback
-        Long userId = 999999L;
+        String userId = "999999";
 
         assertDoesNotThrow(() -> {
             UserDto.RiskAssessment assessment = userValidationService.getUserRiskAssessment(userId);
@@ -157,7 +157,7 @@ class ExternalServiceIntegrationTest {
     @Test
     void testUserServiceOperationsFallback() {
         // Test various user service operations fallback
-        Long userId = 999999L;
+        String userId = "999999";
 
         // These should not throw exceptions
         assertDoesNotThrow(() -> {
@@ -169,3 +169,5 @@ class ExternalServiceIntegrationTest {
         assertFalse(userValidationService.canUserMakePayments(userId));
     }
 }
+
+

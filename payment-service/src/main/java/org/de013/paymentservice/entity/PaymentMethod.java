@@ -26,7 +26,7 @@ import java.time.LocalDateTime;
 public class PaymentMethod extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private String userId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 30)
@@ -139,3 +139,4 @@ public class PaymentMethod extends BaseEntity {
         this.lastUsedAt = LocalDateTime.now();
     }
 }
+

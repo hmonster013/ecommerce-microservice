@@ -22,7 +22,7 @@ public interface UserServiceClient {
      * Get user details by ID
      */
     @GetMapping("/{userId}")
-    ResponseEntity<UserDto> getUserById(@PathVariable("userId") Long userId);
+    ResponseEntity<UserDto> getUserById(@PathVariable("userId") String userId);
 
     /**
      * Get user details by email
@@ -34,47 +34,48 @@ public interface UserServiceClient {
      * Validate user for payment processing
      */
     @GetMapping("/{userId}/validate-payment")
-    ResponseEntity<UserValidationResponse> validateUserForPayment(@PathVariable("userId") Long userId);
+    ResponseEntity<UserValidationResponse> validateUserForPayment(@PathVariable("userId") String userId);
 
     /**
      * Check if user exists and is active
      */
     @GetMapping("/{userId}/exists")
-    ResponseEntity<Boolean> userExists(@PathVariable("userId") Long userId);
+    ResponseEntity<Boolean> userExists(@PathVariable("userId") String userId);
 
     /**
      * Check if user is active
      */
     @GetMapping("/{userId}/active")
-    ResponseEntity<Boolean> isUserActive(@PathVariable("userId") Long userId);
+    ResponseEntity<Boolean> isUserActive(@PathVariable("userId") String userId);
 
     /**
      * Check if user can make payments
      */
     @GetMapping("/{userId}/can-pay")
-    ResponseEntity<Boolean> canUserMakePayments(@PathVariable("userId") Long userId);
+    ResponseEntity<Boolean> canUserMakePayments(@PathVariable("userId") String userId);
 
     /**
      * Get user's payment limits
      */
     @GetMapping("/{userId}/payment-limits")
-    ResponseEntity<UserDto.PaymentLimits> getUserPaymentLimits(@PathVariable("userId") Long userId);
+    ResponseEntity<UserDto.PaymentLimits> getUserPaymentLimits(@PathVariable("userId") String userId);
 
     /**
      * Update user's last payment activity
      */
     @PutMapping("/{userId}/last-payment-activity")
-    ResponseEntity<Void> updateLastPaymentActivity(@PathVariable("userId") Long userId);
+    ResponseEntity<Void> updateLastPaymentActivity(@PathVariable("userId") String userId);
 
     /**
      * Increment user's payment count
      */
     @PutMapping("/{userId}/increment-payment-count")
-    ResponseEntity<Void> incrementPaymentCount(@PathVariable("userId") Long userId);
+    ResponseEntity<Void> incrementPaymentCount(@PathVariable("userId") String userId);
 
     /**
      * Check user's payment history for fraud detection
      */
     @GetMapping("/{userId}/payment-risk-assessment")
-    ResponseEntity<UserDto.RiskAssessment> getUserRiskAssessment(@PathVariable("userId") Long userId);
+    ResponseEntity<UserDto.RiskAssessment> getUserRiskAssessment(@PathVariable("userId") String userId);
 }
+

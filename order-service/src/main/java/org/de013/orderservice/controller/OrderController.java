@@ -109,7 +109,7 @@ public class OrderController {
     @GetMapping("/user/{userId}")
     public Page<OrderResponse> getUserOrders(
             @Parameter(description = "User ID", required = true, example = "1")
-            @PathVariable Long userId,
+            @PathVariable String userId,
             @Parameter(description = "Pagination parameters") Pageable pageable) {
         log.debug("Getting orders for user {}", userId);
         return orderService.listOrdersByUser(userId, pageable);

@@ -204,7 +204,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<PaymentResponse>>> getPaymentsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId,
+            @Parameter(description = "User ID") @PathVariable String userId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         log.debug("Getting payments for user: {} with pagination: {}", userId, pageable);
 
@@ -219,7 +219,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getPaymentsByUserIdAndStatus(
-            @Parameter(description = "User ID") @PathVariable Long userId,
+            @Parameter(description = "User ID") @PathVariable String userId,
             @Parameter(description = "Payment status") @PathVariable PaymentStatus status) {
         log.debug("Getting payments for user: {} with status: {}", userId, status);
 
@@ -296,7 +296,7 @@ public class PaymentController extends BaseController {
     })
     public ResponseEntity<Page<PaymentResponse>> searchPayments(
             @Parameter(description = "Payment number") @RequestParam(required = false) String paymentNumber,
-            @Parameter(description = "User ID") @RequestParam(required = false) Long userId,
+            @Parameter(description = "User ID") @RequestParam(required = false) String userId,
             @Parameter(description = "Order ID") @RequestParam(required = false) Long orderId,
             @Parameter(description = "Payment status") @RequestParam(required = false) PaymentStatus status,
             @Parameter(description = "Minimum amount") @RequestParam(required = false) BigDecimal minAmount,
@@ -316,7 +316,7 @@ public class PaymentController extends BaseController {
     @GetMapping("/user/{userId}/successful")
     @Operation(summary = "Get successful payments by user", description = "Get all successful payments for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getSuccessfulPaymentsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting successful payments for user: {}", userId);
 
         List<PaymentResponse> payments = paymentService.getSuccessfulPaymentsByUserId(userId);
@@ -326,7 +326,7 @@ public class PaymentController extends BaseController {
     @GetMapping("/user/{userId}/failed")
     @Operation(summary = "Get failed payments by user", description = "Get all failed payments for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getFailedPaymentsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting failed payments for user: {}", userId);
 
         List<PaymentResponse> payments = paymentService.getFailedPaymentsByUserId(userId);
@@ -336,7 +336,7 @@ public class PaymentController extends BaseController {
     @GetMapping("/user/{userId}/pending")
     @Operation(summary = "Get pending payments by user", description = "Get all pending payments for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getPendingPaymentsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting pending payments for user: {}", userId);
 
         List<PaymentResponse> payments = paymentService.getPendingPaymentsByUserId(userId);
@@ -348,7 +348,7 @@ public class PaymentController extends BaseController {
     @GetMapping("/user/{userId}/statistics")
     @Operation(summary = "Get payment statistics by user", description = "Get payment statistics for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentService.PaymentStatistics>> getPaymentStatisticsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting payment statistics for user: {}", userId);
 
         PaymentService.PaymentStatistics statistics = paymentService.getPaymentStatisticsByUserId(userId);
@@ -369,7 +369,7 @@ public class PaymentController extends BaseController {
     @GetMapping("/user/{userId}/total-amount")
     @Operation(summary = "Get total payment amount by user", description = "Get total successful payment amount for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<BigDecimal>> getTotalPaymentAmountByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting total payment amount for user: {}", userId);
 
         BigDecimal totalAmount = paymentService.getTotalPaymentAmountByUserId(userId);

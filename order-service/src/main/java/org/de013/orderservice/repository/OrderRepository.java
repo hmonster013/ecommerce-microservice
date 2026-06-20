@@ -43,7 +43,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      * @param pageable pagination information
      * @return page of orders
      */
-    Page<Order> findByUserId(Long userId, Pageable pageable);
+    Page<Order> findByUserId(String userId, Pageable pageable);
 
     /**
      * Find orders by user ID and status
@@ -53,7 +53,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      * @param pageable pagination information
      * @return page of orders
      */
-    Page<Order> findByUserIdAndStatus(Long userId, OrderStatus status, Pageable pageable);
+    Page<Order> findByUserIdAndStatus(String userId, OrderStatus status, Pageable pageable);
 
     /**
      * Find orders by status
@@ -92,7 +92,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      * @param pageable  pagination information
      * @return page of orders
      */
-    Page<Order> findByUserIdAndCreatedAtBetween(Long userId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    Page<Order> findByUserIdAndCreatedAtBetween(String userId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
     /**
      * Find orders by status and date range
@@ -122,7 +122,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      * @param pageable pagination information
      * @return page of orders
      */
-    Page<Order> findByUserIdAndStatusIn(Long userId, List<OrderStatus> statuses, Pageable pageable);
+    Page<Order> findByUserIdAndStatusIn(String userId, List<OrderStatus> statuses, Pageable pageable);
 
     /**
      * Find orders with expected delivery date before given date
@@ -164,7 +164,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      * @param userId the user ID
      * @return count of orders
      */
-    long countByUserId(Long userId);
+    long countByUserId(String userId);
 
     /**
      * Count orders by status
@@ -181,7 +181,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      * @param status the order status
      * @return count of orders
      */
-    long countByUserIdAndStatus(Long userId, OrderStatus status);
+    long countByUserIdAndStatus(String userId, OrderStatus status);
 
     /**
      * Count orders created today
@@ -242,7 +242,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      * @return page of recent orders
      */
     @Query("SELECT o FROM Order o WHERE o.userId = :userId AND o.createdAt >= :since")
-    Page<Order> findRecentOrdersForUser(@Param("userId") Long userId,
+    Page<Order> findRecentOrdersForUser(@Param("userId") String userId,
                                         @Param("since") LocalDateTime since,
                                         Pageable pageable);
 

@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class PaymentMethodResponse {
 
     private Long id;
-    private Long userId;
+    private String userId;
     private PaymentMethodType type;
     private String provider;
     private Boolean isDefault;
@@ -154,3 +154,4 @@ public class PaymentMethodResponse {
         return isExpired != null && isExpired;
     }
 }
+

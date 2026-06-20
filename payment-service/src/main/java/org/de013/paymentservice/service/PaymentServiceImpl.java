@@ -171,14 +171,14 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PaymentResponse> getPaymentsByUserId(Long userId, Pageable pageable) {
+    public Page<PaymentResponse> getPaymentsByUserId(String userId, Pageable pageable) {
         return paymentRepository.findByUserId(userId, pageable)
                 .map(paymentMapper::toPaymentResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentResponse> getPaymentsByUserIdAndStatus(Long userId, PaymentStatus status) {
+    public List<PaymentResponse> getPaymentsByUserIdAndStatus(String userId, PaymentStatus status) {
         return paymentRepository.findByUserIdAndStatus(userId, status).stream()
                 .map(paymentMapper::toPaymentResponse)
                 .toList();
@@ -248,7 +248,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public void validateUserCanMakePayment(Long userId) {
+    public void validateUserCanMakePayment(String userId) {
         // TODO: Validate with User Service
     }
 
@@ -291,7 +291,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public Page<PaymentResponse> searchPayments(
-            String paymentNumber, Long userId, Long orderId, PaymentStatus status,
+            String paymentNumber, String userId, Long orderId, PaymentStatus status,
             BigDecimal minAmount, BigDecimal maxAmount, LocalDateTime startDate, LocalDateTime endDate,
             Pageable pageable) {
 
@@ -302,7 +302,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentResponse> getSuccessfulPaymentsByUserId(Long userId) {
+    public List<PaymentResponse> getSuccessfulPaymentsByUserId(String userId) {
         return paymentRepository.findSuccessfulPaymentsByUserId(userId).stream()
                 .map(paymentMapper::toPaymentResponse)
                 .toList();
@@ -310,7 +310,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentResponse> getFailedPaymentsByUserId(Long userId) {
+    public List<PaymentResponse> getFailedPaymentsByUserId(String userId) {
         return paymentRepository.findFailedPaymentsByUserId(userId).stream()
                 .map(paymentMapper::toPaymentResponse)
                 .toList();
@@ -318,7 +318,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentResponse> getPendingPaymentsByUserId(Long userId) {
+    public List<PaymentResponse> getPendingPaymentsByUserId(String userId) {
         return paymentRepository.findPendingPaymentsByUserId(userId).stream()
                 .map(paymentMapper::toPaymentResponse)
                 .toList();
@@ -328,7 +328,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentStatistics getPaymentStatisticsByUserId(Long userId) {
+    public PaymentStatistics getPaymentStatisticsByUserId(String userId) {
         // TODO: Implement statistics calculation
         return new PaymentService.PaymentStatistics(
                 0L, 0L, 0L, 0L,
@@ -348,7 +348,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal getTotalPaymentAmountByUserId(Long userId) {
+    public BigDecimal getTotalPaymentAmountByUserId(String userId) {
         return paymentRepository.sumSuccessfulPaymentsByUserId(userId);
     }
 

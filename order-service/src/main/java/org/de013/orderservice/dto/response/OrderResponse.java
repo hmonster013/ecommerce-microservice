@@ -41,7 +41,7 @@ public class OrderResponse {
     /**
      * User ID who placed the order
      */
-    private Long userId;
+    private String userId;
 
     /**
      * Current order status

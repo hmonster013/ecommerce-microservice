@@ -24,7 +24,7 @@ public class UserValidationResponse {
     private List<String> errors;
 
     // User details
-    private Long userId;
+    private String userId;
     private String username;
     private String email;
     private String status;
@@ -88,7 +88,7 @@ public class UserValidationResponse {
     }
 
     // Factory methods
-    public static UserValidationResponse valid(Long userId, String username, String email) {
+    public static UserValidationResponse valid(String userId, String username, String email) {
         return UserValidationResponse.builder()
                 .valid(true)
                 .userId(userId)
@@ -116,7 +116,7 @@ public class UserValidationResponse {
                 .build();
     }
 
-    public static UserValidationResponse userNotFound(Long userId) {
+    public static UserValidationResponse userNotFound(String userId) {
         return UserValidationResponse.builder()
                 .valid(false)
                 .userId(userId)
@@ -126,7 +126,7 @@ public class UserValidationResponse {
                 .build();
     }
 
-    public static UserValidationResponse userBlocked(Long userId, String username, String reason) {
+    public static UserValidationResponse userBlocked(String userId, String username, String reason) {
         return UserValidationResponse.builder()
                 .valid(false)
                 .userId(userId)
@@ -140,7 +140,7 @@ public class UserValidationResponse {
                 .build();
     }
 
-    public static UserValidationResponse highRisk(Long userId, String username, String riskLevel, String reason) {
+    public static UserValidationResponse highRisk(String userId, String username, String riskLevel, String reason) {
         return UserValidationResponse.builder()
                 .valid(false)
                 .userId(userId)
@@ -158,3 +158,4 @@ public class UserValidationResponse {
                 .build();
     }
 }
+

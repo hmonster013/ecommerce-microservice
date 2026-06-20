@@ -22,6 +22,7 @@ import org.de013.paymentservice.service.PaymentMethodService;
 import org.de013.paymentservice.service.PaymentService;
 import org.de013.paymentservice.service.WebhookService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -291,7 +292,7 @@ public class StripeController extends BaseController {
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<StripeCustomerResponse>> createStripeCustomer(
             @Parameter(description = "User ID to create customer for", required = true)
-            @RequestParam Long userId,
+            @RequestParam String userId,
             @Parameter(description = "Customer email") @RequestParam(required = false) String email,
             @Parameter(description = "Customer name") @RequestParam(required = false) String name,
             @Parameter(description = "Customer phone") @RequestParam(required = false) String phone) {
@@ -433,8 +434,8 @@ public class StripeController extends BaseController {
     /**
      * Validate user ID parameter
      */
-    private boolean isValidUserId(Long userId) {
-        return userId != null && userId > 0;
+    private boolean isValidUserId(String userId) {
+        return StringUtils.hasText(userId);
     }
 
     /**
@@ -446,3 +447,4 @@ public class StripeController extends BaseController {
                 customerId.startsWith("cus_");
     }
 }
+

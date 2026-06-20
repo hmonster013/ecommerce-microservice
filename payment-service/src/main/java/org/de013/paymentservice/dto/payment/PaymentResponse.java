@@ -26,7 +26,7 @@ public class PaymentResponse {
     private Long id;
     private String paymentNumber;
     private Long orderId;
-    private Long userId;
+    private String userId;
     private BigDecimal amount;
     private Currency currency;
     private PaymentStatus status;
@@ -142,3 +142,4 @@ public class PaymentResponse {
         };
     }
 }
+

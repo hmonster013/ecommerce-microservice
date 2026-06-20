@@ -59,10 +59,10 @@ public class Order extends BaseEntity {
     /**
      * ID of the user who placed the order
      */
-    @Column(name = "user_id", nullable = false)
-    @NotNull(message = "User ID is required")
-    @Positive(message = "User ID must be positive")
-    private Long userId;
+    @Column(name = "user_id", length = 36, nullable = false)
+    @NotBlank(message = "User ID is required")
+    @Size(max = 36)
+    private String userId;
 
     /**
      * Current status of the order

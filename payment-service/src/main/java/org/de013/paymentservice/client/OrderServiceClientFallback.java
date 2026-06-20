@@ -54,7 +54,7 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     }
 
     @Override
-    public ResponseEntity<Boolean> validateOrderOwnership(Long orderId, Long userId) {
+    public ResponseEntity<Boolean> validateOrderOwnership(Long orderId, String userId) {
         log.warn("Order Service unavailable - using fallback for validateOrderOwnership: order={}, user={}",
                 orderId, userId);
         return ResponseEntity.ok(false);
@@ -100,3 +100,4 @@ public class OrderServiceClientFallback implements OrderServiceClient {
         return fallbackOrder;
     }
 }
+

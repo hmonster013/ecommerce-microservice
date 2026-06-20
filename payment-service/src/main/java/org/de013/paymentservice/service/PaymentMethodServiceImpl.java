@@ -167,7 +167,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentMethodResponse> getPaymentMethodsByUserId(Long userId) {
+    public List<PaymentMethodResponse> getPaymentMethodsByUserId(String userId) {
         return paymentMethodRepository.findByUserId(userId).stream()
                 .map(paymentMethodMapper::toPaymentMethodResponse)
                 .toList();
@@ -175,7 +175,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentMethodResponse> getActivePaymentMethodsByUserId(Long userId) {
+    public List<PaymentMethodResponse> getActivePaymentMethodsByUserId(String userId) {
         return paymentMethodRepository.findByUserIdAndIsActive(userId, true).stream()
                 .map(paymentMethodMapper::toPaymentMethodResponse)
                 .toList();
@@ -183,14 +183,14 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PaymentMethodResponse> getPaymentMethodsByUserId(Long userId, Pageable pageable) {
+    public Page<PaymentMethodResponse> getPaymentMethodsByUserId(String userId, Pageable pageable) {
         return paymentMethodRepository.findByUserId(userId, pageable)
                 .map(paymentMethodMapper::toPaymentMethodResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentMethodResponse> getPaymentMethodsByUserIdAndType(Long userId, PaymentMethodType type) {
+    public List<PaymentMethodResponse> getPaymentMethodsByUserIdAndType(String userId, PaymentMethodType type) {
         return paymentMethodRepository.findByUserIdAndTypeAndIsActive(userId, type, true).stream()
                 .map(paymentMethodMapper::toPaymentMethodResponse)
                 .toList();
@@ -200,7 +200,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<PaymentMethodResponse> getDefaultPaymentMethodByUserId(Long userId) {
+    public Optional<PaymentMethodResponse> getDefaultPaymentMethodByUserId(String userId) {
         return paymentMethodRepository.findDefaultByUserId(userId)
                 .map(paymentMethodMapper::toPaymentMethodResponse);
     }
@@ -226,14 +226,14 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
     }
 
     @Override
-    public void clearDefaultPaymentMethod(Long userId) {
+    public void clearDefaultPaymentMethod(String userId) {
         paymentMethodRepository.clearDefaultFlagForUser(userId);
         log.info("Default payment method cleared for user: {}", userId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public boolean hasDefaultPaymentMethod(Long userId) {
+    public boolean hasDefaultPaymentMethod(String userId) {
         return paymentMethodRepository.hasDefaultPaymentMethod(userId);
     }
 
@@ -350,7 +350,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentMethodResponse> getCardPaymentMethodsByUserId(Long userId) {
+    public List<PaymentMethodResponse> getCardPaymentMethodsByUserId(String userId) {
         return paymentMethodRepository.findCardPaymentMethodsByUserId(userId).stream()
                 .map(paymentMethodMapper::toPaymentMethodResponse)
                 .toList();
@@ -396,7 +396,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
     @Override
     @Transactional(readOnly = true)
     public Page<PaymentMethodResponse> searchPaymentMethods(
-            Long userId, PaymentMethodType type, Boolean isActive, Boolean isDefault,
+            String userId, PaymentMethodType type, Boolean isActive, Boolean isDefault,
             String provider, String cardBrand, Pageable pageable) {
 
         return paymentMethodRepository.searchPaymentMethods(
@@ -406,7 +406,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentMethodResponse> getRecentlyUsedPaymentMethods(Long userId, int limit) {
+    public List<PaymentMethodResponse> getRecentlyUsedPaymentMethods(String userId, int limit) {
         Pageable pageable = PageRequest.of(0, limit);
         return paymentMethodRepository.findRecentlyUsedByUserId(userId, pageable).stream()
                 .map(paymentMethodMapper::toPaymentMethodResponse)
@@ -415,7 +415,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentMethodResponse> getUnusedPaymentMethods(Long userId) {
+    public List<PaymentMethodResponse> getUnusedPaymentMethods(String userId) {
         return paymentMethodRepository.findUnusedByUserId(userId).stream()
                 .map(paymentMethodMapper::toPaymentMethodResponse)
                 .toList();
@@ -425,7 +425,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentMethodStatistics getPaymentMethodStatisticsByUserId(Long userId) {
+    public PaymentMethodStatistics getPaymentMethodStatisticsByUserId(String userId) {
         Object[] stats = paymentMethodRepository.getPaymentMethodStatisticsByUserId(userId);
 
         Long totalMethods = (Long) stats[0];
@@ -469,13 +469,13 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public Long getPaymentMethodCountByUserAndType(Long userId, PaymentMethodType type) {
+    public Long getPaymentMethodCountByUserAndType(String userId, PaymentMethodType type) {
         return paymentMethodRepository.countByUserIdAndType(userId, type);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public boolean hasActivePaymentMethods(Long userId) {
+    public boolean hasActivePaymentMethods(String userId) {
         return paymentMethodRepository.hasActivePaymentMethods(userId);
     }
 
@@ -501,7 +501,7 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
 
     @Override
     @Transactional(readOnly = true)
-    public void validatePaymentMethodOwnership(Long paymentMethodId, Long userId) {
+    public void validatePaymentMethodOwnership(Long paymentMethodId, String userId) {
         PaymentMethod paymentMethod = getPaymentMethodEntityById(paymentMethodId)
                 .orElseThrow(() -> new PaymentMethodNotFoundException("Payment method not found: " + paymentMethodId));
 
@@ -622,3 +622,4 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
         return builder.build();
     }
 }
+

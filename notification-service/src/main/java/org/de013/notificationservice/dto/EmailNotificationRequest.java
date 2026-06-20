@@ -22,7 +22,7 @@ public class EmailNotificationRequest {
     @Schema(description = "User ID (optional, for tracking purposes)",
             example = "123",
             nullable = true)
-    private Long userId;
+    private String userId;
 
     @NotBlank(message = "Email address is required")
     @Email(message = "Invalid email format")
@@ -47,3 +47,4 @@ public class EmailNotificationRequest {
             maxLength = 5000)
     private String message;
 }
+

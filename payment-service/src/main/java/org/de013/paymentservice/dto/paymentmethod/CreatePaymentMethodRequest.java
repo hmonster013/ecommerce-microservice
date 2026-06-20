@@ -23,7 +23,7 @@ public class CreatePaymentMethodRequest {
 
     @NotNull(message = "User ID is required")
     @Positive(message = "User ID must be positive")
-    private Long userId;
+    private String userId;
 
     @NotNull(message = "Payment method type is required")
     private PaymentMethodType type;
@@ -111,3 +111,4 @@ public class CreatePaymentMethodRequest {
         return stripeCustomerId == null || stripeCustomerId.trim().isEmpty();
     }
 }
+

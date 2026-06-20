@@ -74,7 +74,7 @@ public class OrderValidationService {
     /**
      * Validate order ownership
      */
-    public boolean validateOrderOwnership(Long orderId, Long userId) {
+    public boolean validateOrderOwnership(Long orderId, String userId) {
         try {
             log.debug("Validating order ownership: orderId={}, userId={}", orderId, userId);
             ResponseEntity<Boolean> response = orderServiceClient.validateOrderOwnership(orderId, userId);
@@ -229,3 +229,4 @@ public class OrderValidationService {
         }
     }
 }
+
