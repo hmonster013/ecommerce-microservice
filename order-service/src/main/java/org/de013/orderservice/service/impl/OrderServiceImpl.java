@@ -41,8 +41,8 @@ public class OrderServiceImpl implements OrderService {
         log.info("Creating order for user: {} from cart: {}", request.getUserId(), request.getCartId());
 
         // Get cart items from Shopping Cart Service
-        List<CartServiceClient.CartItemDto> cartItems = cartServiceClient.getCartItems(request.getCartId());
-        if (cartItems.isEmpty()) {
+        List<org.de013.orderservice.dto.CartItemDto> cartItems = cartServiceClient.getCartItems(request.getCartId()).getData();
+        if (cartItems == null || cartItems.isEmpty()) {
             throw new IllegalArgumentException("Cart is empty or not found");
         }
 
@@ -60,7 +60,7 @@ public class OrderServiceImpl implements OrderService {
         order.setUpdatedAt(LocalDateTime.now());
 
         // Convert cart items to order items
-        for (CartServiceClient.CartItemDto cartItem : cartItems) {
+        for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
 
             // Convert String productId to Long (assuming it's numeric)
