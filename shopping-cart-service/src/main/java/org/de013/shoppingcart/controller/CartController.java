@@ -18,6 +18,7 @@ import org.de013.shoppingcart.dto.response.CartResponseDto;
 import org.de013.shoppingcart.service.CartService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -91,6 +92,7 @@ public class CartController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{cartId}")
+    @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> getCartById(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
@@ -119,6 +121,7 @@ public class CartController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping("/clear")
+    @PreAuthorize("#userId == null or @cartSecurity.canAccessCart(#userId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> clearCart(
             @Parameter(description = "User ID for authenticated users")
             @RequestParam(required = false) String userId,
@@ -155,6 +158,7 @@ public class CartController extends BaseController {
             @ApiResponse(responseCode = "400", description = "Invalid request - user ID or session ID required")
     })
     @DeleteMapping
+    @PreAuthorize("#userId == null or @cartSecurity.canAccessCart(#userId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCart(
             @Parameter(description = "User ID for authenticated users", example = "user-123e4567-e89b-12d3-a456-426614174000")
             @RequestParam(required = false) String userId,
@@ -202,6 +206,7 @@ public class CartController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{cartId}/validate")
+    @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> validateCart(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
@@ -275,6 +280,7 @@ public class CartController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping("/{cartId}/activity")
+    @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> updateCartActivity(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {

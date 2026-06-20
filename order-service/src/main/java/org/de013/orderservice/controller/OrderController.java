@@ -21,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * Basic Order Controller - Core CRUD operations only
@@ -71,6 +72,7 @@ public class OrderController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{orderId}")
+    @PreAuthorize("@orderSecurity.canAccessOrder(#orderId)")
     public OrderResponse getOrder(
             @Parameter(description = "Order ID", required = true, example = "1")
             @PathVariable Long orderId) {
@@ -189,6 +191,7 @@ public class OrderController {
     })
     @DeleteMapping("/{orderId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@orderSecurity.canModifyOrder(#orderId)")
     public void cancelOrder(
             @Parameter(description = "Order ID", required = true, example = "1")
             @PathVariable Long orderId,

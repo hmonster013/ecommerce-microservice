@@ -99,15 +99,14 @@ public class SecurityConfig {
                             .pathMatchers(HttpMethod.POST, "/api/order-service/orders").hasAnyRole("ADMIN", "CUSTOMER")
                             .pathMatchers(HttpMethod.POST, "/api/order-service/orders/").hasAnyRole("ADMIN", "CUSTOMER")
 
-                            // Cancel own orders
-                            .pathMatchers(HttpMethod.POST, "/api/order-service/orders/*/cancel").hasAnyRole("ADMIN", "CUSTOMER")
-                            .pathMatchers(HttpMethod.PUT, "/api/order-service/orders/*/cancel").hasAnyRole("ADMIN", "CUSTOMER")
-
                             // Order management and viewing (admin, manager, support)
-                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER", "SUPPORT", "CUSTOMER")
+                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders/number/*").hasAnyRole("ADMIN", "CUSTOMER") // Allow customers to view order by number
+                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders/{id:\\d+}").hasAnyRole("ADMIN", "MANAGER", "SUPPORT", "CUSTOMER")
+                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders").hasAnyRole("ADMIN", "MANAGER", "SUPPORT")
+                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders/user/**").hasAnyRole("ADMIN", "MANAGER", "SUPPORT")
                             .pathMatchers(HttpMethod.PUT, "/api/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER")
                             .pathMatchers(HttpMethod.PATCH, "/api/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER")
-                            .pathMatchers(HttpMethod.DELETE, "/api/order-service/orders/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.DELETE, "/api/order-service/orders/**").hasAnyRole("ADMIN", "CUSTOMER") // Need CUSTOMER to cancel order (DELETE /{orderId})
 
                             // ========== PAYMENT SERVICE ==========
                             // Customer personal payments

@@ -22,6 +22,7 @@ import org.de013.shoppingcart.service.CartItemService;
 import org.de013.shoppingcart.service.CartService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Optional;
@@ -213,6 +214,7 @@ public class CartItemController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/cart/{cartId}")
+    @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CartItemResponseDto>>> getCartItems(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
