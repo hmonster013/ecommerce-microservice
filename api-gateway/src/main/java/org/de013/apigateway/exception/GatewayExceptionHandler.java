@@ -78,6 +78,11 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
             return handleResponseStatusException(responseStatusEx, path, method, traceId);
         }
 
+        // Handle WebExchangeBindException (Validation errors in WebFlux)
+        if (ex instanceof org.springframework.web.bind.support.WebExchangeBindException bindEx) {
+            return handleWebExchangeBindException(bindEx, path, method, traceId);
+        }
+
         // Handle connection errors
         if (isConnectionError(ex)) {
             return handleConnectionError(ex, path, method, traceId);
@@ -181,6 +186,33 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
                 status.getReasonPhrase(),
                 "RESPONSE_STATUS_ERROR",
                 ex.getReason() != null ? ex.getReason() : status.getReasonPhrase(),
+                path,
+                method,
+                traceId
+        );
+    }
+
+    /**
+     * Handle WebExchangeBindException (Validation errors)
+     */
+    private ErrorResponse handleWebExchangeBindException(
+            org.springframework.web.bind.support.WebExchangeBindException ex,
+            String path,
+            String method,
+            String traceId
+    ) {
+        log.warn("Validation error [{}]: {}", traceId, ex.getMessage());
+        
+        java.util.List<String> details = ex.getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .toList();
+
+        return ErrorResponse.withDetails(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "VALIDATION_ERROR",
+                "Validation failed for request body",
+                String.join(", ", details),
                 path,
                 method,
                 traceId
