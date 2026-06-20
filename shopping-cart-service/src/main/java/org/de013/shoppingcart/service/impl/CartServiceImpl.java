@@ -597,10 +597,48 @@ public class CartServiceImpl implements CartService {
                 .updatedAt(cart.getUpdatedAt())
                 .lastActivityAt(cart.getLastActivityAt())
                 .expiresAt(cart.getExpiresAt())
+                .items(cartItemService.getCartItems(cart.getId()))
                 .build();
     }
 
     private CartResponseDto convertToResponseDto(RedisCart redisCart) {
+        List<org.de013.shoppingcart.dto.response.CartItemResponseDto> items = java.util.List.of();
+        if (redisCart.getItems() != null && !redisCart.getItems().isEmpty()) {
+            items = redisCart.getItems().stream().map(item -> org.de013.shoppingcart.dto.response.CartItemResponseDto.builder()
+                    .itemId(item.getItemId())
+                    .productId(item.getProductId())
+                    .productSku(item.getProductSku())
+                    .productName(item.getProductName())
+                    .productDescription(item.getProductDescription())
+                    .productImageUrl(item.getProductImageUrl())
+                    .categoryId(item.getCategoryId())
+                    .categoryName(item.getCategoryName())
+                    .quantity(item.getQuantity())
+                    .unitPrice(item.getUnitPrice())
+                    .originalPrice(item.getOriginalPrice())
+                    .discountAmount(item.getDiscountAmount())
+                    .totalPrice(item.getTotalPrice())
+                    .currency(item.getCurrency())
+                    .weight(item.getWeight())
+                    .dimensions(item.getDimensions())
+                    .variantId(item.getVariantId())
+                    .variantAttributes(item.getVariantAttributes())
+                    .specialInstructions(item.getSpecialInstructions())
+                    .addedAt(item.getAddedAt())
+                    .lastPriceCheckAt(item.getLastPriceCheckAt())
+                    .priceChanged(item.getPriceChanged())
+                    .availabilityStatus(item.getAvailabilityStatus())
+                    .stockQuantity(item.getStockQuantity())
+                    .maxQuantityPerOrder(item.getMaxQuantityPerOrder())
+                    .isGift(item.getIsGift())
+                    .giftMessage(item.getGiftMessage())
+                    .giftWrapType(item.getGiftWrapType())
+                    .giftWrapPrice(item.getGiftWrapPrice())
+                    .isAvailable(item.isAvailable())
+                    .build()
+            ).toList();
+        }
+
         return CartResponseDto.builder()
                 .cartId(redisCart.getCartId())
                 .userId(redisCart.getUserId())
@@ -616,6 +654,7 @@ public class CartServiceImpl implements CartService {
                 .updatedAt(redisCart.getUpdatedAt())
                 .lastActivityAt(redisCart.getLastActivityAt())
                 .expiresAt(redisCart.getExpiresAt())
+                .items(items) // TODO(P11): RedisCart không lưu item chi tiết, map khi hoàn thiện cart Redis
                 .build();
     }
 
