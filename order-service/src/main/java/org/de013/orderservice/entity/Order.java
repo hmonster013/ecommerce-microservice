@@ -308,6 +308,25 @@ public class Order extends BaseEntity {
         }
     }
 
+    /** Recalculate order-level totals from order items. */
+    public void recalculateTotals() {
+        String currency = totalAmount != null ? totalAmount.getCurrency()
+                : (subtotalAmount != null ? subtotalAmount.getCurrency() : "USD");
+        Money subtotal = Money.zero(currency);
+        Money discount = Money.zero(currency);
+        Money tax = Money.zero(currency);
+        for (OrderItem item : orderItems) {
+            if (item.getTotalPrice() != null)    subtotal = subtotal.add(item.getTotalPrice());
+            if (item.getDiscountAmount() != null) discount = discount.add(item.getDiscountAmount());
+            if (item.getTaxAmount() != null)      tax = tax.add(item.getTaxAmount());
+        }
+        Money shipping = shippingAmount != null ? shippingAmount : Money.zero(currency);
+        this.subtotalAmount = subtotal;
+        this.discountAmount = discount;
+        this.taxAmount = tax;
+        this.shippingAmount = shipping;
+        this.totalAmount = subtotal.subtract(discount).add(tax).add(shipping);
+    }
 
     /**
      * Calculate total quantity of items in the order

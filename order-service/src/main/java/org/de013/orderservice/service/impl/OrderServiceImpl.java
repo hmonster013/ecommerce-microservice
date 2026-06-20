@@ -81,6 +81,8 @@ public class OrderServiceImpl implements OrderService {
             order.getOrderItems().add(orderItem);
         }
 
+        order.recalculateTotals();
+
         order = orderRepository.save(order);
         log.info("Order created successfully: {} with {} items", orderNumber, cartItems.size());
 
