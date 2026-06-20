@@ -25,7 +25,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     private static final String HEADER_USER_ID = "X-User-Id";
     private static final String HEADER_USERNAME = "X-User-Username";
     private static final String HEADER_USER_EMAIL = "X-User-Email";
-    private static final String HEADER_USER_ROLES = "X-User-Roles";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -47,19 +46,18 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             String userId = request.getHeader(HEADER_USER_ID);
             String username = request.getHeader(HEADER_USERNAME);
             String email = request.getHeader(HEADER_USER_EMAIL);
-            String roles = request.getHeader(HEADER_USER_ROLES);
 
             // Debug logging to see what headers we receive
-            log.debug("Headers received - UserId: {}, Username: {}, Email: {}, Roles: {}",
-                    userId, username, email, roles);
+            log.debug("Headers received - UserId: {}, Username: {}, Email: {}",
+                    userId, username, email);
 
             // If user context exists, create Authentication object
             if (StringUtils.hasText(userId) && StringUtils.hasText(username)) {
-                Authentication auth = HeaderAuthenticationProvider.createFromHeaders(userId, username, email, roles);
+                Authentication auth = HeaderAuthenticationProvider.createFromHeaders(userId, username, email);
 
                 if (auth != null) {
                     SecurityContextHolder.getContext().setAuthentication(auth);
-                    log.debug("Set authentication for user: {} with roles: {}", username, roles);
+                    log.debug("Set authentication for user: {}", username);
                 }
             } else {
                 log.debug("No user context found in headers - UserId: {}, Username: {}", userId, username);

@@ -91,8 +91,7 @@ public class SecurityConfig {
                 // API Gateway headers
                 "X-User-Id",
                 "X-User-Username",
-                "X-User-Email",
-                "X-User-Roles"
+                "X-User-Email"
         ));
 
         configuration.setAllowCredentials(true);

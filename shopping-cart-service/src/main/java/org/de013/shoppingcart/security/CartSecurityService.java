@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
+import org.de013.shoppingcart.service.CartService;
+import org.de013.shoppingcart.dto.response.CartResponseDto;
+import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -16,8 +19,41 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class CartSecurityService {
 
+    private final CartService cartService;
+
     /**
-     * Check if current user can access the cart
+     * Check if current user can access the cart by cartId
+     */
+    public boolean canAccessCart(Long cartId) {
+        UserContext userContext = UserContextHolder.getCurrentUser();
+        if (userContext == null) {
+            log.debug("No user context found, denying access to cart {}", cartId);
+            return false;
+        }
+
+        try {
+            Optional<CartResponseDto> cartOpt = cartService.getCartById(cartId);
+            if (cartOpt.isEmpty()) {
+                return true; // Let the service handle 404
+            }
+            
+            CartResponseDto cart = cartOpt.get();
+            // Allow if guest cart (no userId) or if user owns the cart
+            boolean isOwner = cart.getUserId() == null || cart.getUserId().equals(userContext.getUserId());
+            log.debug("User {} {} access cart {} (owner: {})",
+                    userContext.getUsername(),
+                    isOwner ? "granted" : "denied",
+                    cartId,
+                    isOwner);
+            return isOwner;
+        } catch (Exception e) {
+            log.warn("Error checking cart ownership for cart {}: {}", cartId, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if current user can access the cart by userId
      * - Admins can access any cart
      * - Customers can only access their own cart
      */
@@ -28,13 +64,7 @@ public class CartSecurityService {
             return false;
         }
 
-        // Admins can access any cart
-        if (userContext.isAdmin()) {
-            log.debug("Admin user {} accessing cart for user {}", userContext.getUsername(), userId);
-            return true;
-        }
-
-        // Customers can only access their own cart
+        // Only access own cart
         boolean isOwnCart = userContext.getUserId().equals(userId);
         log.debug("User {} {} access cart for user {} (own cart: {})",
                 userContext.getUsername(),
@@ -55,57 +85,11 @@ public class CartSecurityService {
 
 
     /**
-     * Check if current user can access external services
-     * - Only admins can access external service endpoints
-     */
-    public boolean canAccessExternalServices() {
-        UserContext userContext = UserContextHolder.getCurrentUser();
-        if (userContext == null) {
-            log.debug("No user context found, denying access to external services");
-            return false;
-        }
-
-        boolean canAccess = userContext.isAdmin();
-        log.debug("User {} {} access external services (admin: {})",
-                userContext.getUsername(),
-                canAccess ? "can" : "cannot",
-                canAccess);
-        return canAccess;
-    }
-
-    /**
-     * Check if current user can access monitoring endpoints
-     * - Only admins can access monitoring
-     */
-    public boolean canAccessMonitoring() {
-        UserContext userContext = UserContextHolder.getCurrentUser();
-        if (userContext == null) {
-            log.debug("No user context found, denying access to monitoring");
-            return false;
-        }
-
-        boolean canAccess = userContext.isAdmin();
-        log.debug("User {} {} access monitoring (admin: {})",
-                userContext.getUsername(),
-                canAccess ? "can" : "cannot",
-                canAccess);
-        return canAccess;
-    }
-
-    /**
      * Check if current user is authenticated
      */
     public boolean isAuthenticated() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal());
-    }
-
-    /**
-     * Check if current user has admin role
-     */
-    public boolean isAdmin() {
-        UserContext userContext = UserContextHolder.getCurrentUser();
-        return userContext != null && userContext.isAdmin();
     }
 
     /**

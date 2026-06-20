@@ -4,12 +4,9 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Authentication Provider that creates Authentication object from headers set by API Gateway
@@ -33,34 +30,20 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
      * Create Authentication object from headers
      * Note: userId here is actually Keycloak UUID (sub claim)
      */
-    public static Authentication createFromHeaders(String keycloakId, String username, String email, String roles) {
+    public static Authentication createFromHeaders(String keycloakId, String username, String email) {
         if (keycloakId == null || username == null) {
             return null;
         }
 
-        List<SimpleGrantedAuthority> authorities = parseRoles(roles);
-
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 username,
                 null,
-                authorities
+                List.of()
         );
 
-        auth.setDetails(new HeaderUserDetails(keycloakId, username, email, roles));
+        auth.setDetails(new HeaderUserDetails(keycloakId, username, email));
 
         return auth;
-    }
-
-    private static List<SimpleGrantedAuthority> parseRoles(String roles) {
-        if (roles == null || roles.trim().isEmpty()) {
-            return List.of();
-        }
-
-        return Arrays.stream(roles.split(","))
-                .map(String::trim)
-                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
     }
 
     /**
@@ -70,13 +53,11 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
         private final String keycloakId;
         private final String username;
         private final String email;
-        private final String roles;
 
-        public HeaderUserDetails(String keycloakId, String username, String email, String roles) {
+        public HeaderUserDetails(String keycloakId, String username, String email) {
             this.keycloakId = keycloakId;
             this.username = username;
             this.email = email;
-            this.roles = roles;
         }
 
         public String getKeycloakId() {
@@ -89,10 +70,6 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
 
         public String getEmail() {
             return email;
-        }
-
-        public String getRoles() {
-            return roles;
         }
     }
 }

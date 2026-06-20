@@ -15,9 +15,6 @@ public class FeignRequestInterceptor implements RequestInterceptor {
             "X-User-Id",
             "X-User-Username",
             "X-User-Email",
-            "X-User-FirstName",
-            "X-User-LastName",
-            "X-User-Roles",
             "Authorization"
     };
 
