@@ -9,10 +9,8 @@ import org.de013.userservice.dto.UserProfileDto;
 import org.de013.userservice.dto.UserRegistrationDto;
 import org.de013.userservice.dto.UserResponse;
 import org.de013.userservice.dto.UserUpdateDto;
-import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
 import org.de013.userservice.mapper.UserMapper;
-import org.de013.userservice.repository.RoleRepository;
 import org.de013.userservice.repository.UserRepository;
 import org.de013.userservice.service.UserManagementService;
 import org.springframework.data.domain.Page;
@@ -32,7 +30,6 @@ import java.util.stream.Collectors;
 public class UserManagementServiceImpl implements UserManagementService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final UserMapper userMapper;
 
     // ========== User Registration & Creation ==========
@@ -47,9 +44,6 @@ public class UserManagementServiceImpl implements UserManagementService {
         // Note: User registration should be done through Keycloak
         // This method creates profile only - password managed by Keycloak
 
-        Role customerRole = roleRepository.findByName("CUSTOMER")
-                .orElseThrow(() -> new BusinessException("Default CUSTOMER role not found"));
-
         User user = User.builder()
                 .keycloakId(request.getKeycloakId()) // Required: Keycloak user UUID
                 .username(request.getUsername())
@@ -60,9 +54,6 @@ public class UserManagementServiceImpl implements UserManagementService {
                 .address(request.getAddress())
                 .createdBy("SYSTEM")
                 .build();
-
-        // Add default role
-        user.getRoles().add(customerRole);
 
         user = userRepository.save(user);
 
@@ -207,64 +198,9 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserResponse> getUsersByRole(String roleName) {
-        List<User> users = userRepository.findByRoleName(roleName);
-        return users.stream()
-                .map(userMapper::convertToUserResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public PageResponse<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
         Page<User> users = userRepository.findUsersCreatedBetween(startDate, endDate, pageable);
         return PageResponse.of(users.map(userMapper::convertToUserResponse));
-    }
-
-    // ========== User Role Management ==========
-
-    @Override
-    public void assignRole(Long userId, String roleName) {
-        log.info("Assigning role {} to user: {}", roleName, userId);
-
-        User user = findUserById(userId);
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
-
-        user.getRoles().add(role);
-        userRepository.save(user);
-
-        log.info("Role {} assigned successfully to user: {}", roleName, userId);
-    }
-
-    @Override
-    public void removeRole(Long userId, String roleName) {
-        log.info("Removing role {} from user: {}", roleName, userId);
-
-        User user = findUserById(userId);
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
-
-        user.getRoles().remove(role);
-        userRepository.save(user);
-
-        log.info("Role {} removed successfully from user: {}", roleName, userId);
-    }
-
-    @Override
-    public void updateUserRoles(Long userId, List<String> roleNames) {
-        log.info("Updating roles for user: {} with roles: {}", userId, roleNames);
-
-        User user = findUserById(userId);
-        Set<Role> roles = roleNames.stream()
-                .map(roleName -> roleRepository.findByName(roleName)
-                        .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName)))
-                .collect(Collectors.toSet());
-
-        user.setRoles(roles);
-        userRepository.save(user);
-
-        log.info("Roles updated successfully for user: {}", userId);
     }
 
     // ========== User Deletion ==========

@@ -118,14 +118,6 @@ public interface UserManagementService {
     PageResponse<UserResponse> searchUsers(String keyword, Pageable pageable);
 
     /**
-     * Get users by role
-     *
-     * @param roleName Role name
-     * @return List of user responses
-     */
-    List<UserResponse> getUsersByRole(String roleName);
-
-    /**
      * Get users created in date range
      *
      * @param startDate Start date
@@ -135,33 +127,7 @@ public interface UserManagementService {
      */
     PageResponse<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
-    // ========== User Role Management ==========
-
-    /**
-     * Assign role to user
-     *
-     * @param userId   User ID
-     * @param roleName Role name
-     */
-    void assignRole(Long userId, String roleName);
-
-    /**
-     * Remove role from user
-     *
-     * @param userId   User ID
-     * @param roleName Role name
-     */
-    void removeRole(Long userId, String roleName);
-
-    /**
-     * Update user roles
-     *
-     * @param userId    User ID
-     * @param roleNames List of role names
-     */
-    void updateUserRoles(Long userId, List<String> roleNames);
-
-    // ========== User Deletion ==========
+    // ========== User Administration ==========
 
     /**
      * Delete user by ID

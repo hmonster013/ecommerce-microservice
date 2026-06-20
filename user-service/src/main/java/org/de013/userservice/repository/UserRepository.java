@@ -1,6 +1,5 @@
 package org.de013.userservice.repository;
 
-import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,17 +37,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     boolean existsByUsernameAndIdNot(String username, Long id);
 
     boolean existsByEmailAndIdNot(String email, Long id);
-
-    // ========== Role-based Queries ==========
-
-    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName")
-    List<User> findByRoleName(@Param("roleName") String roleName);
-
-    @Query("SELECT u FROM User u JOIN u.roles r WHERE r IN :roles")
-    List<User> findByRolesIn(@Param("roles") List<Role> roles);
-
-    @Query("SELECT COUNT(u) FROM User u JOIN u.roles r WHERE r.name = :roleName")
-    long countByRoleName(@Param("roleName") String roleName);
 
     // ========== Search and Filtering ==========
 

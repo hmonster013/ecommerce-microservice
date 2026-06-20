@@ -3,7 +3,6 @@ package org.de013.userservice.repository.specification;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
-import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -33,20 +32,6 @@ public class UserSpecification {
     }
 
     /**
-     * Filter by role name
-     */
-    public static Specification<User> hasRole(String roleName) {
-        return (root, query, criteriaBuilder) -> {
-            if (roleName == null || roleName.trim().isEmpty()) {
-                return criteriaBuilder.conjunction();
-            }
-
-            Join<User, Role> roleJoin = root.join("roles", JoinType.INNER);
-            return criteriaBuilder.equal(criteriaBuilder.lower(roleJoin.get("name")), roleName.toLowerCase());
-        };
-    }
-
-    /**
      * Filter by creation date range
      */
     public static Specification<User> createdBetween(LocalDateTime startDate, LocalDateTime endDate) {
@@ -68,10 +53,9 @@ public class UserSpecification {
     /**
      * Complex filter combining multiple criteria
      */
-    public static Specification<User> withFilters(String keyword, String roleName,
+    public static Specification<User> withFilters(String keyword,
                                                   LocalDateTime startDate, LocalDateTime endDate) {
         return Specification.where(hasKeyword(keyword))
-                .and(hasRole(roleName))
                 .and(createdBetween(startDate, endDate));
     }
 }

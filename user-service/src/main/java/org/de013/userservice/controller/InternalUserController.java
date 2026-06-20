@@ -6,9 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ApiResponse;
 import org.de013.userservice.dto.SyncUserRequest;
 import org.de013.userservice.dto.UserResponse;
-import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
-import org.de013.userservice.repository.RoleRepository;
 import org.de013.userservice.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 public class InternalUserController {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
 
     @PostMapping("/sync")
     public ResponseEntity<ApiResponse<UserResponse>> syncUserFromKeycloak(@Valid @RequestBody SyncUserRequest request) {
@@ -96,10 +93,6 @@ public class InternalUserController {
         User user = userRepository.findByKeycloakId(keycloakId).orElseGet(() -> {
             log.info("User not found with keycloakId: {}. Creating new user profile.", keycloakId);
 
-            // Get default CUSTOMER role
-            Role customerRole = roleRepository.findByName("CUSTOMER")
-                    .orElseThrow(() -> new RuntimeException("Default CUSTOMER role not found in database"));
-
             // Create new user with default role
             User newUser = User.builder()
                     .keycloakId(keycloakId)
@@ -108,9 +101,6 @@ public class InternalUserController {
                     .firstName(firstName != null ? firstName : "N/A")
                     .lastName(lastName != null ? lastName : "N/A")
                     .build();
-
-            // Add default CUSTOMER role
-            newUser.getRoles().add(customerRole);
 
             // Save and return
             User savedUser = userRepository.save(newUser);
