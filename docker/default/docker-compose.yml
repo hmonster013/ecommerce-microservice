@@ -17,10 +17,7 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: ecommerce-postgres
-    env_file:
-      - ../../.env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
       POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
     healthcheck:
@@ -40,8 +37,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: ecommerce-redis
-    env_file:
-      - ../../.env
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -56,8 +51,6 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: ecommerce-rabbitmq
-    env_file:
-      - ../../.env
     ports:
       - "${RABBITMQ_HOST_PORT:-15672}:5672"
       - "${RABBITMQ_MGMT_HOST_PORT:-25672}:15672"
@@ -75,8 +68,6 @@ services:
   kafka:
     image: apache/kafka:3.7.0
     container_name: ecommerce-kafka
-    env_file:
-      - ../../.env
     ports:
       - "${KAFKA_PORT}:9092"
     environment:
@@ -115,8 +106,6 @@ services:
       context: ../../config-server
       dockerfile: Dockerfile
     container_name: ecommerce-config-server
-    env_file:
-      - ../../.env
     ports:
       - "${CONFIG_SERVER_PORT}:8071"
     environment:
@@ -140,8 +129,6 @@ services:
       context: ../../eureka-server
       dockerfile: Dockerfile
     container_name: ecommerce-eureka-server
-    env_file:
-      - ../../.env
     ports:
       - "${EUREKA_SERVER_PORT}:8761"
     environment:
@@ -205,7 +192,7 @@ services:
       KC_LOG_LEVEL: INFO
       KEYCLOAK_LOGLEVEL: INFO
     volumes:
-      - ../../keycloak/realm-config:/opt/keycloak/data/import
+      - ../keycloak/realm-config:/opt/keycloak/data/import
     command:
       - start-dev
       - --import-realm
