@@ -32,7 +32,7 @@ nano secrets.yaml    # Update passwords, API keys, tokens
 kubectl apply -f configmap.yaml
 kubectl apply -f secrets.yaml
 kubectl create configmap keycloak-realm-config \
-  --from-file=ecommerce-realm-realm.json=../keycloak/realm-config/ecommerce-realm-realm.json \
+  --from-file=ecommerce-realm-realm.json=../docker/keycloak/realm-config/ecommerce-realm-realm.json \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # 2. Deploy infrastructure

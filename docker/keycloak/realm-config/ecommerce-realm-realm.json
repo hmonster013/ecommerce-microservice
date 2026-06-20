@@ -148,20 +148,6 @@
       ]
     },
     {
-      "clientId": "user-service-admin",
-      "name": "User Service Admin Client",
-      "description": "Service account for User Service admin operations",
-      "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "user-service-admin-secret-change-in-production",
-      "standardFlowEnabled": false,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": true,
-      "publicClient": false,
-      "protocol": "openid-connect"
-    },
-    {
       "clientId": "frontend-app",
       "name": "Frontend Application",
       "description": "Public client for SPA/Mobile applications",
