@@ -205,6 +205,25 @@ public class StripePaymentGateway implements PaymentGateway {
     @Override
     public StripePaymentResponse createPaymentIntent(StripePaymentRequest request) throws Exception {
         try {
+            String apiKey = config.getGateways().getStripe().getApiKey();
+            if (apiKey == null || apiKey.isEmpty() || apiKey.contains("your_stripe_secret_key") || apiKey.equals("sk_test_your_secret")) {
+                log.warn("Stripe API key is default/placeholder. Using MOCK MODE for PaymentIntent creation.");
+                return StripePaymentResponse.builder()
+                        .paymentIntentId("pi_mock_" + System.currentTimeMillis())
+                        .status("succeeded")
+                        .clientSecret("pi_mock_secret_" + System.currentTimeMillis())
+                        .amount(request.getAmount())
+                        .currency(request.getCurrency().toUpperCase())
+                        .customerId(request.getCustomerId() != null ? request.getCustomerId() : "cus_mock_123")
+                        .paymentMethodId(request.getPaymentMethodId() != null ? request.getPaymentMethodId() : "pm_card_visa")
+                        .description(request.getDescription())
+                        .captureMethod("automatic")
+                        .confirmationMethod("automatic")
+                        .created(System.currentTimeMillis() / 1000)
+                        .livemode(false)
+                        .build();
+            }
+
             PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
                     .setAmount(request.getAmountInCents())
                     .setCurrency(request.getCurrency().toLowerCase())
@@ -232,17 +251,13 @@ public class StripePaymentGateway implements PaymentGateway {
                 paramsBuilder.setReceiptEmail(request.getReceiptEmail());
             }
 
-            // Set confirmation method
-            if (request.isAutomaticConfirmation()) {
-                paramsBuilder.setConfirmationMethod(PaymentIntentCreateParams.ConfirmationMethod.AUTOMATIC);
-            } else {
+            // Set confirmation method (only set manual if specified, as automatic conflicts with automatic payment methods)
+            if (!request.isAutomaticConfirmation()) {
                 paramsBuilder.setConfirmationMethod(PaymentIntentCreateParams.ConfirmationMethod.MANUAL);
             }
 
-            // Set capture method
-            if (request.isAutomaticCapture()) {
-                paramsBuilder.setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.AUTOMATIC);
-            } else {
+            // Set capture method (only set manual if specified)
+            if (!request.isAutomaticCapture()) {
                 paramsBuilder.setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.MANUAL);
             }
 
@@ -254,6 +269,11 @@ public class StripePaymentGateway implements PaymentGateway {
             // Add metadata
             if (request.getMetadata() != null) {
                 paramsBuilder.putAllMetadata(request.getMetadata());
+            }
+
+            // Set confirm if requested
+            if (request.getConfirmPayment() != null && request.getConfirmPayment()) {
+                paramsBuilder.setConfirm(true);
             }
 
             PaymentIntent paymentIntent = PaymentIntent.create(paramsBuilder.build());

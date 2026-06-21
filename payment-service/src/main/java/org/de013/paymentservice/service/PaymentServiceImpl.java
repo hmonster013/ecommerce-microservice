@@ -15,6 +15,9 @@ import org.de013.paymentservice.gateway.PaymentGatewayFactory;
 import org.de013.paymentservice.gateway.stripe.StripePaymentGateway;
 import org.de013.paymentservice.mapper.PaymentMapper;
 import org.de013.paymentservice.repository.PaymentRepository;
+import org.de013.paymentservice.client.OrderServiceClient;
+import org.de013.paymentservice.client.UserServiceClient;
+import org.de013.paymentservice.client.NotificationServiceClient;
 import org.de013.paymentservice.util.PaymentNumberGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +41,9 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentGatewayFactory gatewayFactory;
     private final PaymentMapper paymentMapper;
+    private final OrderServiceClient orderServiceClient;
+    private final UserServiceClient userServiceClient;
+    private final NotificationServiceClient notificationServiceClient;
 
     // ========== PAYMENT PROCESSING ==========
 
@@ -52,7 +58,26 @@ public class PaymentServiceImpl implements PaymentService {
             Payment payment = createPaymentEntity(request);
             payment = paymentRepository.save(payment);
 
-            // TODO: Process with Stripe gateway
+            // Get Stripe gateway
+            PaymentGateway gateway = gatewayFactory.getGateway("STRIPE");
+            StripePaymentGateway stripeGateway = (StripePaymentGateway) gateway;
+
+            // Map and process payment
+            org.de013.paymentservice.dto.stripe.StripePaymentRequest stripeRequest = stripeGateway.mapToGatewayPaymentRequest(request);
+            org.de013.paymentservice.dto.stripe.StripePaymentResponse stripeResponse = stripeGateway.createPaymentIntent(stripeRequest);
+            stripeGateway.mapGatewayResponseToPayment(stripeResponse, payment);
+
+            // Save updated payment with stripe details
+            payment = paymentRepository.save(payment);
+
+            // If confirmPayment was true and status is succeeded, update order status and send notification
+            if (payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED) {
+                updateOrderStatus(payment.getOrderId(), "PAID", payment);
+                sendPaymentSuccessNotification(payment);
+            } else if (payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.FAILED) {
+                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
+            }
+
             log.info("Payment processed successfully: {}", payment.getPaymentNumber());
             return paymentMapper.toPaymentResponse(payment);
 
@@ -97,10 +122,10 @@ public class PaymentServiceImpl implements PaymentService {
 
             // Update order status if payment is successful
             if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
-                updateOrderStatus(payment.getOrderId(), "PAID");
+                updateOrderStatus(payment.getOrderId(), "PAID", payment);
                 log.info("Payment confirmed successfully: {}", payment.getPaymentNumber());
             } else if (payment.getStatus() == PaymentStatus.FAILED) {
-                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED");
+                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
                 log.warn("Payment confirmation failed: {}", payment.getPaymentNumber());
             }
 
@@ -404,10 +429,21 @@ public class PaymentServiceImpl implements PaymentService {
                 .build();
     }
 
-    private void updateOrderStatus(Long orderId, String status) {
+    private void updateOrderStatus(Long orderId, String status, Payment payment) {
         try {
             log.info("Updating order {} status to: {}", orderId, status);
-            // TODO: Call order service to update status
+            if ("PAID".equals(status)) {
+                orderServiceClient.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber());
+            } else if ("PAYMENT_FAILED".equals(status)) {
+                orderServiceClient.markOrderPaymentFailed(orderId, payment.getFailureReason() != null ? payment.getFailureReason() : "Payment failed");
+            } else {
+                org.de013.paymentservice.dto.external.OrderStatusUpdateRequest request = org.de013.paymentservice.dto.external.OrderStatusUpdateRequest.builder()
+                        .status(status)
+                        .reason("Payment status updated to " + status)
+                        .build();
+                orderServiceClient.updateOrderStatus(orderId, request);
+            }
+            log.info("Successfully updated order {} status to: {}", orderId, status);
         } catch (Exception e) {
             log.warn("Failed to update order status for order: {}", orderId, e);
         }
@@ -458,5 +494,56 @@ public class PaymentServiceImpl implements PaymentService {
     private void createPaymentTransaction(Payment payment, Object stripeResponse, Object transactionType) {
         // TODO: Implement payment transaction creation
         log.debug("Creating payment transaction for payment: {}", payment.getId());
+    }
+
+    private void sendPaymentSuccessNotification(Payment payment) {
+        try {
+            String recipientEmail = payment.getReceiptEmail();
+            if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
+                // Fetch email from User Service
+                try {
+                    org.de013.common.dto.ApiResponse<org.de013.paymentservice.dto.external.UserDto> apiResponse = userServiceClient.getUserById(payment.getUserId()).getBody();
+                    if (apiResponse != null && apiResponse.getData() != null) {
+                        org.de013.paymentservice.dto.external.UserDto userDto = apiResponse.getData();
+                        if (userDto.getEmail() != null) {
+                            recipientEmail = userDto.getEmail();
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to fetch user email from User Service for user: {}", payment.getUserId(), e);
+                }
+            }
+
+            if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
+                log.warn("Cannot send email notification: recipient email is missing");
+                return;
+            }
+
+            log.info("Sending payment success email notification to: {}", recipientEmail);
+            java.util.Map<String, Object> emailRequest = new java.util.HashMap<>();
+            emailRequest.put("userId", payment.getUserId());
+            emailRequest.put("to", recipientEmail);
+            emailRequest.put("subject", "Thanh toán thành công cho Đơn hàng #" + payment.getOrderId());
+            emailRequest.put("message", String.format(
+                    "Xin chào,\n\nGiao dịch thanh toán của bạn cho Đơn hàng #%d đã được xử lý THÀNH CÔNG.\n" +
+                    "Mã giao dịch: %s\n" +
+                    "Số tiền: %s %s\n" +
+                    "Phương thức thanh toán: %s\n" +
+                    "Thời gian: %s\n\n" +
+                    "Cảm ơn bạn đã mua sắm tại cửa hàng của chúng tôi!\n" +
+                    "Trân trọng,\nGlobal Travel Buddy & Local Service Team",
+                    payment.getOrderId(),
+                    payment.getPaymentNumber(),
+                    payment.getAmount(),
+                    payment.getCurrency(),
+                    payment.getMethod(),
+                    java.time.LocalDateTime.now().toString()
+            ));
+
+            notificationServiceClient.sendEmail(emailRequest);
+            log.info("Successfully sent payment success email notification to: {}", recipientEmail);
+        } catch (Exception e) {
+            log.error("Failed to send email notification for payment: {}", payment.getPaymentNumber(), e);
+        }
     }
 }
