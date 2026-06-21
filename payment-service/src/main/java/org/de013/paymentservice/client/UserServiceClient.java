@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping;
  */
 @FeignClient(
         name = "user-service",
-        path = "/api/v1/users",
+        path = "/api/v1/users/internal",
         fallback = UserServiceClientFallback.class
 )
 public interface UserServiceClient {
@@ -21,8 +21,8 @@ public interface UserServiceClient {
     /**
      * Get user details by ID
      */
-    @GetMapping("/{userId}")
-    ResponseEntity<UserDto> getUserById(@PathVariable("userId") String userId);
+    @GetMapping("/by-keycloak-id/{userId}")
+    ResponseEntity<org.de013.common.dto.ApiResponse<UserDto>> getUserById(@PathVariable("userId") String userId);
 
     /**
      * Get user details by email

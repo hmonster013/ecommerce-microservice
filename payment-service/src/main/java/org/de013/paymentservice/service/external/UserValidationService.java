@@ -57,10 +57,10 @@ public class UserValidationService {
     public UserDto getUserById(String userId) {
         try {
             log.debug("Getting user by ID: {}", userId);
-            ResponseEntity<UserDto> response = userServiceClient.getUserById(userId);
+            ResponseEntity<org.de013.common.dto.ApiResponse<UserDto>> response = userServiceClient.getUserById(userId);
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().getData() != null) {
+                return response.getBody().getData();
             } else {
                 throw new ExternalServiceException("User not found or service unavailable: " + userId);
             }

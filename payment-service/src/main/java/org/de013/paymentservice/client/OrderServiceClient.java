@@ -14,7 +14,7 @@ import java.math.BigDecimal;
  */
 @FeignClient(
         name = "order-service",
-        path = "/api/v1/orders",
+        path = "/orders",
         fallback = OrderServiceClientFallback.class
 )
 public interface OrderServiceClient {

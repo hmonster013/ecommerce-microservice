@@ -19,9 +19,9 @@ import java.util.List;
 public class UserServiceClientFallback implements UserServiceClient {
 
     @Override
-    public ResponseEntity<UserDto> getUserById(String userId) {
+    public ResponseEntity<org.de013.common.dto.ApiResponse<UserDto>> getUserById(String userId) {
         log.warn("User Service unavailable - using fallback for getUserById: {}", userId);
-        return ResponseEntity.ok(createFallbackUserDto(userId));
+        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(createFallbackUserDto(userId)));
     }
 
     @Override
