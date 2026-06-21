@@ -25,6 +25,12 @@ public interface OrderService {
     // Update operations
     OrderResponse updateOrder(Long id, UpdateOrderRequest request);
 
+    void markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber);
+
+    void markOrderPaymentFailed(Long orderId, String reason);
+
+    void updateOrderStatus(Long orderId, org.de013.orderservice.dto.request.OrderStatusUpdateRequest request);
+
     // Delete operations
     void cancelOrder(Long id, String reason);
 }

@@ -3,6 +3,7 @@ package org.de013.orderservice.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.orderservice.client.CartServiceClient;
+import org.de013.orderservice.client.ProductCatalogClient;
 import org.de013.orderservice.dto.request.CreateOrderRequest;
 import org.de013.orderservice.dto.request.UpdateOrderRequest;
 import org.de013.orderservice.dto.response.OrderResponse;
@@ -34,6 +35,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final CartServiceClient cartServiceClient;
+    private final ProductCatalogClient productCatalogClient;
 
     @Override
     @Transactional
@@ -59,13 +61,15 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
-        // Convert cart items to order items
+        // Convert cart items to order items and deduct stock
         for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
 
             // Convert String productId to Long (assuming it's numeric)
+            Long productId;
             try {
-                orderItem.setProductId(Long.parseLong(cartItem.getProductId()));
+                productId = Long.parseLong(cartItem.getProductId());
+                orderItem.setProductId(productId);
             } catch (NumberFormatException e) {
                 log.warn("Invalid productId format: {}, skipping item", cartItem.getProductId());
                 continue;
@@ -79,6 +83,15 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setTotalPrice(new Money(cartItem.getTotalPrice(), cartItem.getCurrency()));
             orderItem.setOrder(order);
             order.getOrderItems().add(orderItem);
+
+            // Deduct stock in Product Catalog Service
+            try {
+                log.info("Deducting {} stock for product ID: {}", cartItem.getQuantity(), productId);
+                productCatalogClient.removeStock(productId, cartItem.getQuantity());
+            } catch (Exception e) {
+                log.error("Failed to deduct stock for product ID: {} - Error: {}", productId, e.getMessage());
+                throw new IllegalStateException("Failed to allocate inventory for product: " + cartItem.getProductName());
+            }
         }
 
         order.recalculateTotals();
@@ -156,6 +169,46 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(order);
         log.info("Order {} cancelled successfully", id);
+    }
+
+    @Override
+    @Transactional
+    public void markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber) {
+        log.info("Marking order {} as PAID with paymentId {} and number {}", orderId, paymentId, paymentNumber);
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+        order.setStatus(OrderStatus.PAID);
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+        log.info("Order {} successfully marked as PAID", orderId);
+    }
+
+    @Override
+    @Transactional
+    public void markOrderPaymentFailed(Long orderId, String reason) {
+        log.info("Marking order {} as FAILED due to: {}", orderId, reason);
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+        order.setStatus(OrderStatus.FAILED);
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+        log.info("Order {} successfully marked as FAILED", orderId);
+    }
+
+    @Override
+    @Transactional
+    public void updateOrderStatus(Long orderId, org.de013.orderservice.dto.request.OrderStatusUpdateRequest request) {
+        log.info("Updating order {} status to {}", orderId, request.getStatus());
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+        OrderStatus newStatus = OrderStatus.fromCode(request.getStatus());
+        if (newStatus == null) {
+            throw new IllegalArgumentException("Invalid order status code: " + request.getStatus());
+        }
+        order.setStatus(newStatus);
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+        log.info("Order {} status successfully updated to {}", orderId, newStatus);
     }
 }
 

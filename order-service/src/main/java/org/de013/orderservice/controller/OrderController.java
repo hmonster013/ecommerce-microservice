@@ -201,5 +201,30 @@ public class OrderController {
         String reason = (request != null && request.getReason() != null) ? request.getReason() : "Cancelled by user";
         orderService.cancelOrder(orderId, reason);
     }
+
+    @PutMapping("/{orderId}/status")
+    public void updateOrderStatus(
+            @PathVariable Long orderId,
+            @RequestBody org.de013.orderservice.dto.request.OrderStatusUpdateRequest request) {
+        log.info("Received request to update order {} status", orderId);
+        orderService.updateOrderStatus(orderId, request);
+    }
+
+    @PutMapping("/{orderId}/mark-paid")
+    public void markOrderAsPaid(
+            @PathVariable Long orderId,
+            @RequestParam Long paymentId,
+            @RequestParam String paymentNumber) {
+        log.info("Received request to mark order {} as paid", orderId);
+        orderService.markOrderAsPaid(orderId, paymentId, paymentNumber);
+    }
+
+    @PutMapping("/{orderId}/mark-payment-failed")
+    public void markOrderPaymentFailed(
+            @PathVariable Long orderId,
+            @RequestParam String reason) {
+        log.info("Received request to mark order {} payment failed", orderId);
+        orderService.markOrderPaymentFailed(orderId, reason);
+    }
 }
 
