@@ -109,6 +109,7 @@ public class CartItemController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping("/{itemId}")
+    @PreAuthorize("@cartSecurity.canAccessCartItem(#itemId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateCartItem(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
@@ -148,6 +149,7 @@ public class CartItemController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping("/{itemId}/quantity")
+    @PreAuthorize("@cartSecurity.canAccessCartItem(#itemId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateItemQuantity(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
@@ -186,6 +188,7 @@ public class CartItemController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping("/{itemId}")
+    @PreAuthorize("@cartSecurity.canAccessCartItem(#itemId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> removeCartItem(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId) {

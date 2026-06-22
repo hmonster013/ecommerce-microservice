@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
+import org.de013.shoppingcart.repository.jpa.CartItemRepository;
 import org.de013.shoppingcart.service.CartService;
 import org.de013.shoppingcart.dto.response.CartResponseDto;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 public class CartSecurityService {
 
     private final CartService cartService;
+    private final CartItemRepository cartItemRepository;
 
     /**
      * Check if current user can access the cart by cartId
@@ -48,6 +50,26 @@ public class CartSecurityService {
             return isOwner;
         } catch (Exception e) {
             log.warn("Error checking cart ownership for cart {}: {}", cartId, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if current user can access/modify a specific cart item
+     */
+    public boolean canAccessCartItem(Long itemId) {
+        UserContext userContext = UserContextHolder.getCurrentUser();
+        if (userContext == null) {
+            log.debug("No user context found, denying access to cart item {}", itemId);
+            return false;
+        }
+
+        try {
+            return cartItemRepository.findById(itemId)
+                    .map(item -> canAccessCart(item.getCart().getId()))
+                    .orElse(true); // Let the service handle 404
+        } catch (Exception e) {
+            log.warn("Error checking cart item ownership for item {}: {}", itemId, e.getMessage());
             return false;
         }
     }
