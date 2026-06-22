@@ -14,11 +14,17 @@ public class OrderDto {
     private Long id;
     private String orderNumber;
     private String userId;
-    private BigDecimal totalAmount;
+    private MoneyDto totalAmount;
     private String currency;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @lombok.Data
+    public static class MoneyDto {
+        private BigDecimal amount;
+        private String currency;
+    }
 
     // Helper methods
     @JsonIgnore

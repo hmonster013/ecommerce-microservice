@@ -85,8 +85,25 @@ public class PaymentController extends BaseController {
             @Valid @RequestBody ProcessPaymentRequest request) {
         log.info("Processing payment request for order: {}", request.getOrderId());
 
+        String keycloakId = getCurrentUserKeycloakId();
+        if (keycloakId != null) {
+            log.info("Overriding request userId with Keycloak authenticated userId: {}", keycloakId);
+            request.setUserId(keycloakId);
+        } else {
+            throw new IllegalArgumentException("User context is missing");
+        }
+
         PaymentResponse response = paymentService.processPayment(request);
         return created(response, PaymentConstants.PAYMENT_PROCESSED);
+    }
+
+    private String getCurrentUserKeycloakId() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails) {
+            org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails details = (org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails) auth.getDetails();
+            return details.getKeycloakId();
+        }
+        return null;
     }
 
     @PostMapping("/{paymentId}/confirm")

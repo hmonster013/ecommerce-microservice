@@ -19,10 +19,14 @@ import org.de013.paymentservice.client.OrderServiceClient;
 import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.client.NotificationServiceClient;
 import org.de013.paymentservice.util.PaymentNumberGenerator;
+import org.de013.paymentservice.dto.external.UserValidationResponse;
+import org.de013.paymentservice.entity.PaymentTransaction;
+import org.de013.paymentservice.entity.enums.TransactionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -66,6 +70,9 @@ public class PaymentServiceImpl implements PaymentService {
             org.de013.paymentservice.dto.stripe.StripePaymentRequest stripeRequest = stripeGateway.mapToGatewayPaymentRequest(request);
             org.de013.paymentservice.dto.stripe.StripePaymentResponse stripeResponse = stripeGateway.createPaymentIntent(stripeRequest);
             stripeGateway.mapGatewayResponseToPayment(stripeResponse, payment);
+
+            // Create transaction record
+            createPaymentTransaction(payment, stripeResponse, TransactionType.CHARGE);
 
             // Save updated payment with stripe details
             payment = paymentRepository.save(payment);
@@ -117,6 +124,9 @@ public class PaymentServiceImpl implements PaymentService {
             // Update payment based on Stripe response
             updatePaymentFromStripeResponse(payment, stripeResponse);
 
+            // Create transaction record
+            createPaymentTransaction(payment, stripeResponse, TransactionType.CHARGE);
+
             // Save updated payment
             payment = paymentRepository.save(payment);
 
@@ -150,6 +160,10 @@ public class PaymentServiceImpl implements PaymentService {
 
         payment.setStatus(PaymentStatus.CANCELED);
         payment.setFailureReason(reason);
+
+        // Create transaction record
+        createPaymentTransaction(payment, null, TransactionType.CANCELLATION);
+
         payment = paymentRepository.save(payment);
 
         return paymentMapper.toPaymentResponse(payment);
@@ -157,10 +171,56 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse capturePayment(Long paymentId, BigDecimal amount) {
+        log.info("Capturing payment: {} with amount: {}", paymentId, amount);
+
         Payment payment = getPaymentEntityById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-        // TODO: Implement capture logic
-        return paymentMapper.toPaymentResponse(payment);
+
+        try {
+            if (!canCapturePayment(paymentId)) {
+                throw new PaymentProcessingException("Payment cannot be captured. Current status: " + payment.getStatus());
+            }
+
+            if (payment.getStripePaymentIntentId() == null) {
+                throw new PaymentProcessingException("Payment Intent ID is missing");
+            }
+
+            // Get Stripe gateway
+            PaymentGateway gateway = gatewayFactory.getGateway("STRIPE");
+            StripePaymentGateway stripeGateway = (StripePaymentGateway) gateway;
+
+            // Capture payment with Stripe
+            BigDecimal captureAmount = amount != null ? amount : payment.getAmount();
+            StripePaymentResponse stripeResponse = stripeGateway.capturePayment(
+                    payment.getStripePaymentIntentId(),
+                    captureAmount
+            );
+
+            // Update payment based on Stripe response
+            updatePaymentFromStripeResponse(payment, stripeResponse);
+
+            // Create transaction record
+            createPaymentTransaction(payment, stripeResponse, TransactionType.CAPTURE);
+
+            // Save updated payment
+            payment = paymentRepository.save(payment);
+
+            // Update order status if payment is successful
+            if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
+                updateOrderStatus(payment.getOrderId(), "PAID", payment);
+                sendPaymentSuccessNotification(payment);
+                log.info("Payment captured successfully: {}", payment.getPaymentNumber());
+            } else if (payment.getStatus() == PaymentStatus.FAILED) {
+                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
+                log.warn("Payment capture failed: {}", payment.getPaymentNumber());
+            }
+
+            return paymentMapper.toPaymentResponse(payment);
+
+        } catch (Exception e) {
+            log.error("Failed to capture payment: {}", paymentId, e);
+            throw new PaymentProcessingException("Failed to capture payment: " + e.getMessage(), e);
+        }
     }
 
     // ========== PAYMENT RETRIEVAL ==========
@@ -243,10 +303,48 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse syncPaymentStatusWithStripe(Long paymentId) {
+        log.info("Syncing payment status with Stripe: {}", paymentId);
+
         Payment payment = getPaymentEntityById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-        // TODO: Implement Stripe sync
-        return paymentMapper.toPaymentResponse(payment);
+
+        if (payment.getStripePaymentIntentId() == null) {
+            log.warn("Stripe Payment Intent ID is missing for payment: {}", paymentId);
+            return paymentMapper.toPaymentResponse(payment);
+        }
+
+        try {
+            // Get Stripe gateway
+            PaymentGateway gateway = gatewayFactory.getGateway("STRIPE");
+            StripePaymentGateway stripeGateway = (StripePaymentGateway) gateway;
+
+            // Retrieve payment intent from Stripe
+            StripePaymentResponse stripeResponse = stripeGateway.getPaymentIntent(payment.getStripePaymentIntentId());
+
+            // Update payment based on Stripe response
+            updatePaymentFromStripeResponse(payment, stripeResponse);
+
+            // Create transaction record
+            createPaymentTransaction(payment, stripeResponse, TransactionType.CHARGE);
+
+            // Save updated payment
+            payment = paymentRepository.save(payment);
+
+            // Update order status if status changed to SUCCEEDED or FAILED
+            if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
+                updateOrderStatus(payment.getOrderId(), "PAID", payment);
+                sendPaymentSuccessNotification(payment);
+            } else if (payment.getStatus() == PaymentStatus.FAILED) {
+                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
+            }
+
+            log.info("Payment sync complete for payment {}. Status: {}", payment.getPaymentNumber(), payment.getStatus());
+            return paymentMapper.toPaymentResponse(payment);
+
+        } catch (Exception e) {
+            log.error("Failed to sync payment status with Stripe: {}", paymentId, e);
+            throw new PaymentProcessingException("Failed to sync payment status: " + e.getMessage(), e);
+        }
     }
 
     // ========== PAYMENT VALIDATION ==========
@@ -265,16 +363,62 @@ public class PaymentServiceImpl implements PaymentService {
         if (request.getUserId() == null) {
             throw new PaymentProcessingException("User ID is required");
         }
+
+        // Validate with Order Service (Stripe Amount Tampering Protection)
+        validatePaymentAmount(request.getOrderId(), request.getAmount());
+
+        // Validate with User Service (Check blocked / high risk status)
+        validateUserCanMakePayment(request.getUserId());
     }
 
     @Override
     public void validatePaymentAmount(Long orderId, BigDecimal amount) {
-        // TODO: Validate with Order Service
+        log.info("Validating payment amount {} for order {}", amount, orderId);
+        try {
+            ResponseEntity<org.de013.paymentservice.dto.external.OrderDto> response = orderServiceClient.getOrderById(orderId);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                org.de013.paymentservice.dto.external.OrderDto order = response.getBody();
+                BigDecimal orderTotal = order.getTotalAmount() != null ? order.getTotalAmount().getAmount() : BigDecimal.ZERO;
+                if (orderTotal.compareTo(amount) != 0) {
+                    log.error("Payment amount mismatch: request amount={}, order total={}", amount, orderTotal);
+                    throw new PaymentProcessingException("Payment amount mismatch. Required: " + orderTotal + ", Provided: " + amount);
+                }
+                log.info("Payment amount matches order total: {}", orderTotal);
+            } else {
+                throw new PaymentProcessingException("Failed to validate payment: Order not found: " + orderId);
+            }
+        } catch (PaymentProcessingException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error communicating with Order Service for verification: ", e);
+            throw new PaymentProcessingException("Failed to verify payment amount: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public void validateUserCanMakePayment(String userId) {
-        // TODO: Validate with User Service
+        log.info("Validating with User Service if user can make payment: {}", userId);
+        try {
+            ResponseEntity<UserValidationResponse> response = userServiceClient.validateUserForPayment(userId);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                UserValidationResponse validation = response.getBody();
+                if (!validation.isValid()) {
+                    log.error("User validation failed: {}", validation.getMessage());
+                    throw new PaymentProcessingException("User is not allowed to make payment: " + validation.getMessage());
+                }
+                if (!validation.isCanMakePayments()) {
+                    log.error("User cannot make payments. Reason: {}", validation.getPaymentBlockReason());
+                    throw new PaymentProcessingException("User payment authorization is disabled: " + validation.getPaymentBlockReason());
+                }
+                log.info("User validation successful for user: {}", userId);
+            } else {
+                throw new PaymentProcessingException("Failed to validate user: User not found: " + userId);
+            }
+        } catch (PaymentProcessingException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Error communicating with User Service for verification. Proceeding with fallback.", e);
+        }
     }
 
     @Override
@@ -351,24 +495,80 @@ public class PaymentServiceImpl implements PaymentService {
 
     // ========== PAYMENT STATISTICS ==========
 
+    private PaymentService.PaymentStatistics calculateStatistics(List<Payment> payments, LocalDateTime defaultStart, LocalDateTime defaultEnd) {
+        if (payments == null || payments.isEmpty()) {
+            return new PaymentService.PaymentStatistics(
+                    0L, 0L, 0L, 0L,
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    defaultStart, defaultEnd);
+        }
+
+        long totalPayments = payments.size();
+        long successfulPayments = 0;
+        long failedPayments = 0;
+        long pendingPayments = 0;
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal successfulAmount = BigDecimal.ZERO;
+
+        LocalDateTime firstPaymentDate = null;
+        LocalDateTime lastPaymentDate = null;
+
+        for (Payment p : payments) {
+            BigDecimal amt = p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO;
+            totalAmount = totalAmount.add(amt);
+
+            if (p.getStatus() == PaymentStatus.SUCCEEDED) {
+                successfulPayments++;
+                successfulAmount = successfulAmount.add(amt);
+            } else if (p.getStatus() == PaymentStatus.FAILED) {
+                failedPayments++;
+            } else if (p.getStatus() != PaymentStatus.CANCELED) {
+                pendingPayments++;
+            }
+
+            LocalDateTime created = p.getCreatedAt();
+            if (created != null) {
+                if (firstPaymentDate == null || created.isBefore(firstPaymentDate)) {
+                    firstPaymentDate = created;
+                }
+                if (lastPaymentDate == null || created.isAfter(lastPaymentDate)) {
+                    lastPaymentDate = created;
+                }
+            }
+        }
+
+        BigDecimal averageAmount = totalPayments > 0 
+                ? totalAmount.divide(BigDecimal.valueOf(totalPayments), 2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        return new PaymentService.PaymentStatistics(
+                totalPayments,
+                successfulPayments,
+                failedPayments,
+                pendingPayments,
+                totalAmount,
+                successfulAmount,
+                averageAmount,
+                firstPaymentDate != null ? firstPaymentDate : defaultStart,
+                lastPaymentDate != null ? lastPaymentDate : defaultEnd
+        );
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PaymentStatistics getPaymentStatisticsByUserId(String userId) {
-        // TODO: Implement statistics calculation
-        return new PaymentService.PaymentStatistics(
-                0L, 0L, 0L, 0L,
-                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                null, null);
+        log.info("Calculating payment statistics for user: {}", userId);
+        List<Payment> payments = paymentRepository.findByUserId(userId);
+        return calculateStatistics(payments, null, null);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PaymentStatistics getPaymentStatisticsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        // TODO: Implement statistics calculation
-        return new PaymentService.PaymentStatistics(
-                0L, 0L, 0L, 0L,
-                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                startDate, endDate);
+        log.info("Calculating payment statistics for date range: {} to {}", startDate, endDate);
+        List<Payment> payments = paymentRepository.findByCreatedAtBetween(startDate, endDate);
+        return calculateStatistics(payments, startDate, endDate);
     }
 
     @Override
@@ -491,9 +691,30 @@ public class PaymentServiceImpl implements PaymentService {
         };
     }
 
-    private void createPaymentTransaction(Payment payment, Object stripeResponse, Object transactionType) {
-        // TODO: Implement payment transaction creation
-        log.debug("Creating payment transaction for payment: {}", payment.getId());
+    private void createPaymentTransaction(Payment payment, StripePaymentResponse stripeResponse, TransactionType transactionType) {
+        log.info("Creating payment transaction of type {} for payment: {}", transactionType, payment.getId());
+
+        PaymentTransaction transaction = PaymentTransaction.builder()
+                .payment(payment)
+                .type(transactionType)
+                .amount(payment.getAmount())
+                .currency(payment.getCurrency() != null ? payment.getCurrency().name() : null)
+                .status(payment.getStatus())
+                .description(payment.getDescription() != null ? payment.getDescription() : (transactionType + " transaction"))
+                .createdBy("SYSTEM")
+                .updatedBy("SYSTEM")
+                .build();
+
+        if (stripeResponse != null) {
+            transaction.setStripePaymentIntentId(stripeResponse.getPaymentIntentId());
+            transaction.setStripeResponse(stripeResponse.toString());
+            transaction.setGatewayTransactionId(stripeResponse.getPaymentIntentId());
+            if (stripeResponse.getFailureMessage() != null) {
+                transaction.setFailureReason(stripeResponse.getFailureMessage());
+            }
+        }
+
+        payment.addTransaction(transaction);
     }
 
     private void sendPaymentSuccessNotification(Payment payment) {

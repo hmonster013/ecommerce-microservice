@@ -94,7 +94,10 @@ public class OrderServiceClientFallback implements OrderServiceClient {
         fallbackOrder.setId(orderId);
         fallbackOrder.setOrderNumber("FALLBACK-ORDER");
         fallbackOrder.setUserId(null);
-        fallbackOrder.setTotalAmount(BigDecimal.ZERO);
+        OrderDto.MoneyDto money = new OrderDto.MoneyDto();
+        money.setAmount(BigDecimal.ZERO);
+        money.setCurrency("USD");
+        fallbackOrder.setTotalAmount(money);
         fallbackOrder.setCurrency("USD");
         fallbackOrder.setStatus("UNKNOWN");
         return fallbackOrder;

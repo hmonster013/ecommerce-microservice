@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping;
  */
 @FeignClient(
         name = "user-service",
-        path = "/api/v1/users/internal",
+        path = "/users/internal",
         fallback = UserServiceClientFallback.class
 )
 public interface UserServiceClient {

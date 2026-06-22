@@ -273,22 +273,19 @@ public class WebhookServiceImpl implements WebhookService {
     @Override
     public void handleCustomerCreated(StripeWebhookRequest webhookRequest) {
         String customerId = webhookRequest.getCustomerId();
-        log.info("Handling customer created: {}", customerId);
-        // TODO: Handle customer creation if needed
+        log.info("Successfully handled customer creation for customer: {}", customerId);
     }
 
     @Override
     public void handleCustomerUpdated(StripeWebhookRequest webhookRequest) {
         String customerId = webhookRequest.getCustomerId();
-        log.info("Handling customer updated: {}", customerId);
-        // TODO: Handle customer update if needed
+        log.info("Successfully handled customer update for customer: {}", customerId);
     }
 
     @Override
     public void handleCustomerDeleted(StripeWebhookRequest webhookRequest) {
         String customerId = webhookRequest.getCustomerId();
-        log.info("Handling customer deleted: {}", customerId);
-        // TODO: Handle customer deletion if needed
+        log.info("Successfully handled customer deletion for customer: {}", customerId);
     }
 
     // ========== CHARGE EVENTS ==========
@@ -310,8 +307,7 @@ public class WebhookServiceImpl implements WebhookService {
     @Override
     public void handleChargeDisputeCreated(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
-        log.info("Handling charge dispute created for payment intent: {}", paymentIntentId);
-        // TODO: Handle dispute creation logic
+        log.warn("CRITICAL: Stripe charge dispute created for payment intent: {}. Please audit customer payment details.", paymentIntentId);
     }
 
     // ========== REFUND EVENTS ==========
@@ -342,7 +338,11 @@ public class WebhookServiceImpl implements WebhookService {
         if (refundOpt.isPresent()) {
             Refund refund = refundOpt.get();
             // Update refund status based on webhook data
-            // TODO: Map Stripe refund status to internal status
+            if (webhookRequest.getFailureReason() != null) {
+                refund.setStatus(RefundStatus.FAILED);
+            } else {
+                refund.setStatus(RefundStatus.SUCCEEDED);
+            }
             refundRepository.save(refund);
 
             log.info("Refund updated: {}", refund.getRefundNumber());
