@@ -53,8 +53,11 @@ public class OrderController {
             @Parameter(description = "Order creation request", required = true)
             @Valid @RequestBody CreateOrderRequest request) {
         UserContext userContext = UserContextHolder.getCurrentUser();
-        if (userContext != null) {
-            log.info("Creating order for user: {} (ID: {})", userContext.getUsername(), userContext.getUserId());
+        if (userContext != null && userContext.getUserId() != null) {
+            log.info("Overriding request userId with Keycloak authenticated userId: {}", userContext.getUserId());
+            request.setUserId(userContext.getUserId());
+        } else {
+            throw new IllegalArgumentException("User context is missing");
         }
         return orderService.createOrder(request);
     }
