@@ -34,7 +34,7 @@ public class CorsConfig implements WebMvcConfigurer {
                 .maxAge(3600);
 
         // Configuration for API docs
-        registry.addMapping("/v3/api-docs/**")
+        registry.addMapping("/v1/api-docs/**")
                 .allowedOriginPatterns("*")
                 .allowedMethods("GET", "OPTIONS")
                 .allowedHeaders("*")

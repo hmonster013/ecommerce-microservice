@@ -17,9 +17,9 @@ public class GatewayRoutesConfig {
         RouteLocator routeLocator = builder.routes()
                 // User Service Routes
                 .route("user-service", r -> r
-                        .path("/api/user-service/**")
+                        .path("/api/v1/user-service/**")
                         .filters(f -> f
-                                .rewritePath("/api/user-service/(?<remaining>.*)", "/${remaining}")
+                                .rewritePath("/api/v1/user-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
                                         .setName("userServiceCircuitBreaker")
                                         .setFallbackUri("forward:/fallback/user-service"))
@@ -28,15 +28,15 @@ public class GatewayRoutesConfig {
 
                 // User Service API Docs
                 .route("user-service-docs", r -> r
-                        .path("/api/user-service/v3/api-docs")
-                        .filters(f -> f.rewritePath("/api/user-service/v3/api-docs", "/v3/api-docs"))
+                        .path("/api/v1/user-service/v1/api-docs")
+                        .filters(f -> f.rewritePath("/api/v1/user-service/v1/api-docs", "/v1/api-docs"))
                         .uri("lb://user-service"))
 
                 // Product Catalog Service Routes
                 .route("product-catalog-service", r -> r
-                        .path("/api/product-catalog-service/**")
+                        .path("/api/v1/product-catalog-service/**")
                         .filters(f -> f
-                                .rewritePath("/api/product-catalog-service/(?<remaining>.*)", "/${remaining}")
+                                .rewritePath("/api/v1/product-catalog-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
                                         .setName("productServiceCircuitBreaker")
                                         .setFallbackUri("forward:/fallback/product-catalog-service"))
@@ -45,15 +45,15 @@ public class GatewayRoutesConfig {
 
                 // Product Catalog Service API Docs
                 .route("product-catalog-service-docs", r -> r
-                        .path("/api/product-catalog-service/v3/api-docs")
-                        .filters(f -> f.rewritePath("/api/product-catalog-service/v3/api-docs", "/v3/api-docs"))
+                        .path("/api/v1/product-catalog-service/v1/api-docs")
+                        .filters(f -> f.rewritePath("/api/v1/product-catalog-service/v1/api-docs", "/v1/api-docs"))
                         .uri("lb://product-catalog-service"))
 
                 // Shopping Cart Service Routes
                 .route("shopping-cart-service", r -> r
-                        .path("/api/shopping-cart-service/**")
+                        .path("/api/v1/shopping-cart-service/**")
                         .filters(f -> f
-                                .rewritePath("/api/shopping-cart-service/(?<remaining>.*)", "/${remaining}")
+                                .rewritePath("/api/v1/shopping-cart-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
                                         .setName("cartServiceCircuitBreaker")
                                         .setFallbackUri("forward:/fallback/shopping-cart-service"))
@@ -62,15 +62,15 @@ public class GatewayRoutesConfig {
 
                 // Shopping Cart Service API Docs
                 .route("shopping-cart-service-docs", r -> r
-                        .path("/api/shopping-cart-service/v3/api-docs")
-                        .filters(f -> f.rewritePath("/api/shopping-cart-service/v3/api-docs", "/v3/api-docs"))
+                        .path("/api/v1/shopping-cart-service/v1/api-docs")
+                        .filters(f -> f.rewritePath("/api/v1/shopping-cart-service/v1/api-docs", "/v1/api-docs"))
                         .uri("lb://shopping-cart-service"))
 
                 // Order Service Routes
                 .route("order-service", r -> r
-                        .path("/api/order-service/**")
+                        .path("/api/v1/order-service/**")
                         .filters(f -> f
-                                .rewritePath("/api/order-service/(?<remaining>.*)", "/${remaining}")
+                                .rewritePath("/api/v1/order-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
                                         .setName("orderServiceCircuitBreaker")
                                         .setFallbackUri("forward:/fallback/order-service"))
@@ -79,15 +79,15 @@ public class GatewayRoutesConfig {
 
                 // Order Service API Docs
                 .route("order-service-docs", r -> r
-                        .path("/api/order-service/v3/api-docs")
-                        .filters(f -> f.rewritePath("/api/order-service/v3/api-docs", "/v3/api-docs"))
+                        .path("/api/v1/order-service/v1/api-docs")
+                        .filters(f -> f.rewritePath("/api/v1/order-service/v1/api-docs", "/v1/api-docs"))
                         .uri("lb://order-service"))
 
                 // Payment Service Routes
                 .route("payment-service", r -> r
-                        .path("/api/payment-service/**")
+                        .path("/api/v1/payment-service/**")
                         .filters(f -> f
-                                .rewritePath("/api/payment-service/(?<remaining>.*)", "/${remaining}")
+                                .rewritePath("/api/v1/payment-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
                                         .setName("paymentServiceCircuitBreaker")
                                         .setFallbackUri("forward:/fallback/payment-service"))
@@ -96,15 +96,15 @@ public class GatewayRoutesConfig {
 
                 // Payment Service API Docs
                 .route("payment-service-docs", r -> r
-                        .path("/api/payment-service/v3/api-docs")
-                        .filters(f -> f.rewritePath("/api/payment-service/v3/api-docs", "/v3/api-docs"))
+                        .path("/api/v1/payment-service/v1/api-docs")
+                        .filters(f -> f.rewritePath("/api/v1/payment-service/v1/api-docs", "/v1/api-docs"))
                         .uri("lb://payment-service"))
 
                 // Notification Service Routes
                 .route("notification-service", r -> r
-                        .path("/api/notification-service/**")
+                        .path("/api/v1/notification-service/**")
                         .filters(f -> f
-                                .rewritePath("/api/notification-service/(?<remaining>.*)", "/${remaining}")
+                                .rewritePath("/api/v1/notification-service/(?<remaining>.*)", "/${remaining}")
                                 .circuitBreaker(c -> c
                                         .setName("notificationServiceCircuitBreaker")
                                         .setFallbackUri("forward:/fallback/notification-service"))
@@ -113,9 +113,15 @@ public class GatewayRoutesConfig {
 
                 // Notification Service API Docs
                 .route("notification-service-docs", r -> r
-                        .path("/api/notification-service/v3/api-docs")
-                        .filters(f -> f.rewritePath("/api/notification-service/v3/api-docs", "/v3/api-docs"))
+                        .path("/api/v1/notification-service/v1/api-docs")
+                        .filters(f -> f.rewritePath("/api/v1/notification-service/v1/api-docs", "/v1/api-docs"))
                         .uri("lb://notification-service"))
+
+                // API Gateway's Own Docs Route (Forwarding /api/v1/v1/api-docs to internal /v1/api-docs)
+                .route("api-gateway-docs", r -> r
+                        .path("/api/v1/v1/api-docs/**")
+                        .filters(f -> f.rewritePath("/api/v1/v1/api-docs(?<remaining>.*)", "/v1/api-docs${remaining}"))
+                        .uri("http://localhost:8080"))
 
                 .build();
 

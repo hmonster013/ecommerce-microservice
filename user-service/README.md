@@ -123,7 +123,7 @@ user-service/
 5. **Verify Setup**
    - Health Check: http://localhost:8081/actuator/health
    - API Documentation: http://localhost:8081/swagger-ui.html
-   - API Docs JSON: http://localhost:8081/v3/api-docs
+   - API Docs JSON: http://localhost:8081/v1/api-docs
 
 ### Docker Setup
 
@@ -298,7 +298,7 @@ jwt:
 # API Documentation
 springdoc:
   api-docs:
-    path: /v3/api-docs
+    path: /v1/api-docs
   swagger-ui:
     path: /swagger-ui.html
 ```

@@ -107,7 +107,7 @@ services:
         condition: service_healthy
     environment:
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: ${EUREKA_URL}
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       CONFIG_SERVER_URL: ${CONFIG_SERVER_URL}
       RABBITMQ_HOST: ${RABBITMQ_HOST}
       RABBITMQ_PORT: ${RABBITMQ_PORT}
@@ -148,6 +148,7 @@ services:
       OTEL_METRICS_EXPORTER: prometheus
       OTEL_LOGS_EXPORTER: none
       JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
+      SPRINGDOC_API_DOCS_PATH: /v1/api-docs
 
 # Define the shared network
 networks:

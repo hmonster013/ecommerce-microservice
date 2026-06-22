@@ -52,7 +52,7 @@ public class SecurityConfig {
                 // Trust internal network - API Gateway handles authorization
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v1/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                         .requestMatchers("/users/internal/**").permitAll()
                         .anyRequest().permitAll()
                 )

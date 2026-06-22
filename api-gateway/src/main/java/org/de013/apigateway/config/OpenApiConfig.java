@@ -19,37 +19,37 @@ public class OpenApiConfig {
 
         // Service APIs using Eureka discovery pattern
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/user-service/**")
+                .pathsToMatch("/api/v1/user-service/**")
                 .group("user-service")
                 .displayName("User Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/product-catalog-service/**")
+                .pathsToMatch("/api/v1/product-catalog-service/**")
                 .group("product-catalog-service")
                 .displayName("Product Catalog Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/shopping-cart-service/**")
+                .pathsToMatch("/api/v1/shopping-cart-service/**")
                 .group("shopping-cart-service")
                 .displayName("Shopping Cart Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/order-service/**")
+                .pathsToMatch("/api/v1/order-service/**")
                 .group("order-service")
                 .displayName("Order Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/payment-service/**")
+                .pathsToMatch("/api/v1/payment-service/**")
                 .group("payment-service")
                 .displayName("Payment Service")
                 .build());
 
         groups.add(GroupedOpenApi.builder()
-                .pathsToMatch("/api/notification-service/**")
+                .pathsToMatch("/api/v1/notification-service/**")
                 .group("notification-service")
                 .displayName("Notification Service")
                 .build());

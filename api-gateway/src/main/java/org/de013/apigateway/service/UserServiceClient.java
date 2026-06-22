@@ -15,7 +15,7 @@ public class UserServiceClient {
     private final WebClient.Builder webClientBuilder;
 
     private static final String USER_SERVICE_URL = "lb://user-service";
-    private static final String SYNC_ENDPOINT = "/api/v1/users/internal/sync";
+    private static final String SYNC_ENDPOINT = "/users/internal/sync";
 
     /**
      * Sync user from Keycloak to User Service database

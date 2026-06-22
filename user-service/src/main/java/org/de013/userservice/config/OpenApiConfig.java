@@ -88,10 +88,10 @@ public class OpenApiConfig {
                         .url("http://localhost:" + serverPort)
                         .description("Direct Access (Local Development)"),
                 new Server()
-                        .url("http://localhost:8080/api/user-service")
+                        .url("http://localhost:8080/api/v1/user-service")
                         .description("Via API Gateway (Local)"),
                 new Server()
-                        .url("http://api-gateway:8080/api/user-service")
+                        .url("http://api-gateway:8080/api/v1/user-service")
                         .description("Via API Gateway (Docker)")
         );
     }

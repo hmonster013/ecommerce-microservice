@@ -99,7 +99,7 @@ docker-compose up product-catalog-service
 
 ## 📚 Documentation
 - Swagger UI: `http://localhost:8082/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8082/v3/api-docs`
+- OpenAPI JSON: `http://localhost:8082/v1/api-docs`
 
 ## ✅ Phase 1 Completed
 - [x] Maven project setup with Spring Boot 3.3.5

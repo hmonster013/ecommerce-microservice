@@ -84,7 +84,7 @@ curl http://localhost:8080/actuator/health
 - Individual services: `http://localhost:{port}/swagger-ui.html`
 
 ### OpenAPI Specification
-- `http://localhost:{port}/v3/api-docs`
+- `http://localhost:{port}/v1/api-docs`
 
 ## 📊 Monitoring & Observability
 

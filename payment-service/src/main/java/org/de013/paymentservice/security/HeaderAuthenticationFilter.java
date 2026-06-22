@@ -65,7 +65,7 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return path.contains("/actuator/") ||
                 path.contains("/swagger-ui") ||
-                path.contains("/v3/api-docs");
+                path.contains("/v1/api-docs");
     }
 
     /**

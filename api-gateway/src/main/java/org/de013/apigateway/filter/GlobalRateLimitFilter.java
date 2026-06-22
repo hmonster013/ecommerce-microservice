@@ -228,7 +228,7 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
     private boolean isInfrastructureEndpoint(String path) {
         return path.startsWith("/actuator") ||
                 path.startsWith("/swagger-ui") ||
-                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/v1/api-docs") ||
                 path.startsWith("/webjars/");
     }
 

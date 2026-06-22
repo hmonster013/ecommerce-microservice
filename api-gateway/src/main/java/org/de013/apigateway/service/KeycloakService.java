@@ -36,8 +36,8 @@ public class KeycloakService {
             @Value("${keycloak.realm}") String realm,
             @Value("${keycloak.client-id}") String clientId,
             @Value("${keycloak.client-secret}") String clientSecret,
-            @Value("${keycloak.admin-username}") String adminUsername,
-            @Value("${keycloak.admin-password}") String adminPassword) {
+            @Value("${keycloak.admin-username:admin}") String adminUsername,
+            @Value("${keycloak.admin-password:admin}") String adminPassword) {
         this.serverUrl = serverUrl;
         this.realm = realm;
         this.clientId = clientId;

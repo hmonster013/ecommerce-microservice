@@ -79,6 +79,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
         return path.contains("/auth/") ||
                 path.contains("/actuator/") ||
                 path.contains("/swagger-ui") ||
-                path.contains("/v3/api-docs");
+                path.contains("/v1/api-docs");
     }
 }

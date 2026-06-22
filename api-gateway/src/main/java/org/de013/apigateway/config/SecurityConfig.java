@@ -35,10 +35,10 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> {
                     if (permitAllSwaggerPaths) {
                         // Allow Swagger UI and API docs access without authentication
-                        exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**", "/api/*/v3/api-docs/**", "/api/*/*/v3/api-docs/**").permitAll();
+                        exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").permitAll();
                     } else {
                         // Require authentication for all other paths
-                        exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**", "/api/*/v3/api-docs/**", "/api/*/*/v3/api-docs/**").hasRole("ADMIN");
+                        exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").hasRole("ADMIN");
                     }
 
                     exchanges
@@ -49,87 +49,86 @@ public class SecurityConfig {
 
                             // ========== AUTHENTICATION ENDPOINTS ==========
                             // Admin user management
-                            .pathMatchers("/api/auth/admin/**").hasRole("ADMIN")
+                            .pathMatchers("/api/v1/auth/admin/**").hasRole("ADMIN")
 
                             // Public authentication endpoints (login, register, refresh, logout)
-                            .pathMatchers("/api/auth/**").permitAll()
+                            .pathMatchers("/api/v1/auth/**").permitAll()
 
                             // ========== USER SERVICE ==========
                             // Internal endpoints (service-to-service communication)
-                            .pathMatchers("/api/user-service/api/v1/users/internal/**").permitAll()
-                            .pathMatchers("/api/user-service/users/internal/**").permitAll() // Legacy path support
+                            .pathMatchers("/api/v1/user-service/users/internal/**").permitAll()
 
                             // Profile endpoints (authenticated users only)
-                            .pathMatchers(HttpMethod.GET, "/api/user-service/users/profile").authenticated()
-                            .pathMatchers(HttpMethod.PUT, "/api/user-service/users/profile").authenticated()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/user-service/users/profile").authenticated()
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/user-service/users/profile").authenticated()
 
                             // Admin-only user management endpoints
-                            .pathMatchers("/api/user-service/users/**").hasRole("ADMIN")
+                            .pathMatchers("/api/v1/user-service/users/**").hasRole("ADMIN")
 
                             // ========== PRODUCT CATALOG SERVICE ==========
                             // Public read access to products and categories
-                            .pathMatchers(HttpMethod.GET, "/api/product-catalog-service/products/**").permitAll()
-                            .pathMatchers(HttpMethod.GET, "/api/product-catalog-service/categories/**").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/products/**").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/categories/**").permitAll()
 
                             // Admin-only product management
-                            .pathMatchers(HttpMethod.POST, "/api/product-catalog-service/products/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.PUT, "/api/product-catalog-service/products/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.PATCH, "/api/product-catalog-service/products/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.DELETE, "/api/product-catalog-service/products/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/products/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/products/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/products/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/products/**").hasRole("ADMIN")
 
                             // Admin-only category management
-                            .pathMatchers(HttpMethod.POST, "/api/product-catalog-service/categories/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.PUT, "/api/product-catalog-service/categories/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.PATCH, "/api/product-catalog-service/categories/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.DELETE, "/api/product-catalog-service/categories/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/categories/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/categories/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/categories/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/categories/**").hasRole("ADMIN")
 
                             // Admin/Manager inventory management
-                            .pathMatchers("/api/product-catalog-service/inventory/**").hasAnyRole("ADMIN", "MANAGER")
+                            .pathMatchers("/api/v1/product-catalog-service/inventory/**").hasAnyRole("ADMIN", "MANAGER")
 
                             // ========== SHOPPING CART SERVICE ==========
                             // Cart access for authenticated users
-                            .pathMatchers("/api/shopping-cart-service/cart/**").hasAnyRole("ADMIN", "CUSTOMER", "MANAGER")
-                            .pathMatchers("/api/shopping-cart-service/carts/**").hasAnyRole("ADMIN", "CUSTOMER", "MANAGER")
+                            .pathMatchers("/api/v1/shopping-cart-service/cart/**").hasAnyRole("ADMIN", "CUSTOMER", "MANAGER")
+                            .pathMatchers("/api/v1/shopping-cart-service/carts/**").hasAnyRole("ADMIN", "CUSTOMER", "MANAGER")
 
                             // ========== ORDER SERVICE ==========
                             // Customer personal orders
-                            .pathMatchers("/api/order-service/orders/my-orders/**").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers("/api/v1/order-service/orders/my-orders/**").hasAnyRole("ADMIN", "CUSTOMER")
 
                             // Create orders (customers and admins)
-                            .pathMatchers(HttpMethod.POST, "/api/order-service/orders").hasAnyRole("ADMIN", "CUSTOMER")
-                            .pathMatchers(HttpMethod.POST, "/api/order-service/orders/").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders/").hasAnyRole("ADMIN", "CUSTOMER")
 
                             // Order management and viewing (admin, manager, support)
-                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders/number/*").hasAnyRole("ADMIN", "CUSTOMER") // Allow customers to view order by number
-                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders/{id:\\d+}").hasAnyRole("ADMIN", "MANAGER", "SUPPORT", "CUSTOMER")
-                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders").hasAnyRole("ADMIN", "MANAGER", "SUPPORT")
-                            .pathMatchers(HttpMethod.GET, "/api/order-service/orders/user/**").hasAnyRole("ADMIN", "MANAGER", "SUPPORT")
-                            .pathMatchers(HttpMethod.PUT, "/api/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER")
-                            .pathMatchers(HttpMethod.PATCH, "/api/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER")
-                            .pathMatchers(HttpMethod.DELETE, "/api/order-service/orders/**").hasAnyRole("ADMIN", "CUSTOMER") // Need CUSTOMER to cancel order (DELETE /{orderId})
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/number/*").hasAnyRole("ADMIN", "CUSTOMER") // Allow customers to view order by number
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/{id:\\d+}").hasAnyRole("ADMIN", "MANAGER", "SUPPORT", "CUSTOMER")
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders").hasAnyRole("ADMIN", "MANAGER", "SUPPORT")
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/user/**").hasAnyRole("ADMIN", "MANAGER", "SUPPORT")
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER")
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER")
+                            .pathMatchers(HttpMethod.DELETE, "/api/v1/order-service/orders/**").hasAnyRole("ADMIN", "CUSTOMER") // Need CUSTOMER to cancel order (DELETE /{orderId})
 
                             // ========== PAYMENT SERVICE ==========
                             // Customer personal payments
-                            .pathMatchers("/api/payment-service/payments/my-payments/**").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers("/api/v1/payment-service/payments/my-payments/**").hasAnyRole("ADMIN", "CUSTOMER")
 
                             // Process payments (customers and admins)
-                            .pathMatchers(HttpMethod.POST, "/api/payment-service/payments/process").hasAnyRole("ADMIN", "CUSTOMER")
-                            .pathMatchers(HttpMethod.POST, "/api/payment-service/payments/confirm").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/process").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/confirm").hasAnyRole("ADMIN", "CUSTOMER")
 
                             // Payment management (admin, manager)
-                            .pathMatchers("/api/payment-service/payments/**").hasAnyRole("ADMIN", "MANAGER")
+                            .pathMatchers("/api/v1/payment-service/payments/**").hasAnyRole("ADMIN", "MANAGER")
 
                             // Webhooks (public - but should be validated by service)
-                            .pathMatchers(HttpMethod.POST, "/api/payment-service/webhooks/**").permitAll()
+                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/webhooks/**").permitAll()
 
                             // ========== NOTIFICATION SERVICE ==========
                             // Send notifications (admin, support)
-                            .pathMatchers(HttpMethod.POST, "/api/notification-service/notifications/send/**").hasAnyRole("ADMIN", "SUPPORT")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/notification-service/notifications/send/**").hasAnyRole("ADMIN", "SUPPORT")
 
                             // View notifications (authenticated users can see their own)
-                            .pathMatchers(HttpMethod.GET, "/api/notification-service/notifications/**").authenticated()
-                            .pathMatchers(HttpMethod.PUT, "/api/notification-service/notifications/**").authenticated()
-                            .pathMatchers(HttpMethod.PATCH, "/api/notification-service/notifications/**").authenticated()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/notification-service/notifications/**").authenticated()
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/notification-service/notifications/**").authenticated()
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/notification-service/notifications/**").authenticated()
 
                             // All other requests require authentication
                             .anyExchange().authenticated();

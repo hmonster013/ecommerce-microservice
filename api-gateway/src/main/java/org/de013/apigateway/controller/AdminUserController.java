@@ -12,7 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/api/auth/admin/users")
+@RequestMapping("/api/v1/auth/admin/users")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Admin User Management", description = "Admin endpoints for user management backed by Keycloak")
@@ -53,7 +53,7 @@ public class AdminUserController {
     private Mono<Void> deleteUserFromUserService(String keycloakId) {
         return webClientBuilder.build()
                 .delete()
-                .uri("http://user-service/api/v1/users/internal/by-keycloak-id/" + keycloakId)
+                .uri("http://user-service/users/internal/by-keycloak-id/" + keycloakId)
                 .retrieve()
                 .bodyToMono(Void.class)
                 .doOnSuccess(v -> log.info("User {} deleted from user-service DB", keycloakId))

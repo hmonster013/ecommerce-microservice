@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/users/internal")
+@RequestMapping("/users/internal")
 @RequiredArgsConstructor
 @Slf4j
 public class InternalUserController {
