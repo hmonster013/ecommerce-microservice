@@ -19,6 +19,7 @@ public class PaymentGatewayConfig {
     @Data
     public static class Gateways {
         private Stripe stripe = new Stripe();
+        private Vnpay vnpay = new Vnpay();
     }
 
     @Data
@@ -29,6 +30,18 @@ public class PaymentGatewayConfig {
         private String apiVersion = "2023-10-16";
         private String successUrl;
         private String cancelUrl;
+    }
+
+    @Data
+    public static class Vnpay {
+        private boolean enabled = false;
+        private String tmnCode;
+        private String hashSecret;
+        private String payUrl;
+        private String returnUrl;
+        private String ipnUrl;
+        private String version = "2.1.0";
+        private long vndRate = 25000;
     }
 
     @Data
