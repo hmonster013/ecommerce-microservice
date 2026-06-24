@@ -4,6 +4,7 @@ import org.de013.paymentservice.client.OrderServiceClient;
 import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.dto.external.OrderDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
+import org.de013.common.exception.ConflictException;
 import org.de013.paymentservice.exception.PaymentProcessingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,40 @@ class PaymentValidationTest {
         when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
 
         assertThrows(PaymentProcessingException.class, () -> 
+                paymentService.validatePaymentAmount(orderId, amount));
+    }
+
+    @Test
+    void validatePaymentAmount_WhenOrderAlreadyPaid_ShouldThrowException() {
+        Long orderId = 123L;
+        BigDecimal amount = BigDecimal.valueOf(100.00);
+
+        OrderDto orderDto = new OrderDto();
+        orderDto.setStatus("PAID");
+        OrderDto.MoneyDto money = new OrderDto.MoneyDto();
+        money.setAmount(BigDecimal.valueOf(100.00));
+        orderDto.setTotalAmount(money);
+
+        when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
+
+        assertThrows(ConflictException.class, () ->
+                paymentService.validatePaymentAmount(orderId, amount));
+    }
+
+    @Test
+    void validatePaymentAmount_WhenOrderCancelled_ShouldThrowException() {
+        Long orderId = 123L;
+        BigDecimal amount = BigDecimal.valueOf(100.00);
+
+        OrderDto orderDto = new OrderDto();
+        orderDto.setStatus("CANCELLED");
+        OrderDto.MoneyDto money = new OrderDto.MoneyDto();
+        money.setAmount(BigDecimal.valueOf(100.00));
+        orderDto.setTotalAmount(money);
+
+        when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
+
+        assertThrows(ConflictException.class, () ->
                 paymentService.validatePaymentAmount(orderId, amount));
     }
 

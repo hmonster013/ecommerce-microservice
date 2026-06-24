@@ -8,6 +8,7 @@ import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
+import org.de013.common.exception.ConflictException;
 import org.de013.paymentservice.exception.PaymentNotFoundException;
 import org.de013.paymentservice.exception.PaymentProcessingException;
 import org.de013.paymentservice.gateway.PaymentGateway;
@@ -378,6 +379,17 @@ public class PaymentServiceImpl implements PaymentService {
             ResponseEntity<org.de013.paymentservice.dto.external.OrderDto> response = orderServiceClient.getOrderById(orderId);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 org.de013.paymentservice.dto.external.OrderDto order = response.getBody();
+                
+                // Business rule validation: Do not allow payment for an order in a non-payable state
+                if ("PAID".equals(order.getStatus()) || "COMPLETED".equals(order.getStatus())) {
+                    log.error("Order {} is already paid or completed. Status: {}", orderId, order.getStatus());
+                    throw new ConflictException("Order is already paid: " + orderId);
+                }
+                if ("CANCELLED".equals(order.getStatus())) {
+                    log.error("Order {} is cancelled, cannot process payment", orderId);
+                    throw new ConflictException("Order is cancelled: " + orderId);
+                }
+
                 BigDecimal orderTotal = order.getTotalAmount() != null ? order.getTotalAmount().getAmount() : BigDecimal.ZERO;
                 if (orderTotal.compareTo(amount) != 0) {
                     log.error("Payment amount mismatch: request amount={}, order total={}", amount, orderTotal);
@@ -387,7 +399,7 @@ public class PaymentServiceImpl implements PaymentService {
             } else {
                 throw new PaymentProcessingException("Failed to validate payment: Order not found: " + orderId);
             }
-        } catch (PaymentProcessingException e) {
+        } catch (ConflictException | PaymentProcessingException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error communicating with Order Service for verification: ", e);
