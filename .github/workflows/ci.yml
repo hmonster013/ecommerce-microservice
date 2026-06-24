@@ -14,21 +14,8 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    # Note: integration tests use Testcontainers, which start their own Postgres
+    # per service — no shared service container is needed here.
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

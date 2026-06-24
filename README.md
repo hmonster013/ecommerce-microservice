@@ -1,5 +1,7 @@
 # E-commerce Microservices Platform
 
+[![Java CI/CD Pipeline](https://github.com/hmonster013/ecommerce-microservice/actions/workflows/ci.yml/badge.svg)](https://github.com/hmonster013/ecommerce-microservice/actions/workflows/ci.yml)
+
 > **Project URL**: https://roadmap.sh/projects/scalable-ecommerce-platform
 
 A scalable e-commerce platform built with microservices architecture using Spring Boot, Spring Cloud, and Docker.
