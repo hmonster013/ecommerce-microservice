@@ -23,6 +23,7 @@ import java.util.List;
         @Index(name = "idx_status", columnList = "status"),
         @Index(name = "idx_stripe_payment_intent_id", columnList = "stripePaymentIntentId", unique = true),
         @Index(name = "idx_stripe_customer_id", columnList = "stripeCustomerId"),
+        @Index(name = "idx_gateway_txn_ref", columnList = "gatewayTxnRef"),
         @Index(name = "idx_created_at", columnList = "createdAt")
 })
 @EqualsAndHashCode(callSuper = true)
@@ -68,6 +69,16 @@ public class Payment extends BaseEntity {
 
     @Column(name = "stripe_response", columnDefinition = "TEXT")
     private String stripeResponse;
+
+    // General Gateway details (e.g. for non-Stripe providers like VNPay)
+    @Column(name = "gateway_name", length = 20)
+    private String gatewayName;
+
+    @Column(name = "gateway_txn_ref", length = 100)
+    private String gatewayTxnRef;
+
+    @Column(name = "gateway_response", columnDefinition = "TEXT")
+    private String gatewayResponse;
 
     // Additional payment details
     @Column(name = "description", length = 500)

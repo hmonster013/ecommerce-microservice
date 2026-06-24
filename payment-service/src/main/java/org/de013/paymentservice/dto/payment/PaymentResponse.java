@@ -37,6 +37,9 @@ public class PaymentResponse {
     private String stripeCustomerId;
     private String clientSecret; // For frontend confirmation
 
+    // Redirect payment method information (e.g. for VNPay)
+    private String redirectUrl;
+
     // Payment details
     private String description;
     private String failureReason;
