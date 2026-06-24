@@ -118,7 +118,6 @@ public class Product extends BaseEntity {
     private Inventory inventory;
 
 
-
     // Helper methods
     public boolean isAvailable() {
         return status != null && status.isAvailable();

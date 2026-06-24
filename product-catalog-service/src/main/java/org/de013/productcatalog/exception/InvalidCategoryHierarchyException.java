@@ -15,11 +15,11 @@ public class InvalidCategoryHierarchyException extends BaseBusinessException {
 
     public InvalidCategoryHierarchyException(Long categoryId, Long parentId) {
         super(
-            String.format("Cannot set category %d as parent of category %d - would create circular reference", 
-                         parentId, categoryId),
-            ERROR_CODE,
-            HttpStatus.BAD_REQUEST,
-            categoryId, parentId
+                String.format("Cannot set category %d as parent of category %d - would create circular reference",
+                        parentId, categoryId),
+                ERROR_CODE,
+                HttpStatus.BAD_REQUEST,
+                categoryId, parentId
         );
     }
 
@@ -37,22 +37,22 @@ public class InvalidCategoryHierarchyException extends BaseBusinessException {
 
     public static InvalidCategoryHierarchyException maxDepthExceeded(int maxDepth) {
         return new InvalidCategoryHierarchyException(
-            String.format("Category hierarchy depth cannot exceed %d levels", maxDepth),
-            maxDepth
+                String.format("Category hierarchy depth cannot exceed %d levels", maxDepth),
+                maxDepth
         );
     }
 
     public static InvalidCategoryHierarchyException cannotDeleteWithChildren(Long categoryId, int childCount) {
         return new InvalidCategoryHierarchyException(
-            String.format("Cannot delete category %d - it has %d child categories", categoryId, childCount),
-            categoryId, childCount
+                String.format("Cannot delete category %d - it has %d child categories", categoryId, childCount),
+                categoryId, childCount
         );
     }
 
     public static InvalidCategoryHierarchyException cannotDeleteWithProducts(Long categoryId, int productCount) {
         return new InvalidCategoryHierarchyException(
-            String.format("Cannot delete category %d - it has %d products", categoryId, productCount),
-            categoryId, productCount
+                String.format("Cannot delete category %d - it has %d products", categoryId, productCount),
+                categoryId, productCount
         );
     }
 }

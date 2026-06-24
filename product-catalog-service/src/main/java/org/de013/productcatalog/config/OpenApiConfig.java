@@ -16,7 +16,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 
-
 import java.util.List;
 
 /**
@@ -39,7 +38,7 @@ public class OpenApiConfig {
                         .title("Product Catalog Service API")
                         .description("""
                                 **Enterprise Product Catalog Service** - A comprehensive microservice for managing product catalogs with advanced features:
-
+                                
                                 ## 🚀 Key Features
                                 - **Product Management**: Complete CRUD operations for products, categories, variants, and images
                                 - **Variant Management**: Product variants with different types (size, color, material, etc.)
@@ -49,20 +48,20 @@ public class OpenApiConfig {
                                 - **Review System**: Customer reviews and ratings management
                                 - **Caching**: Redis-based multi-layer caching for optimal performance
                                 - **Analytics**: Search analytics and business intelligence
-
+                                
                                 ## 🔍 Search Capabilities
                                 - Multi-field text search across products
                                 - Dynamic filtering by price, category, brand, rating
                                 - Advanced sorting options
                                 - Search suggestions and autocomplete
                                 - Popular and trending products
-
+                                
                                 ## ⚡ Performance Features
                                 - Redis caching with intelligent TTL strategies
                                 - Database connection pooling (HikariCP)
                                 - JPA performance optimizations
                                 - Search result caching and optimization
-
+                                
                                 ## 📊 Analytics & Monitoring
                                 - Search behavior tracking
                                 - Performance metrics and KPIs
@@ -82,10 +81,10 @@ public class OpenApiConfig {
                                 .url("http://localhost:" + serverPort)
                                 .description("Direct Access (Local Development)"),
                         new Server()
-                                .url("http://localhost:8080/api/product-catalog-service")
+                                .url("http://localhost:8080/api/v1/product-catalog-service")
                                 .description("Via API Gateway (Local)"),
                         new Server()
-                                .url("http://api-gateway:8080/api/product-catalog-service")
+                                .url("http://api-gateway:8080/api/v1/product-catalog-service")
                                 .description("Via API Gateway (Docker)")))
                 .tags(List.of(
                         new Tag()
@@ -127,11 +126,11 @@ public class OpenApiConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .description("""
-                    JWT Authorization header using the Bearer scheme.
-
-                    Enter 'Bearer' [space] and then your token in the text input below.
-
-                    Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    """);
+                        JWT Authorization header using the Bearer scheme.
+                        
+                        Enter 'Bearer' [space] and then your token in the text input below.
+                        
+                        Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        """);
     }
 }

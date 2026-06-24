@@ -42,29 +42,29 @@ public class OpenApiConfig {
         return new Info()
                 .title("Order Service API")
                 .description("""
-                    **Order Service** provides comprehensive order management capabilities for the e-commerce platform.
-                    
-                    ## Features
-                    - Order creation and management
-                    - Order status tracking
-                    - Payment integration
-                    - Inventory management
-                    - Order history and analytics
-                    - Real-time notifications
-                    
-                    ## Authentication
-                    This API uses JWT (JSON Web Token) for authentication. To access protected endpoints:
-                    1. Obtain a JWT token from the user service
-                    2. Use the returned JWT token in the Authorization header
-                    3. Format: `Authorization: Bearer <your-jwt-token>`
-                    
-                    ## Order Workflow
-                    1. Create order from shopping cart
-                    2. Process payment
-                    3. Update inventory
-                    4. Send notifications
-                    5. Track order status
-                    """)
+                        **Order Service** provides comprehensive order management capabilities for the e-commerce platform.
+                        
+                        ## Features
+                        - Order creation and management
+                        - Order status tracking
+                        - Payment integration
+                        - Inventory management
+                        - Order history and analytics
+                        - Real-time notifications
+                        
+                        ## Authentication
+                        This API uses JWT (JSON Web Token) for authentication. To access protected endpoints:
+                        1. Obtain a JWT token from the user service
+                        2. Use the returned JWT token in the Authorization header
+                        3. Format: `Authorization: Bearer <your-jwt-token>`
+                        
+                        ## Order Workflow
+                        1. Create order from shopping cart
+                        2. Process payment
+                        3. Update inventory
+                        4. Send notifications
+                        5. Track order status
+                        """)
                 .version("1.0.0")
                 .contact(contact())
                 .license(license());
@@ -89,10 +89,10 @@ public class OpenApiConfig {
                         .url("http://localhost:" + serverPort)
                         .description("Direct Access (Local Development)"),
                 new Server()
-                        .url("http://localhost:8080/api/order-service")
+                        .url("http://localhost:8080/api/v1/order-service")
                         .description("Via API Gateway (Local)"),
                 new Server()
-                        .url("http://api-gateway:8080/api/order-service")
+                        .url("http://api-gateway:8080/api/v1/order-service")
                         .description("Via API Gateway (Docker)")
         );
     }
@@ -119,11 +119,11 @@ public class OpenApiConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .description("""
-                    JWT Authorization header using the Bearer scheme.
-                    
-                    Enter 'Bearer' [space] and then your token in the text input below.
-                    
-                    Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    """);
+                        JWT Authorization header using the Bearer scheme.
+                        
+                        Enter 'Bearer' [space] and then your token in the text input below.
+                        
+                        Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        """);
     }
 }

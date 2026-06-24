@@ -69,10 +69,10 @@ public class OpenApiConfig {
                                 .url("http://localhost:" + serverPort)
                                 .description("Direct Access (Local Development)"),
                         new Server()
-                                .url("http://localhost:8080/api/shopping-cart-service")
+                                .url("http://localhost:8080/api/v1/shopping-cart-service")
                                 .description("Via API Gateway (Local)"),
                         new Server()
-                                .url("http://api-gateway:8080/api/shopping-cart-service")
+                                .url("http://api-gateway:8080/api/v1/shopping-cart-service")
                                 .description("Via API Gateway (Docker)")
                 ))
                 .tags(List.of(
@@ -104,11 +104,11 @@ public class OpenApiConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .description("""
-                    JWT Authorization header using the Bearer scheme.
-
-                    Enter 'Bearer' [space] and then your token in the text input below.
-
-                    Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    """);
+                        JWT Authorization header using the Bearer scheme.
+                        
+                        Enter 'Bearer' [space] and then your token in the text input below.
+                        
+                        Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        """);
     }
 }

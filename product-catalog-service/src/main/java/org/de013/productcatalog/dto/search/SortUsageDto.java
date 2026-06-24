@@ -68,7 +68,7 @@ public class SortUsageDto {
     @JsonIgnore
     public String getSortCategory() {
         if (sortCriteria == null) return "UNKNOWN";
-        
+
         String criteria = sortCriteria.toLowerCase();
         if (criteria.contains("price")) return "PRICE";
         if (criteria.contains("name") || criteria.contains("title")) return "NAME";
@@ -76,7 +76,7 @@ public class SortUsageDto {
         if (criteria.contains("date") || criteria.contains("created")) return "DATE";
         if (criteria.contains("popular") || criteria.contains("trending")) return "POPULARITY";
         if (criteria.contains("relevance") || criteria.contains("score")) return "RELEVANCE";
-        
+
         return "OTHER";
     }
 
@@ -86,22 +86,22 @@ public class SortUsageDto {
     @JsonIgnore
     public Integer calculateEffectivenessScore() {
         double score = 0.0;
-        
+
         // Usage component (40%)
         if (usagePercentage != null) {
             score += Math.min(usagePercentage * 2, 40);
         }
-        
+
         // Click-through rate component (35%)
         if (clickThroughRate != null) {
             score += clickThroughRate * 0.35;
         }
-        
+
         // Conversion rate component (25%)
         if (conversionRate != null) {
             score += Math.min(conversionRate * 2.5, 25);
         }
-        
+
         return Math.max(0, Math.min(100, (int) Math.round(score)));
     }
 
@@ -113,20 +113,20 @@ public class SortUsageDto {
         if (isPreferred() && drivesConversions()) {
             return "FEATURE - Highly effective sort option, consider making it more prominent";
         }
-        
-        if (isDefault != null && isDefault && 
-            (clickThroughRate == null || clickThroughRate < 50.0)) {
+
+        if (isDefault != null && isDefault &&
+                (clickThroughRate == null || clickThroughRate < 50.0)) {
             return "REVIEW_DEFAULT - Default sort may not be optimal for user engagement";
         }
-        
+
         if (usagePercentage != null && usagePercentage < 2.0) {
             return "CONSIDER_REMOVAL - Low usage sort option, evaluate necessity";
         }
-        
+
         if (drivesConversions()) {
             return "MAINTAIN - Good converting sort option, keep available";
         }
-        
+
         return "MONITOR - Continue tracking performance";
     }
 }

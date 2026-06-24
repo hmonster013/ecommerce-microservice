@@ -40,7 +40,6 @@ public class ProductSearchDto {
     private BigDecimal maxPrice;
 
 
-
     @Schema(description = "Only featured products", example = "false")
     private Boolean featuredOnly;
 
@@ -122,14 +121,14 @@ public class ProductSearchDto {
     @JsonIgnore
     public boolean hasFilters() {
         return (categoryIds != null && !categoryIds.isEmpty()) ||
-               (brands != null && !brands.isEmpty()) ||
-               (statuses != null && !statuses.isEmpty()) ||
-               hasPriceRange() ||
+                (brands != null && !brands.isEmpty()) ||
+                (statuses != null && !statuses.isEmpty()) ||
+                hasPriceRange() ||
 
-               Boolean.TRUE.equals(featuredOnly) ||
-               Boolean.TRUE.equals(inStockOnly) ||
-               Boolean.TRUE.equals(onSaleOnly) ||
-               Boolean.TRUE.equals(digitalOnly);
+                Boolean.TRUE.equals(featuredOnly) ||
+                Boolean.TRUE.equals(inStockOnly) ||
+                Boolean.TRUE.equals(onSaleOnly) ||
+                Boolean.TRUE.equals(digitalOnly);
     }
 
     @JsonIgnore

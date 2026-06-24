@@ -8,15 +8,15 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "product_categories", 
-       indexes = {
-           @Index(name = "idx_product_categories_product_id", columnList = "product_id"),
-           @Index(name = "idx_product_categories_category_id", columnList = "category_id"),
-           @Index(name = "idx_product_categories_primary", columnList = "is_primary")
-       },
-       uniqueConstraints = {
-           @UniqueConstraint(name = "uk_product_category", columnNames = {"product_id", "category_id"})
-       })
+@Table(name = "product_categories",
+        indexes = {
+                @Index(name = "idx_product_categories_product_id", columnList = "product_id"),
+                @Index(name = "idx_product_categories_category_id", columnList = "category_id"),
+                @Index(name = "idx_product_categories_primary", columnList = "is_primary")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_product_category", columnNames = {"product_id", "category_id"})
+        })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -60,9 +60,9 @@ public class ProductCategory extends BaseEntity {
         if (!(o instanceof ProductCategory)) return false;
         ProductCategory that = (ProductCategory) o;
         return product != null && category != null &&
-               product.getId() != null && category.getId() != null &&
-               product.getId().equals(that.product.getId()) &&
-               category.getId().equals(that.category.getId());
+                product.getId() != null && category.getId() != null &&
+                product.getId().equals(that.product.getId()) &&
+                category.getId().equals(that.category.getId());
     }
 
     @Override

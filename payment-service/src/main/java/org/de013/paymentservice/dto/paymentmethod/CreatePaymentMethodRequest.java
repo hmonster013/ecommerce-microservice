@@ -2,7 +2,10 @@ package org.de013.paymentservice.dto.paymentmethod;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +23,7 @@ public class CreatePaymentMethodRequest {
 
     @NotNull(message = "User ID is required")
     @Positive(message = "User ID must be positive")
-    private Long userId;
+    private String userId;
 
     @NotNull(message = "Payment method type is required")
     private PaymentMethodType type;
@@ -108,3 +111,4 @@ public class CreatePaymentMethodRequest {
         return stripeCustomerId == null || stripeCustomerId.trim().isEmpty();
     }
 }
+

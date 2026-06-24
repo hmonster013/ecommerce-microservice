@@ -12,9 +12,9 @@ import org.de013.shoppingcart.repository.jpa.CartRepository;
 import org.de013.shoppingcart.repository.redis.RedisCartOperations;
 import org.de013.shoppingcart.repository.redis.RedisCartRepository;
 import org.de013.shoppingcart.repository.redis.RedisCartSessionManager;
-import org.de013.shoppingcart.service.CartService;
-import org.de013.shoppingcart.service.CartMergeService;
 import org.de013.shoppingcart.service.CartItemService;
+import org.de013.shoppingcart.service.CartMergeService;
+import org.de013.shoppingcart.service.CartService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,16 +52,16 @@ public class CartServiceImpl implements CartService {
     public CartResponseDto getOrCreateCart(String userId, String sessionId) {
         try {
             log.debug("Getting or creating cart for user: {}, session: {}", userId, sessionId);
-            
+
             // Try to get existing cart
             Optional<CartResponseDto> existingCart = getActiveCart(userId, sessionId);
             if (existingCart.isPresent()) {
                 return existingCart.get();
             }
-            
+
             // Create new cart
             return createNewCart(userId, sessionId);
-            
+
         } catch (Exception e) {
             log.error("Error getting or creating cart: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to get or create cart", e);
@@ -110,7 +110,7 @@ public class CartServiceImpl implements CartService {
 
             if (cart.isPresent()) {
                 log.debug("Found cart: id={}, userId={}, sessionId={}",
-                    cart.get().getId(), cart.get().getUserId(), cart.get().getSessionId());
+                        cart.get().getId(), cart.get().getUserId(), cart.get().getSessionId());
                 // Update last activity
                 updateLastActivity(cart.get().getId());
                 return Optional.of(convertToResponseDto(cart.get()));
@@ -132,10 +132,10 @@ public class CartServiceImpl implements CartService {
     public CartResponseDto createNewCart(String userId, String sessionId) {
         try {
             log.debug("Creating new cart for user: {}, session: {}", userId, sessionId);
-            
+
             // Determine cart type
             CartType cartType = userId != null ? CartType.USER : CartType.GUEST;
-            
+
             // Create cart entity
             Cart cart = Cart.builder()
                     .userId(userId)
@@ -148,29 +148,29 @@ public class CartServiceImpl implements CartService {
                     .itemCount(0)
                     .totalQuantity(0)
                     .build();
-            
+
             // Set expiration
             cart.setExpirationFromType();
             cart.setLastActivityAt(LocalDateTime.now());
-            
+
             // Save to database
             cart = cartRepository.save(cart);
-            
+
             // Save to Redis
             RedisCart redisCart = RedisCart.fromCart(cart);
             Duration ttl = Duration.ofSeconds(cartType.getDefaultTtlSeconds());
             redisCartOperations.saveCartWithTTL(redisCart, ttl);
-            
+
             // Create session if needed
             if (sessionId != null && userId == null) {
                 sessionManager.createGuestSession();
             }
-            
+
             // Analytics removed for basic functionality
-            
+
             log.info("Created new cart {} for user: {}, session: {}", cart.getId(), userId, sessionId);
             return convertToResponseDto(cart);
-            
+
         } catch (Exception e) {
             log.error("Error creating new cart: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create new cart", e);
@@ -188,16 +188,16 @@ public class CartServiceImpl implements CartService {
             if (redisCart.isPresent()) {
                 return Optional.of(convertToResponseDto(redisCart.get()));
             }
-            
+
             // Fallback to database
             Optional<Cart> dbCart = cartRepository.findByIdWithItems(cartId);
             if (dbCart.isPresent()) {
                 syncCartToRedis(dbCart.get());
                 return Optional.of(convertToResponseDto(dbCart.get()));
             }
-            
+
             return Optional.empty();
-            
+
         } catch (Exception e) {
             log.error("Error getting cart by ID {}: {}", cartId, e.getMessage(), e);
             return Optional.empty();
@@ -213,15 +213,15 @@ public class CartServiceImpl implements CartService {
     public void updateCartTotals(Long cartId) {
         try {
             log.debug("Updating totals for cart: {}", cartId);
-            
+
             // Get cart items and calculate totals
             BigDecimal subtotal = cartItemService.calculateCartSubtotal(cartId);
             int itemCount = cartItemService.getCartItemCount(cartId);
             int totalQuantity = cartItemService.getCartTotalQuantity(cartId);
-            
+
             // Update in database
             cartRepository.updateCartTotals(cartId, subtotal, subtotal, itemCount, totalQuantity, LocalDateTime.now());
-            
+
             // Update in Redis
             Optional<RedisCart> redisCart = redisCartRepository.findByCartId(cartId);
             if (redisCart.isPresent()) {
@@ -231,13 +231,13 @@ public class CartServiceImpl implements CartService {
                 cart.setItemCount(itemCount);
                 cart.setTotalQuantity(totalQuantity);
                 cart.updateCartTotals();
-                
+
                 redisCartRepository.save(cart);
             }
-            
-            log.debug("Updated cart {} totals: subtotal={}, items={}, quantity={}", 
-                     cartId, subtotal, itemCount, totalQuantity);
-            
+
+            log.debug("Updated cart {} totals: subtotal={}, items={}, quantity={}",
+                    cartId, subtotal, itemCount, totalQuantity);
+
         } catch (Exception e) {
             log.error("Error updating cart totals for cart {}: {}", cartId, e.getMessage(), e);
             throw new RuntimeException("Failed to update cart totals", e);
@@ -256,7 +256,6 @@ public class CartServiceImpl implements CartService {
             log.error("Error updating last activity for cart {}: {}", cartId, e.getMessage(), e);
         }
     }
-
 
 
     // ==================== CART LIFECYCLE ====================
@@ -412,7 +411,7 @@ public class CartServiceImpl implements CartService {
             String sessionId = cart.getSessionId();
 
             log.debug("Performing deletion for cart {} (userId={}, sessionId={}, reason={})",
-                     cartId, userId, sessionId, reason);
+                    cartId, userId, sessionId, reason);
 
             // Delete from Redis
             boolean redisDeleted = redisCartOperations.deleteCartByIdentifiers(userId, sessionId);
@@ -598,10 +597,49 @@ public class CartServiceImpl implements CartService {
                 .updatedAt(cart.getUpdatedAt())
                 .lastActivityAt(cart.getLastActivityAt())
                 .expiresAt(cart.getExpiresAt())
+                .items(cartItemService.getCartItems(cart.getId()))
                 .build();
     }
 
     private CartResponseDto convertToResponseDto(RedisCart redisCart) {
+        List<org.de013.shoppingcart.dto.response.CartItemResponseDto> items = java.util.List.of();
+        if (redisCart.getItems() != null && !redisCart.getItems().isEmpty()) {
+            items = redisCart.getItems().stream().map(item -> org.de013.shoppingcart.dto.response.CartItemResponseDto.builder()
+                    .itemId(item.getItemId())
+                    .productId(item.getProductId())
+                    .productSku(item.getProductSku())
+                    .productName(item.getProductName())
+                    .productDescription(item.getProductDescription())
+                    .productImageUrl(item.getProductImageUrl())
+                    .categoryId(item.getCategoryId())
+                    .categoryName(item.getCategoryName())
+                    .quantity(item.getQuantity())
+                    .unitPrice(item.getUnitPrice())
+                    .originalPrice(item.getOriginalPrice())
+                    .discountAmount(item.getDiscountAmount())
+                    .totalPrice(item.getTotalPrice())
+                    .currency(item.getCurrency())
+                    .weight(item.getWeight())
+                    .dimensions(item.getDimensions())
+                    .variantId(item.getVariantId())
+                    .variantAttributes(item.getVariantAttributes())
+                    .specialInstructions(item.getSpecialInstructions())
+                    .addedAt(item.getAddedAt())
+                    .lastPriceCheckAt(item.getLastPriceCheckAt())
+                    .priceChanged(item.getPriceChanged())
+                    .productBrand(item.getProductBrand())
+                    .availabilityStatus(item.getAvailabilityStatus())
+                    .stockQuantity(item.getStockQuantity())
+                    .maxQuantityPerOrder(item.getMaxQuantityPerOrder())
+                    .isGift(item.getIsGift())
+                    .giftMessage(item.getGiftMessage())
+                    .giftWrapType(item.getGiftWrapType())
+                    .giftWrapPrice(item.getGiftWrapPrice())
+                    .isAvailable(item.isAvailable())
+                    .build()
+            ).toList();
+        }
+
         return CartResponseDto.builder()
                 .cartId(redisCart.getCartId())
                 .userId(redisCart.getUserId())
@@ -617,6 +655,7 @@ public class CartServiceImpl implements CartService {
                 .updatedAt(redisCart.getUpdatedAt())
                 .lastActivityAt(redisCart.getLastActivityAt())
                 .expiresAt(redisCart.getExpiresAt())
+                .items(items) // TODO(P11): RedisCart không lưu item chi tiết, map khi hoàn thiện cart Redis
                 .build();
     }
 

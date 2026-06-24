@@ -13,7 +13,6 @@ public class PaymentNotFoundException extends ResourceNotFoundException {
     }
 
 
-
     /**
      * Creates a PaymentNotFoundException for a payment ID.
      */
@@ -31,7 +30,7 @@ public class PaymentNotFoundException extends ResourceNotFoundException {
     /**
      * Creates a PaymentNotFoundException for a user ID.
      */
-    public static PaymentNotFoundException forUser(Long userId) {
+    public static PaymentNotFoundException forUser(String userId) {
         return new PaymentNotFoundException("No payments found for user ID: " + userId);
     }
 
@@ -42,3 +41,4 @@ public class PaymentNotFoundException extends ResourceNotFoundException {
         return new PaymentNotFoundException("No payment found for order ID: " + orderId);
     }
 }
+

@@ -11,9 +11,9 @@ import java.util.Map;
  * Provides user authentication, session management, and user preferences
  */
 @FeignClient(
-    name = "user-service",
-    path = "/users", // Service-to-service calls use internal paths
-    fallback = UserServiceFallback.class
+        name = "user-service",
+        path = "/users", // Service-to-service calls use internal paths
+        fallback = UserServiceFallback.class
 )
 public interface UserServiceFeignClient {
 

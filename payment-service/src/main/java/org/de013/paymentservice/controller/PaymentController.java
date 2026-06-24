@@ -8,13 +8,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.PageResponse;
+import org.de013.common.security.UserContext;
+import org.de013.common.security.UserContextHolder;
 import org.de013.paymentservice.constant.PaymentConstants;
-import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
+import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.de013.paymentservice.service.PaymentService;
 import org.springframework.data.domain.Page;
@@ -32,7 +33,7 @@ import java.util.List;
  * Handles payment processing, status checking, and payment management
  */
 @RestController
-@RequestMapping(ApiPaths.PAYMENTS)
+@RequestMapping("/payments")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Payments", description = "Payment processing and management operations")
@@ -42,35 +43,35 @@ public class PaymentController extends BaseController {
 
     // ========== PAYMENT PROCESSING ==========
 
-    @PostMapping(ApiPaths.PROCESS)
+    @PostMapping("/process")
     @Operation(
-        summary = "Process a payment",
-        description = """
-            Process a new payment for an order using the specified payment method.
-
-            **Payment Flow:**
-            1. Validates order and user information
-            2. Processes payment through selected gateway (Stripe, PayPal, etc.)
-            3. Updates order status
-            4. Sends notifications
-
-            **Supported Payment Methods:**
-            - Credit/Debit Cards (via Stripe)
-            - Bank Accounts
-            - Digital Wallets (PayPal, Apple Pay, Google Pay)
-
-            **Example Request:**
-            ```json
-            {
-              "orderId": 12345,
-              "userId": 67890,
-              "amount": 99.99,
-              "currency": "USD",
-              "paymentMethodId": "pm_1234567890",
-              "gateway": "STRIPE"
-            }
-            ```
-            """)
+            summary = "Process a payment",
+            description = """
+                    Process a new payment for an order using the specified payment method.
+                    
+                    **Payment Flow:**
+                    1. Validates order and user information
+                    2. Processes payment through selected gateway (Stripe, PayPal, etc.)
+                    3. Updates order status
+                    4. Sends notifications
+                    
+                    **Supported Payment Methods:**
+                    - Credit/Debit Cards (via Stripe)
+                    - Bank Accounts
+                    - Digital Wallets (PayPal, Apple Pay, Google Pay)
+                    
+                    **Example Request:**
+                    ```json
+                    {
+                      "orderId": 12345,
+                      "userId": 67890,
+                      "amount": 99.99,
+                      "currency": "USD",
+                      "paymentMethodId": "pm_1234567890",
+                      "gateway": "STRIPE"
+                    }
+                    ```
+                    """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Payment processed successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid payment request or validation failed"),
@@ -84,11 +85,28 @@ public class PaymentController extends BaseController {
             @Valid @RequestBody ProcessPaymentRequest request) {
         log.info("Processing payment request for order: {}", request.getOrderId());
 
+        String keycloakId = getCurrentUserKeycloakId();
+        if (keycloakId != null) {
+            log.info("Overriding request userId with Keycloak authenticated userId: {}", keycloakId);
+            request.setUserId(keycloakId);
+        } else {
+            throw new IllegalArgumentException("User context is missing");
+        }
+
         PaymentResponse response = paymentService.processPayment(request);
         return created(response, PaymentConstants.PAYMENT_PROCESSED);
     }
 
-    @PostMapping(ApiPaths.PAYMENT_ID_PARAM + ApiPaths.CONFIRM)
+    private String getCurrentUserKeycloakId() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails) {
+            org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails details = (org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails) auth.getDetails();
+            return details.getKeycloakId();
+        }
+        return null;
+    }
+
+    @PostMapping("/{paymentId}/confirm")
     @Operation(summary = "Confirm a payment", description = "Confirm a payment with payment method")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment confirmed successfully"),
@@ -104,7 +122,7 @@ public class PaymentController extends BaseController {
         return success(response, PaymentConstants.PAYMENT_CONFIRMED);
     }
 
-    @PutMapping(ApiPaths.PAYMENT_ID_PARAM + ApiPaths.CANCEL)
+    @PutMapping("/{paymentId}/cancel")
     @Operation(summary = "Cancel a payment", description = "Cancel a pending payment")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment canceled successfully"),
@@ -120,7 +138,7 @@ public class PaymentController extends BaseController {
         return success(response, PaymentConstants.PAYMENT_CANCELED);
     }
 
-    @PostMapping(ApiPaths.PAYMENT_ID_PARAM + ApiPaths.CAPTURE)
+    @PostMapping("/{paymentId}/capture")
     @Operation(summary = "Capture a payment", description = "Capture an authorized payment")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment captured successfully"),
@@ -138,7 +156,23 @@ public class PaymentController extends BaseController {
 
     // ========== PAYMENT RETRIEVAL ==========
 
-    @GetMapping(ApiPaths.PAYMENT_ID_PARAM)
+    @GetMapping("/my-payments")
+    @Operation(summary = "Get my payments", description = "Retrieve paginated payments for the authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Payments retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required")
+    })
+    public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<PaymentResponse>>> getMyPayments(
+            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+        UserContext userContext = UserContextHolder.requireAuthenticated();
+        log.debug("Getting payments for current user: {} with pagination: {}", userContext.getUserId(), pageable);
+
+        Page<PaymentResponse> payments = paymentService.getPaymentsByUserId(userContext.getUserId(), pageable);
+        PageResponse<PaymentResponse> pageResponse = PageResponse.of(payments);
+        return success(pageResponse, PaymentConstants.PAYMENT_RETRIEVED);
+    }
+
+    @GetMapping("/{paymentId:[0-9]+}")
     @Operation(summary = "Get payment by ID", description = "Retrieve payment details by payment ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment found"),
@@ -153,7 +187,7 @@ public class PaymentController extends BaseController {
                 .orElse(notFound(PaymentConstants.PAYMENT_NOT_FOUND + " with ID: " + paymentId));
     }
 
-    @GetMapping(ApiPaths.NUMBER + ApiPaths.PAYMENT_NUMBER_PARAM)
+    @GetMapping("/number/{paymentNumber}")
     @Operation(summary = "Get payment by number", description = "Retrieve payment details by payment number")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment found"),
@@ -168,7 +202,7 @@ public class PaymentController extends BaseController {
                 .orElse(notFound(PaymentConstants.PAYMENT_NOT_FOUND + " with number: " + paymentNumber));
     }
 
-    @GetMapping(ApiPaths.ORDER + ApiPaths.ORDER_ID_PARAM)
+    @GetMapping("/order/{orderId}")
     @Operation(summary = "Get payments by order ID", description = "Retrieve all payments for an order")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
@@ -181,13 +215,13 @@ public class PaymentController extends BaseController {
         return success(payments, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM)
+    @GetMapping("/user/{userId}")
     @Operation(summary = "Get payments by user ID", description = "Retrieve paginated payments for a user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<PaymentResponse>>> getPaymentsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId,
+            @Parameter(description = "User ID") @PathVariable String userId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         log.debug("Getting payments for user: {} with pagination: {}", userId, pageable);
 
@@ -196,13 +230,13 @@ public class PaymentController extends BaseController {
         return success(pageResponse, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.STATUS + ApiPaths.STATUS_PARAM)
+    @GetMapping("/user/{userId}/status/{status}")
     @Operation(summary = "Get payments by user and status", description = "Retrieve payments for a user with specific status")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getPaymentsByUserIdAndStatus(
-            @Parameter(description = "User ID") @PathVariable Long userId,
+            @Parameter(description = "User ID") @PathVariable String userId,
             @Parameter(description = "Payment status") @PathVariable PaymentStatus status) {
         log.debug("Getting payments for user: {} with status: {}", userId, status);
 
@@ -212,7 +246,7 @@ public class PaymentController extends BaseController {
 
     // ========== PAYMENT STATUS ==========
 
-    @GetMapping(ApiPaths.PAYMENT_ID_PARAM + ApiPaths.STATUS)
+    @GetMapping("/{paymentId}/status")
     @Operation(summary = "Get payment status", description = "Get detailed payment status information")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment status retrieved"),
@@ -226,7 +260,7 @@ public class PaymentController extends BaseController {
         return success(status, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.NUMBER + ApiPaths.PAYMENT_NUMBER_PARAM + ApiPaths.STATUS)
+    @GetMapping("/number/{paymentNumber}/status")
     @Operation(summary = "Get payment status by number", description = "Get payment status by payment number")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment status retrieved"),
@@ -240,7 +274,7 @@ public class PaymentController extends BaseController {
         return success(status, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @PutMapping(ApiPaths.PAYMENT_ID_PARAM + ApiPaths.STATUS)
+    @PutMapping("/{paymentId}/status")
     @Operation(summary = "Update payment status", description = "Update payment status manually")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment status updated"),
@@ -256,7 +290,7 @@ public class PaymentController extends BaseController {
         return success(response, "Payment status updated successfully");
     }
 
-    @PostMapping(ApiPaths.PAYMENT_ID_PARAM + ApiPaths.SYNC)
+    @PostMapping("/{paymentId}/sync")
     @Operation(summary = "Sync payment with Stripe", description = "Synchronize payment status with Stripe")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payment synced successfully"),
@@ -272,14 +306,14 @@ public class PaymentController extends BaseController {
 
     // ========== PAYMENT SEARCH ==========
 
-    @GetMapping(ApiPaths.SEARCH)
+    @GetMapping("/search")
     @Operation(summary = "Search payments", description = "Search payments with various criteria")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
     public ResponseEntity<Page<PaymentResponse>> searchPayments(
             @Parameter(description = "Payment number") @RequestParam(required = false) String paymentNumber,
-            @Parameter(description = "User ID") @RequestParam(required = false) Long userId,
+            @Parameter(description = "User ID") @RequestParam(required = false) String userId,
             @Parameter(description = "Order ID") @RequestParam(required = false) Long orderId,
             @Parameter(description = "Payment status") @RequestParam(required = false) PaymentStatus status,
             @Parameter(description = "Minimum amount") @RequestParam(required = false) BigDecimal minAmount,
@@ -296,30 +330,30 @@ public class PaymentController extends BaseController {
         return ResponseEntity.ok(payments);
     }
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.SUCCESSFUL)
+    @GetMapping("/user/{userId}/successful")
     @Operation(summary = "Get successful payments by user", description = "Get all successful payments for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getSuccessfulPaymentsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting successful payments for user: {}", userId);
 
         List<PaymentResponse> payments = paymentService.getSuccessfulPaymentsByUserId(userId);
         return success(payments, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.FAILED)
+    @GetMapping("/user/{userId}/failed")
     @Operation(summary = "Get failed payments by user", description = "Get all failed payments for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getFailedPaymentsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting failed payments for user: {}", userId);
 
         List<PaymentResponse> payments = paymentService.getFailedPaymentsByUserId(userId);
         return success(payments, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.PENDING)
+    @GetMapping("/user/{userId}/pending")
     @Operation(summary = "Get pending payments by user", description = "Get all pending payments for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getPendingPaymentsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting pending payments for user: {}", userId);
 
         List<PaymentResponse> payments = paymentService.getPendingPaymentsByUserId(userId);
@@ -328,17 +362,17 @@ public class PaymentController extends BaseController {
 
     // ========== PAYMENT STATISTICS ==========
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.STATISTICS)
+    @GetMapping("/user/{userId}/statistics")
     @Operation(summary = "Get payment statistics by user", description = "Get payment statistics for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentService.PaymentStatistics>> getPaymentStatisticsByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting payment statistics for user: {}", userId);
 
         PaymentService.PaymentStatistics statistics = paymentService.getPaymentStatisticsByUserId(userId);
         return success(statistics, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.STATISTICS)
+    @GetMapping("/statistics")
     @Operation(summary = "Get payment statistics by date range", description = "Get payment statistics for a date range")
     public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentService.PaymentStatistics>> getPaymentStatisticsByDateRange(
             @Parameter(description = "Start date") @RequestParam LocalDateTime startDate,
@@ -349,17 +383,17 @@ public class PaymentController extends BaseController {
         return success(statistics, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.USER + ApiPaths.USER_ID_PARAM + ApiPaths.TOTAL_AMOUNT)
+    @GetMapping("/user/{userId}/total-amount")
     @Operation(summary = "Get total payment amount by user", description = "Get total successful payment amount for a user")
     public ResponseEntity<org.de013.common.dto.ApiResponse<BigDecimal>> getTotalPaymentAmountByUserId(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting total payment amount for user: {}", userId);
 
         BigDecimal totalAmount = paymentService.getTotalPaymentAmountByUserId(userId);
         return success(totalAmount, PaymentConstants.PAYMENT_RETRIEVED);
     }
 
-    @GetMapping(ApiPaths.COUNT + ApiPaths.STATUS + ApiPaths.STATUS_PARAM)
+    @GetMapping("/count/status/{status}")
     @Operation(summary = "Get payment count by status", description = "Get count of payments with specific status")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Long>> getPaymentCountByStatus(
             @Parameter(description = "Payment status") @PathVariable PaymentStatus status) {

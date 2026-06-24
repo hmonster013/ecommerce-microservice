@@ -130,11 +130,11 @@ public class VariantInventoryDto {
         if (trackInventory == null || !trackInventory) {
             return true; // If not tracking inventory, assume always available
         }
-        
+
         if (getInStock()) {
             return true;
         }
-        
+
         return allowBackorder != null && allowBackorder;
     }
 

@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class PaymentMethodResponse {
 
     private Long id;
-    private Long userId;
+    private String userId;
     private PaymentMethodType type;
     private String provider;
     private Boolean isDefault;
@@ -124,16 +124,16 @@ public class PaymentMethodResponse {
         }
 
         if (type == PaymentMethodType.CARD && cardInfo != null) {
-            String brand = cardInfo.getBrand() != null ? 
-                cardInfo.getBrand().toUpperCase() : "CARD";
-            String last4 = cardInfo.getMaskedNumber() != null ? 
-                cardInfo.getMaskedNumber().substring(cardInfo.getMaskedNumber().length() - 4) : "****";
+            String brand = cardInfo.getBrand() != null ?
+                    cardInfo.getBrand().toUpperCase() : "CARD";
+            String last4 = cardInfo.getMaskedNumber() != null ?
+                    cardInfo.getMaskedNumber().substring(cardInfo.getMaskedNumber().length() - 4) : "****";
             return brand + " •••• " + last4;
         }
 
         if (type == PaymentMethodType.WALLET && walletInfo != null) {
-            return walletInfo.getDisplayName() != null ? 
-                walletInfo.getDisplayName() : walletInfo.getType();
+            return walletInfo.getDisplayName() != null ?
+                    walletInfo.getDisplayName() : walletInfo.getType();
         }
 
         return getTypeDisplayName();
@@ -154,3 +154,4 @@ public class PaymentMethodResponse {
         return isExpired != null && isExpired;
     }
 }
+

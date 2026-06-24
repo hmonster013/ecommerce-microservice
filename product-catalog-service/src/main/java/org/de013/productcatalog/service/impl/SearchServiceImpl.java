@@ -8,11 +8,11 @@ import org.de013.productcatalog.dto.search.ProductSearchDto;
 import org.de013.productcatalog.dto.search.SearchResultDto;
 import org.de013.productcatalog.entity.Product;
 import org.de013.productcatalog.entity.enums.ProductStatus;
+import org.de013.productcatalog.mapper.ProductMapper;
 import org.de013.productcatalog.repository.CategoryRepository;
 import org.de013.productcatalog.repository.ProductRepository;
 import org.de013.productcatalog.repository.specification.ProductSpecification;
 import org.de013.productcatalog.service.SearchService;
-import org.de013.productcatalog.mapper.ProductMapper;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -42,25 +42,25 @@ public class SearchServiceImpl implements SearchService {
     @Cacheable(value = "search_results", key = "#searchDto.hashCode()")
     public SearchResultDto searchProducts(ProductSearchDto searchDto) {
         log.info("Searching products with criteria: {}", searchDto);
-        
+
         long startTime = System.currentTimeMillis();
-        
+
         // Build specification from search criteria
         Specification<Product> spec = ProductSpecification.buildFromSearchDto(searchDto);
-        
+
         // Create pageable with sorting
         Pageable pageable = createPageable(searchDto);
-        
+
         // Execute search
         Page<Product> products = productRepository.findAll(spec, pageable);
-        
+
         long executionTime = System.currentTimeMillis() - startTime;
-        
+
         // Map to DTOs
         List<ProductSummaryDto> productDtos = products.getContent().stream()
                 .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
-        
+
         // Build search result
         SearchResultDto result = SearchResultDto.builder()
                 .query(searchDto.getQuery())
@@ -70,13 +70,13 @@ public class SearchServiceImpl implements SearchService {
                 .availableFilters(getFiltersForSearchResults(searchDto))
                 .metadata(createSearchMetadata(searchDto, products))
                 .build();
-        
+
         // Enhance results
         result = enhanceSearchResults(result);
-        
+
         // Record search analytics
         recordSearch(searchDto, products.getTotalElements());
-        
+
         log.info("Search completed in {}ms, found {} results", executionTime, products.getTotalElements());
         return result;
     }
@@ -85,11 +85,11 @@ public class SearchServiceImpl implements SearchService {
     @Cacheable(value = "simple_search", key = "#query + '_' + #pageable.hashCode()")
     public PageResponse<ProductSummaryDto> simpleSearch(String query, Pageable pageable) {
         log.debug("Simple search for query: {}", query);
-        
+
         if (!StringUtils.hasText(query)) {
             return getEmptyPageResponse();
         }
-        
+
         Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
     }
@@ -98,11 +98,11 @@ public class SearchServiceImpl implements SearchService {
     @Cacheable(value = "fulltext_search", key = "#query + '_' + #pageable.hashCode()")
     public PageResponse<ProductSummaryDto> fullTextSearch(String query, Pageable pageable) {
         log.debug("Full-text search for query: {}", query);
-        
+
         if (!StringUtils.hasText(query)) {
             return getEmptyPageResponse();
         }
-        
+
         Page<Product> products = productRepository.fullTextSearch(query, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
     }
@@ -110,9 +110,9 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public PageResponse<ProductSummaryDto> advancedSearch(ProductSearchDto searchDto) {
         log.debug("Advanced search with criteria: {}", searchDto);
-        
+
         SearchResultDto result = searchProducts(searchDto);
-        
+
         return PageResponse.<ProductSummaryDto>builder()
                 .content(result.getProducts())
                 .page(searchDto.getPage())
@@ -129,7 +129,7 @@ public class SearchServiceImpl implements SearchService {
     @Cacheable(value = "search_filters", key = "'all'")
     public ProductFilterDto getAvailableFilters() {
         log.debug("Getting all available filters");
-        
+
         return ProductFilterDto.builder()
                 .categories(getCategoryFilters())
                 .brands(getBrandFilters())
@@ -143,38 +143,38 @@ public class SearchServiceImpl implements SearchService {
     @Cacheable(value = "search_filters", key = "#query")
     public ProductFilterDto getAvailableFilters(String query) {
         log.debug("Getting available filters for query: {}", query);
-        
+
         if (!StringUtils.hasText(query)) {
             return getAvailableFilters();
         }
-        
+
         // Get filters based on search results
         ProductSearchDto searchDto = ProductSearchDto.builder()
                 .query(query)
                 .page(0)
                 .size(1000) // Large size to get all results for filtering
                 .build();
-        
+
         return getFiltersForSearchResults(searchDto);
     }
 
     @Override
     public ProductFilterDto getAvailableFilters(List<Long> categoryIds) {
         log.debug("Getting available filters for categories: {}", categoryIds);
-        
+
         ProductSearchDto searchDto = ProductSearchDto.builder()
                 .categoryIds(categoryIds)
                 .page(0)
                 .size(1000)
                 .build();
-        
+
         return getFiltersForSearchResults(searchDto);
     }
 
     @Override
     public ProductFilterDto getFiltersForSearchResults(ProductSearchDto searchDto) {
         log.debug("Getting filters for search results");
-        
+
         // This would typically analyze the search results to provide relevant filters
         // For now, return basic filters
         return getAvailableFilters();
@@ -183,56 +183,56 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public PageResponse<ProductSummaryDto> searchInCategory(Long categoryId, String query, Pageable pageable) {
         log.debug("Searching in category {} with query: {}", categoryId, query);
-        
+
         ProductSearchDto searchDto = ProductSearchDto.builder()
                 .query(query)
                 .categoryIds(List.of(categoryId))
                 .page(pageable.getPageNumber())
                 .size(pageable.getPageSize())
                 .build();
-        
+
         return advancedSearch(searchDto);
     }
 
     @Override
     public PageResponse<ProductSummaryDto> searchInCategories(List<Long> categoryIds, String query, Pageable pageable) {
         log.debug("Searching in categories {} with query: {}", categoryIds, query);
-        
+
         ProductSearchDto searchDto = ProductSearchDto.builder()
                 .query(query)
                 .categoryIds(categoryIds)
                 .page(pageable.getPageNumber())
                 .size(pageable.getPageSize())
                 .build();
-        
+
         return advancedSearch(searchDto);
     }
 
     @Override
     public PageResponse<ProductSummaryDto> searchByBrand(String brand, String query, Pageable pageable) {
         log.debug("Searching by brand {} with query: {}", brand, query);
-        
+
         ProductSearchDto searchDto = ProductSearchDto.builder()
                 .query(query)
                 .brands(List.of(brand))
                 .page(pageable.getPageNumber())
                 .size(pageable.getPageSize())
                 .build();
-        
+
         return advancedSearch(searchDto);
     }
 
     @Override
     public PageResponse<ProductSummaryDto> searchByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
         log.debug("Searching by price range: {} - {}", minPrice, maxPrice);
-        
+
         ProductSearchDto searchDto = ProductSearchDto.builder()
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
                 .page(pageable.getPageNumber())
                 .size(pageable.getPageSize())
                 .build();
-        
+
         return advancedSearch(searchDto);
     }
 
@@ -245,11 +245,11 @@ public class SearchServiceImpl implements SearchService {
     @Cacheable(value = "search_suggestions", key = "#query + '_' + #limit")
     public List<String> getSearchSuggestions(String query, int limit) {
         log.debug("Getting search suggestions for query: {} with limit: {}", query, limit);
-        
+
         if (!StringUtils.hasText(query) || query.length() < 2) {
             return List.of();
         }
-        
+
         // This would typically use a dedicated search suggestion service
         // For now, return basic suggestions based on product names
         return autocompleteProductNames(query, limit);
@@ -259,15 +259,15 @@ public class SearchServiceImpl implements SearchService {
     @Cacheable(value = "autocomplete", key = "'products_' + #query + '_' + #limit")
     public List<String> autocompleteProductNames(String query, int limit) {
         log.debug("Autocompleting product names for query: {} with limit: {}", query, limit);
-        
+
         if (!StringUtils.hasText(query) || query.length() < 2) {
             return List.of();
         }
-        
+
         // Simple implementation - would be enhanced with proper search engine
         Pageable pageable = PageRequest.of(0, limit);
         Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE.name(), pageable);
-        
+
         return products.getContent().stream()
                 .map(Product::getName)
                 .distinct()
@@ -290,7 +290,7 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public SearchResultDto enhanceSearchResults(SearchResultDto results) {
         log.debug("Enhancing search results");
-        
+
         // Add suggestions if no results
         if (results.getProducts().isEmpty() && StringUtils.hasText(results.getQuery())) {
             results.setSuggestions(getSearchSuggestions(results.getQuery()));
@@ -306,9 +306,9 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private Sort createSort(String sortBy, String direction) {
-        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction) ? 
+        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction) ?
                 Sort.Direction.DESC : Sort.Direction.ASC;
-        
+
         return switch (sortBy.toLowerCase()) {
             case "name" -> Sort.by(sortDirection, "name");
             case "price" -> Sort.by(sortDirection, "price");
@@ -335,7 +335,7 @@ public class SearchServiceImpl implements SearchService {
         List<ProductSummaryDto> content = products.getContent().stream()
                 .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
-        
+
         return PageResponse.<ProductSummaryDto>builder()
                 .content(content)
                 .page(products.getNumber())

@@ -20,8 +20,10 @@ import org.de013.paymentservice.repository.RefundRepository;
 import org.de013.paymentservice.util.PaymentNumberGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -329,7 +331,7 @@ public class RefundServiceImpl implements RefundService {
 
         Payment payment = paymentOpt.get();
         return payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED &&
-               !payment.isFullyRefunded();
+                !payment.isFullyRefunded();
     }
 
     @Override
@@ -367,10 +369,41 @@ public class RefundServiceImpl implements RefundService {
             String refundType, BigDecimal minAmount, BigDecimal maxAmount,
             LocalDateTime startDate, LocalDateTime endDate, String initiatedBy, Pageable pageable) {
 
-        return refundRepository.searchRefunds(
-                refundNumber, paymentId, orderId, status, refundType, minAmount, maxAmount,
-                startDate, endDate, initiatedBy, pageable)
-                .map(refundMapper::toRefundResponse);
+        Specification<Refund> spec = Specification.where(null);
+
+        if (StringUtils.hasText(refundNumber)) {
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("refundNumber")), "%" + refundNumber.toLowerCase() + "%"));
+        }
+        if (paymentId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("paymentId"), paymentId));
+        }
+        if (orderId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("orderId"), orderId));
+        }
+        if (status != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+        if (StringUtils.hasText(refundType)) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("refundType"), refundType));
+        }
+        if (minAmount != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("amount"), minAmount));
+        }
+        if (maxAmount != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("amount"), maxAmount));
+        }
+        if (startDate != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("createdAt"), startDate));
+        }
+        if (endDate != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("createdAt"), endDate));
+        }
+        if (StringUtils.hasText(initiatedBy)) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("initiatedBy"), initiatedBy));
+        }
+
+        return refundRepository.findAll(spec, pageable).map(refundMapper::toRefundResponse);
     }
 
     @Override

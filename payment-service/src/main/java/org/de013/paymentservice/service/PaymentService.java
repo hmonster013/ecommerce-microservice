@@ -1,8 +1,8 @@
 package org.de013.paymentservice.service;
 
-import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
+import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.springframework.data.domain.Page;
@@ -65,12 +65,12 @@ public interface PaymentService {
     /**
      * Get payments by user ID
      */
-    Page<PaymentResponse> getPaymentsByUserId(Long userId, Pageable pageable);
+    Page<PaymentResponse> getPaymentsByUserId(String userId, Pageable pageable);
 
     /**
      * Get payments by user ID and status
      */
-    List<PaymentResponse> getPaymentsByUserIdAndStatus(Long userId, PaymentStatus status);
+    List<PaymentResponse> getPaymentsByUserIdAndStatus(String userId, PaymentStatus status);
 
     // ========== PAYMENT STATUS ==========
 
@@ -109,7 +109,7 @@ public interface PaymentService {
     /**
      * Validate user can make payment
      */
-    void validateUserCanMakePayment(Long userId);
+    void validateUserCanMakePayment(String userId);
 
     /**
      * Check if payment can be canceled
@@ -133,7 +133,7 @@ public interface PaymentService {
      */
     Page<PaymentResponse> searchPayments(
             String paymentNumber,
-            Long userId,
+            String userId,
             Long orderId,
             PaymentStatus status,
             BigDecimal minAmount,
@@ -146,24 +146,24 @@ public interface PaymentService {
     /**
      * Get successful payments by user
      */
-    List<PaymentResponse> getSuccessfulPaymentsByUserId(Long userId);
+    List<PaymentResponse> getSuccessfulPaymentsByUserId(String userId);
 
     /**
      * Get failed payments by user
      */
-    List<PaymentResponse> getFailedPaymentsByUserId(Long userId);
+    List<PaymentResponse> getFailedPaymentsByUserId(String userId);
 
     /**
      * Get pending payments by user
      */
-    List<PaymentResponse> getPendingPaymentsByUserId(Long userId);
+    List<PaymentResponse> getPendingPaymentsByUserId(String userId);
 
     // ========== PAYMENT STATISTICS ==========
 
     /**
      * Get payment statistics by user ID
      */
-    PaymentStatistics getPaymentStatisticsByUserId(Long userId);
+    PaymentStatistics getPaymentStatisticsByUserId(String userId);
 
     /**
      * Get payment statistics by date range
@@ -173,7 +173,7 @@ public interface PaymentService {
     /**
      * Get total payment amount by user
      */
-    BigDecimal getTotalPaymentAmountByUserId(Long userId);
+    BigDecimal getTotalPaymentAmountByUserId(String userId);
 
     /**
      * Get payment count by status
@@ -217,5 +217,6 @@ public interface PaymentService {
             BigDecimal averageAmount,
             LocalDateTime firstPaymentDate,
             LocalDateTime lastPaymentDate
-    ) {}
+    ) {
+    }
 }

@@ -14,10 +14,10 @@ import java.io.Serializable;
 
 /**
  * Address Value Object
- * 
+ * <p>
  * Represents a complete address with validation and formatting capabilities.
  * This is an embeddable value object that can be used in various entities.
- * 
+ *
  * @author Development Team
  * @version 1.0.0
  */
@@ -30,9 +30,9 @@ import java.io.Serializable;
 @ToString
 @EqualsAndHashCode
 public class Address implements Serializable {
-    
+
     private static final long serialVersionUID = 1L;
-    
+
     /**
      * First name of the recipient
      */
@@ -67,7 +67,7 @@ public class Address implements Serializable {
     @NotBlank(message = "Street address is required")
     @Size(max = 255, message = "Street address must not exceed 255 characters")
     private String streetAddress;
-    
+
     /**
      * Street address line 2 (optional)
      */
@@ -102,7 +102,7 @@ public class Address implements Serializable {
     @NotBlank(message = "Postal code is required")
     @Size(max = 20, message = "Postal code must not exceed 20 characters")
     private String postalCode;
-    
+
     /**
      * Country code (ISO 3166-1 alpha-2)
      */
@@ -129,9 +129,9 @@ public class Address implements Serializable {
     @Column(name = "email", length = 255)
     @Size(max = 255, message = "Email must not exceed 255 characters")
     @Pattern(regexp = "^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$",
-             message = "Invalid email format")
+            message = "Invalid email format")
     private String email;
-    
+
     /**
      * Special delivery instructions
      */
@@ -156,7 +156,7 @@ public class Address implements Serializable {
     @Column(name = "is_residential")
     @Builder.Default
     private Boolean isResidential = true;
-    
+
     /**
      * Get the full name (first + last name)
      *
@@ -165,21 +165,21 @@ public class Address implements Serializable {
     @JsonIgnore
     public String getFullName() {
         StringBuilder fullName = new StringBuilder();
-        
+
         if (StringUtils.isNotBlank(firstName)) {
             fullName.append(firstName.trim());
         }
-        
+
         if (StringUtils.isNotBlank(lastName)) {
             if (fullName.length() > 0) {
                 fullName.append(" ");
             }
             fullName.append(lastName.trim());
         }
-        
+
         return fullName.toString();
     }
-    
+
     /**
      * Get the complete street address (line 1 + line 2)
      *
@@ -188,21 +188,21 @@ public class Address implements Serializable {
     @JsonIgnore
     public String getCompleteStreetAddress() {
         StringBuilder address = new StringBuilder();
-        
+
         if (StringUtils.isNotBlank(streetAddress)) {
             address.append(streetAddress.trim());
         }
-        
+
         if (StringUtils.isNotBlank(streetAddress2)) {
             if (address.length() > 0) {
                 address.append(", ");
             }
             address.append(streetAddress2.trim());
         }
-        
+
         return address.toString();
     }
-    
+
     /**
      * Get formatted address as a single line
      *
@@ -211,13 +211,13 @@ public class Address implements Serializable {
     @JsonIgnore
     public String getFormattedSingleLine() {
         StringBuilder formatted = new StringBuilder();
-        
+
         // Add street address
         String completeStreet = getCompleteStreetAddress();
         if (StringUtils.isNotBlank(completeStreet)) {
             formatted.append(completeStreet);
         }
-        
+
         // Add city
         if (StringUtils.isNotBlank(city)) {
             if (formatted.length() > 0) {
@@ -225,7 +225,7 @@ public class Address implements Serializable {
             }
             formatted.append(city.trim());
         }
-        
+
         // Add state
         if (StringUtils.isNotBlank(state)) {
             if (formatted.length() > 0) {
@@ -233,7 +233,7 @@ public class Address implements Serializable {
             }
             formatted.append(state.trim());
         }
-        
+
         // Add postal code
         if (StringUtils.isNotBlank(postalCode)) {
             if (formatted.length() > 0) {
@@ -241,7 +241,7 @@ public class Address implements Serializable {
             }
             formatted.append(postalCode.trim());
         }
-        
+
         // Add country
         if (StringUtils.isNotBlank(country)) {
             if (formatted.length() > 0) {
@@ -249,10 +249,10 @@ public class Address implements Serializable {
             }
             formatted.append(country.trim());
         }
-        
+
         return formatted.toString();
     }
-    
+
     /**
      * Get formatted address as multiple lines
      *
@@ -261,59 +261,59 @@ public class Address implements Serializable {
     @JsonIgnore
     public String getFormattedMultiLine() {
         StringBuilder formatted = new StringBuilder();
-        
+
         // Add recipient name
         String fullName = getFullName();
         if (StringUtils.isNotBlank(fullName)) {
             formatted.append(fullName).append("\n");
         }
-        
+
         // Add company if present
         if (StringUtils.isNotBlank(company)) {
             formatted.append(company.trim()).append("\n");
         }
-        
+
         // Add street address
         if (StringUtils.isNotBlank(streetAddress)) {
             formatted.append(streetAddress.trim()).append("\n");
         }
-        
+
         if (StringUtils.isNotBlank(streetAddress2)) {
             formatted.append(streetAddress2.trim()).append("\n");
         }
-        
+
         // Add city, state, postal code
         StringBuilder cityLine = new StringBuilder();
         if (StringUtils.isNotBlank(city)) {
             cityLine.append(city.trim());
         }
-        
+
         if (StringUtils.isNotBlank(state)) {
             if (cityLine.length() > 0) {
                 cityLine.append(", ");
             }
             cityLine.append(state.trim());
         }
-        
+
         if (StringUtils.isNotBlank(postalCode)) {
             if (cityLine.length() > 0) {
                 cityLine.append(" ");
             }
             cityLine.append(postalCode.trim());
         }
-        
+
         if (cityLine.length() > 0) {
             formatted.append(cityLine).append("\n");
         }
-        
+
         // Add country
         if (StringUtils.isNotBlank(country)) {
             formatted.append(country.trim());
         }
-        
+
         return formatted.toString().trim();
     }
-    
+
     /**
      * Check if this address is complete and valid for shipping
      *
@@ -322,14 +322,14 @@ public class Address implements Serializable {
     @JsonIgnore
     public boolean isComplete() {
         return StringUtils.isNotBlank(firstName) &&
-               StringUtils.isNotBlank(lastName) &&
-               StringUtils.isNotBlank(streetAddress) &&
-               StringUtils.isNotBlank(city) &&
-               StringUtils.isNotBlank(state) &&
-               StringUtils.isNotBlank(postalCode) &&
-               StringUtils.isNotBlank(country);
+                StringUtils.isNotBlank(lastName) &&
+                StringUtils.isNotBlank(streetAddress) &&
+                StringUtils.isNotBlank(city) &&
+                StringUtils.isNotBlank(state) &&
+                StringUtils.isNotBlank(postalCode) &&
+                StringUtils.isNotBlank(country);
     }
-    
+
     /**
      * Check if this is a domestic address (same country as business)
      *
@@ -338,11 +338,11 @@ public class Address implements Serializable {
      */
     @JsonIgnore
     public boolean isDomestic(String businessCountry) {
-        return StringUtils.isNotBlank(country) && 
-               StringUtils.isNotBlank(businessCountry) &&
-               country.equalsIgnoreCase(businessCountry);
+        return StringUtils.isNotBlank(country) &&
+                StringUtils.isNotBlank(businessCountry) &&
+                country.equalsIgnoreCase(businessCountry);
     }
-    
+
     /**
      * Normalize the address (trim whitespace, uppercase country code, etc.)
      */

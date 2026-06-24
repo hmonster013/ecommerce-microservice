@@ -1,13 +1,13 @@
 package org.de013.paymentservice.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.de013.paymentservice.entity.enums.TransactionType;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,19 +17,19 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "payment_transactions", indexes = {
-    @Index(name = "idx_payment_id", columnList = "paymentId"),
-    @Index(name = "idx_type", columnList = "type"),
-    @Index(name = "idx_status", columnList = "status"),
-    @Index(name = "idx_stripe_charge_id", columnList = "stripeChargeId", unique = true),
-    @Index(name = "idx_stripe_transfer_group", columnList = "stripeTransferGroup"),
-    @Index(name = "idx_created_at", columnList = "createdAt")
+        @Index(name = "idx_payment_id", columnList = "paymentId"),
+        @Index(name = "idx_type", columnList = "type"),
+        @Index(name = "idx_status", columnList = "status"),
+        @Index(name = "idx_stripe_charge_id", columnList = "stripeChargeId", unique = true),
+        @Index(name = "idx_stripe_transfer_group", columnList = "stripeTransferGroup"),
+        @Index(name = "idx_created_at", columnList = "createdAt")
 })
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class PaymentTransaction extends BaseEntity{
+public class PaymentTransaction extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_id", nullable = false)
@@ -106,9 +106,9 @@ public class PaymentTransaction extends BaseEntity{
     }
 
     public boolean requiresAction() {
-        return status == PaymentStatus.REQUIRES_ACTION || 
-               status == PaymentStatus.REQUIRES_CONFIRMATION ||
-               status == PaymentStatus.REQUIRES_PAYMENT_METHOD;
+        return status == PaymentStatus.REQUIRES_ACTION ||
+                status == PaymentStatus.REQUIRES_CONFIRMATION ||
+                status == PaymentStatus.REQUIRES_PAYMENT_METHOD;
     }
 
     public void markAsProcessed() {

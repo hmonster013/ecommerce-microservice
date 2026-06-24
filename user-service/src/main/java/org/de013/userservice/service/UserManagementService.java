@@ -1,9 +1,11 @@
 package org.de013.userservice.service;
 
 import org.de013.common.dto.PageResponse;
-import org.de013.userservice.dto.*;
+import org.de013.userservice.dto.UserProfileDto;
+import org.de013.userservice.dto.UserRegistrationDto;
+import org.de013.userservice.dto.UserResponse;
+import org.de013.userservice.dto.UserUpdateDto;
 import org.de013.userservice.entity.User;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
@@ -19,6 +21,7 @@ public interface UserManagementService {
 
     /**
      * Register a new user
+     *
      * @param request User registration details
      * @return User response DTO
      */
@@ -26,6 +29,7 @@ public interface UserManagementService {
 
     /**
      * Create a new user (admin function)
+     *
      * @param request User creation details
      * @return User response DTO
      */
@@ -35,6 +39,7 @@ public interface UserManagementService {
 
     /**
      * Get user by ID
+     *
      * @param id User ID
      * @return User response DTO
      */
@@ -42,6 +47,7 @@ public interface UserManagementService {
 
     /**
      * Get user by username
+     *
      * @param username Username
      * @return User response DTO
      */
@@ -49,6 +55,7 @@ public interface UserManagementService {
 
     /**
      * Get user by email
+     *
      * @param email Email address
      * @return User response DTO
      */
@@ -56,6 +63,7 @@ public interface UserManagementService {
 
     /**
      * Find user entity by username (internal use)
+     *
      * @param username Username
      * @return User entity
      */
@@ -63,6 +71,7 @@ public interface UserManagementService {
 
     /**
      * Find user entity by ID (internal use)
+     *
      * @param id User ID
      * @return User entity
      */
@@ -72,6 +81,7 @@ public interface UserManagementService {
 
     /**
      * Get user profile
+     *
      * @param username Username
      * @return User profile DTO
      */
@@ -79,8 +89,9 @@ public interface UserManagementService {
 
     /**
      * Update user profile
+     *
      * @param username Username
-     * @param request Profile update details
+     * @param request  Profile update details
      * @return Updated user response DTO
      */
     UserResponse updateUserProfile(String username, UserUpdateDto request);
@@ -91,6 +102,7 @@ public interface UserManagementService {
 
     /**
      * Get all users with pagination
+     *
      * @param pageable Pagination parameters
      * @return Page of user responses
      */
@@ -98,101 +110,37 @@ public interface UserManagementService {
 
     /**
      * Search users by keyword
-     * @param keyword Search keyword
+     *
+     * @param keyword  Search keyword
      * @param pageable Pagination parameters
      * @return Page of user responses
      */
     PageResponse<UserResponse> searchUsers(String keyword, Pageable pageable);
 
     /**
-     * Get users by role
-     * @param roleName Role name
-     * @return List of user responses
-     */
-    List<UserResponse> getUsersByRole(String roleName);
-
-    /**
-     * Get active users
-     * @return List of active user responses
-     */
-    List<UserResponse> getActiveUsers();
-
-    /**
      * Get users created in date range
+     *
      * @param startDate Start date
-     * @param endDate End date
-     * @param pageable Pagination parameters
+     * @param endDate   End date
+     * @param pageable  Pagination parameters
      * @return Page of user responses
      */
     PageResponse<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
-    // ========== User Status Management ==========
-
-    /**
-     * Enable user account
-     * @param userId User ID
-     */
-    void enableUser(Long userId);
-
-    /**
-     * Disable user account
-     * @param userId User ID
-     */
-    void disableUser(Long userId);
-
-    /**
-     * Lock user account
-     * @param userId User ID
-     */
-    void lockUser(Long userId);
-
-    /**
-     * Unlock user account
-     * @param userId User ID
-     */
-    void unlockUser(Long userId);
-
-    // ========== User Role Management ==========
-
-    /**
-     * Assign role to user
-     * @param userId User ID
-     * @param roleName Role name
-     */
-    void assignRole(Long userId, String roleName);
-
-    /**
-     * Remove role from user
-     * @param userId User ID
-     * @param roleName Role name
-     */
-    void removeRole(Long userId, String roleName);
-
-    /**
-     * Update user roles
-     * @param userId User ID
-     * @param roleNames List of role names
-     */
-    void updateUserRoles(Long userId, List<String> roleNames);
-
-    // ========== User Deletion ==========
+    // ========== User Administration ==========
 
     /**
      * Delete user by ID
+     *
      * @param userId User ID
      */
     void deleteUser(Long userId);
-
-    /**
-     * Soft delete user (disable instead of actual deletion)
-     * @param userId User ID
-     */
-    void softDeleteUser(Long userId);
 
     // ========== Validation Methods ==========
 
     /**
      * Check if username exists
+     *
      * @param username Username
      * @return true if exists, false otherwise
      */
@@ -200,6 +148,7 @@ public interface UserManagementService {
 
     /**
      * Check if email exists
+     *
      * @param email Email address
      * @return true if exists, false otherwise
      */
@@ -207,15 +156,17 @@ public interface UserManagementService {
 
     /**
      * Validate username availability for update
+     *
      * @param username Username
-     * @param userId Current user ID
+     * @param userId   Current user ID
      * @return true if available, false otherwise
      */
     boolean isUsernameAvailableForUpdate(String username, Long userId);
 
     /**
      * Validate email availability for update
-     * @param email Email address
+     *
+     * @param email  Email address
      * @param userId Current user ID
      * @return true if available, false otherwise
      */

@@ -50,25 +50,25 @@ public class CartItemServiceImpl implements CartItemService {
     public CartItemResponseDto addItemToCart(Long cartId, AddToCartDto request) {
         try {
             log.debug("Adding item {} to cart {}", request.getProductId(), cartId);
-            
+
             // Get cart
             Optional<Cart> cartOpt = cartRepository.findByIdWithItems(cartId);
             if (cartOpt.isEmpty()) {
                 throw new RuntimeException("Cart not found");
             }
-            
+
             Cart cart = cartOpt.get();
-            
+
             // Validate cart can be modified
             if (!cart.canBeModified()) {
                 log.error("Cart {} cannot be modified - Status: {}, Expired: {}, ExpiresAt: {}",
-                         cartId, cart.getStatus(), cart.isExpired(), cart.getExpiresAt());
+                        cartId, cart.getStatus(), cart.isExpired(), cart.getExpiresAt());
                 throw new RuntimeException("Cart cannot be modified");
             }
-            
+
             // Debug logging
             log.debug("Request details: productId={}, quantity={}, variantId={}",
-                     request.getProductId(), request.getQuantity(), request.getVariantId());
+                    request.getProductId(), request.getQuantity(), request.getVariantId());
 
             // Get product information
             ProductDetailDto productInfo = productCatalogClient.getProductInfo(request.getProductId());
@@ -77,12 +77,12 @@ public class CartItemServiceImpl implements CartItemService {
             }
 
             log.debug("Product info - current price: {}, original price: {}",
-                     productInfo.getCurrentPrice(), productInfo.getOriginalPrice());
-            
+                    productInfo.getCurrentPrice(), productInfo.getOriginalPrice());
+
             // Check if item already exists
             Optional<CartItem> existingItem = cartItemRepository.findByCartIdAndProductIdAndVariantId(
-                cartId, request.getProductId(), request.getVariantId());
-            
+                    cartId, request.getProductId(), request.getVariantId());
+
             CartItem cartItem;
             if (existingItem.isPresent()) {
                 // Update existing item
@@ -94,25 +94,25 @@ public class CartItemServiceImpl implements CartItemService {
                 cartItem = createNewCartItem(cart, request, productInfo);
                 cart.addItem(cartItem);
             }
-            
+
             // Basic validation - check required fields
             if (cartItem.getQuantity() <= 0) {
                 throw new RuntimeException("Invalid quantity");
             }
-            
+
             // Save item
             cartItem = cartItemRepository.save(cartItem);
-            
+
             // Update Redis
             updateRedisCart(cartId);
-            
+
             // Analytics removed for basic functionality
-            
-            log.info("Added item {} to cart {}, quantity: {}", 
+
+            log.info("Added item {} to cart {}, quantity: {}",
                     request.getProductId(), cartId, request.getQuantity());
-            
+
             return convertToResponseDto(cartItem);
-            
+
         } catch (Exception e) {
             log.error("Error adding item to cart: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to add item to cart", e);
@@ -133,14 +133,14 @@ public class CartItemServiceImpl implements CartItemService {
             if (itemOpt.isEmpty()) {
                 throw new RuntimeException("Cart item not found");
             }
-            
+
             CartItem item = itemOpt.get();
-            
+
             // Validate cart can be modified
             if (!item.getCart().canBeModified()) {
                 throw new RuntimeException("Cart cannot be modified");
             }
-            
+
             // Update fields
             if (request.getQuantity() != null) {
                 item.updateQuantity(request.getQuantity());
@@ -153,31 +153,31 @@ public class CartItemServiceImpl implements CartItemService {
             if (request.isRefreshPrice()) {
                 refreshItemPrice(item);
             }
-            
+
             if (request.getSpecialInstructions() != null) {
                 item.setSpecialInstructions(request.getSpecialInstructions());
             }
-            
+
             if (request.getIsGift() != null) {
                 item.setIsGift(request.getIsGift());
                 item.setGiftMessage(request.getGiftMessage());
                 item.setGiftWrapType(request.getGiftWrapType());
             }
-            
+
             // Basic validation - check required fields
             if (item.getQuantity() <= 0) {
                 throw new RuntimeException("Invalid quantity");
             }
-            
+
             // Save item
             item = cartItemRepository.save(item);
-            
+
             // Update Redis
             updateRedisCart(item.getCart().getId());
-            
+
             log.info("Updated cart item {}", itemId);
             return convertToResponseDto(item);
-            
+
         } catch (Exception e) {
             log.error("Error updating cart item: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to update cart item", e);
@@ -267,15 +267,6 @@ public class CartItemServiceImpl implements CartItemService {
             return false;
         }
     }
-
-
-
-
-
-
-
-
-
 
 
     // ==================== CART CALCULATIONS ====================
@@ -376,11 +367,15 @@ public class CartItemServiceImpl implements CartItemService {
 
             ProductDetailDto productInfo = productCatalogClient.getProductInfo(item.getProductId());
             if (productInfo != null && productInfo.getCurrentPrice() != null) {
-                BigDecimal newPrice = productInfo.getCurrentPrice();
-                if (!newPrice.equals(item.getUnitPrice())) {
-                    log.info("Updating price for product {} from {} to {}",
-                            item.getProductId(), item.getUnitPrice(), newPrice);
-                    item.updateUnitPrice(newPrice);
+                // Keep list-price semantics: unitPrice = current + per-unit discount, so net stays correct
+                BigDecimal discountPerUnit = productInfo.getDiscountAmount() != null ?
+                        productInfo.getDiscountAmount() : BigDecimal.ZERO;
+                BigDecimal newListPrice = productInfo.getCurrentPrice().add(discountPerUnit);
+                if (!newListPrice.equals(item.getUnitPrice())) {
+                    log.info("Updating price for product {} from {} to {} (discount/unit {})",
+                            item.getProductId(), item.getUnitPrice(), newListPrice, discountPerUnit);
+                    item.setDiscountAmount(discountPerUnit);
+                    item.updateUnitPrice(newListPrice);
                 }
             }
         } catch (Exception e) {
@@ -390,25 +385,32 @@ public class CartItemServiceImpl implements CartItemService {
     }
 
     private CartItem createNewCartItem(Cart cart, AddToCartDto request, ProductDetailDto productInfo) {
-        // Always use price from Product Catalog for security - never trust client-provided prices
-        BigDecimal finalUnitPrice = productInfo.getCurrentPrice() != null ?
-                                   productInfo.getCurrentPrice() : BigDecimal.ZERO;
+        // Always use price from Product Catalog for security - never trust client-provided prices.
+        // Store unitPrice as the list price (per unit) so that (unitPrice - discountAmount) equals the
+        // net price actually charged. This keeps the discount applied exactly once in cart and order totals.
+        BigDecimal currentPrice = productInfo.getCurrentPrice() != null ?
+                productInfo.getCurrentPrice() : BigDecimal.ZERO;
+        BigDecimal discountPerUnit = productInfo.getDiscountAmount() != null ?
+                productInfo.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal listUnitPrice = currentPrice.add(discountPerUnit);
 
-        log.debug("Creating cart item - productInfo.currentPrice: {}, final unitPrice: {}",
-                 productInfo.getCurrentPrice(), finalUnitPrice);
+        log.debug("Creating cart item - currentPrice: {}, discountPerUnit: {}, listUnitPrice: {}",
+                currentPrice, discountPerUnit, listUnitPrice);
 
         return CartItem.builder()
                 .cart(cart)
                 .productId(request.getProductId())
                 .productSku(productInfo.getSku())
                 .productName(productInfo.getName())
+                .productBrand(productInfo.getBrand())
                 .productDescription(productInfo.getDescription())
                 .productImageUrl(productInfo.getImageUrl())
                 .categoryId(productInfo.getCategoryId())
                 .categoryName(productInfo.getCategoryName())
                 .quantity(request.getQuantity())
-                .unitPrice(finalUnitPrice)
+                .unitPrice(listUnitPrice)
                 .originalPrice(productInfo.getOriginalPrice())
+                .discountAmount(discountPerUnit)
                 .currency("USD")
                 .variantId(request.getVariantId())
                 .specialInstructions(request.getSpecialInstructions())
@@ -441,13 +443,13 @@ public class CartItemServiceImpl implements CartItemService {
     }
 
 
-
     private CartItemResponseDto convertToResponseDto(CartItem item) {
         return CartItemResponseDto.builder()
                 .itemId(item.getId())
                 .productId(item.getProductId())
                 .productSku(item.getProductSku())
                 .productName(item.getProductName())
+                .productBrand(item.getProductBrand())
                 .productDescription(item.getProductDescription())
                 .productImageUrl(item.getProductImageUrl())
                 .categoryId(item.getCategoryId())

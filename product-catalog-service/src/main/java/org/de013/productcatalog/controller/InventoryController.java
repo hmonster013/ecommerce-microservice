@@ -6,12 +6,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.InventoryDto;
 import org.de013.productcatalog.service.InventoryService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -25,10 +23,10 @@ public class InventoryController extends BaseController {
 
     @Operation(summary = "Get product inventory", description = "Retrieve inventory information for a specific product")
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Inventory retrieved successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product or inventory not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Inventory retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product or inventory not found")
     })
-    @GetMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY)
+    @GetMapping("/products/{id}/inventory")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> getProductInventory(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id) {
@@ -41,7 +39,7 @@ public class InventoryController extends BaseController {
 
     // Stock Management Operations
     @Operation(summary = "[ADMIN] Add stock", description = "Add stock to a product")
-    @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.ADD)
+    @PostMapping("/products/{id}/inventory/add")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> addStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -55,7 +53,7 @@ public class InventoryController extends BaseController {
     }
 
     @Operation(summary = "[ADMIN] Remove stock", description = "Remove stock from a product")
-    @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.REMOVE)
+    @PostMapping("/products/{id}/inventory/remove")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> removeStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -69,7 +67,7 @@ public class InventoryController extends BaseController {
     }
 
     @Operation(summary = "[ADMIN] Set stock level", description = "Set exact stock level for a product")
-    @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.SET)
+    @PostMapping("/products/{id}/inventory/set")
     public ResponseEntity<org.de013.common.dto.ApiResponse<InventoryDto>> setStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -84,7 +82,7 @@ public class InventoryController extends BaseController {
 
     // Stock Reservation Operations
     @Operation(summary = "[ADMIN] Reserve stock", description = "Reserve stock for an order")
-    @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.RESERVE)
+    @PostMapping("/products/{id}/inventory/reserve")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> reserveStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -102,7 +100,7 @@ public class InventoryController extends BaseController {
     }
 
     @Operation(summary = "[ADMIN] Release reserved stock", description = "Release previously reserved stock")
-    @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.RELEASE)
+    @PostMapping("/products/{id}/inventory/release")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> releaseReservedStock(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -120,7 +118,7 @@ public class InventoryController extends BaseController {
     }
 
     @Operation(summary = "[ADMIN] Fulfill order", description = "Fulfill an order by reducing stock and reserved quantity")
-    @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.FULFILL)
+    @PostMapping("/products/{id}/inventory/fulfill")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> fulfillOrder(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -138,7 +136,7 @@ public class InventoryController extends BaseController {
     }
 
     @Operation(summary = "Check stock availability", description = "Check if sufficient stock is available for an order")
-    @GetMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.INVENTORY + ApiPaths.CHECK)
+    @GetMapping("/products/{id}/inventory/check")
     public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> checkStockAvailability(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,

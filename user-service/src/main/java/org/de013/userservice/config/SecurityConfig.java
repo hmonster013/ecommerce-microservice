@@ -1,22 +1,15 @@
 package org.de013.userservice.config;
 
 import lombok.RequiredArgsConstructor;
-import org.de013.common.constant.ApiPaths;
 import org.de013.userservice.security.HeaderAuthenticationFilter;
 import org.de013.userservice.security.HeaderAuthenticationProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -27,7 +20,7 @@ import java.util.Arrays;
 
 /**
  * Security configuration for User Service
- *
+ * <p>
  * Architecture: API Gateway-First with Keycloak
  * - All requests come through API Gateway (validates JWT with Keycloak)
  * - API Gateway forwards user context via headers (X-User-Id = Keycloak UUID)
@@ -59,8 +52,8 @@ public class SecurityConfig {
                 // Trust internal network - API Gateway handles authorization
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
-                        .requestMatchers(ApiPaths.USERS + "/internal/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v1/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
+                        .requestMatchers("/users/internal/**").permitAll()
                         .anyRequest().permitAll()
                 )
 
@@ -98,8 +91,7 @@ public class SecurityConfig {
                 // API Gateway headers
                 "X-User-Id",
                 "X-User-Username",
-                "X-User-Email",
-                "X-User-Roles"
+                "X-User-Email"
         ));
 
         configuration.setAllowCredentials(true);

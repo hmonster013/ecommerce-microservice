@@ -33,7 +33,7 @@ public interface NotificationService {
     /**
      * Send push notification
      */
-    void sendPushNotification(Long userId, String title, String message, Map<String, Object> data);
+    void sendPushNotification(String userId, String title, String message, Map<String, Object> data);
 
     /**
      * Send webhook notification
@@ -43,7 +43,8 @@ public interface NotificationService {
     /**
      * Send notification to multiple channels
      */
-    void sendMultiChannelNotification(Long userId, String email, String phoneNumber,
-                                    String subject, String message, Map<String, Object> data,
-                                    boolean sendEmail, boolean sendSms, boolean sendPush);
+    void sendMultiChannelNotification(String userId, String email, String phoneNumber,
+                                      String subject, String message, Map<String, Object> data,
+                                      boolean sendEmail, boolean sendSms, boolean sendPush);
 }
+

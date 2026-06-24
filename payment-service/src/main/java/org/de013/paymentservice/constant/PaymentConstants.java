@@ -1,6 +1,5 @@
 package org.de013.paymentservice.constant;
 
-import org.de013.common.constant.ApiPaths;
 
 /**
  * Constants for Payment Service
@@ -13,10 +12,10 @@ public final class PaymentConstants {
     }
 
     // ========== API Paths ==========
-    public static final String API_V1_PAYMENTS = ApiPaths.API + ApiPaths.V1 + ApiPaths.PAYMENTS;
-    public static final String API_V1_PAYMENT_METHODS = ApiPaths.API + ApiPaths.V1 + ApiPaths.PAYMENT_METHODS;
-    public static final String API_V1_REFUNDS = ApiPaths.API + ApiPaths.V1 + ApiPaths.REFUNDS;
-    public static final String API_V1_WEBHOOKS = ApiPaths.API + ApiPaths.V1 + ApiPaths.WEBHOOKS;
+    public static final String API_V1_PAYMENTS = "/api/v1/payments";
+    public static final String API_V1_PAYMENT_METHODS = "/api/v1/payment-methods";
+    public static final String API_V1_REFUNDS = "/api/v1/refunds";
+    public static final String API_V1_WEBHOOKS = "/api/v1/webhooks";
 
     // ========== Payment Messages ==========
     public static final String PAYMENT_PROCESSED = "Payment processed successfully";

@@ -23,7 +23,7 @@ public class PaymentGatewayFactory {
 
     private final PaymentGatewayConfig config;
     private final StripePaymentGateway stripePaymentGateway;
-    
+
     private final Map<String, PaymentGateway> gateways = new HashMap<>();
 
     /**
@@ -32,7 +32,7 @@ public class PaymentGatewayFactory {
     @EventListener(ApplicationReadyEvent.class)
     public void initializeGateways() {
         log.info("Initializing payment gateways...");
-        
+
         // Initialize Stripe gateway
         if (config.getGateways().getStripe().isEnabled()) {
             try {
@@ -62,7 +62,7 @@ public class PaymentGatewayFactory {
 
         String upperProvider = provider.toUpperCase();
         PaymentGateway gateway = gateways.get(upperProvider);
-        
+
         if (gateway == null) {
             throw new PaymentGatewayException("Payment gateway not found or not enabled: " + provider);
         }
@@ -130,11 +130,11 @@ public class PaymentGatewayFactory {
      */
     public Map<String, Boolean> performHealthCheck() {
         Map<String, Boolean> healthStatus = new HashMap<>();
-        
+
         for (Map.Entry<String, PaymentGateway> entry : gateways.entrySet()) {
             String provider = entry.getKey();
             PaymentGateway gateway = entry.getValue();
-            
+
             try {
                 boolean isHealthy = gateway.isHealthy();
                 healthStatus.put(provider, isHealthy);
@@ -144,7 +144,7 @@ public class PaymentGatewayFactory {
                 log.warn("Gateway {} health check failed", provider, e);
             }
         }
-        
+
         return healthStatus;
     }
 
@@ -153,14 +153,14 @@ public class PaymentGatewayFactory {
      */
     public Map<String, Object> getGatewayStatistics() {
         Map<String, Object> stats = new HashMap<>();
-        
+
         stats.put("totalGateways", gateways.size());
         stats.put("enabledGateways", getAvailableGateways().size());
         stats.put("healthyGateways", getHealthyGateways().size());
         stats.put("availableGateways", getAvailableGateways());
         stats.put("healthyGatewaysList", getHealthyGateways());
         stats.put("healthStatus", performHealthCheck());
-        
+
         return stats;
     }
 
@@ -178,15 +178,15 @@ public class PaymentGatewayFactory {
      */
     public void validateGatewayConfiguration(String provider) {
         PaymentGateway gateway = getGateway(provider);
-        
+
         if (!gateway.isEnabled()) {
             throw new PaymentGatewayException("Gateway is not enabled: " + provider);
         }
-        
+
         if (!gateway.isHealthy()) {
             throw new PaymentGatewayException("Gateway is not healthy: " + provider);
         }
-        
+
         log.info("Gateway {} configuration is valid", provider);
     }
 }

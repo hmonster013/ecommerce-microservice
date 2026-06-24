@@ -20,8 +20,8 @@ public class SkuValidator implements ConstraintValidator<ValidSku, String> {
     public void initialize(ValidSku constraintAnnotation) {
         this.pattern = Pattern.compile(constraintAnnotation.pattern());
         this.allowNull = constraintAnnotation.allowNull();
-        log.debug("Initialized SKU validator with pattern: {} and allowNull: {}", 
-                 constraintAnnotation.pattern(), allowNull);
+        log.debug("Initialized SKU validator with pattern: {} and allowNull: {}",
+                constraintAnnotation.pattern(), allowNull);
     }
 
     @Override
@@ -65,7 +65,7 @@ public class SkuValidator implements ConstraintValidator<ValidSku, String> {
     private boolean isReservedPrefix(String sku) {
         String[] reservedPrefixes = {"SYS", "ADM", "TST", "DEV"};
         String prefix = sku.substring(0, 3);
-        
+
         for (String reserved : reservedPrefixes) {
             if (reserved.equals(prefix)) {
                 return true;
@@ -80,6 +80,6 @@ public class SkuValidator implements ConstraintValidator<ValidSku, String> {
     private void addCustomMessage(ConstraintValidatorContext context, String message) {
         context.disableDefaultConstraintViolation();
         context.buildConstraintViolationWithTemplate(message)
-               .addConstraintViolation();
+                .addConstraintViolation();
     }
 }

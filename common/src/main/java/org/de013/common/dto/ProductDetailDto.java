@@ -136,7 +136,6 @@ public class ProductDetailDto {
     }
 
 
-
     @Getter
     @Setter
     @NoArgsConstructor
@@ -185,9 +184,9 @@ public class ProductDetailDto {
     @JsonIgnore
     public boolean isAvailable() {
         return "ACTIVE".equals(status) &&
-               inventory != null &&
-               inventory.getAvailableQuantity() != null &&
-               inventory.getAvailableQuantity() > 0;
+                inventory != null &&
+                inventory.getAvailableQuantity() != null &&
+                inventory.getAvailableQuantity() > 0;
     }
 
     @JsonIgnore
@@ -230,7 +229,20 @@ public class ProductDetailDto {
 
     @JsonIgnore
     public BigDecimal getOriginalPrice() {
-        return pricing != null ? pricing.getOriginalPrice() : comparePrice;
+        return pricing != null && pricing.getOriginalPrice() != null ? pricing.getOriginalPrice() : comparePrice;
+    }
+
+    @JsonIgnore
+    public BigDecimal getDiscountAmount() {
+        if (pricing != null && pricing.getDiscountAmount() != null) {
+            return pricing.getDiscountAmount();
+        }
+        BigDecimal current = getCurrentPrice();
+        BigDecimal original = getOriginalPrice();
+        if (current != null && original != null && original.compareTo(current) > 0) {
+            return original.subtract(current);
+        }
+        return BigDecimal.ZERO;
     }
 
     @JsonIgnore

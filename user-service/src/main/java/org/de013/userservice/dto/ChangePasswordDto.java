@@ -2,12 +2,12 @@ package org.de013.userservice.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import org.de013.userservice.validator.ValidPassword;
-import org.de013.userservice.validator.ValidPasswordConfirmation;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.de013.userservice.validator.ValidPassword;
+import org.de013.userservice.validator.ValidPasswordConfirmation;
 
 @Data
 @Builder

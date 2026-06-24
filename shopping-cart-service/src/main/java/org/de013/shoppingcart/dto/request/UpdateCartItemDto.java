@@ -3,9 +3,11 @@ package org.de013.shoppingcart.dto.request;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.*;
-
 
 
 /**
@@ -22,12 +24,10 @@ import lombok.*;
 public class UpdateCartItemDto {
 
 
-
     @Schema(description = "New quantity for the item", example = "3", minimum = "1", maximum = "99")
     @Min(value = 1, message = "{quantity.min}")
     @Max(value = 99, message = "{quantity.max}")
     private Integer quantity;
-
 
 
     @Schema(description = "Updated special instructions", example = "Please handle with care")
@@ -50,7 +50,6 @@ public class UpdateCartItemDto {
     private String giftWrapType;
 
 
-
     @Schema(description = "Validate price against current product price", example = "true")
     @JsonProperty("validate_price")
     @Builder.Default
@@ -65,7 +64,6 @@ public class UpdateCartItemDto {
     @JsonProperty("refresh_price")
     @Builder.Default
     private Boolean refreshPrice = false;
-
 
 
     /**
@@ -87,9 +85,8 @@ public class UpdateCartItemDto {
     @AssertTrue(message = "{update.field.required}")
     public boolean hasUpdateFields() {
         return quantity != null || specialInstructions != null ||
-               isGift != null || giftMessage != null || giftWrapType != null;
+                isGift != null || giftMessage != null || giftWrapType != null;
     }
-
 
 
     /**

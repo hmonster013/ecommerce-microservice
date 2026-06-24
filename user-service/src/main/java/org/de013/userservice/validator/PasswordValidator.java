@@ -8,18 +8,18 @@ import jakarta.validation.ConstraintValidatorContext;
  * Validates password complexity, length, and security requirements
  */
 public class PasswordValidator implements ConstraintValidator<ValidPassword, String> {
-    
+
     @Override
     public void initialize(ValidPassword constraintAnnotation) {
         // No initialization needed
     }
-    
+
     @Override
     public boolean isValid(String password, ConstraintValidatorContext context) {
         if (password == null) {
             return false;
         }
-        
+
         // Check basic length
         if (password.length() < 8) {
             addConstraintViolation(context, "password.tooShort");
@@ -55,10 +55,10 @@ public class PasswordValidator implements ConstraintValidator<ValidPassword, Str
             addConstraintViolation(context, "password.noSpecialChar");
             return false;
         }
-        
+
         return true;
     }
-    
+
     private void addConstraintViolation(ConstraintValidatorContext context, String messageKey) {
         context.disableDefaultConstraintViolation();
         context.buildConstraintViolationWithTemplate("{" + messageKey + "}").addConstraintViolation();

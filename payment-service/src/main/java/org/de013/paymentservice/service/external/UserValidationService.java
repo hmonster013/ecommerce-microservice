@@ -25,28 +25,28 @@ public class UserValidationService {
     /**
      * Validate user for payment processing
      */
-    public UserValidationResponse validateUserForPayment(Long userId) {
+    public UserValidationResponse validateUserForPayment(String userId) {
         try {
             log.debug("Validating user for payment: {}", userId);
             ResponseEntity<UserValidationResponse> response = userServiceClient.validateUserForPayment(userId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 UserValidationResponse validation = response.getBody();
-                log.debug("User validation result: userId={}, valid={}, canPay={}, message={}", 
-                         userId, validation.isValid(), validation.isPaymentAllowed(), validation.getMessage());
+                log.debug("User validation result: userId={}, valid={}, canPay={}, message={}",
+                        userId, validation.isValid(), validation.isPaymentAllowed(), validation.getMessage());
                 return validation;
             } else {
                 log.warn("Invalid response from user service for user validation: {}", userId);
                 return UserValidationResponse.invalid(
-                    "Invalid response from user service",
-                    List.of("Service returned invalid response")
+                        "Invalid response from user service",
+                        List.of("Service returned invalid response")
                 );
             }
         } catch (Exception e) {
             log.error("Error validating user for payment: userId={}", userId, e);
             return UserValidationResponse.invalid(
-                "Error validating user: " + e.getMessage(),
-                List.of("Service communication error", e.getMessage())
+                    "Error validating user: " + e.getMessage(),
+                    List.of("Service communication error", e.getMessage())
             );
         }
     }
@@ -54,13 +54,13 @@ public class UserValidationService {
     /**
      * Get user details by ID
      */
-    public UserDto getUserById(Long userId) {
+    public UserDto getUserById(String userId) {
         try {
             log.debug("Getting user by ID: {}", userId);
-            ResponseEntity<UserDto> response = userServiceClient.getUserById(userId);
-            
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
+            ResponseEntity<org.de013.common.dto.ApiResponse<UserDto>> response = userServiceClient.getUserById(userId);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().getData() != null) {
+                return response.getBody().getData();
             } else {
                 throw new ExternalServiceException("User not found or service unavailable: " + userId);
             }
@@ -73,24 +73,24 @@ public class UserValidationService {
     /**
      * Check if user exists and is active
      */
-    public boolean isUserActiveAndExists(Long userId) {
+    public boolean isUserActiveAndExists(String userId) {
         try {
             log.debug("Checking if user is active and exists: {}", userId);
-            
+
             // First check if user exists
             ResponseEntity<Boolean> existsResponse = userServiceClient.userExists(userId);
             if (!existsResponse.getStatusCode().is2xxSuccessful() || !Boolean.TRUE.equals(existsResponse.getBody())) {
                 log.debug("User does not exist: {}", userId);
                 return false;
             }
-            
+
             // Then check if user is active
             ResponseEntity<Boolean> activeResponse = userServiceClient.isUserActive(userId);
             if (!activeResponse.getStatusCode().is2xxSuccessful() || !Boolean.TRUE.equals(activeResponse.getBody())) {
                 log.debug("User is not active: {}", userId);
                 return false;
             }
-            
+
             log.debug("User is active and exists: {}", userId);
             return true;
         } catch (Exception e) {
@@ -102,11 +102,11 @@ public class UserValidationService {
     /**
      * Check if user can make payments
      */
-    public boolean canUserMakePayments(Long userId) {
+    public boolean canUserMakePayments(String userId) {
         try {
             log.debug("Checking if user can make payments: {}", userId);
             ResponseEntity<Boolean> response = userServiceClient.canUserMakePayments(userId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 boolean canPay = response.getBody();
                 log.debug("User payment capability: userId={}, canPay={}", userId, canPay);
@@ -124,11 +124,11 @@ public class UserValidationService {
     /**
      * Get user payment limits
      */
-    public UserDto.PaymentLimits getUserPaymentLimits(Long userId) {
+    public UserDto.PaymentLimits getUserPaymentLimits(String userId) {
         try {
             log.debug("Getting user payment limits: {}", userId);
             ResponseEntity<UserDto.PaymentLimits> response = userServiceClient.getUserPaymentLimits(userId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 return response.getBody();
             } else {
@@ -154,15 +154,15 @@ public class UserValidationService {
     /**
      * Get user risk assessment
      */
-    public UserDto.RiskAssessment getUserRiskAssessment(Long userId) {
+    public UserDto.RiskAssessment getUserRiskAssessment(String userId) {
         try {
             log.debug("Getting user risk assessment: {}", userId);
             ResponseEntity<UserDto.RiskAssessment> response = userServiceClient.getUserRiskAssessment(userId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 UserDto.RiskAssessment assessment = response.getBody();
-                log.debug("User risk assessment: userId={}, riskLevel={}, riskScore={}, allowPayments={}", 
-                         userId, assessment.getRiskLevel(), assessment.getRiskScore(), assessment.getAllowPayments());
+                log.debug("User risk assessment: userId={}, riskLevel={}, riskScore={}, allowPayments={}",
+                        userId, assessment.getRiskLevel(), assessment.getRiskScore(), assessment.getAllowPayments());
                 return assessment;
             } else {
                 log.warn("Unable to get user risk assessment: {}", userId);
@@ -184,18 +184,18 @@ public class UserValidationService {
     /**
      * Validate payment amount against user limits
      */
-    public boolean validatePaymentAmount(Long userId, BigDecimal amount) {
+    public boolean validatePaymentAmount(String userId, BigDecimal amount) {
         try {
             UserDto.PaymentLimits limits = getUserPaymentLimits(userId);
-            
+
             if (!limits.getHasLimits()) {
                 log.debug("User has no payment limits: userId={}", userId);
                 return true;
             }
-            
+
             boolean canProcess = limits.canProcessAmount(amount) && limits.canProcessTransaction();
             log.debug("Payment amount validation: userId={}, amount={}, canProcess={}", userId, amount, canProcess);
-            
+
             return canProcess;
         } catch (Exception e) {
             log.error("Error validating payment amount: userId={}, amount={}", userId, amount, e);
@@ -206,13 +206,13 @@ public class UserValidationService {
     /**
      * Update user's last payment activity
      */
-    public void updateLastPaymentActivity(Long userId) {
+    public void updateLastPaymentActivity(String userId) {
         try {
             log.debug("Updating last payment activity: {}", userId);
             ResponseEntity<Void> response = userServiceClient.updateLastPaymentActivity(userId);
-            
+
             if (!response.getStatusCode().is2xxSuccessful()) {
-                log.warn("Failed to update last payment activity: userId={}, status={}", 
+                log.warn("Failed to update last payment activity: userId={}, status={}",
                         userId, response.getStatusCode());
             } else {
                 log.debug("Successfully updated last payment activity: userId={}", userId);
@@ -226,13 +226,13 @@ public class UserValidationService {
     /**
      * Increment user's payment count
      */
-    public void incrementPaymentCount(Long userId) {
+    public void incrementPaymentCount(String userId) {
         try {
             log.debug("Incrementing payment count: {}", userId);
             ResponseEntity<Void> response = userServiceClient.incrementPaymentCount(userId);
-            
+
             if (!response.getStatusCode().is2xxSuccessful()) {
-                log.warn("Failed to increment payment count: userId={}, status={}", 
+                log.warn("Failed to increment payment count: userId={}, status={}",
                         userId, response.getStatusCode());
             } else {
                 log.debug("Successfully incremented payment count: userId={}", userId);
@@ -246,44 +246,45 @@ public class UserValidationService {
     /**
      * Comprehensive user validation for payment processing
      */
-    public UserValidationResponse comprehensiveUserValidation(Long userId, BigDecimal paymentAmount) {
+    public UserValidationResponse comprehensiveUserValidation(String userId, BigDecimal paymentAmount) {
         try {
             log.debug("Performing comprehensive user validation: userId={}, amount={}", userId, paymentAmount);
-            
+
             // Get basic validation
             UserValidationResponse basicValidation = validateUserForPayment(userId);
             if (!basicValidation.isValid()) {
                 return basicValidation;
             }
-            
+
             // Check payment amount against limits
             if (!validatePaymentAmount(userId, paymentAmount)) {
                 return UserValidationResponse.invalid(
-                    "Payment amount exceeds user limits",
-                    List.of("Amount exceeds daily, monthly, or transaction limits")
+                        "Payment amount exceeds user limits",
+                        List.of("Amount exceeds daily, monthly, or transaction limits")
                 );
             }
-            
+
             // Get risk assessment
             UserDto.RiskAssessment riskAssessment = getUserRiskAssessment(userId);
             if (riskAssessment.shouldBlockPayment()) {
                 return UserValidationResponse.highRisk(
-                    userId, 
-                    basicValidation.getUsername(),
-                    riskAssessment.getRiskLevel(),
-                    riskAssessment.getRiskReason()
+                        userId,
+                        basicValidation.getUsername(),
+                        riskAssessment.getRiskLevel(),
+                        riskAssessment.getRiskReason()
                 );
             }
-            
+
             log.debug("Comprehensive user validation passed: userId={}", userId);
             return basicValidation;
-            
+
         } catch (Exception e) {
             log.error("Error in comprehensive user validation: userId={}, amount={}", userId, paymentAmount, e);
             return UserValidationResponse.invalid(
-                "Error during user validation: " + e.getMessage(),
-                List.of("Service error", e.getMessage())
+                    "Error during user validation: " + e.getMessage(),
+                    List.of("Service error", e.getMessage())
             );
         }
     }
 }
+

@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,17 +40,17 @@ public class UserServiceClient {
     public boolean validateUser(String userId) {
         try {
             log.debug("Validating user: {}", userId);
-            
+
             String url = userServiceUrl + "/api/users/" + userId + "/validate";
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 return Boolean.TRUE.equals(responseBody.get("isValid"));
             }
-            
+
             return false;
-            
+
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 log.warn("User not found: {}", userId);
@@ -72,16 +71,16 @@ public class UserServiceClient {
     public UserInfo getUserInfo(String userId) {
         try {
             log.debug("Fetching user info for: {}", userId);
-            
+
             String url = userServiceUrl + "/api/users/" + userId;
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToUserInfo(response.getBody());
             }
-            
+
             return null;
-            
+
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 log.warn("User not found: {}", userId);
@@ -104,16 +103,16 @@ public class UserServiceClient {
     public UserPreferences getUserPreferences(String userId) {
         try {
             log.debug("Fetching user preferences for: {}", userId);
-            
+
             String url = userServiceUrl + "/api/users/" + userId + "/preferences";
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToUserPreferences(response.getBody());
             }
-            
+
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error fetching user preferences for {}: {}", userId, e.getMessage(), e);
             return null;
@@ -126,16 +125,16 @@ public class UserServiceClient {
     public ShippingAddress getDefaultShippingAddress(String userId) {
         try {
             log.debug("Fetching default shipping address for user: {}", userId);
-            
+
             String url = userServiceUrl + "/api/users/" + userId + "/addresses/default";
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToShippingAddress(response.getBody());
             }
-            
+
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error fetching default shipping address for {}: {}", userId, e.getMessage(), e);
             return null;
@@ -150,16 +149,16 @@ public class UserServiceClient {
     public LoyaltyInfo getUserLoyaltyInfo(String userId) {
         try {
             log.debug("Fetching loyalty info for user: {}", userId);
-            
+
             String url = userServiceUrl + "/api/users/" + userId + "/loyalty";
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToLoyaltyInfo(response.getBody());
             }
-            
+
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error fetching loyalty info for {}: {}", userId, e.getMessage(), e);
             return null;
@@ -172,22 +171,22 @@ public class UserServiceClient {
     public boolean updateLoyaltyPoints(String userId, int pointsToAdd, String reason) {
         try {
             log.debug("Updating loyalty points for user {}: {} points, reason: {}", userId, pointsToAdd, reason);
-            
+
             String url = userServiceUrl + "/api/users/" + userId + "/loyalty/points";
             Map<String, Object> request = Map.of(
-                "pointsToAdd", pointsToAdd,
-                "reason", reason
+                    "pointsToAdd", pointsToAdd,
+                    "reason", reason
             );
-            
+
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 return Boolean.TRUE.equals(responseBody.get("success"));
             }
-            
+
             return false;
-            
+
         } catch (Exception e) {
             log.error("Error updating loyalty points for {}: {}", userId, e.getMessage(), e);
             return false;
@@ -202,17 +201,17 @@ public class UserServiceClient {
     public boolean hasPermission(String userId, String permission) {
         try {
             log.debug("Checking permission {} for user: {}", permission, userId);
-            
+
             String url = userServiceUrl + "/api/users/" + userId + "/permissions/" + permission;
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 return Boolean.TRUE.equals(responseBody.get("hasPermission"));
             }
-            
+
             return false;
-            
+
         } catch (Exception e) {
             log.error("Error checking permission for user {}: {}", userId, e.getMessage(), e);
             return false;
@@ -228,11 +227,11 @@ public class UserServiceClient {
             if (userInfo == null) {
                 return false;
             }
-            
-            return "ACTIVE".equals(userInfo.getStatus()) && 
-                   !Boolean.TRUE.equals(userInfo.getIsSuspended()) &&
-                   hasPermission(userId, "MAKE_PURCHASES");
-            
+
+            return "ACTIVE".equals(userInfo.getStatus()) &&
+                    !Boolean.TRUE.equals(userInfo.getIsSuspended()) &&
+                    hasPermission(userId, "MAKE_PURCHASES");
+
         } catch (Exception e) {
             log.error("Error checking purchase permission for user {}: {}", userId, e.getMessage(), e);
             return false;
@@ -247,16 +246,16 @@ public class UserServiceClient {
     public void recordCartActivity(String userId, String activityType, Map<String, Object> activityData) {
         try {
             log.debug("Recording cart activity for user {}: {}", userId, activityType);
-            
+
             String url = userServiceUrl + "/api/users/" + userId + "/activity";
             Map<String, Object> request = Map.of(
-                "activityType", activityType,
-                "activityData", activityData,
-                "timestamp", System.currentTimeMillis()
+                    "activityType", activityType,
+                    "activityData", activityData,
+                    "timestamp", System.currentTimeMillis()
             );
-            
+
             restTemplate.postForEntity(url, request, Map.class);
-            
+
         } catch (Exception e) {
             log.error("Error recording cart activity for user {}: {}", userId, e.getMessage(), e);
             // Don't throw exception as this is not critical

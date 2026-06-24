@@ -42,8 +42,8 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     public ResponseEntity<OrderValidationResponse> validateOrderForPayment(Long orderId) {
         log.warn("Order Service unavailable - using fallback validation for order: {}", orderId);
         return ResponseEntity.ok(OrderValidationResponse.invalid(
-            "Order Service unavailable - cannot validate order",
-            List.of("Service temporarily unavailable", "Please try again later")
+                "Order Service unavailable - cannot validate order",
+                List.of("Service temporarily unavailable", "Please try again later")
         ));
     }
 
@@ -54,22 +54,22 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     }
 
     @Override
-    public ResponseEntity<Boolean> validateOrderOwnership(Long orderId, Long userId) {
-        log.warn("Order Service unavailable - using fallback for validateOrderOwnership: order={}, user={}", 
+    public ResponseEntity<Boolean> validateOrderOwnership(Long orderId, String userId) {
+        log.warn("Order Service unavailable - using fallback for validateOrderOwnership: order={}, user={}",
                 orderId, userId);
         return ResponseEntity.ok(false);
     }
 
     @Override
     public ResponseEntity<Void> markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber) {
-        log.warn("Order Service unavailable - cannot mark order as paid: order={}, payment={}", 
+        log.warn("Order Service unavailable - cannot mark order as paid: order={}, payment={}",
                 orderId, paymentId);
         return ResponseEntity.ok().build();
     }
 
     @Override
     public ResponseEntity<Void> markOrderPaymentFailed(Long orderId, String reason) {
-        log.warn("Order Service unavailable - cannot mark payment as failed: order={}, reason={}", 
+        log.warn("Order Service unavailable - cannot mark payment as failed: order={}, reason={}",
                 orderId, reason);
         return ResponseEntity.ok().build();
     }
@@ -94,9 +94,13 @@ public class OrderServiceClientFallback implements OrderServiceClient {
         fallbackOrder.setId(orderId);
         fallbackOrder.setOrderNumber("FALLBACK-ORDER");
         fallbackOrder.setUserId(null);
-        fallbackOrder.setTotalAmount(BigDecimal.ZERO);
+        OrderDto.MoneyDto money = new OrderDto.MoneyDto();
+        money.setAmount(BigDecimal.ZERO);
+        money.setCurrency("USD");
+        fallbackOrder.setTotalAmount(money);
         fallbackOrder.setCurrency("USD");
         fallbackOrder.setStatus("UNKNOWN");
         return fallbackOrder;
     }
 }
+

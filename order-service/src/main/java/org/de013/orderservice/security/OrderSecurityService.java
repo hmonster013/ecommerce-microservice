@@ -32,20 +32,14 @@ public class OrderSecurityService {
             return false;
         }
 
-        // Admins can access any order
-        if (userContext.isAdmin()) {
-            log.debug("Admin user {} accessing order {}", userContext.getUsername(), orderId);
-            return true;
-        }
-
-        // For customers, check if they own the order
+        // Check if user owns the order
         try {
             OrderResponse order = orderService.getOrderById(orderId);
             boolean isOwner = order.getUserId().equals(userContext.getUserId());
-            log.debug("User {} {} access order {} (owner: {})", 
-                    userContext.getUsername(), 
-                    isOwner ? "granted" : "denied", 
-                    orderId, 
+            log.debug("User {} {} access order {} (owner: {})",
+                    userContext.getUsername(),
+                    isOwner ? "granted" : "denied",
+                    orderId,
                     isOwner);
             return isOwner;
         } catch (Exception e) {
@@ -59,25 +53,19 @@ public class OrderSecurityService {
      * - Admins can access any user's orders
      * - Customers can only access their own orders
      */
-    public boolean canAccessUserOrders(Long userId) {
+    public boolean canAccessUserOrders(String userId) {
         UserContext userContext = UserContextHolder.getCurrentUser();
         if (userContext == null) {
             log.debug("No user context found, denying access to user {} orders", userId);
             return false;
         }
 
-        // Admins can access any user's orders
-        if (userContext.isAdmin()) {
-            log.debug("Admin user {} accessing orders for user {}", userContext.getUsername(), userId);
-            return true;
-        }
-
-        // Customers can only access their own orders
+        // Only access own orders
         boolean isOwnOrders = userContext.getUserId().equals(userId);
-        log.debug("User {} {} access orders for user {} (own orders: {})", 
-                userContext.getUsername(), 
-                isOwnOrders ? "granted" : "denied", 
-                userId, 
+        log.debug("User {} {} access orders for user {} (own orders: {})",
+                userContext.getUsername(),
+                isOwnOrders ? "granted" : "denied",
+                userId,
                 isOwnOrders);
         return isOwnOrders;
     }
@@ -88,20 +76,8 @@ public class OrderSecurityService {
      * - In the future, might allow customers to modify their own pending orders
      */
     public boolean canModifyOrder(Long orderId) {
-        UserContext userContext = UserContextHolder.getCurrentUser();
-        if (userContext == null) {
-            log.debug("No user context found, denying modify access to order {}", orderId);
-            return false;
-        }
-
-        // Currently only admins can modify orders
-        boolean canModify = userContext.isAdmin();
-        log.debug("User {} {} modify order {} (admin: {})", 
-                userContext.getUsername(), 
-                canModify ? "can" : "cannot", 
-                orderId, 
-                canModify);
-        return canModify;
+        // Ownership check is enough, admin-bypass is handled by gateway routes
+        return canAccessOrder(orderId);
     }
 
     /**
@@ -110,13 +86,5 @@ public class OrderSecurityService {
     public boolean isAuthenticated() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal());
-    }
-
-    /**
-     * Check if current user has admin role
-     */
-    public boolean isAdmin() {
-        UserContext userContext = UserContextHolder.getCurrentUser();
-        return userContext != null && userContext.isAdmin();
     }
 }

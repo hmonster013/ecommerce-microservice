@@ -46,16 +46,16 @@ public class RedisCartOperations {
         try {
             String key = generateCartKey(cart);
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
-            
+
             // Save cart data
             valueOps.set(key, cart, ttl);
-            
+
             // Create index entries
             createIndexEntries(cart, ttl);
-            
+
             // Update activity timestamp
             updateLastActivity(cart.getId());
-            
+
             log.debug("Saved cart {} with TTL {}", key, ttl);
         } catch (Exception e) {
             log.error("Error saving cart to Redis: {}", e.getMessage(), e);
@@ -70,18 +70,18 @@ public class RedisCartOperations {
         try {
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
             Object cartData = valueOps.get(key);
-            
+
             if (cartData == null) {
                 return Optional.empty();
             }
-            
+
             RedisCart cart = convertToRedisCart(cartData);
-            
+
             // Update last activity
             if (cart != null) {
                 updateLastActivity(cart.getId());
             }
-            
+
             return Optional.ofNullable(cart);
         } catch (Exception e) {
             log.error("Error getting cart from Redis: {}", e.getMessage(), e);
@@ -221,13 +221,13 @@ public class RedisCartOperations {
         try {
             String lockKey = CART_LOCK_PREFIX + cartId;
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
-            
+
             Boolean acquired = valueOps.setIfAbsent(lockKey, "locked", lockDuration);
-            
+
             if (Boolean.TRUE.equals(acquired)) {
                 log.debug("Acquired lock for cart: {}", cartId);
             }
-            
+
             return Boolean.TRUE.equals(acquired);
         } catch (Exception e) {
             log.error("Error acquiring cart lock: {}", e.getMessage(), e);
@@ -242,11 +242,11 @@ public class RedisCartOperations {
         try {
             String lockKey = CART_LOCK_PREFIX + cartId;
             Boolean released = redisTemplate.delete(lockKey);
-            
+
             if (Boolean.TRUE.equals(released)) {
                 log.debug("Released lock for cart: {}", cartId);
             }
-            
+
             return Boolean.TRUE.equals(released);
         } catch (Exception e) {
             log.error("Error releasing cart lock: {}", e.getMessage(), e);
@@ -263,7 +263,7 @@ public class RedisCartOperations {
         try {
             String activityKey = CART_ACTIVITY_PREFIX + cartId;
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
-            
+
             valueOps.set(activityKey, LocalDateTime.now().toString(), Duration.ofHours(24));
         } catch (Exception e) {
             log.error("Error updating cart activity: {}", e.getMessage(), e);
@@ -277,12 +277,12 @@ public class RedisCartOperations {
         try {
             String activityKey = CART_ACTIVITY_PREFIX + cartId;
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
-            
+
             Object activity = valueOps.get(activityKey);
             if (activity != null) {
                 return Optional.of(LocalDateTime.parse(activity.toString()));
             }
-            
+
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error getting cart activity: {}", e.getMessage(), e);
@@ -299,10 +299,10 @@ public class RedisCartOperations {
         try {
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
             List<Object> cartDataList = valueOps.multiGet(cartKeys);
-            
+
             Map<String, RedisCart> result = new HashMap<>();
             List<String> keysList = new ArrayList<>(cartKeys);
-            
+
             for (int i = 0; i < keysList.size(); i++) {
                 Object cartData = cartDataList.get(i);
                 if (cartData != null) {
@@ -312,7 +312,7 @@ public class RedisCartOperations {
                     }
                 }
             }
-            
+
             return result;
         } catch (Exception e) {
             log.error("Error getting multiple carts: {}", e.getMessage(), e);
@@ -354,7 +354,7 @@ public class RedisCartOperations {
     public Set<String> findExpiredCarts() {
         try {
             Set<String> allCartKeys = findCartKeysByPattern(CART_PREFIX + "*");
-            
+
             return allCartKeys.stream()
                     .filter(key -> {
                         Duration ttl = getCartTTL(key);
@@ -405,14 +405,14 @@ public class RedisCartOperations {
     private void createIndexEntries(RedisCart cart, Duration ttl) {
         try {
             SetOperations<String, Object> setOps = redisTemplate.opsForSet();
-            
+
             // Index by status
             if (cart.getStatus() != null) {
                 String statusKey = "cart_status:" + cart.getStatus();
                 setOps.add(statusKey, cart.getId());
                 redisTemplate.expire(statusKey, ttl.plusHours(1));
             }
-            
+
             // Index by cart type
             if (cart.getCartType() != null) {
                 String typeKey = "cart_type:" + cart.getCartType();
@@ -430,13 +430,13 @@ public class RedisCartOperations {
     private void cleanupIndexEntries(RedisCart cart) {
         try {
             SetOperations<String, Object> setOps = redisTemplate.opsForSet();
-            
+
             // Remove from status index
             if (cart.getStatus() != null) {
                 String statusKey = "cart_status:" + cart.getStatus();
                 setOps.remove(statusKey, cart.getId());
             }
-            
+
             // Remove from type index
             if (cart.getCartType() != null) {
                 String typeKey = "cart_type:" + cart.getCartType();
@@ -496,8 +496,6 @@ public class RedisCartOperations {
             return null;
         }
     }
-
-
 
 
 }

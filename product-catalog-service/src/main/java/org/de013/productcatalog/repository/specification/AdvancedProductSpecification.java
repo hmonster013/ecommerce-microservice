@@ -3,7 +3,10 @@ package org.de013.productcatalog.repository.specification;
 import jakarta.persistence.criteria.*;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.productcatalog.dto.search.ProductSearchDto;
-import org.de013.productcatalog.entity.*;
+import org.de013.productcatalog.entity.Category;
+import org.de013.productcatalog.entity.Inventory;
+import org.de013.productcatalog.entity.Product;
+import org.de013.productcatalog.entity.ProductCategory;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.de013.productcatalog.util.SearchUtils;
 import org.springframework.data.jpa.domain.Specification;
@@ -47,7 +50,6 @@ public class AdvancedProductSpecification {
             if (searchDto.getBrands() != null && !searchDto.getBrands().isEmpty()) {
                 predicates.add(createBrandPredicate(searchDto.getBrands(), root, criteriaBuilder));
             }
-
 
 
             // Status filtering (default to ACTIVE only)
@@ -123,7 +125,7 @@ public class AdvancedProductSpecification {
         // Search in category names
         Join<Product, ProductCategory> productCategoryJoin = root.join("productCategories", JoinType.LEFT);
         Join<ProductCategory, Category> categoryJoin = productCategoryJoin.join("category", JoinType.LEFT);
-        
+
         for (String term : searchTerms) {
             searchPredicates.add(cb.like(cb.lower(categoryJoin.get("name")), "%" + term.toLowerCase() + "%"));
         }
@@ -137,7 +139,7 @@ public class AdvancedProductSpecification {
     private static Predicate createCategoryPredicate(List<Long> categoryIds, Root<Product> root, CriteriaBuilder cb) {
         Join<Product, ProductCategory> productCategoryJoin = root.join("productCategories", JoinType.INNER);
         Join<ProductCategory, Category> categoryJoin = productCategoryJoin.join("category", JoinType.INNER);
-        
+
         return categoryJoin.get("id").in(categoryIds);
     }
 
@@ -163,14 +165,13 @@ public class AdvancedProductSpecification {
      */
     private static Predicate createBrandPredicate(List<String> brands, Root<Product> root, CriteriaBuilder cb) {
         List<Predicate> brandPredicates = new ArrayList<>();
-        
+
         for (String brand : brands) {
             brandPredicates.add(cb.like(cb.lower(root.get("brand")), "%" + brand.toLowerCase() + "%"));
         }
-        
+
         return cb.or(brandPredicates.toArray(new Predicate[0]));
     }
-
 
 
     /**
@@ -191,8 +192,8 @@ public class AdvancedProductSpecification {
     /**
      * Date range filtering predicate
      */
-    private static Predicate createDateRangePredicate(LocalDateTime createdAfter, LocalDateTime createdBefore, 
-                                                     Root<Product> root, CriteriaBuilder cb) {
+    private static Predicate createDateRangePredicate(LocalDateTime createdAfter, LocalDateTime createdBefore,
+                                                      Root<Product> root, CriteriaBuilder cb) {
         List<Predicate> datePredicates = new ArrayList<>();
 
         if (createdAfter != null) {
@@ -218,9 +219,9 @@ public class AdvancedProductSpecification {
      */
     private static Predicate createOnSalePredicate(Root<Product> root, CriteriaBuilder cb) {
         return cb.and(
-            cb.isNotNull(root.get("salePrice")),
-            cb.greaterThan(root.get("salePrice"), BigDecimal.ZERO),
-            cb.lessThan(root.get("salePrice"), root.get("price"))
+                cb.isNotNull(root.get("salePrice")),
+                cb.greaterThan(root.get("salePrice"), BigDecimal.ZERO),
+                cb.lessThan(root.get("salePrice"), root.get("price"))
         );
     }
 
@@ -238,11 +239,11 @@ public class AdvancedProductSpecification {
             if (!product.getProductCategories().isEmpty()) {
                 Join<Product, ProductCategory> productCategoryJoin = root.join("productCategories", JoinType.INNER);
                 Join<ProductCategory, Category> categoryJoin = productCategoryJoin.join("category", JoinType.INNER);
-                
+
                 List<Long> categoryIds = product.getProductCategories().stream()
-                    .map(pc -> pc.getCategory().getId())
-                    .toList();
-                
+                        .map(pc -> pc.getCategory().getId())
+                        .toList();
+
                 predicates.add(categoryJoin.get("id").in(categoryIds));
             }
 
@@ -250,14 +251,14 @@ public class AdvancedProductSpecification {
             BigDecimal priceVariation = product.getPrice().multiply(BigDecimal.valueOf(0.2));
             BigDecimal minPrice = product.getPrice().subtract(priceVariation);
             BigDecimal maxPrice = product.getPrice().add(priceVariation);
-            
+
             predicates.add(criteriaBuilder.between(root.get("price"), minPrice, maxPrice));
 
             // Same brand (optional)
             if (StringUtils.hasText(product.getBrand())) {
                 predicates.add(criteriaBuilder.equal(
-                    criteriaBuilder.lower(root.get("brand")), 
-                    product.getBrand().toLowerCase()
+                        criteriaBuilder.lower(root.get("brand")),
+                        product.getBrand().toLowerCase()
                 ));
             }
 
@@ -282,7 +283,7 @@ public class AdvancedProductSpecification {
             LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
             Predicate recentlyCreated = criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), thirtyDaysAgo);
             Predicate recentlyUpdated = criteriaBuilder.greaterThanOrEqualTo(root.get("updatedAt"), thirtyDaysAgo);
-            
+
             predicates.add(criteriaBuilder.or(recentlyCreated, recentlyUpdated));
 
             // Has good rating (would require subquery for actual implementation)

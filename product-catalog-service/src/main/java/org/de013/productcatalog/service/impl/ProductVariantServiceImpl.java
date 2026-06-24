@@ -52,8 +52,8 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         // Check for duplicate variant combination
         if (!isVariantCombinationUnique(productId, createDto.getVariantType(), createDto.getValue())) {
             throw new IllegalArgumentException(
-                String.format("Variant combination already exists: %s = %s", 
-                    createDto.getVariantType(), createDto.getValue()));
+                    String.format("Variant combination already exists: %s = %s",
+                            createDto.getVariantType(), createDto.getValue()));
         }
 
         // Check SKU uniqueness if provided
@@ -95,11 +95,11 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         if (updateDto.getVariantType() != null) {
             // Check for duplicate variant combination if type or value changed
             String newValue = updateDto.getValue() != null ? updateDto.getValue() : variant.getValue();
-            if (!isVariantCombinationUnique(variant.getProduct().getId(), 
+            if (!isVariantCombinationUnique(variant.getProduct().getId(),
                     updateDto.getVariantType(), newValue, variantId)) {
                 throw new IllegalArgumentException(
-                    String.format("Variant combination already exists: %s = %s", 
-                        updateDto.getVariantType(), newValue));
+                        String.format("Variant combination already exists: %s = %s",
+                                updateDto.getVariantType(), newValue));
             }
             variant.setVariantType(updateDto.getVariantType());
         }
@@ -110,13 +110,13 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
         if (StringUtils.hasText(updateDto.getValue())) {
             // Check for duplicate variant combination if value changed
-            VariantType currentType = updateDto.getVariantType() != null ? 
-                updateDto.getVariantType() : variant.getVariantType();
-            if (!isVariantCombinationUnique(variant.getProduct().getId(), 
+            VariantType currentType = updateDto.getVariantType() != null ?
+                    updateDto.getVariantType() : variant.getVariantType();
+            if (!isVariantCombinationUnique(variant.getProduct().getId(),
                     currentType, updateDto.getValue(), variantId)) {
                 throw new IllegalArgumentException(
-                    String.format("Variant combination already exists: %s = %s", 
-                        currentType, updateDto.getValue()));
+                        String.format("Variant combination already exists: %s = %s",
+                                currentType, updateDto.getValue()));
             }
             variant.setValue(updateDto.getValue());
         }
@@ -183,7 +183,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
      */
     private void reorderVariantsAfterDeletion(Long productId, VariantType variantType, Integer deletedDisplayOrder) {
         log.debug("Reordering variants after deletion for product: {}, type: {}, deleted order: {}",
-                 productId, variantType, deletedDisplayOrder);
+                productId, variantType, deletedDisplayOrder);
 
         // Find all variants with display order greater than the deleted variant
         // We can choose to reorder by variant type or globally for the product
@@ -210,7 +210,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
      */
     private void reorderVariantsAfterBulkDeletion(Long productId, VariantType variantType, List<ProductVariant> deletedVariants) {
         log.debug("Reordering variants after bulk deletion for product: {}, type: {}, deleted count: {}",
-                 productId, variantType, deletedVariants.size());
+                productId, variantType, deletedVariants.size());
 
         // Get all remaining variants of the same type, ordered by display order
         List<ProductVariant> remainingVariants = variantRepository
@@ -374,8 +374,8 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         // Group variants by product and variant type for efficient reordering
         Map<Long, Map<VariantType, List<ProductVariant>>> groupedVariants = variantsToDelete.stream()
                 .collect(Collectors.groupingBy(
-                    v -> v.getProduct().getId(),
-                    Collectors.groupingBy(ProductVariant::getVariantType)
+                        v -> v.getProduct().getId(),
+                        Collectors.groupingBy(ProductVariant::getVariantType)
                 ));
 
         // Delete all variants first

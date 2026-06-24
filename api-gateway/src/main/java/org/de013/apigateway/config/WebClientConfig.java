@@ -7,7 +7,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
 public class WebClientConfig {
-    
+
     /**
      * WebClient for internal microservices with load balancer
      * Used by UserServiceClient to call User Service via Eureka

@@ -187,7 +187,7 @@ public class CartCheckoutDto {
     @AssertTrue(message = "Either user ID or session ID must be provided")
     public boolean isValidUserOrSession() {
         return (userId != null && !userId.trim().isEmpty()) ||
-               (sessionId != null && !sessionId.trim().isEmpty());
+                (sessionId != null && !sessionId.trim().isEmpty());
     }
 
     /**
@@ -197,8 +197,8 @@ public class CartCheckoutDto {
     @AssertTrue(message = "Either cart ID or user/session identification must be provided")
     public boolean hasValidCartIdentification() {
         return cartId != null ||
-               (userId != null && !userId.trim().isEmpty()) ||
-               (sessionId != null && !sessionId.trim().isEmpty());
+                (userId != null && !userId.trim().isEmpty()) ||
+                (sessionId != null && !sessionId.trim().isEmpty());
     }
 
     /**
@@ -227,7 +227,7 @@ public class CartCheckoutDto {
     @JsonIgnore
     public boolean isGuestSession() {
         return sessionId != null && !sessionId.trim().isEmpty() &&
-               (userId == null || userId.trim().isEmpty());
+                (userId == null || userId.trim().isEmpty());
     }
 
     /**

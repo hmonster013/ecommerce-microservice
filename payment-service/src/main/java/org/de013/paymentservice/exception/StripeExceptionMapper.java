@@ -22,10 +22,10 @@ public class StripeExceptionMapper {
     /**
      * Maps a Stripe exception to our custom StripeException with payment context.
      */
-    public StripeException mapStripeException(com.stripe.exception.StripeException stripeEx, 
-                                            String paymentId, String operation) {
-        log.error("Stripe API error - Code: {}, Type: {}, Message: {}, RequestId: {}", 
-                stripeEx.getCode(), stripeEx.getClass().getSimpleName(), 
+    public StripeException mapStripeException(com.stripe.exception.StripeException stripeEx,
+                                              String paymentId, String operation) {
+        log.error("Stripe API error - Code: {}, Type: {}, Message: {}, RequestId: {}",
+                stripeEx.getCode(), stripeEx.getClass().getSimpleName(),
                 stripeEx.getMessage(), stripeEx.getRequestId());
 
         // Handle specific Stripe exception types
@@ -47,20 +47,20 @@ public class StripeExceptionMapper {
 
         // Generic Stripe exception
         return new StripeException(
-            stripeEx.getMessage(),
-            paymentId,
-            operation,
-            stripeEx.getCode(),
-            stripeEx.getClass().getSimpleName(),
-            stripeEx
+                stripeEx.getMessage(),
+                paymentId,
+                operation,
+                stripeEx.getCode(),
+                stripeEx.getClass().getSimpleName(),
+                stripeEx
         );
     }
 
-    private StripeException handleCardException(com.stripe.exception.CardException cardEx, 
-                                              String paymentId, String operation) {
+    private StripeException handleCardException(com.stripe.exception.CardException cardEx,
+                                                String paymentId, String operation) {
         String code = cardEx.getCode();
         String declineCode = cardEx.getDeclineCode();
-        
+
         if ("card_declined".equals(code)) {
             if ("insufficient_funds".equals(declineCode)) {
                 return StripeException.insufficientFunds(paymentId);
@@ -76,12 +76,12 @@ public class StripeExceptionMapper {
         }
 
         return new StripeException(
-            cardEx.getMessage(),
-            paymentId,
-            operation,
-            code,
-            "card_error",
-            cardEx
+                cardEx.getMessage(),
+                paymentId,
+                operation,
+                code,
+                "card_error",
+                cardEx
         );
     }
 
@@ -89,15 +89,15 @@ public class StripeExceptionMapper {
         return StripeException.rateLimitExceeded();
     }
 
-    private StripeException handleInvalidRequestException(com.stripe.exception.InvalidRequestException invalidEx, 
-                                                        String paymentId, String operation) {
+    private StripeException handleInvalidRequestException(com.stripe.exception.InvalidRequestException invalidEx,
+                                                          String paymentId, String operation) {
         return new StripeException(
-            "Invalid request to Stripe API: " + invalidEx.getMessage(),
-            paymentId,
-            operation,
-            "invalid_request",
-            "validation_error",
-            invalidEx
+                "Invalid request to Stripe API: " + invalidEx.getMessage(),
+                paymentId,
+                operation,
+                "invalid_request",
+                "validation_error",
+                invalidEx
         );
     }
 
@@ -105,27 +105,27 @@ public class StripeExceptionMapper {
         return StripeException.authenticationFailed();
     }
 
-    private StripeException handleApiConnectionException(com.stripe.exception.ApiConnectionException connEx, 
-                                                       String paymentId, String operation) {
+    private StripeException handleApiConnectionException(com.stripe.exception.ApiConnectionException connEx,
+                                                         String paymentId, String operation) {
         return new StripeException(
-            "Failed to connect to Stripe API: " + connEx.getMessage(),
-            paymentId,
-            operation,
-            "api_connection_error",
-            "api_connection_error",
-            connEx
+                "Failed to connect to Stripe API: " + connEx.getMessage(),
+                paymentId,
+                operation,
+                "api_connection_error",
+                "api_connection_error",
+                connEx
         );
     }
 
-    private StripeException handleApiException(com.stripe.exception.ApiException apiEx, 
-                                             String paymentId, String operation) {
+    private StripeException handleApiException(com.stripe.exception.ApiException apiEx,
+                                               String paymentId, String operation) {
         return new StripeException(
-            "Stripe API error: " + apiEx.getMessage(),
-            paymentId,
-            operation,
-            "api_error",
-            "api_error",
-            apiEx
+                "Stripe API error: " + apiEx.getMessage(),
+                paymentId,
+                operation,
+                "api_error",
+                "api_error",
+                apiEx
         );
     }
 
@@ -141,18 +141,18 @@ public class StripeExceptionMapper {
         if (stripeEx instanceof com.stripe.exception.RateLimitException) {
             return true;
         }
-        
+
         // API connection exceptions are retryable
         if (stripeEx instanceof com.stripe.exception.ApiConnectionException) {
             return true;
         }
-        
+
         // Some API exceptions are retryable (5xx errors)
         if (stripeEx instanceof com.stripe.exception.ApiException) {
             Integer statusCode = stripeEx.getStatusCode();
             return statusCode != null && statusCode >= 500;
         }
-        
+
         return false;
     }
 
@@ -164,12 +164,12 @@ public class StripeExceptionMapper {
             // For rate limit exceptions, use exponential backoff starting at 1 second
             return 1000L;
         }
-        
+
         if (stripeEx instanceof com.stripe.exception.ApiConnectionException) {
             // For connection exceptions, use a shorter delay
             return 500L;
         }
-        
+
         // Default retry delay
         return 1000L;
     }

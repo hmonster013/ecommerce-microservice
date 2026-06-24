@@ -91,16 +91,16 @@ public class UpdatePaymentMethodRequest {
     @JsonIgnore
     public boolean hasCardExpiryUpdate() {
         return cardExpiryUpdate != null &&
-               cardExpiryUpdate.getExpiryMonth() != null &&
-               cardExpiryUpdate.getExpiryYear() != null;
+                cardExpiryUpdate.getExpiryMonth() != null &&
+                cardExpiryUpdate.getExpiryYear() != null;
     }
 
     @JsonIgnore
     public boolean hasAnyUpdate() {
         return hasNicknameUpdate() ||
-               hasDefaultUpdate() ||
-               hasActiveUpdate() ||
-               hasBillingAddressUpdate() ||
-               hasCardExpiryUpdate();
+                hasDefaultUpdate() ||
+                hasActiveUpdate() ||
+                hasBillingAddressUpdate() ||
+                hasCardExpiryUpdate();
     }
 }

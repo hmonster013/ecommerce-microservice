@@ -12,18 +12,18 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SyncUserRequest {
-    
+
     @NotBlank(message = "Keycloak ID is required")
     private String keycloakId;
-    
+
     @NotBlank(message = "Username is required")
     private String username;
-    
+
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     private String email;
-    
+
     private String firstName;
-    
+
     private String lastName;
 }

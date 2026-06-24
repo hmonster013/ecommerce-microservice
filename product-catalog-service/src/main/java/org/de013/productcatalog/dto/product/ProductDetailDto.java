@@ -1,14 +1,12 @@
 package org.de013.productcatalog.dto.product;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
-import org.de013.productcatalog.dto.category.CategorySummaryDto;
 import org.de013.common.dto.InventoryDto;
-
+import org.de013.productcatalog.dto.category.CategorySummaryDto;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 
 import java.math.BigDecimal;
@@ -91,7 +89,6 @@ public class ProductDetailDto {
     private InventoryDto inventory;
 
 
-
     @Schema(description = "Related products")
     private List<ProductSummaryDto> relatedProducts;
 
@@ -119,22 +116,22 @@ public class ProductDetailDto {
     @Builder
     @Schema(description = "Pricing information")
     public static class PricingInfo {
-        
+
         @Schema(description = "Current price", example = "999.00")
         private BigDecimal currentPrice;
-        
+
         @Schema(description = "Original price", example = "1099.00")
         private BigDecimal originalPrice;
-        
+
         @Schema(description = "Discount amount", example = "100.00")
         private BigDecimal discountAmount;
-        
+
         @Schema(description = "Discount percentage", example = "9.09")
         private BigDecimal discountPercentage;
-        
+
         @Schema(description = "Is on sale", example = "true")
         private Boolean onSale;
-        
+
         @Schema(description = "Savings text", example = "Save $100.00 (9%)")
         private String savingsText;
     }
@@ -146,19 +143,19 @@ public class ProductDetailDto {
     @Builder
     @Schema(description = "Shipping information")
     public static class ShippingInfo {
-        
+
         @Schema(description = "Requires shipping", example = "true")
         private Boolean requiresShipping;
-        
+
         @Schema(description = "Weight in kg", example = "0.187")
         private BigDecimal weight;
-        
+
         @Schema(description = "Dimensions", example = "14.7 x 7.1 x 0.8 cm")
         private String dimensions;
-        
+
         @Schema(description = "Estimated delivery time", example = "2-3 business days")
         private String estimatedDelivery;
-        
+
         @Schema(description = "Free shipping eligible", example = "true")
         private Boolean freeShippingEligible;
     }
@@ -170,13 +167,13 @@ public class ProductDetailDto {
     @Builder
     @Schema(description = "Product specification")
     public static class ProductSpecification {
-        
+
         @Schema(description = "Specification name", example = "Display")
         private String name;
-        
+
         @Schema(description = "Specification value", example = "6.1-inch Super Retina XDR")
         private String value;
-        
+
         @Schema(description = "Specification group", example = "Display & Design")
         private String group;
     }
@@ -189,9 +186,9 @@ public class ProductDetailDto {
     @JsonIgnore
     public boolean isAvailable() {
         return status == ProductStatus.ACTIVE &&
-               inventory != null &&
-               inventory.getAvailableQuantity() != null &&
-               inventory.getAvailableQuantity() > 0;
+                inventory != null &&
+                inventory.getAvailableQuantity() != null &&
+                inventory.getAvailableQuantity() > 0;
     }
 
     @JsonIgnore

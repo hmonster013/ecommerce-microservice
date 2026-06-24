@@ -40,30 +40,30 @@ public class OpenApiConfig {
         return new Info()
                 .title("User Service API")
                 .description("""
-                    **User Service** provides comprehensive user management and authentication capabilities for the e-commerce platform.
-                    
-                    ## Features
-                    - User registration and authentication
-                    - JWT token-based security
-                    - Profile management
-                    - Role-based access control
-                    - Password management
-                    - Email validation
-                    
-                    ## Authentication
-                    This API uses JWT (JSON Web Token) for authentication. To access protected endpoints:
-                    1. Register a new user or login with existing credentials
-                    2. Use the returned JWT token in the Authorization header
-                    3. Format: `Authorization: Bearer <your-jwt-token>`
-                    
-                    ## Rate Limiting
-                    API endpoints are rate-limited to prevent abuse:
-                    - Authentication endpoints: 5 requests per minute
-                    - General endpoints: 100 requests per minute
-                    
-                    ## Error Handling
-                    All errors follow a consistent format with appropriate HTTP status codes and detailed error messages.
-                    """)
+                        **User Service** provides comprehensive user management and authentication capabilities for the e-commerce platform.
+                        
+                        ## Features
+                        - User registration and authentication
+                        - JWT token-based security
+                        - Profile management
+                        - Role-based access control
+                        - Password management
+                        - Email validation
+                        
+                        ## Authentication
+                        This API uses JWT (JSON Web Token) for authentication. To access protected endpoints:
+                        1. Register a new user or login with existing credentials
+                        2. Use the returned JWT token in the Authorization header
+                        3. Format: `Authorization: Bearer <your-jwt-token>`
+                        
+                        ## Rate Limiting
+                        API endpoints are rate-limited to prevent abuse:
+                        - Authentication endpoints: 5 requests per minute
+                        - General endpoints: 100 requests per minute
+                        
+                        ## Error Handling
+                        All errors follow a consistent format with appropriate HTTP status codes and detailed error messages.
+                        """)
                 .version("1.0.0")
                 .contact(contact())
                 .license(license());
@@ -88,10 +88,10 @@ public class OpenApiConfig {
                         .url("http://localhost:" + serverPort)
                         .description("Direct Access (Local Development)"),
                 new Server()
-                        .url("http://localhost:8080/api/user-service")
+                        .url("http://localhost:8080/api/v1/user-service")
                         .description("Via API Gateway (Local)"),
                 new Server()
-                        .url("http://api-gateway:8080/api/user-service")
+                        .url("http://api-gateway:8080/api/v1/user-service")
                         .description("Via API Gateway (Docker)")
         );
     }
@@ -113,11 +113,11 @@ public class OpenApiConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .description("""
-                    JWT Authorization header using the Bearer scheme.
-                    
-                    Enter 'Bearer' [space] and then your token in the text input below.
-                    
-                    Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    """);
+                        JWT Authorization header using the Bearer scheme.
+                        
+                        Enter 'Bearer' [space] and then your token in the text input below.
+                        
+                        Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        """);
     }
 }

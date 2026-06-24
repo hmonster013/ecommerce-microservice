@@ -1,6 +1,5 @@
 package org.de013.userservice.repository;
 
-import org.de013.userservice.entity.Role;
 import org.de013.userservice.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,48 +38,23 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     boolean existsByEmailAndIdNot(String email, Long id);
 
-    // ========== Status-based Queries ==========
-
-    List<User> findByEnabled(boolean enabled);
-
-    List<User> findByAccountNonLocked(boolean accountNonLocked);
-
-    @Query("SELECT u FROM User u WHERE u.enabled = true AND u.accountNonLocked = true")
-    List<User> findAllActiveUsers();
-
-    @Query("SELECT u FROM User u WHERE u.enabled = false OR u.accountNonLocked = false")
-    List<User> findAllInactiveUsers();
-
-    // ========== Role-based Queries ==========
-
-    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName")
-    List<User> findByRoleName(@Param("roleName") String roleName);
-
-    @Query("SELECT u FROM User u JOIN u.roles r WHERE r IN :roles")
-    List<User> findByRolesIn(@Param("roles") List<Role> roles);
-
-    @Query("SELECT COUNT(u) FROM User u JOIN u.roles r WHERE r.name = :roleName")
-    long countByRoleName(@Param("roleName") String roleName);
-
     // ========== Search and Filtering ==========
 
     @Query("SELECT u FROM User u WHERE " +
-           "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<User> searchUsers(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("SELECT u FROM User u WHERE " +
-           "(LOWER(u.firstName) LIKE LOWER(CONCAT('%', :firstName, '%')) OR :firstName IS NULL) AND " +
-           "(LOWER(u.lastName) LIKE LOWER(CONCAT('%', :lastName, '%')) OR :lastName IS NULL) AND " +
-           "(LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')) OR :email IS NULL) AND " +
-           "(u.enabled = :enabled OR :enabled IS NULL)")
+            "(LOWER(u.firstName) LIKE LOWER(CONCAT('%', :firstName, '%')) OR :firstName IS NULL) AND " +
+            "(LOWER(u.lastName) LIKE LOWER(CONCAT('%', :lastName, '%')) OR :lastName IS NULL) AND " +
+            "(LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')) OR :email IS NULL)")
     Page<User> findUsersWithFilters(@Param("firstName") String firstName,
-                                   @Param("lastName") String lastName,
-                                   @Param("email") String email,
-                                   @Param("enabled") Boolean enabled,
-                                   Pageable pageable);
+                                    @Param("lastName") String lastName,
+                                    @Param("email") String email,
+                                    Pageable pageable);
 
     // ========== Date-based Queries ==========
 
@@ -90,18 +64,15 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     @Query("SELECT u FROM User u WHERE u.createdAt >= :startDate AND u.createdAt <= :endDate")
     Page<User> findUsersCreatedBetween(@Param("startDate") LocalDateTime startDate,
-                                      @Param("endDate") LocalDateTime endDate,
-                                      Pageable pageable);
+                                       @Param("endDate") LocalDateTime endDate,
+                                       Pageable pageable);
 
     // ========== Statistics Queries ==========
-
-    @Query("SELECT COUNT(u) FROM User u WHERE u.enabled = true")
-    long countActiveUsers();
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :date")
     long countUsersCreatedAfter(@Param("date") LocalDateTime date);
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :startDate AND u.createdAt <= :endDate")
     long countUsersCreatedBetween(@Param("startDate") LocalDateTime startDate,
-                                 @Param("endDate") LocalDateTime endDate);
+                                  @Param("endDate") LocalDateTime endDate);
 }

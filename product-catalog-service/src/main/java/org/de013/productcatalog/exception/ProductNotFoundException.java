@@ -12,19 +12,19 @@ public class ProductNotFoundException extends BaseBusinessException {
 
     public ProductNotFoundException(Long productId) {
         super(
-            String.format("Product with ID %d not found", productId),
-            ERROR_CODE,
-            HttpStatus.NOT_FOUND,
-            productId
+                String.format("Product with ID %d not found", productId),
+                ERROR_CODE,
+                HttpStatus.NOT_FOUND,
+                productId
         );
     }
 
     public ProductNotFoundException(String sku) {
         super(
-            String.format("Product with SKU '%s' not found", sku),
-            ERROR_CODE,
-            HttpStatus.NOT_FOUND,
-            sku
+                String.format("Product with SKU '%s' not found", sku),
+                ERROR_CODE,
+                HttpStatus.NOT_FOUND,
+                sku
         );
     }
 

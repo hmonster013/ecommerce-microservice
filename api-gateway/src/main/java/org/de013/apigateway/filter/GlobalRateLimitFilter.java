@@ -1,5 +1,6 @@
 package org.de013.apigateway.filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +10,6 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -18,15 +18,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 /**
  * Global Rate Limiting Filter for API Gateway
  * Provides infrastructure-level protection against abuse and DDoS attacks
- * 
+ * <p>
  * This filter runs early in the filter chain to protect the system before
  * expensive operations like authentication and routing.
  */
@@ -59,17 +57,17 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
 
         // Get client IP
         String clientIp = getClientIp(request);
-        
+
         // Check IP-based rate limit first (coarse-grained protection)
         Bucket ipBucket = rateLimitConfig.getIpBucket(clientIp);
         ConsumptionProbe ipProbe = ipBucket.tryConsumeAndReturnRemaining(1);
-        
+
         if (!ipProbe.isConsumed()) {
             log.warn("Rate limit exceeded for IP: {} on path: {}", clientIp, path);
             return handleRateLimitExceeded(
-                exchange, 
-                "IP rate limit exceeded", 
-                ipProbe.getNanosToWaitForRefill()
+                    exchange,
+                    "IP rate limit exceeded",
+                    ipProbe.getNanosToWaitForRefill()
             );
         }
 
@@ -78,13 +76,13 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
         if (userId != null) {
             Bucket userBucket = rateLimitConfig.getUserBucket(userId);
             ConsumptionProbe userProbe = userBucket.tryConsumeAndReturnRemaining(1);
-            
+
             if (!userProbe.isConsumed()) {
                 log.warn("Rate limit exceeded for user: {} on path: {}", userId, path);
                 return handleRateLimitExceeded(
-                    exchange, 
-                    "User rate limit exceeded", 
-                    userProbe.getNanosToWaitForRefill()
+                        exchange,
+                        "User rate limit exceeded",
+                        userProbe.getNanosToWaitForRefill()
                 );
             }
 
@@ -102,18 +100,18 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
      * Handle rate limit exceeded scenario
      */
     private Mono<Void> handleRateLimitExceeded(
-            ServerWebExchange exchange, 
-            String message, 
+            ServerWebExchange exchange,
+            String message,
             long nanosToWait) {
-        
+
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        
+
         // Add Retry-After header (in seconds)
         long secondsToWait = (nanosToWait / 1_000_000_000) + 1;
         response.getHeaders().add("Retry-After", String.valueOf(secondsToWait));
-        
+
         // Add rate limit headers
         response.getHeaders().add("X-RateLimit-Limit", "See configuration");
         response.getHeaders().add("X-RateLimit-Remaining", "0");
@@ -121,15 +119,15 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
 
         String traceId = generateTraceId();
         ServerHttpRequest request = exchange.getRequest();
-        
+
         ErrorResponse errorResponse = ErrorResponse.of(
-            HttpStatus.TOO_MANY_REQUESTS.value(),
-            HttpStatus.TOO_MANY_REQUESTS.getReasonPhrase(),
-            "RATE_LIMIT_EXCEEDED",
-            message + ". Please try again later.",
-            request.getURI().getPath(),
-            request.getMethod().name(),
-            traceId
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                HttpStatus.TOO_MANY_REQUESTS.getReasonPhrase(),
+                "RATE_LIMIT_EXCEEDED",
+                message + ". Please try again later.",
+                request.getURI().getPath(),
+                request.getMethod().name(),
+                traceId
         );
 
         try {
@@ -139,8 +137,8 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
         } catch (Exception e) {
             log.error("Error serializing rate limit error response: {}", e.getMessage());
             String fallbackMessage = String.format(
-                "{\"success\":false,\"message\":\"%s\",\"code\":\"RATE_LIMIT_EXCEEDED\",\"traceId\":\"%s\"}",
-                message, traceId
+                    "{\"success\":false,\"message\":\"%s\",\"code\":\"RATE_LIMIT_EXCEEDED\",\"traceId\":\"%s\"}",
+                    message, traceId
             );
             byte[] bytes = fallbackMessage.getBytes(StandardCharsets.UTF_8);
             DataBuffer buffer = response.bufferFactory().wrap(bytes);
@@ -153,11 +151,11 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
      */
     private void addRateLimitHeaders(ServerHttpResponse response, ConsumptionProbe probe) {
         response.getHeaders().add("X-RateLimit-Remaining", String.valueOf(probe.getRemainingTokens()));
-        
+
         if (probe.getNanosToWaitForRefill() > 0) {
             long secondsToReset = (probe.getNanosToWaitForRefill() / 1_000_000_000) + 1;
-            response.getHeaders().add("X-RateLimit-Reset", 
-                String.valueOf(System.currentTimeMillis() / 1000 + secondsToReset));
+            response.getHeaders().add("X-RateLimit-Reset",
+                    String.valueOf(System.currentTimeMillis() / 1000 + secondsToReset));
         }
     }
 
@@ -202,10 +200,10 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
             if (parts.length < 2) {
                 return null;
             }
-            
+
             // Decode payload (Base64)
             String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
-            
+
             // Extract "sub" claim (simple string matching, not full JSON parsing)
             // This is just for rate limiting, full validation happens later in SecurityConfig
             if (payload.contains("\"sub\"")) {
@@ -216,7 +214,7 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
                     return payload.substring(valueStart, valueEnd);
                 }
             }
-            
+
             return null;
         } catch (Exception e) {
             log.debug("Could not extract userId from token: {}", e.getMessage());
@@ -229,9 +227,9 @@ public class GlobalRateLimitFilter implements GlobalFilter, Ordered {
      */
     private boolean isInfrastructureEndpoint(String path) {
         return path.startsWith("/actuator") ||
-               path.startsWith("/swagger-ui") ||
-               path.startsWith("/v3/api-docs") ||
-               path.startsWith("/webjars/");
+                path.startsWith("/swagger-ui") ||
+                path.startsWith("/v1/api-docs") ||
+                path.startsWith("/webjars/");
     }
 
     /**

@@ -257,13 +257,13 @@ public class PriceBreakdownDto {
     @JsonIgnore
     public BigDecimal getTotalDiscounts() {
         BigDecimal total = BigDecimal.ZERO;
-        
+
         if (productDiscounts != null) total = total.add(productDiscounts);
         if (cartDiscounts != null) total = total.add(cartDiscounts);
         if (couponDiscounts != null) total = total.add(couponDiscounts);
         if (loyaltyDiscounts != null) total = total.add(loyaltyDiscounts);
         if (shippingDiscounts != null) total = total.add(shippingDiscounts);
-        
+
         return total;
     }
 
@@ -272,8 +272,8 @@ public class PriceBreakdownDto {
      */
     @JsonIgnore
     public BigDecimal calculateSavingsPercentage() {
-        if (originalTotal != null && originalTotal.compareTo(BigDecimal.ZERO) > 0 && 
-            totalSavings != null && totalSavings.compareTo(BigDecimal.ZERO) > 0) {
+        if (originalTotal != null && originalTotal.compareTo(BigDecimal.ZERO) > 0 &&
+                totalSavings != null && totalSavings.compareTo(BigDecimal.ZERO) > 0) {
             return totalSavings.divide(originalTotal, 4, BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
         }

@@ -29,12 +29,12 @@ public class RateLimitConfig {
         this.properties = properties;
         log.info("Rate limiting enabled: {}", properties.isEnabled());
         if (properties.isEnabled()) {
-            log.info("Per-IP limit: {} requests per {} minute(s)", 
-                properties.getPerIp().getCapacity(), 
-                properties.getPerIp().getRefillPeriodMinutes());
-            log.info("Per-User limit: {} requests per {} minute(s)", 
-                properties.getPerUser().getCapacity(), 
-                properties.getPerUser().getRefillPeriodMinutes());
+            log.info("Per-IP limit: {} requests per {} minute(s)",
+                    properties.getPerIp().getCapacity(),
+                    properties.getPerIp().getRefillPeriodMinutes());
+            log.info("Per-User limit: {} requests per {} minute(s)",
+                    properties.getPerUser().getCapacity(),
+                    properties.getPerUser().getRefillPeriodMinutes());
         }
     }
 
@@ -59,8 +59,8 @@ public class RateLimitConfig {
             Bucket bucket = Bucket.builder()
                     .addLimit(limit)
                     .build();
-            log.debug("Created rate limit bucket for key: {} with capacity: {}, refill: {} per {}", 
-                key, capacity, refillTokens, refillPeriod);
+            log.debug("Created rate limit bucket for key: {} with capacity: {}, refill: {} per {}",
+                    key, capacity, refillTokens, refillPeriod);
             return bucket;
         });
     }
@@ -71,10 +71,10 @@ public class RateLimitConfig {
     public Bucket getIpBucket(String clientIp) {
         LimitConfig config = properties.getPerIp();
         return createBucket(
-            "ip:" + clientIp, 
-            config.getCapacity(), 
-            config.getRefillTokens(), 
-            Duration.ofMinutes(config.getRefillPeriodMinutes())
+                "ip:" + clientIp,
+                config.getCapacity(),
+                config.getRefillTokens(),
+                Duration.ofMinutes(config.getRefillPeriodMinutes())
         );
     }
 
@@ -84,10 +84,10 @@ public class RateLimitConfig {
     public Bucket getUserBucket(String userId) {
         LimitConfig config = properties.getPerUser();
         return createBucket(
-            "user:" + userId, 
-            config.getCapacity(), 
-            config.getRefillTokens(), 
-            Duration.ofMinutes(config.getRefillPeriodMinutes())
+                "user:" + userId,
+                config.getCapacity(),
+                config.getRefillTokens(),
+                Duration.ofMinutes(config.getRefillPeriodMinutes())
         );
     }
 

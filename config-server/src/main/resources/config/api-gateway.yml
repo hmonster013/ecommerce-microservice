@@ -114,24 +114,24 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
-    config-url: /v3/api-docs/swagger-config
+    config-url: /v1/api-docs/swagger-config
     disable-swagger-default-url: true
 
     urls:
-      - url: /v3/api-docs
+      - url: /api/v1/v1/api-docs
         name: API Gateway
-      # Service APIs - using automatic discovery pattern /api/{service-name}/**
-      - url: /api/user-service/v3/api-docs
+      # Service APIs - using automatic discovery pattern /api/v1/{service-name}/**
+      - url: /api/v1/user-service/v1/api-docs
         name: User Service
-      - url: /api/product-catalog-service/v3/api-docs
+      - url: /api/v1/product-catalog-service/v1/api-docs
         name: Product Catalog Service
-      - url: /api/shopping-cart-service/v3/api-docs
+      - url: /api/v1/shopping-cart-service/v1/api-docs
         name: Shopping Cart Service
-      - url: /api/order-service/v3/api-docs
+      - url: /api/v1/order-service/v1/api-docs
         name: Order Service
-      - url: /api/payment-service/v3/api-docs
+      - url: /api/v1/payment-service/v1/api-docs
         name: Payment Service
-      - url: /api/notification-service/v3/api-docs
+      - url: /api/v1/notification-service/v1/api-docs
         name: Notification Service
 
 # Keycloak Configuration

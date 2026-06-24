@@ -15,14 +15,24 @@ public interface OrderService {
 
     // Read operations
     OrderResponse getOrderById(Long id);
+
     OrderResponse getOrderByNumber(String orderNumber);
-    Page<OrderResponse> listOrdersByUser(Long userId, Pageable pageable);
+
+    Page<OrderResponse> listOrdersByUser(String userId, Pageable pageable);
+
     Page<OrderResponse> listAllOrders(Pageable pageable);
 
     // Update operations
     OrderResponse updateOrder(Long id, UpdateOrderRequest request);
 
+    void markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber);
+
+    void markOrderPaymentFailed(Long orderId, String reason);
+
+    void updateOrderStatus(Long orderId, org.de013.orderservice.dto.request.OrderStatusUpdateRequest request);
+
     // Delete operations
     void cancelOrder(Long id, String reason);
 }
+
 

@@ -62,7 +62,7 @@ public class PriceRangeDto {
         if (label != null && !label.trim().isEmpty()) {
             return label;
         }
-        
+
         if (hasMinPrice() && hasMaxPrice()) {
             return String.format("$%.2f - $%.2f", minPrice, maxPrice);
         } else if (hasMinPrice()) {
@@ -70,7 +70,7 @@ public class PriceRangeDto {
         } else if (hasMaxPrice()) {
             return String.format("Up to $%.2f", maxPrice);
         }
-        
+
         return "Any price";
     }
 }

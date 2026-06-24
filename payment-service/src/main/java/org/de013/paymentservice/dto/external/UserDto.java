@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserDto {
-    private Long id;
+    private String id;
     private String username;
     private String email;
     private String firstName;
@@ -82,8 +82,8 @@ public class UserDto {
             if (!hasLimits) return true;
 
             return (transactionLimit == null || amount.compareTo(transactionLimit) <= 0) &&
-                   (remainingDailyLimit == null || amount.compareTo(remainingDailyLimit) <= 0) &&
-                   (remainingMonthlyLimit == null || amount.compareTo(remainingMonthlyLimit) <= 0);
+                    (remainingDailyLimit == null || amount.compareTo(remainingDailyLimit) <= 0) &&
+                    (remainingMonthlyLimit == null || amount.compareTo(remainingMonthlyLimit) <= 0);
         }
 
         @JsonIgnore

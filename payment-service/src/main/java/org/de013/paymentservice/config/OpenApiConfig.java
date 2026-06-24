@@ -42,32 +42,32 @@ public class OpenApiConfig {
         return new Info()
                 .title("Payment Service API")
                 .description("""
-                    **Payment Service** provides secure payment processing capabilities for the e-commerce platform.
-                    
-                    ## Features
-                    - Payment processing and validation
-                    - Multiple payment methods support
-                    - Payment status tracking
-                    - Refund and cancellation handling
-                    - Payment history and analytics
-                    - Secure transaction management
-                    
-                    ## Authentication
-                    This API uses JWT (JSON Web Token) for authentication. To access protected endpoints:
-                    1. Obtain a JWT token from the user service
-                    2. Use the returned JWT token in the Authorization header
-                    3. Format: `Authorization: Bearer <your-jwt-token>`
-                    
-                    ## Payment Flow
-                    1. Create payment intent
-                    2. Process payment with provider
-                    3. Validate payment result
-                    4. Update order status
-                    5. Send confirmation
-                    
-                    ## Security
-                    All payment data is encrypted and processed securely following PCI DSS standards.
-                    """)
+                        **Payment Service** provides secure payment processing capabilities for the e-commerce platform.
+                        
+                        ## Features
+                        - Payment processing and validation
+                        - Multiple payment methods support
+                        - Payment status tracking
+                        - Refund and cancellation handling
+                        - Payment history and analytics
+                        - Secure transaction management
+                        
+                        ## Authentication
+                        This API uses JWT (JSON Web Token) for authentication. To access protected endpoints:
+                        1. Obtain a JWT token from the user service
+                        2. Use the returned JWT token in the Authorization header
+                        3. Format: `Authorization: Bearer <your-jwt-token>`
+                        
+                        ## Payment Flow
+                        1. Create payment intent
+                        2. Process payment with provider
+                        3. Validate payment result
+                        4. Update order status
+                        5. Send confirmation
+                        
+                        ## Security
+                        All payment data is encrypted and processed securely following PCI DSS standards.
+                        """)
                 .version("1.0.0")
                 .contact(contact())
                 .license(license());
@@ -92,10 +92,10 @@ public class OpenApiConfig {
                         .url("http://localhost:" + serverPort)
                         .description("Direct Access (Local Development)"),
                 new Server()
-                        .url("http://localhost:8080/api/payment-service")
+                        .url("http://localhost:8080/api/v1/payment-service")
                         .description("Via API Gateway (Local)"),
                 new Server()
-                        .url("http://api-gateway:8080/api/payment-service")
+                        .url("http://api-gateway:8080/api/v1/payment-service")
                         .description("Via API Gateway (Docker)")
         );
     }
@@ -125,11 +125,11 @@ public class OpenApiConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .description("""
-                    JWT Authorization header using the Bearer scheme.
-                    
-                    Enter 'Bearer' [space] and then your token in the text input below.
-                    
-                    Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    """);
+                        JWT Authorization header using the Bearer scheme.
+                        
+                        Enter 'Bearer' [space] and then your token in the text input below.
+                        
+                        Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        """);
     }
 }

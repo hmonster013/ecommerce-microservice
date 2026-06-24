@@ -69,19 +69,19 @@ public class SearchResultDto {
     @Builder
     @Schema(description = "Applied search filters")
     public static class SearchFilters {
-        
+
         @Schema(description = "Category filters")
         private List<String> categories;
-        
+
         @Schema(description = "Brand filters")
         private List<String> brands;
-        
+
         @Schema(description = "Price range")
         private PriceRangeDto priceRange;
-        
+
         @Schema(description = "Minimum rating")
         private Double minRating;
-        
+
         @Schema(description = "Feature filters")
         private List<String> features;
     }
@@ -93,25 +93,25 @@ public class SearchResultDto {
     @Builder
     @Schema(description = "Search metadata")
     public static class SearchMetadata {
-        
+
         @Schema(description = "Search type", example = "full_text")
         private String searchType;
-        
+
         @Schema(description = "Sort field", example = "relevance")
         private String sortBy;
-        
+
         @Schema(description = "Sort direction", example = "DESC")
         private String sortDirection;
-        
+
         @Schema(description = "Page number", example = "0")
         private Integer page;
-        
+
         @Schema(description = "Page size", example = "20")
         private Integer size;
-        
+
         @Schema(description = "Has more results", example = "true")
         private Boolean hasMore;
-        
+
         @Schema(description = "Search ID for analytics", example = "search_123456")
         private String searchId;
     }
@@ -142,7 +142,7 @@ public class SearchResultDto {
         if (totalResults == null) {
             return "No results";
         }
-        
+
         if (totalResults == 0) {
             return "No results found";
         } else if (totalResults == 1) {
@@ -157,7 +157,7 @@ public class SearchResultDto {
         if (executionTimeMs == null) {
             return "";
         }
-        
+
         if (executionTimeMs < 1000) {
             return String.format("(%d ms)", executionTimeMs);
         } else {

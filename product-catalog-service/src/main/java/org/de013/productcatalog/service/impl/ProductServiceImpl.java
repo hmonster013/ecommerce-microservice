@@ -4,16 +4,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.*;
-
-import org.de013.productcatalog.entity.*;
-import java.util.Optional;
+import org.de013.productcatalog.entity.Category;
+import org.de013.productcatalog.entity.Inventory;
+import org.de013.productcatalog.entity.Product;
+import org.de013.productcatalog.entity.ProductCategory;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.de013.productcatalog.exception.DuplicateSkuException;
 import org.de013.productcatalog.exception.ProductNotFoundException;
-import org.de013.productcatalog.repository.*;
-
-import org.de013.productcatalog.service.ProductService;
 import org.de013.productcatalog.mapper.ProductMapper;
+import org.de013.productcatalog.repository.CategoryRepository;
+import org.de013.productcatalog.repository.InventoryRepository;
+import org.de013.productcatalog.repository.ProductCategoryRepository;
+import org.de013.productcatalog.repository.ProductRepository;
+import org.de013.productcatalog.service.ProductService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -21,12 +24,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -101,20 +105,20 @@ public class ProductServiceImpl implements ProductService {
     @CacheEvict(value = {"featuredProducts", "popularProducts", "searchResults"}, allEntries = true)
     public ProductResponseDto updateProduct(Long id, ProductUpdateDto updateDto) {
         log.info("Updating product with ID: {}", id);
-        
+
         Product product = findProductById(id);
         validateProductData(updateDto, id);
-        
+
         // Update product fields
         updateProductFields(product, updateDto);
-        
+
         // Update category relationships if provided
         if (updateDto.getCategoryIds() != null) {
             updateProductCategoryRelationships(product, updateDto.getCategoryIds(), updateDto.getPrimaryCategoryId());
         }
-        
+
         product = productRepository.save(product);
-        
+
         log.info("Product updated successfully with ID: {}", id);
         return productMapper.toProductResponseDto(product);
     }
@@ -124,10 +128,10 @@ public class ProductServiceImpl implements ProductService {
     @CacheEvict(value = "products", key = "#id")
     public void deleteProduct(Long id) {
         log.info("Deleting product with ID: {}", id);
-        
+
         Product product = findProductById(id);
         productRepository.delete(product);
-        
+
         log.info("Product deleted successfully with ID: {}", id);
     }
 
@@ -135,7 +139,7 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(value = "products", key = "#id")
     public ProductDetailDto getProductById(Long id) {
         log.debug("Getting product by ID: {}", id);
-        
+
         Product product = findProductById(id);
         return productMapper.toProductDetailDto(product);
     }
@@ -144,17 +148,17 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(value = "products", key = "#sku")
     public ProductDetailDto getProductBySku(String sku) {
         log.debug("Getting product by SKU: {}", sku);
-        
+
         Product product = productRepository.findBySku(sku)
-                .orElseThrow(() -> new RuntimeException("Product not found with SKU: " + sku));
-        
+                .orElseThrow(() -> new ProductNotFoundException(sku));
+
         return productMapper.toProductDetailDto(product);
     }
 
     @Override
     public PageResponse<ProductSummaryDto> getAllProducts(Pageable pageable) {
         log.debug("Getting all products with pagination: {}", pageable);
-        
+
         Page<Product> products = productRepository.findAll(pageable);
         return mapToPageResponse(products);
     }
@@ -162,7 +166,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public PageResponse<ProductSummaryDto> getProductsByStatus(ProductStatus status, Pageable pageable) {
         log.debug("Getting products by status: {} with pagination: {}", status, pageable);
-        
+
         Page<Product> products = productRepository.findByStatus(status, pageable);
         return mapToPageResponse(products);
     }
@@ -171,7 +175,7 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(value = "categories", key = "'products_' + #categoryId + '_' + #pageable.pageNumber + '_' + #pageable.pageSize")
     public PageResponse<ProductSummaryDto> getProductsByCategory(Long categoryId, Pageable pageable) {
         log.debug("Getting products by category ID: {} with pagination: {}", categoryId, pageable);
-        
+
         Page<Product> products = productRepository.findByCategoryIdAndStatus(
                 categoryId, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
@@ -180,7 +184,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public PageResponse<ProductSummaryDto> getProductsByCategorySlug(String categorySlug, Pageable pageable) {
         log.debug("Getting products by category slug: {} with pagination: {}", categorySlug, pageable);
-        
+
         Page<Product> products = productRepository.findByCategorySlugAndStatus(
                 categorySlug, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
@@ -189,7 +193,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public PageResponse<ProductSummaryDto> getProductsByBrand(String brand, Pageable pageable) {
         log.debug("Getting products by brand: {} with pagination: {}", brand, pageable);
-        
+
         Page<Product> products = productRepository.findByBrand(brand, pageable);
         return mapToPageResponse(products);
     }
@@ -198,7 +202,7 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(value = "featured", key = "'all'")
     public List<ProductSummaryDto> getFeaturedProducts() {
         log.debug("Getting all featured products");
-        
+
         List<Product> products = productRepository.findByIsFeaturedTrue();
         return products.stream()
                 .map(productMapper::toProductSummaryDto)
@@ -209,10 +213,10 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(value = "featured", key = "'limit_' + #limit")
     public List<ProductSummaryDto> getFeaturedProducts(int limit) {
         log.debug("Getting featured products with limit: {}", limit);
-        
+
         Pageable pageable = PageRequest.of(0, limit, Sort.by("createdAt").descending());
         Page<Product> products = productRepository.findByIsFeaturedTrue(pageable);
-        
+
         return products.getContent().stream()
                 .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
@@ -222,7 +226,7 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(value = "featured", key = "'category_' + #categoryId")
     public List<ProductSummaryDto> getFeaturedProductsByCategory(Long categoryId) {
         log.debug("Getting featured products by category ID: {}", categoryId);
-        
+
         List<Product> products = productRepository.findFeaturedByCategoryId(categoryId, ProductStatus.ACTIVE.name());
         return products.stream()
                 .map(productMapper::toProductSummaryDto)
@@ -233,7 +237,7 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(value = "featured", key = "'category_' + #categoryId + '_limit_' + #limit")
     public List<ProductSummaryDto> getFeaturedProductsByCategory(Long categoryId, int limit) {
         log.debug("Getting featured products by category ID: {} with limit: {}", categoryId, limit);
-        
+
         List<Product> products = productRepository.findFeaturedByCategoryId(categoryId, ProductStatus.ACTIVE.name());
         return products.stream()
                 .limit(limit)
@@ -242,11 +246,10 @@ public class ProductServiceImpl implements ProductService {
     }
 
 
-
     @Override
     public PageResponse<ProductSummaryDto> searchProductsSimple(String query, Pageable pageable) {
         log.debug("Simple search for products with query: {}", query);
-        
+
         Page<Product> products = productRepository.searchByQuery(query, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
     }
@@ -254,7 +257,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public PageResponse<ProductSummaryDto> fullTextSearch(String query, Pageable pageable) {
         log.debug("Full-text search for products with query: {}", query);
-        
+
         Page<Product> products = productRepository.fullTextSearch(query, ProductStatus.ACTIVE.name(), pageable);
         return mapToPageResponse(products);
     }
@@ -269,7 +272,7 @@ public class ProductServiceImpl implements ProductService {
         List<ProductSummaryDto> content = products.getContent().stream()
                 .map(productMapper::toProductSummaryDto)
                 .collect(Collectors.toList());
-        
+
         return PageResponse.<ProductSummaryDto>builder()
                 .content(content)
                 .page(products.getNumber())
@@ -281,7 +284,6 @@ public class ProductServiceImpl implements ProductService {
                 .empty(products.isEmpty())
                 .build();
     }
-
 
 
     // Validation methods
@@ -365,7 +367,7 @@ public class ProductServiceImpl implements ProductService {
         if (primaryCategoryId == null && !productCategories.isEmpty()) {
             productCategories.get(0).setPrimary(true);
             log.debug("No primary category specified, setting first category as primary: {}",
-                     productCategories.get(0).getCategory().getId());
+                    productCategories.get(0).getCategory().getId());
         }
 
         // Save all relationships
@@ -380,7 +382,7 @@ public class ProductServiceImpl implements ProductService {
 
     private void createInitialInventory(Product product, ProductCreateDto createDto) {
         log.debug("Setting initial inventory for product ID: {} with quantity: {}",
-                 product.getId(), createDto.getInitialQuantity());
+                product.getId(), createDto.getInitialQuantity());
 
         // Skip inventory setup for digital products
         if (Boolean.TRUE.equals(createDto.getIsDigital())) {
@@ -414,7 +416,7 @@ public class ProductServiceImpl implements ProductService {
 
             inventoryRepository.save(inventory);
             log.debug("Updated existing inventory for product ID: {} with quantity: {}",
-                     product.getId(), inventory.getQuantity());
+                    product.getId(), inventory.getQuantity());
         } else {
             // Fallback: Create inventory if trigger didn't work for some reason
             log.warn("No inventory found for product ID: {}, creating new one", product.getId());
@@ -518,11 +520,38 @@ public class ProductServiceImpl implements ProductService {
     }
 
     // Essential implementations only
-    @Override public boolean isSkuUnique(String sku) { return !productRepository.existsBySku(sku); }
-    @Override public boolean isSkuUnique(String sku, Long excludeProductId) { return !productRepository.existsBySkuAndIdNot(sku, excludeProductId); }
-    @Override public long getTotalProductCount() { return productRepository.count(); }
-    @Override public long getActiveProductCount() { return productRepository.countByStatus(ProductStatus.ACTIVE); }
-    @Override public long getFeaturedProductCount() { return productRepository.countByIsFeaturedTrue(); }
-    @Override public boolean existsById(Long id) { return productRepository.existsById(id); }
-    @Override public boolean existsBySku(String sku) { return productRepository.existsBySku(sku); }
+    @Override
+    public boolean isSkuUnique(String sku) {
+        return !productRepository.existsBySku(sku);
+    }
+
+    @Override
+    public boolean isSkuUnique(String sku, Long excludeProductId) {
+        return !productRepository.existsBySkuAndIdNot(sku, excludeProductId);
+    }
+
+    @Override
+    public long getTotalProductCount() {
+        return productRepository.count();
+    }
+
+    @Override
+    public long getActiveProductCount() {
+        return productRepository.countByStatus(ProductStatus.ACTIVE);
+    }
+
+    @Override
+    public long getFeaturedProductCount() {
+        return productRepository.countByIsFeaturedTrue();
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return productRepository.existsById(id);
+    }
+
+    @Override
+    public boolean existsBySku(String sku) {
+        return productRepository.existsBySku(sku);
+    }
 }

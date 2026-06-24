@@ -59,29 +59,29 @@ public interface PaymentMethodService {
     /**
      * Get all payment methods for user
      */
-    List<PaymentMethodResponse> getPaymentMethodsByUserId(Long userId);
+    List<PaymentMethodResponse> getPaymentMethodsByUserId(String userId);
 
     /**
      * Get active payment methods for user
      */
-    List<PaymentMethodResponse> getActivePaymentMethodsByUserId(Long userId);
+    List<PaymentMethodResponse> getActivePaymentMethodsByUserId(String userId);
 
     /**
      * Get payment methods by user ID with pagination
      */
-    Page<PaymentMethodResponse> getPaymentMethodsByUserId(Long userId, Pageable pageable);
+    Page<PaymentMethodResponse> getPaymentMethodsByUserId(String userId, Pageable pageable);
 
     /**
      * Get payment methods by user ID and type
      */
-    List<PaymentMethodResponse> getPaymentMethodsByUserIdAndType(Long userId, PaymentMethodType type);
+    List<PaymentMethodResponse> getPaymentMethodsByUserIdAndType(String userId, PaymentMethodType type);
 
     // ========== DEFAULT PAYMENT METHOD MANAGEMENT ==========
 
     /**
      * Get default payment method for user
      */
-    Optional<PaymentMethodResponse> getDefaultPaymentMethodByUserId(Long userId);
+    Optional<PaymentMethodResponse> getDefaultPaymentMethodByUserId(String userId);
 
     /**
      * Set payment method as default for user
@@ -91,12 +91,12 @@ public interface PaymentMethodService {
     /**
      * Clear default payment method for user
      */
-    void clearDefaultPaymentMethod(Long userId);
+    void clearDefaultPaymentMethod(String userId);
 
     /**
      * Check if user has default payment method
      */
-    boolean hasDefaultPaymentMethod(Long userId);
+    boolean hasDefaultPaymentMethod(String userId);
 
     // ========== STRIPE INTEGRATION ==========
 
@@ -125,7 +125,7 @@ public interface PaymentMethodService {
     /**
      * Get card payment methods for user
      */
-    List<PaymentMethodResponse> getCardPaymentMethodsByUserId(Long userId);
+    List<PaymentMethodResponse> getCardPaymentMethodsByUserId(String userId);
 
     /**
      * Find expired card payment methods
@@ -148,7 +148,7 @@ public interface PaymentMethodService {
      * Search payment methods with criteria
      */
     Page<PaymentMethodResponse> searchPaymentMethods(
-            Long userId,
+            String userId,
             PaymentMethodType type,
             Boolean isActive,
             Boolean isDefault,
@@ -160,29 +160,29 @@ public interface PaymentMethodService {
     /**
      * Get recently used payment methods
      */
-    List<PaymentMethodResponse> getRecentlyUsedPaymentMethods(Long userId, int limit);
+    List<PaymentMethodResponse> getRecentlyUsedPaymentMethods(String userId, int limit);
 
     /**
      * Get unused payment methods
      */
-    List<PaymentMethodResponse> getUnusedPaymentMethods(Long userId);
+    List<PaymentMethodResponse> getUnusedPaymentMethods(String userId);
 
     // ========== PAYMENT METHOD STATISTICS ==========
 
     /**
      * Get payment method statistics for user
      */
-    PaymentMethodStatistics getPaymentMethodStatisticsByUserId(Long userId);
+    PaymentMethodStatistics getPaymentMethodStatisticsByUserId(String userId);
 
     /**
      * Get payment method count by user and type
      */
-    Long getPaymentMethodCountByUserAndType(Long userId, PaymentMethodType type);
+    Long getPaymentMethodCountByUserAndType(String userId, PaymentMethodType type);
 
     /**
      * Check if user has active payment methods
      */
-    boolean hasActivePaymentMethods(Long userId);
+    boolean hasActivePaymentMethods(String userId);
 
     // ========== UTILITY METHODS ==========
 
@@ -199,7 +199,7 @@ public interface PaymentMethodService {
     /**
      * Validate payment method ownership
      */
-    void validatePaymentMethodOwnership(Long paymentMethodId, Long userId);
+    void validatePaymentMethodOwnership(Long paymentMethodId, String userId);
 
     /**
      * Get payment method entity by ID (for internal use)
@@ -238,5 +238,7 @@ public interface PaymentMethodService {
             Long expiringSoonMethods,
             LocalDateTime oldestMethodDate,
             LocalDateTime newestMethodDate
-    ) {}
+    ) {
+    }
 }
+

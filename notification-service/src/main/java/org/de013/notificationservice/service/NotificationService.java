@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 /**
@@ -32,9 +33,9 @@ public class NotificationService {
      * Send email notification
      */
     @Transactional
-    public Notification sendEmail(Long userId, String recipient, String subject, String content) {
+    public Notification sendEmail(String userId, String recipient, String subject, String content) {
         log.info("Sending email notification to: {}", recipient);
-        
+
         Notification notification = Notification.builder()
                 .userId(userId)
                 .channel(NotificationChannel.EMAIL)
@@ -43,9 +44,9 @@ public class NotificationService {
                 .content(content)
                 .status(NotificationStatus.PENDING)
                 .build();
-        
+
         notification = notificationRepository.save(notification);
-        
+
         try {
             emailService.sendEmail(recipient, subject, content);
             notification.setStatus(NotificationStatus.SENT);
@@ -56,7 +57,7 @@ public class NotificationService {
             notification.setErrorMessage(e.getMessage());
             log.error("Failed to send email to {}: {}", recipient, e.getMessage());
         }
-        
+
         return notificationRepository.save(notification);
     }
 
@@ -64,9 +65,9 @@ public class NotificationService {
      * Send SMS notification
      */
     @Transactional
-    public Notification sendSms(Long userId, String phoneNumber, String message) {
+    public Notification sendSms(String userId, String phoneNumber, String message) {
         log.info("Sending SMS notification to: {}", phoneNumber);
-        
+
         Notification notification = Notification.builder()
                 .userId(userId)
                 .channel(NotificationChannel.SMS)
@@ -74,9 +75,9 @@ public class NotificationService {
                 .content(message)
                 .status(NotificationStatus.PENDING)
                 .build();
-        
+
         notification = notificationRepository.save(notification);
-        
+
         try {
             smsService.sendSms(phoneNumber, message);
             notification.setStatus(NotificationStatus.SENT);
@@ -87,7 +88,7 @@ public class NotificationService {
             notification.setErrorMessage(e.getMessage());
             log.error("Failed to send SMS to {}: {}", phoneNumber, e.getMessage());
         }
-        
+
         return notificationRepository.save(notification);
     }
 
@@ -95,7 +96,7 @@ public class NotificationService {
      * Send both email and SMS notification
      */
     @Transactional
-    public List<Notification> sendBoth(Long userId, String email, String phoneNumber, String subject, String message) {
+    public List<Notification> sendBoth(String userId, String email, String phoneNumber, String subject, String message) {
         log.info("Sending both email and SMS notifications for user: {}", userId);
 
         // Send email
@@ -117,14 +118,14 @@ public class NotificationService {
     /**
      * Find notifications by user ID
      */
-    public Page<Notification> findByUserId(Long userId, Pageable pageable) {
+    public Page<Notification> findByUserId(String userId, Pageable pageable) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
 
     /**
      * Count unread notifications for user
      */
-    public long countUnreadByUserId(Long userId) {
+    public long countUnreadByUserId(String userId) {
         return notificationRepository.countByUserIdAndStatus(userId, NotificationStatus.SENT);
     }
 
@@ -142,7 +143,8 @@ public class NotificationService {
             log.info("Notification marked as read: {}", id);
         } else {
             log.warn("Notification not found: {}", id);
-            throw new RuntimeException("Notification not found: " + id);
+            throw new NoSuchElementException("Notification not found: " + id);
         }
     }
 }
+

@@ -106,7 +106,7 @@ public class ProductImageServiceImpl implements ProductImageService {
         if (StringUtils.hasText(updateDto.getUrl())) {
             validateImageUrl(updateDto.getUrl());
             image.setUrl(updateDto.getUrl());
-            
+
             // Update file format if URL changed and format not explicitly provided
             if (updateDto.getFileFormat() == null) {
                 image.setFileFormat(extractFileFormatFromUrl(updateDto.getUrl()));
@@ -327,7 +327,7 @@ public class ProductImageServiceImpl implements ProductImageService {
         if (!StringUtils.hasText(url)) {
             return null;
         }
-        
+
         String extension = url.substring(url.lastIndexOf('.') + 1).toUpperCase();
         return extension.equals("JPEG") ? "JPG" : extension;
     }

@@ -110,26 +110,26 @@ public class SearchPerformanceDto {
     @JsonIgnore
     public Integer getSearchEfficiencyScore() {
         double score = 0.0;
-        
+
         // Success rate component (40%)
         score += getSearchSuccessRate() * 0.4;
-        
+
         // Click-through rate component (30%)
         if (clickThroughRate != null) {
             score += clickThroughRate * 0.3;
         }
-        
+
         // Conversion rate component (20%)
         if (conversionRate != null) {
             score += conversionRate * 2.0 * 0.2; // Scale up conversion rate
         }
-        
+
         // Performance component (10%) - inverse of slow search percentage
         if (totalSearches != null && totalSearches > 0 && slowSearches != null) {
             double slowSearchPercentage = slowSearches * 100.0 / totalSearches;
             score += (100.0 - slowSearchPercentage) * 0.1;
         }
-        
+
         return Math.max(0, Math.min(100, (int) Math.round(score)));
     }
 
@@ -138,9 +138,9 @@ public class SearchPerformanceDto {
      */
     @JsonIgnore
     public Boolean isHealthy() {
-        return getSearchEfficiencyScore() >= 70 && 
-               (averageExecutionTime == null || averageExecutionTime < 500) &&
-               getSearchSuccessRate() >= 80.0;
+        return getSearchEfficiencyScore() >= 70 &&
+                (averageExecutionTime == null || averageExecutionTime < 500) &&
+                getSearchSuccessRate() >= 80.0;
     }
 
     /**
@@ -162,31 +162,31 @@ public class SearchPerformanceDto {
     @JsonIgnore
     public String[] getRecommendations() {
         java.util.List<String> recommendations = new java.util.ArrayList<>();
-        
+
         if (getSearchSuccessRate() < 80.0) {
             recommendations.add("Improve search algorithm to increase result relevance");
         }
-        
+
         if (clickThroughRate != null && clickThroughRate < 50.0) {
             recommendations.add("Optimize search result presentation and ranking");
         }
-        
+
         if (conversionRate != null && conversionRate < 5.0) {
             recommendations.add("Improve product recommendations and search-to-purchase flow");
         }
-        
+
         if (averageExecutionTime != null && averageExecutionTime > 500) {
             recommendations.add("Optimize search performance and consider caching strategies");
         }
-        
+
         if (suggestionAcceptanceRate != null && suggestionAcceptanceRate < 30.0) {
             recommendations.add("Improve search suggestion quality and relevance");
         }
-        
+
         if (recommendations.isEmpty()) {
             recommendations.add("Search performance is optimal - maintain current strategies");
         }
-        
+
         return recommendations.toArray(new String[0]);
     }
 }

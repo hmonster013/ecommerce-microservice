@@ -19,7 +19,7 @@ import java.util.Arrays;
 
 /**
  * Security configuration for Order Service
- * 
+ * <p>
  * Architecture: Trust internal network - API Gateway handles all authentication & authorization
  * - API Gateway validates JWT with Keycloak
  * - API Gateway forwards user context via headers (X-User-Id, X-User-Username, X-User-Email)

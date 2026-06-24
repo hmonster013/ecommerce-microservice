@@ -3,7 +3,8 @@ package org.de013.shoppingcart.dto.request;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 /**
@@ -71,9 +72,9 @@ public class GiftOptionsDto {
     @JsonIgnore
     @AssertTrue(message = "{gift.field.required}")
     public boolean hasGiftFields() {
-        return isGift != null || giftMessage != null || giftWrapType != null || 
-               giftWrapColor != null || senderName != null || recipientName != null ||
-               deliveryInstructions != null;
+        return isGift != null || giftMessage != null || giftWrapType != null ||
+                giftWrapColor != null || senderName != null || recipientName != null ||
+                deliveryInstructions != null;
     }
 
     /**

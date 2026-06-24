@@ -1,0 +1,717 @@
+# ============================================
+# PRODUCTION / FULL DOCKER STACK
+# ============================================
+# Chạy toàn bộ hệ thống trong Docker: hạ tầng + tất cả business service.
+# Dùng khi cần demo end-to-end hoặc môi trường gần production
+# (không cần IDE).
+#
+# Chạy từ root project:
+#   docker compose --env-file .env -f docker-compose/prod/docker-compose.yml up -d --build
+#   docker compose --env-file .env -f docker-compose/prod/docker-compose.yml down
+#
+# Khác với default/:
+#   - Build và chạy mọi business service trong container.
+#   - URL service-to-service dùng hostname container (vd eureka-server, keycloak).
+#   - Cần image build từ Dockerfile của từng module.
+# ============================================
+
+services:
+  # ============================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================
+  
+  postgres:
+    image: postgres:15-alpine
+    container_name: ecommerce-postgres
+    environment:
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "${POSTGRES_HOST_PORT:-25432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - ecommerce-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce-redis
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "${REDIS_HOST_PORT:-16379}:6379"
+    networks:
+      - ecommerce-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: ecommerce-rabbitmq
+    ports:
+      - "${RABBITMQ_HOST_PORT:-15672}:5672"
+      - "${RABBITMQ_MGMT_HOST_PORT:-25672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: ecommerce-kafka
+    ports:
+      - "${KAFKA_PORT}:9092"
+    environment:
+      KAFKA_NODE_ID: ${KAFKA_NODE_ID}
+      KAFKA_PROCESS_ROLES: ${KAFKA_PROCESS_ROLES}
+      KAFKA_LISTENERS: ${KAFKA_LISTENERS}
+      KAFKA_ADVERTISED_LISTENERS: ${KAFKA_ADVERTISED_LISTENERS}
+      KAFKA_CONTROLLER_LISTENER_NAMES: ${KAFKA_CONTROLLER_LISTENER_NAMES}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: ${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP}
+      KAFKA_CONTROLLER_QUORUM_VOTERS: ${KAFKA_CONTROLLER_QUORUM_VOTERS}
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR}
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: ${KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR}
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: ${KAFKA_TRANSACTION_STATE_LOG_MIN_ISR}
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: ${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS}
+      KAFKA_NUM_PARTITIONS: ${KAFKA_NUM_PARTITIONS}
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 --version 2>/dev/null" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
+  # ============================================
+  # SERVICE DISCOVERY & CONFIGURATION
+  # ============================================
+
+  eureka-server:
+    build:
+      context: ../../eureka-server
+      dockerfile: Dockerfile
+    container_name: ecommerce-eureka-server
+    ports:
+      - "${EUREKA_SERVER_PORT}:8761"
+    environment:
+      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      # OpenTelemetry Configuration
+      OTEL_SERVICE_NAME: eureka-server
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      OTEL_METRICS_EXPORTER: prometheus
+      OTEL_LOGS_EXPORTER: none
+      JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
+    networks:
+      - ecommerce-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8761/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  config-server:
+    extends:
+      file: common-config.yml
+      service: config-server-base
+    build:
+      context: ../../config-server
+      dockerfile: Dockerfile
+    container_name: ecommerce-config-server
+    ports:
+      - "${CONFIG_SERVER_PORT}:8071"
+    environment:
+      # OpenTelemetry
+      OTEL_SERVICE_NAME: config-server
+      OTEL_RESOURCE_ATTRIBUTES: service.name=config-server,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api-gateway:
+    extends:
+      file: common-config.yml
+      service: gateway-base
+    build:
+      context: ../../api-gateway
+      dockerfile: Dockerfile
+    container_name: ecommerce-api-gateway
+    ports:
+      - "${API_GATEWAY_PORT}:8080"
+    environment:
+      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      # Keycloak Configuration
+      KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      KEYCLOAK_JWK_SET_URI: ${KEYCLOAK_JWK_SET_URI}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      # Swagger (default yml là true → phải set lại để tôn trọng .env, tránh mở Swagger ở prod)
+      PERMIT_ALL_SWAGGER_PATHS: ${PERMIT_ALL_SWAGGER_PATHS}
+      # Rate limiting (Bucket4j) — để prod tune qua .env.prod
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED}
+      RATE_LIMIT_IP_CAPACITY: ${RATE_LIMIT_IP_CAPACITY}
+      RATE_LIMIT_IP_REFILL: ${RATE_LIMIT_IP_REFILL}
+      RATE_LIMIT_IP_PERIOD: ${RATE_LIMIT_IP_PERIOD}
+      RATE_LIMIT_USER_CAPACITY: ${RATE_LIMIT_USER_CAPACITY}
+      RATE_LIMIT_USER_REFILL: ${RATE_LIMIT_USER_REFILL}
+      RATE_LIMIT_USER_PERIOD: ${RATE_LIMIT_USER_PERIOD}
+      # OpenTelemetry
+      OTEL_SERVICE_NAME: api-gateway
+      OTEL_RESOURCE_ATTRIBUTES: service.name=api-gateway,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
+    networks:
+      - ecommerce-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # MICROSERVICES
+  # ============================================
+
+  user-service:
+    extends:
+      file: common-config.yml
+      service: microservice-with-redis-jwt
+    build:
+      context: ../../user-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-user-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:5432/${USER_SERVICE_DB}
+      # OpenTelemetry
+      OTEL_SERVICE_NAME: user-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=user-service,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
+      # User Service specific configs
+      TOKEN_BLACKLIST_PREFIX: ${TOKEN_BLACKLIST_PREFIX}
+      PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH}
+      PASSWORD_REQUIRE_UPPERCASE: ${PASSWORD_REQUIRE_UPPERCASE}
+      PASSWORD_REQUIRE_LOWERCASE: ${PASSWORD_REQUIRE_LOWERCASE}
+      PASSWORD_REQUIRE_DIGIT: ${PASSWORD_REQUIRE_DIGIT}
+      PASSWORD_REQUIRE_SPECIAL: ${PASSWORD_REQUIRE_SPECIAL}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED}
+      LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT}
+      REGISTRATION_RATE_LIMIT: ${REGISTRATION_RATE_LIMIT}
+      GENERAL_RATE_LIMIT: ${GENERAL_RATE_LIMIT}
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT}
+      MAX_CONCURRENT_SESSIONS: ${MAX_CONCURRENT_SESSIONS}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8081/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  product-catalog-service:
+    extends:
+      file: common-config.yml
+      service: microservice-with-redis
+    build:
+      context: ../../product-catalog-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-product-catalog-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:5432/${PRODUCT_CATALOG_DB}
+      # OpenTelemetry
+      OTEL_SERVICE_NAME: product-catalog-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=product-catalog-service,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8082/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  shopping-cart-service:
+    extends:
+      file: common-config.yml
+      service: microservice-with-redis
+    build:
+      context: ../../shopping-cart-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-shopping-cart-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:5432/${SHOPPING_CART_DB}
+      # OpenTelemetry
+      OTEL_SERVICE_NAME: shopping-cart-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=shopping-cart-service,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
+      # Rate limiting — để prod tune qua .env.prod
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED}
+      GENERAL_RATE_LIMIT: ${GENERAL_RATE_LIMIT}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8083/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  order-service:
+    extends:
+      file: common-config.yml
+      service: microservice-base
+    build:
+      context: ../../order-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-order-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:5432/${ORDER_SERVICE_DB}
+      # OpenTelemetry
+      OTEL_SERVICE_NAME: order-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=order-service,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8084/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  payment-service:
+    extends:
+      file: common-config.yml
+      service: microservice-with-jwt
+    build:
+      context: ../../payment-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-payment-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:5432/${PAYMENT_SERVICE_DB}
+      # OpenTelemetry
+      OTEL_SERVICE_NAME: payment-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=payment-service,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
+      # Payment specific configs
+      STRIPE_ENABLED: ${STRIPE_ENABLED}
+      STRIPE_API_KEY: ${STRIPE_API_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_API_VERSION: ${STRIPE_API_VERSION}
+      STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL}
+      STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL}
+      PAYMENT_TIMEOUT: ${PAYMENT_TIMEOUT}
+      PAYMENT_RETRY_ATTEMPTS: ${PAYMENT_RETRY_ATTEMPTS}
+      PAYMENT_RETRY_DELAY: ${PAYMENT_RETRY_DELAY}
+      PAYMENT_ENCRYPTION_KEY: ${PAYMENT_ENCRYPTION_KEY}
+      WEBHOOK_TIMEOUT: ${WEBHOOK_TIMEOUT}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8085/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  notification-service:
+    extends:
+      file: common-config.yml
+      service: microservice-base
+    build:
+      context: ../../notification-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-notification-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:5432/${NOTIFICATION_SERVICE_DB}
+      # OpenTelemetry
+      OTEL_SERVICE_NAME: notification-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=notification-service,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
+      # Notification specific configs
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8086/actuator/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# ============================================
+# OBSERVABILITY
+# ============================================
+  read:
+    image: grafana/loki:latest
+    container_name: ecommerce-loki-read
+    command: "-config.file=/etc/loki/config.yaml -target=read"
+    user: "0:0"
+    ports:
+      - 3101:3100
+      - 7946
+      - 9095
+    volumes:
+      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+    depends_on:
+      - minio
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: &ecommerce-network-dns
+      ecommerce-network:
+        aliases:
+          - ecommerce-network
+
+  write:
+    image: grafana/loki:latest
+    container_name: ecommerce-loki-write
+    command: "-config.file=/etc/loki/config.yaml -target=write"
+    user: "0:0"
+    ports:
+      - 3102:3100
+      - 7946
+      - 9095
+    volumes:
+      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - minio
+    networks:
+      <<: *ecommerce-network-dns
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: ecommerce-alloy
+    volumes:
+      - ../observability/alloy/alloy-local-config.yaml:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:  run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    ports:
+      - 12345:12345
+    depends_on:
+      - gateway
+    networks:
+      - ecommerce-network
+
+  minio:
+    image: minio/minio
+    container_name: ecommerce-minio
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /data/loki-data && \
+        mkdir -p /data/loki-ruler && \
+        minio server /data
+    environment:
+      - MINIO_ROOT_USER=loki
+      - MINIO_ROOT_PASSWORD=supersecret
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      - MINIO_UPDATE=off
+    ports:
+      - 9000
+    volumes:
+      - ./.data/minio:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 15s
+      timeout: 20s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ecommerce-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: ecommerce-tempo
+    command: [ "-config.file=/etc/tempo.yml" ]
+    volumes:
+      - ./tempo.yml:/etc/tempo.yml
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"   # tempo
+      - "4317:4317"   # otlp grpc
+      - "4318:4318"   # otlp http
+    networks:
+      - ecommerce-network
+    user: "0:0"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3200/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ecommerce-grafana
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    depends_on:
+      - gateway
+      - prometheus
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<'EOF' > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+          - name: Loki
+            type: loki
+            uid: loki
+            access: proxy
+            url: http://gateway:3100
+            jsonData:
+              httpHeaderName1: "X-Scope-OrgID"
+              derivedFields:
+                - datasourceUid: tempo
+                  matcherRegex: "\\[.+\\] \\[(.+),.+\\]"
+                  name: TraceID
+                  url: "$$$${__value.raw}"
+            secureJsonData:
+              httpHeaderValue1: "tenant1"
+          - name: Prometheus
+            type: prometheus
+            uid: prometheus
+            access: proxy
+            url: http://prometheus:9090
+            isDefault: true
+          - name: Tempo
+            type: tempo
+            uid: tempo
+            access: proxy
+            url: http://tempo:3200
+            jsonData:
+              tracesToLogs:
+                datasourceUid: loki
+                mapTagNamesEnabled: true
+                mappedTags:
+                  - key: service.name
+                    value: service
+              serviceMap:
+                datasourceUid: prometheus
+              nodeGraph:
+                enabled: true
+              search:
+                hideFromMenu: false
+              lokiSearch:
+                datasourceUid: loki
+        EOF
+        /run.sh
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+  backend:
+    image: grafana/loki:latest
+    container_name: ecommerce-loki-backend
+    user: "0:0"
+    volumes:
+      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+    ports:
+      - "3100"
+      - "7946"
+    command: "-config.file=/etc/loki/config.yaml -target=backend -legacy-read-mode=false"
+    depends_on:
+      - gateway
+    networks:
+      - ecommerce-network
+
+
+  gateway:
+    image: nginx:latest
+    container_name: ecommerce-loki-gateway
+    depends_on:
+      - read
+      - write
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        cat <<EOF > /etc/nginx/nginx.conf
+        user  nginx;
+        worker_processes  5;  ## Default: 1
+
+        events {
+          worker_connections   1000;
+        }
+
+        http {
+          resolver 127.0.0.11;
+
+          server {
+            listen             3100;
+
+            location = / {
+              return 200 'OK';
+              auth_basic off;
+            }
+
+            location = /api/prom/push {
+              proxy_pass       http://write:3100\$$request_uri;
+            }
+
+            location = /api/prom/tail {
+              proxy_pass       http://read:3100\$$request_uri;
+              proxy_set_header Upgrade \$$http_upgrade;
+              proxy_set_header Connection "upgrade";
+            }
+
+            location ~ /api/prom/.* {
+              proxy_pass       http://read:3100\$$request_uri;
+            }
+
+            location = /loki/api/v1/push {
+              proxy_pass       http://write:3100\$$request_uri;
+            }
+
+            location = /loki/api/v1/tail {
+              proxy_pass       http://read:3100\$$request_uri;
+              proxy_set_header Upgrade \$$http_upgrade;
+              proxy_set_header Connection "upgrade";
+            }
+
+            location ~ /loki/api/.* {
+              proxy_pass       http://read:3100\$$request_uri;
+            }
+          }
+        }
+        EOF
+        /docker-entrypoint.sh nginx -g "daemon off;"
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: ["CMD", "service", "nginx", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+# ============================================
+# SECURITY & AUTHENTICATION
+# ============================================
+  keycloak-db:
+    image: postgres:15-alpine
+    container_name: ecommerce-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_password
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - keycloak_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.5
+    container_name: ecommerce-keycloak
+    ports:
+      - "${KEYCLOAK_PORT:-8090}:8080"
+    environment:
+      # Admin credentials
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      # Database configuration
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_password
+      # Keycloak configuration
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HTTP_ENABLED: true
+      KC_HEALTH_ENABLED: true
+      KC_METRICS_ENABLED: true
+      # Logging
+      KC_LOG_LEVEL: INFO
+      KEYCLOAK_LOGLEVEL: INFO
+    volumes:
+      - ../keycloak/realm-config:/opt/keycloak/data/import
+    command:
+      - start-dev
+      - --import-realm
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  postgres_data:
+  keycloak_data:
+  prometheus_data:
+  tempo_data:
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  ecommerce-network:
+    driver: bridge

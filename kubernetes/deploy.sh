@@ -6,7 +6,7 @@ echo ""
 echo "Deploying ConfigMap and Secrets..."
 kubectl apply -f configmap.yaml
 kubectl apply -f secrets.yaml
-kubectl create configmap keycloak-realm-config --from-file=ecommerce-realm-realm.json=../keycloak/realm-config/ecommerce-realm-realm.json --dry-run=client -o yaml | kubectl apply -f -
+kubectl create configmap keycloak-realm-config --from-file=ecommerce-realm-realm.json=../docker/keycloak/realm-config/ecommerce-realm-realm.json --dry-run=client -o yaml | kubectl apply -f -
 
 echo "Deploying Infrastructure..."
 kubectl apply -f infrastructure/

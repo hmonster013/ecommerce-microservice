@@ -72,7 +72,7 @@ public class RefundRequest {
     public String getReasonCode() {
         // Map common reasons to codes for better categorization
         if (reason == null) return "OTHER";
-        
+
         String lowerReason = reason.toLowerCase();
         if (lowerReason.contains("duplicate")) return "DUPLICATE";
         if (lowerReason.contains("fraudulent")) return "FRAUDULENT";
@@ -81,7 +81,7 @@ public class RefundRequest {
         if (lowerReason.contains("not_received") || lowerReason.contains("delivery")) return "NOT_RECEIVED";
         if (lowerReason.contains("cancel")) return "CANCELLATION";
         if (lowerReason.contains("return")) return "RETURN";
-        
+
         return "OTHER";
     }
 }

@@ -8,7 +8,7 @@ spring:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
   cloud:
     config:
-      fail-fast: true
+      uri: ${CONFIG_SERVER_URL:http://localhost:8071}
       retry:
         initial-interval: 1000
         max-attempts: 6

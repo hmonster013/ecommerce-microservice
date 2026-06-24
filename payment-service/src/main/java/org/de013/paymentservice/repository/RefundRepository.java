@@ -5,6 +5,7 @@ import org.de013.paymentservice.entity.enums.RefundStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,7 +19,7 @@ import java.util.Optional;
  * Repository interface for Refund entity
  */
 @Repository
-public interface RefundRepository extends JpaRepository<Refund, Long> {
+public interface RefundRepository extends JpaRepository<Refund, Long>, JpaSpecificationExecutor<Refund> {
 
     // ========== BASIC QUERIES ==========
 
@@ -174,35 +175,7 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
     List<Refund> findByPaymentIdAndAmountRange(@Param("paymentId") Long paymentId, @Param("minAmount") BigDecimal minAmount, @Param("maxAmount") BigDecimal maxAmount);
 
     // ========== SEARCH AND FILTERING ==========
-
-    /**
-     * Search refunds by criteria
-     */
-    @Query("SELECT r FROM Refund r WHERE " +
-           "(:refundNumber IS NULL OR r.refundNumber LIKE %:refundNumber%) AND " +
-           "(:paymentId IS NULL OR r.paymentId = :paymentId) AND " +
-           "(:orderId IS NULL OR r.orderId = :orderId) AND " +
-           "(:status IS NULL OR r.status = :status) AND " +
-           "(:refundType IS NULL OR r.refundType = :refundType) AND " +
-           "(:minAmount IS NULL OR r.amount >= :minAmount) AND " +
-           "(:maxAmount IS NULL OR r.amount <= :maxAmount) AND " +
-           "(:startDate IS NULL OR r.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR r.createdAt <= :endDate) AND " +
-           "(:initiatedBy IS NULL OR r.initiatedBy = :initiatedBy) " +
-           "ORDER BY r.createdAt DESC")
-    Page<Refund> searchRefunds(
-            @Param("refundNumber") String refundNumber,
-            @Param("paymentId") Long paymentId,
-            @Param("orderId") Long orderId,
-            @Param("status") RefundStatus status,
-            @Param("refundType") String refundType,
-            @Param("minAmount") BigDecimal minAmount,
-            @Param("maxAmount") BigDecimal maxAmount,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate,
-            @Param("initiatedBy") String initiatedBy,
-            Pageable pageable
-    );
+    // Dynamic search is handled via JpaSpecificationExecutor in service layer
 
     // ========== STATISTICS QUERIES ==========
 
@@ -240,14 +213,14 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
      * Get refund statistics by payment ID
      */
     @Query("SELECT " +
-           "COUNT(r) as totalRefunds, " +
-           "COUNT(CASE WHEN r.status = 'SUCCEEDED' THEN 1 END) as successfulRefunds, " +
-           "COUNT(CASE WHEN r.status = 'FAILED' THEN 1 END) as failedRefunds, " +
-           "COUNT(CASE WHEN r.status = 'PENDING' THEN 1 END) as pendingRefunds, " +
-           "COUNT(CASE WHEN r.refundType = 'FULL' THEN 1 END) as fullRefunds, " +
-           "COUNT(CASE WHEN r.refundType = 'PARTIAL' THEN 1 END) as partialRefunds, " +
-           "COALESCE(SUM(CASE WHEN r.status = 'SUCCEEDED' THEN r.amount ELSE 0 END), 0) as totalRefundedAmount " +
-           "FROM Refund r WHERE r.paymentId = :paymentId")
+            "COUNT(r) as totalRefunds, " +
+            "COUNT(CASE WHEN r.status = 'SUCCEEDED' THEN 1 END) as successfulRefunds, " +
+            "COUNT(CASE WHEN r.status = 'FAILED' THEN 1 END) as failedRefunds, " +
+            "COUNT(CASE WHEN r.status = 'PENDING' THEN 1 END) as pendingRefunds, " +
+            "COUNT(CASE WHEN r.refundType = 'FULL' THEN 1 END) as fullRefunds, " +
+            "COUNT(CASE WHEN r.refundType = 'PARTIAL' THEN 1 END) as partialRefunds, " +
+            "COALESCE(SUM(CASE WHEN r.status = 'SUCCEEDED' THEN r.amount ELSE 0 END), 0) as totalRefundedAmount " +
+            "FROM Refund r WHERE r.paymentId = :paymentId")
     Object[] getRefundStatisticsByPaymentId(@Param("paymentId") Long paymentId);
 
     // ========== APPROVAL WORKFLOW QUERIES ==========
@@ -338,6 +311,6 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
      * Find duplicate refunds by Stripe refund ID
      */
     @Query("SELECT r FROM Refund r WHERE r.stripeRefundId IN " +
-           "(SELECT r2.stripeRefundId FROM Refund r2 WHERE r2.stripeRefundId IS NOT NULL GROUP BY r2.stripeRefundId HAVING COUNT(r2.stripeRefundId) > 1)")
+            "(SELECT r2.stripeRefundId FROM Refund r2 WHERE r2.stripeRefundId IS NOT NULL GROUP BY r2.stripeRefundId HAVING COUNT(r2.stripeRefundId) > 1)")
     List<Refund> findDuplicateRefundsByStripeRefundId();
 }

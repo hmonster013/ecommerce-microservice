@@ -8,15 +8,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.constant.ApiPaths;
 import org.de013.common.controller.BaseController;
 import org.de013.productcatalog.dto.image.ProductImageCreateDto;
 import org.de013.productcatalog.dto.image.ProductImageUpdateDto;
 import org.de013.productcatalog.dto.product.ProductImageDto;
-
 import org.de013.productcatalog.service.ProductImageService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,12 +30,12 @@ public class ProductImageController extends BaseController {
 
     @Operation(summary = "[ADMIN] Create product image", description = "Create a new image for a product")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Image created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid image data"),
-        @ApiResponse(responseCode = "404", description = "Product not found"),
-        @ApiResponse(responseCode = "409", description = "Main image already exists")
+            @ApiResponse(responseCode = "201", description = "Image created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid image data"),
+            @ApiResponse(responseCode = "404", description = "Product not found"),
+            @ApiResponse(responseCode = "409", description = "Main image already exists")
     })
-    @PostMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.IMAGES)
+    @PostMapping("/products/{id}/images")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductImageDto>> createImage(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
@@ -53,12 +50,12 @@ public class ProductImageController extends BaseController {
 
     @Operation(summary = "[ADMIN] Update product image", description = "Update an existing product image")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Image updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid image data"),
-        @ApiResponse(responseCode = "404", description = "Image not found"),
-        @ApiResponse(responseCode = "409", description = "Main image already exists")
+            @ApiResponse(responseCode = "200", description = "Image updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid image data"),
+            @ApiResponse(responseCode = "404", description = "Image not found"),
+            @ApiResponse(responseCode = "409", description = "Main image already exists")
     })
-    @PutMapping(ApiPaths.IMAGES + ApiPaths.IMAGE_ID_PARAM)
+    @PutMapping("/images/{imageId}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductImageDto>> updateImage(
             @Parameter(description = "Image ID", required = true)
             @PathVariable Long imageId,
@@ -73,10 +70,10 @@ public class ProductImageController extends BaseController {
 
     @Operation(summary = "[ADMIN] Delete product image", description = "Delete a product image")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Image deleted successfully"),
-        @ApiResponse(responseCode = "404", description = "Image not found")
+            @ApiResponse(responseCode = "200", description = "Image deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Image not found")
     })
-    @DeleteMapping(ApiPaths.IMAGES + ApiPaths.IMAGE_ID_PARAM)
+    @DeleteMapping("/images/{imageId}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteImage(
             @Parameter(description = "Image ID", required = true)
             @PathVariable Long imageId) {
@@ -89,10 +86,10 @@ public class ProductImageController extends BaseController {
 
     @Operation(summary = "Get product image by ID", description = "Retrieve detailed image information by ID")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Image found"),
-        @ApiResponse(responseCode = "404", description = "Image not found")
+            @ApiResponse(responseCode = "200", description = "Image found"),
+            @ApiResponse(responseCode = "404", description = "Image not found")
     })
-    @GetMapping(ApiPaths.IMAGES + ApiPaths.IMAGE_ID_PARAM)
+    @GetMapping("/images/{imageId}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductImageDto>> getImageById(
             @Parameter(description = "Image ID", required = true)
             @PathVariable Long imageId) {
@@ -105,10 +102,10 @@ public class ProductImageController extends BaseController {
 
     @Operation(summary = "Get product images", description = "Get all images for a specific product")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Images retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(responseCode = "200", description = "Images retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Product not found")
     })
-    @GetMapping(ApiPaths.PRODUCTS + ApiPaths.ID_PARAM + ApiPaths.IMAGES)
+    @GetMapping("/products/{id}/images")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<ProductImageDto>>> getImagesByProductId(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id) {

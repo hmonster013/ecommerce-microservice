@@ -45,8 +45,8 @@ public class VariantInventoryUpdateDto {
     // Helper method to check if any field is set
     public boolean hasUpdates() {
         return minStockLevel != null || maxStockLevel != null || reorderPoint != null ||
-               reorderQuantity != null || trackInventory != null || allowBackorder != null ||
-               location != null || sku != null;
+                reorderQuantity != null || trackInventory != null || allowBackorder != null ||
+                location != null || sku != null;
     }
 
     // Validation methods

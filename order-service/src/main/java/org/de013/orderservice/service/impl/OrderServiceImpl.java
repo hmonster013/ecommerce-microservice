@@ -3,6 +3,7 @@ package org.de013.orderservice.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.orderservice.client.CartServiceClient;
+import org.de013.orderservice.client.ProductCatalogClient;
 import org.de013.orderservice.dto.request.CreateOrderRequest;
 import org.de013.orderservice.dto.request.UpdateOrderRequest;
 import org.de013.orderservice.dto.response.OrderResponse;
@@ -19,9 +20,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -35,6 +36,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final CartServiceClient cartServiceClient;
+    private final ProductCatalogClient productCatalogClient;
 
     @Override
     @Transactional
@@ -42,8 +44,8 @@ public class OrderServiceImpl implements OrderService {
         log.info("Creating order for user: {} from cart: {}", request.getUserId(), request.getCartId());
 
         // Get cart items from Shopping Cart Service
-        List<CartServiceClient.CartItemDto> cartItems = cartServiceClient.getCartItems(request.getCartId());
-        if (cartItems.isEmpty()) {
+        List<org.de013.orderservice.dto.CartItemDto> cartItems = cartServiceClient.getCartItems(request.getCartId()).getData();
+        if (cartItems == null || cartItems.isEmpty()) {
             throw new IllegalArgumentException("Cart is empty or not found");
         }
 
@@ -60,13 +62,20 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
-        // Convert cart items to order items
-        for (CartServiceClient.CartItemDto cartItem : cartItems) {
+        String currency = request.getCurrency() != null ? request.getCurrency() : "USD";
+        order.setTaxAmount(new Money(BigDecimal.ZERO, currency));
+        order.setShippingAmount(new Money(BigDecimal.ZERO, currency));
+        order.setDiscountAmount(new Money(BigDecimal.ZERO, currency));
+
+        // Convert cart items to order items and deduct stock
+        for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
 
             // Convert String productId to Long (assuming it's numeric)
+            Long productId;
             try {
-                orderItem.setProductId(Long.parseLong(cartItem.getProductId()));
+                productId = Long.parseLong(cartItem.getProductId());
+                orderItem.setProductId(productId);
             } catch (NumberFormatException e) {
                 log.warn("Invalid productId format: {}, skipping item", cartItem.getProductId());
                 continue;
@@ -76,11 +85,37 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setProductName(cartItem.getProductName());
             orderItem.setProductDescription(cartItem.getProductDescription());
             orderItem.setQuantity(cartItem.getQuantity());
+            // unitPrice is the list price per unit; totalPrice is the GROSS line amount (unitPrice * qty).
+            // The order-level recalculation subtracts the per-line discount once to reach the net total.
+            BigDecimal qty = BigDecimal.valueOf(cartItem.getQuantity());
             orderItem.setUnitPrice(new Money(cartItem.getUnitPrice(), cartItem.getCurrency()));
-            orderItem.setTotalPrice(new Money(cartItem.getTotalPrice(), cartItem.getCurrency()));
+            orderItem.setTotalPrice(new Money(cartItem.getUnitPrice().multiply(qty), cartItem.getCurrency()));
+
+            // cart exposes discount per unit; scale by quantity for the line-level discount
+            BigDecimal discountPerUnit = cartItem.getDiscountAmount() != null ? cartItem.getDiscountAmount() : BigDecimal.ZERO;
+            orderItem.setDiscountAmount(new Money(discountPerUnit.multiply(qty), cartItem.getCurrency()));
+            
+            // Set tax amount (default to 0)
+            orderItem.setTaxAmount(new Money(BigDecimal.ZERO, cartItem.getCurrency()));
+            
+            // Set product category and brand
+            orderItem.setProductCategory(cartItem.getCategoryName());
+            orderItem.setProductBrand(cartItem.getProductBrand());
+            
             orderItem.setOrder(order);
             order.getOrderItems().add(orderItem);
+
+            // Deduct stock in Product Catalog Service
+            try {
+                log.info("Deducting {} stock for product ID: {}", cartItem.getQuantity(), productId);
+                productCatalogClient.removeStock(productId, cartItem.getQuantity());
+            } catch (Exception e) {
+                log.error("Failed to deduct stock for product ID: {} - Error: {}", productId, e.getMessage());
+                throw new IllegalStateException("Failed to allocate inventory for product: " + cartItem.getProductName());
+            }
         }
+
+        order.recalculateTotals();
 
         order = orderRepository.save(order);
         log.info("Order created successfully: {} with {} items", orderNumber, cartItems.size());
@@ -99,7 +134,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderResponse> listOrdersByUser(Long userId, Pageable pageable) {
+    public Page<OrderResponse> listOrdersByUser(String userId, Pageable pageable) {
         log.debug("Getting orders for user: {}", userId);
         return orderRepository.findByUserId(userId, pageable)
                 .map(orderMapper::toResponse);
@@ -156,5 +191,46 @@ public class OrderServiceImpl implements OrderService {
         orderRepository.save(order);
         log.info("Order {} cancelled successfully", id);
     }
+
+    @Override
+    @Transactional
+    public void markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber) {
+        log.info("Marking order {} as PAID with paymentId {} and number {}", orderId, paymentId, paymentNumber);
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+        order.setStatus(OrderStatus.PAID);
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+        log.info("Order {} successfully marked as PAID", orderId);
+    }
+
+    @Override
+    @Transactional
+    public void markOrderPaymentFailed(Long orderId, String reason) {
+        log.info("Marking order {} as FAILED due to: {}", orderId, reason);
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+        order.setStatus(OrderStatus.FAILED);
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+        log.info("Order {} successfully marked as FAILED", orderId);
+    }
+
+    @Override
+    @Transactional
+    public void updateOrderStatus(Long orderId, org.de013.orderservice.dto.request.OrderStatusUpdateRequest request) {
+        log.info("Updating order {} status to {}", orderId, request.getStatus());
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+        OrderStatus newStatus = OrderStatus.fromCode(request.getStatus());
+        if (newStatus == null) {
+            throw new IllegalArgumentException("Invalid order status code: " + request.getStatus());
+        }
+        order.setStatus(newStatus);
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+        log.info("Order {} status successfully updated to {}", orderId, newStatus);
+    }
 }
+
 

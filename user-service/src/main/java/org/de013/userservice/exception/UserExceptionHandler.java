@@ -209,29 +209,6 @@ public class UserExceptionHandler {
     }
 
     /**
-     * Handle account status exceptions
-     */
-    @ExceptionHandler(AccountStatusException.class)
-    public ResponseEntity<ErrorResponse> handleAccountStatusException(
-            AccountStatusException ex, HttpServletRequest request) {
-
-        String traceId = generateTraceId();
-        log.warn("Account status exception [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
-
-        ErrorResponse response = ErrorResponse.of(
-                HttpStatus.FORBIDDEN.value(),
-                HttpStatus.FORBIDDEN.getReasonPhrase(),
-                "ACCOUNT_STATUS_ERROR",
-                ex.getMessage(),
-                request.getRequestURI(),
-                request.getMethod(),
-                traceId
-        );
-
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-    }
-
-    /**
      * Handle general authentication exceptions (fallback)
      */
     @ExceptionHandler(AuthenticationException.class)

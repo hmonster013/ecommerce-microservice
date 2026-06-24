@@ -176,13 +176,17 @@ public class CartItemResponseDto {
     @Schema(description = "Item tags or labels")
     private java.util.List<String> tags;
 
+    @Schema(description = "Product brand", example = "Apple")
+    @JsonProperty("product_brand")
+    private String productBrand;
+
     /**
      * Calculate discount percentage
      */
     @JsonIgnore
     public BigDecimal calculateDiscountPercentage() {
-        if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0 && 
-            discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+        if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0 &&
+                discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
             return discountAmount.divide(originalPrice, 4, BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
         }
@@ -222,7 +226,7 @@ public class CartItemResponseDto {
     @JsonIgnore
     public boolean hasGiftOptions() {
         return Boolean.TRUE.equals(isGift) &&
-               (giftMessage != null || giftWrapType != null);
+                (giftMessage != null || giftWrapType != null);
     }
 
     /**

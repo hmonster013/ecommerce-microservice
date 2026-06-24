@@ -4,6 +4,10 @@
 
 A scalable e-commerce platform built with microservices architecture using Spring Boot, Spring Cloud, and Docker.
 
+## 📖 Docs
+
+- [Architecture overview (tiếng Việt)](docs/architecture.md) — sơ đồ tổng thể, vai trò service, luồng auth, lưu ý maintenance.
+
 ## 🏗️ Architecture
 
 ### Microservices
@@ -37,10 +41,27 @@ A scalable e-commerce platform built with microservices architecture using Sprin
 - Docker & Docker Compose
 - Java 17+ and Maven 3.6+ (for development)
 
-### Run with Docker Compose
+### Run modes
+
+Có 2 profile compose:
+
+- **`docker/default/`** — local development: chỉ chạy **hạ tầng** (Postgres, Redis, RabbitMQ, Kafka, Keycloak, Eureka, Config Server, observability). Business service chạy trên **IntelliJ**.
+- **`docker/prod/`** — full Docker: build & chạy **toàn bộ** (hạ tầng + tất cả business service) cho môi trường gần production.
+
+File `.env` nằm ở **root project**, mọi lệnh phải kèm `--env-file .env` và chạy từ root.
+
+#### Local dev (infrastructure only)
 ```bash
-cd docker-compose/default
-docker compose up -d --build
+# Start hạ tầng
+docker compose --env-file .env -f docker/default/docker-compose.yml up -d
+
+# Sau đó mở IntelliJ và Run các business service, hoặc:
+cd user-service && mvn spring-boot:run
+```
+
+#### Production / full Docker
+```bash
+docker compose --env-file .env -f docker/prod/docker-compose.yml up -d --build
 ```
 
 ### Access Services
@@ -63,7 +84,7 @@ curl http://localhost:8080/actuator/health
 - Individual services: `http://localhost:{port}/swagger-ui.html`
 
 ### OpenAPI Specification
-- `http://localhost:{port}/v3/api-docs`
+- `http://localhost:{port}/v1/api-docs`
 
 ## 📊 Monitoring & Observability
 
@@ -127,9 +148,8 @@ Configuration is managed through:
 - **Environment Variables** - Runtime configuration via `.env` files
 - **Application Properties** - Service-specific settings
 
-Key environment files:
-- `.env.development` - Local development (localhost endpoints)
-- `.env.example` - Docker container configuration
+Environment file:
+- `.env` (root project) — nguồn duy nhất cho cả local dev và Docker. Truyền qua `--env-file .env` khi gọi `docker compose`.
 
 ## 🔐 Security
 
@@ -171,16 +191,18 @@ mvn clean package -DskipTests
 
 ### Run Locally
 ```bash
-# Start infrastructure
-docker compose -f docker-compose/default/docker-compose.yml up -d postgres redis rabbitmq kafka
+# Start full infrastructure (from project root)
+docker compose --env-file .env -f docker/default/docker-compose.yml up -d
 
-# Run service
+# Run business service from IntelliJ, or via mvn:
 cd user-service
 mvn spring-boot:run
 ```
 
+`docker/default/` chỉ chứa hạ tầng — business service chạy ngoài Docker (IntelliJ / mvn). Khi cần chạy full Docker (production-like), dùng `docker/prod/`.
+
 ### Environment Variables
-Configure in `.env.development` for local or `.env` for Docker.
+File `.env` nằm ở **root project** và là nguồn duy nhất. Mọi lệnh `docker compose` phải kèm `--env-file .env` (chạy từ root), nếu không biến sẽ rỗng và service start fail.
 
 ## 📝 Project Structure
 
@@ -195,10 +217,11 @@ ecommerce-microservice/
 ├── order-service/            # Order processing
 ├── payment-service/          # Payment with Stripe
 ├── notification-service/     # Email/SMS notifications
-├── docker-compose/
-│   ├── default/              # Main compose setup
+├── docker/
+│   ├── default/              # Local dev: infrastructure only (business svc chạy IntelliJ)
+│   ├── prod/                 # Production: full Docker (infra + business services)
 │   └── observability/        # Monitoring configs
-└── .env.development          # Local configuration
+└── .env                      # Env vars (root) — dùng với --env-file
 ```
 
 ## 📄 License

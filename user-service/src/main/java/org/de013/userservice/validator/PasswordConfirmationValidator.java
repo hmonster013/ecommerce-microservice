@@ -43,7 +43,7 @@ public class PasswordConfirmationValidator implements ConstraintValidator<ValidP
 
             // Check if passwords match
             boolean isValid = password.equals(confirmPassword);
-            
+
             if (!isValid) {
                 addConstraintViolation(context);
             }

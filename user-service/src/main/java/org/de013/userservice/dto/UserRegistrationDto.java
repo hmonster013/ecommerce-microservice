@@ -4,14 +4,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import org.de013.userservice.validator.ValidEmail;
-import org.de013.userservice.validator.ValidPassword;
-import org.de013.userservice.validator.ValidPhone;
-import org.de013.userservice.validator.ValidName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.de013.userservice.validator.ValidEmail;
+import org.de013.userservice.validator.ValidName;
+import org.de013.userservice.validator.ValidPassword;
+import org.de013.userservice.validator.ValidPhone;
 
 @Data
 @Builder

@@ -31,3 +31,7 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+app:
+  security:
+    permit-all-swagger-paths: ${PERMIT_ALL_SWAGGER_PATHS:true}

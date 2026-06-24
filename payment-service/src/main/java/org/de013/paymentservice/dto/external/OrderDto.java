@@ -2,6 +2,7 @@ package org.de013.paymentservice.dto.external;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -12,12 +13,18 @@ import java.time.LocalDateTime;
 public class OrderDto {
     private Long id;
     private String orderNumber;
-    private Long userId;
-    private BigDecimal totalAmount;
+    private String userId;
+    private MoneyDto totalAmount;
     private String currency;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @lombok.Data
+    public static class MoneyDto {
+        private BigDecimal amount;
+        private String currency;
+    }
 
     // Helper methods
     @JsonIgnore
@@ -35,3 +42,4 @@ public class OrderDto {
         return "CANCELED".equals(status);
     }
 }
+

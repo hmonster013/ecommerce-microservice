@@ -14,18 +14,18 @@ import java.lang.annotation.*;
 @Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidPhone {
-    
+
     String message() default "{phone.format}";
-    
+
     Class<?>[] groups() default {};
-    
+
     Class<? extends Payload>[] payload() default {};
-    
+
     /**
      * Whether to allow international format
      */
     boolean international() default true;
-    
+
     /**
      * Country code for validation (e.g., "VN", "US")
      */

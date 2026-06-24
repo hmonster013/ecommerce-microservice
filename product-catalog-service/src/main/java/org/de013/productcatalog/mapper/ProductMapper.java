@@ -2,7 +2,10 @@ package org.de013.productcatalog.mapper;
 
 import lombok.RequiredArgsConstructor;
 import org.de013.productcatalog.dto.category.CategorySummaryDto;
-import org.de013.productcatalog.dto.product.*;
+import org.de013.productcatalog.dto.product.ProductDetailDto;
+import org.de013.productcatalog.dto.product.ProductImageDto;
+import org.de013.productcatalog.dto.product.ProductResponseDto;
+import org.de013.productcatalog.dto.product.ProductSummaryDto;
 import org.de013.productcatalog.entity.Product;
 import org.de013.productcatalog.entity.ProductCategory;
 import org.de013.productcatalog.entity.ProductImage;
@@ -127,7 +130,7 @@ public class ProductMapper {
         }
 
         String savingsText = onSale ?
-            String.format("Save $%.2f (%.0f%%)", discountAmount, discountPercentage) : null;
+                String.format("Save $%.2f (%.0f%%)", discountAmount, discountPercentage) : null;
 
         return ProductSummaryDto.PricingInfo.builder()
                 .currentPrice(price)
@@ -175,7 +178,7 @@ public class ProductMapper {
         }
 
         String savingsText = onSale ?
-            String.format("Save $%.2f (%.0f%%)", discountAmount, discountPercentage) : null;
+                String.format("Save $%.2f (%.0f%%)", discountAmount, discountPercentage) : null;
 
         return ProductDetailDto.PricingInfo.builder()
                 .currentPrice(price)

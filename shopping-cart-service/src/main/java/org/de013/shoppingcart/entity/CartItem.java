@@ -13,10 +13,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "cart_items", indexes = {
-    @Index(name = "idx_cart_item_cart_id", columnList = "cart_id"),
-    @Index(name = "idx_cart_item_product_id", columnList = "product_id"),
-    @Index(name = "idx_cart_item_cart_product", columnList = "cart_id, product_id"),
-    @Index(name = "idx_cart_item_created_at", columnList = "created_at")
+        @Index(name = "idx_cart_item_cart_id", columnList = "cart_id"),
+        @Index(name = "idx_cart_item_product_id", columnList = "product_id"),
+        @Index(name = "idx_cart_item_cart_product", columnList = "cart_id, product_id"),
+        @Index(name = "idx_cart_item_created_at", columnList = "created_at")
 })
 @Getter
 @Setter
@@ -39,6 +39,9 @@ public class CartItem extends BaseEntity {
 
     @Column(name = "product_name", nullable = false, length = 255)
     private String productName;
+
+    @Column(name = "product_brand", length = 100)
+    private String productBrand;
 
     @Column(name = "product_description", length = 1000)
     private String productDescription;
@@ -125,11 +128,14 @@ public class CartItem extends BaseEntity {
      */
     public void calculateTotalPrice() {
         if (quantity != null && unitPrice != null) {
-            BigDecimal baseTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-            BigDecimal discount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+            BigDecimal qty = BigDecimal.valueOf(quantity);
+            BigDecimal baseTotal = unitPrice.multiply(qty);
+            // discountAmount is stored per unit; scale it by quantity for the line total
+            BigDecimal discountPerUnit = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+            BigDecimal lineDiscount = discountPerUnit.multiply(qty);
             BigDecimal giftWrap = (isGift && giftWrapPrice != null) ? giftWrapPrice : BigDecimal.ZERO;
 
-            this.totalPrice = baseTotal.subtract(discount).add(giftWrap);
+            this.totalPrice = baseTotal.subtract(lineDiscount).add(giftWrap);
         } else {
             // Set to zero if quantity or unitPrice is null
             this.totalPrice = BigDecimal.ZERO;
@@ -166,8 +172,8 @@ public class CartItem extends BaseEntity {
      * Check if item is available for purchase
      */
     public boolean isAvailable() {
-        return "AVAILABLE".equals(availabilityStatus) && 
-               (stockQuantity == null || stockQuantity > 0);
+        return "AVAILABLE".equals(availabilityStatus) &&
+                (stockQuantity == null || stockQuantity > 0);
     }
 
     /**
@@ -188,8 +194,8 @@ public class CartItem extends BaseEntity {
      * Get discount percentage
      */
     public BigDecimal getDiscountPercentage() {
-        if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0 && 
-            discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+        if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0 &&
+                discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
             return discountAmount.divide(originalPrice, 4, BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
         }

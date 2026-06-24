@@ -30,24 +30,24 @@ public class OrderValidationService {
         try {
             log.debug("Validating order for payment: {}", orderId);
             ResponseEntity<OrderValidationResponse> response = orderServiceClient.validateOrderForPayment(orderId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 OrderValidationResponse validation = response.getBody();
-                log.debug("Order validation result: orderId={}, valid={}, message={}", 
-                         orderId, validation.isValid(), validation.getMessage());
+                log.debug("Order validation result: orderId={}, valid={}, message={}",
+                        orderId, validation.isValid(), validation.getMessage());
                 return validation;
             } else {
                 log.warn("Invalid response from order service for order validation: {}", orderId);
                 return OrderValidationResponse.invalid(
-                    "Invalid response from order service",
-                    List.of("Service returned invalid response")
+                        "Invalid response from order service",
+                        List.of("Service returned invalid response")
                 );
             }
         } catch (Exception e) {
             log.error("Error validating order for payment: orderId={}", orderId, e);
             return OrderValidationResponse.invalid(
-                "Error validating order: " + e.getMessage(),
-                List.of("Service communication error", e.getMessage())
+                    "Error validating order: " + e.getMessage(),
+                    List.of("Service communication error", e.getMessage())
             );
         }
     }
@@ -59,7 +59,7 @@ public class OrderValidationService {
         try {
             log.debug("Getting order by ID: {}", orderId);
             ResponseEntity<OrderDto> response = orderServiceClient.getOrderById(orderId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 return response.getBody();
             } else {
@@ -74,18 +74,18 @@ public class OrderValidationService {
     /**
      * Validate order ownership
      */
-    public boolean validateOrderOwnership(Long orderId, Long userId) {
+    public boolean validateOrderOwnership(Long orderId, String userId) {
         try {
             log.debug("Validating order ownership: orderId={}, userId={}", orderId, userId);
             ResponseEntity<Boolean> response = orderServiceClient.validateOrderOwnership(orderId, userId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 boolean isOwner = response.getBody();
-                log.debug("Order ownership validation result: orderId={}, userId={}, isOwner={}", 
-                         orderId, userId, isOwner);
+                log.debug("Order ownership validation result: orderId={}, userId={}, isOwner={}",
+                        orderId, userId, isOwner);
                 return isOwner;
             } else {
-                log.warn("Invalid response from order service for ownership validation: orderId={}, userId={}", 
+                log.warn("Invalid response from order service for ownership validation: orderId={}, userId={}",
                         orderId, userId);
                 return false;
             }
@@ -102,7 +102,7 @@ public class OrderValidationService {
         try {
             log.debug("Getting order total: {}", orderId);
             ResponseEntity<BigDecimal> response = orderServiceClient.getOrderTotal(orderId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 return response.getBody();
             } else {
@@ -119,17 +119,17 @@ public class OrderValidationService {
      */
     public void markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber) {
         try {
-            log.info("Marking order as paid: orderId={}, paymentId={}, paymentNumber={}", 
+            log.info("Marking order as paid: orderId={}, paymentId={}, paymentNumber={}",
                     orderId, paymentId, paymentNumber);
-            
+
             ResponseEntity<Void> response = orderServiceClient.markOrderAsPaid(orderId, paymentId, paymentNumber);
-            
+
             if (!response.getStatusCode().is2xxSuccessful()) {
-                log.warn("Failed to mark order as paid: orderId={}, status={}", 
+                log.warn("Failed to mark order as paid: orderId={}, status={}",
                         orderId, response.getStatusCode());
                 throw new ExternalServiceException("Failed to update order status to paid");
             }
-            
+
             log.info("Successfully marked order as paid: orderId={}", orderId);
         } catch (Exception e) {
             log.error("Error marking order as paid: orderId={}, paymentId={}", orderId, paymentId, e);
@@ -143,11 +143,11 @@ public class OrderValidationService {
     public void markOrderPaymentFailed(Long orderId, String reason) {
         try {
             log.info("Marking order payment as failed: orderId={}, reason={}", orderId, reason);
-            
+
             ResponseEntity<Void> response = orderServiceClient.markOrderPaymentFailed(orderId, reason);
-            
+
             if (!response.getStatusCode().is2xxSuccessful()) {
-                log.warn("Failed to mark order payment as failed: orderId={}, status={}", 
+                log.warn("Failed to mark order payment as failed: orderId={}, status={}",
                         orderId, response.getStatusCode());
                 // Don't throw exception here as this is not critical
             } else {
@@ -165,20 +165,20 @@ public class OrderValidationService {
     public void updateOrderStatus(Long orderId, String status, String reason) {
         try {
             log.info("Updating order status: orderId={}, status={}, reason={}", orderId, status, reason);
-            
+
             OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
             request.setStatus(status);
             request.setReason(reason);
             request.setUpdatedBy("PAYMENT_SERVICE");
-            
+
             ResponseEntity<Void> response = orderServiceClient.updateOrderStatus(orderId, request);
-            
+
             if (!response.getStatusCode().is2xxSuccessful()) {
-                log.warn("Failed to update order status: orderId={}, status={}, responseStatus={}", 
+                log.warn("Failed to update order status: orderId={}, status={}, responseStatus={}",
                         orderId, status, response.getStatusCode());
                 throw new ExternalServiceException("Failed to update order status");
             }
-            
+
             log.info("Successfully updated order status: orderId={}, status={}", orderId, status);
         } catch (Exception e) {
             log.error("Error updating order status: orderId={}, status={}", orderId, status, e);
@@ -193,13 +193,13 @@ public class OrderValidationService {
         try {
             log.debug("Reserving order items: {}", orderId);
             ResponseEntity<Boolean> response = orderServiceClient.reserveOrderItems(orderId);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 boolean reserved = response.getBody();
                 log.debug("Order items reservation result: orderId={}, reserved={}", orderId, reserved);
                 return reserved;
             } else {
-                log.warn("Failed to reserve order items: orderId={}, status={}", 
+                log.warn("Failed to reserve order items: orderId={}, status={}",
                         orderId, response.getStatusCode());
                 return false;
             }
@@ -216,9 +216,9 @@ public class OrderValidationService {
         try {
             log.debug("Releasing order reservation: {}", orderId);
             ResponseEntity<Void> response = orderServiceClient.releaseOrderReservation(orderId);
-            
+
             if (!response.getStatusCode().is2xxSuccessful()) {
-                log.warn("Failed to release order reservation: orderId={}, status={}", 
+                log.warn("Failed to release order reservation: orderId={}, status={}",
                         orderId, response.getStatusCode());
             } else {
                 log.debug("Successfully released order reservation: orderId={}", orderId);
@@ -229,3 +229,4 @@ public class OrderValidationService {
         }
     }
 }
+

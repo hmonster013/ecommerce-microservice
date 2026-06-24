@@ -12,38 +12,38 @@ public interface ProductService {
 
     // CRUD Operations
     ProductResponseDto createProduct(ProductCreateDto createDto);
-    
+
     ProductResponseDto updateProduct(Long id, ProductUpdateDto updateDto);
-    
+
     void deleteProduct(Long id);
-    
+
     ProductDetailDto getProductById(Long id);
-    
+
     ProductDetailDto getProductBySku(String sku);
 
     // Listing Operations
     PageResponse<ProductSummaryDto> getAllProducts(Pageable pageable);
-    
+
     PageResponse<ProductSummaryDto> getProductsByStatus(ProductStatus status, Pageable pageable);
-    
+
     PageResponse<ProductSummaryDto> getProductsByCategory(Long categoryId, Pageable pageable);
-    
+
     PageResponse<ProductSummaryDto> getProductsByCategorySlug(String categorySlug, Pageable pageable);
-    
+
     PageResponse<ProductSummaryDto> getProductsByBrand(String brand, Pageable pageable);
 
     // Featured Products
     List<ProductSummaryDto> getFeaturedProducts();
-    
+
     List<ProductSummaryDto> getFeaturedProducts(int limit);
-    
+
     List<ProductSummaryDto> getFeaturedProductsByCategory(Long categoryId);
-    
+
     List<ProductSummaryDto> getFeaturedProductsByCategory(Long categoryId, int limit);
 
     // Search Operations
     PageResponse<ProductSummaryDto> searchProductsSimple(String query, Pageable pageable);
-    
+
     PageResponse<ProductSummaryDto> fullTextSearch(String query, Pageable pageable);
 
     // Product Validation

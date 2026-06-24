@@ -15,7 +15,7 @@ public class SlugValidator implements ConstraintValidator<ValidSlug, String> {
 
     private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
     private static final String[] RESERVED_SLUGS = {
-        "admin", "api", "www", "mail", "ftp", "localhost", "root", "test", "staging", "prod", "production"
+            "admin", "api", "www", "mail", "ftp", "localhost", "root", "test", "staging", "prod", "production"
     };
 
     private int minLength;
@@ -27,9 +27,9 @@ public class SlugValidator implements ConstraintValidator<ValidSlug, String> {
         this.minLength = constraintAnnotation.minLength();
         this.maxLength = constraintAnnotation.maxLength();
         this.allowNull = constraintAnnotation.allowNull();
-        
-        log.debug("Initialized Slug validator - minLength: {}, maxLength: {}, allowNull: {}", 
-                 minLength, maxLength, allowNull);
+
+        log.debug("Initialized Slug validator - minLength: {}, maxLength: {}, allowNull: {}",
+                minLength, maxLength, allowNull);
     }
 
     @Override
@@ -103,6 +103,6 @@ public class SlugValidator implements ConstraintValidator<ValidSlug, String> {
     private void addCustomMessage(ConstraintValidatorContext context, String message) {
         context.disableDefaultConstraintViolation();
         context.buildConstraintViolationWithTemplate(message)
-               .addConstraintViolation();
+                .addConstraintViolation();
     }
 }

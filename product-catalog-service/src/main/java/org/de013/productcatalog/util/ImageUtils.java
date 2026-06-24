@@ -3,7 +3,9 @@ package org.de013.productcatalog.util;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -15,16 +17,16 @@ import java.util.regex.Pattern;
 public class ImageUtils {
 
     private static final Set<String> SUPPORTED_FORMATS = Set.of(
-        "jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"
+            "jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"
     );
 
     private static final Set<String> PREFERRED_FORMATS = Set.of(
-        "jpg", "jpeg", "png", "webp"
+            "jpg", "jpeg", "png", "webp"
     );
 
     private static final Pattern URL_PATTERN = Pattern.compile(
-        "^(https?://)([\\w\\-\\.]+)\\.([a-z]{2,6})(:[0-9]{1,5})?(/.*)?$",
-        Pattern.CASE_INSENSITIVE
+            "^(https?://)([\\w\\-\\.]+)\\.([a-z]{2,6})(:[0-9]{1,5})?(/.*)?$",
+            Pattern.CASE_INSENSITIVE
     );
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -89,7 +91,7 @@ public class ImageUtils {
 
         String extension = extractFileExtension(originalUrl);
         String baseUrl = originalUrl.substring(0, originalUrl.lastIndexOf('.'));
-        
+
         return String.format("%s_thumb_%s.%s", baseUrl, size, extension);
     }
 
@@ -98,13 +100,13 @@ public class ImageUtils {
      */
     public static Map<String, String> generateThumbnails(String originalUrl) {
         Map<String, String> thumbnails = new HashMap<>();
-        
+
         if (!isValidImageUrl(originalUrl)) {
             return thumbnails;
         }
 
         String[] sizes = {"50x50", "150x150", "300x300", "600x600"};
-        
+
         for (String size : sizes) {
             thumbnails.put(size, generateThumbnailUrl(originalUrl, size));
         }
@@ -201,9 +203,9 @@ public class ImageUtils {
         String lowerUrl = url.toLowerCase();
 
         String[] suspiciousPatterns = {
-            "javascript:", "data:", "vbscript:", "file:", "ftp:",
-            "localhost", "127.0.0.1", "0.0.0.0", "::1",
-            ".exe", ".bat", ".cmd", ".scr", ".com"
+                "javascript:", "data:", "vbscript:", "file:", "ftp:",
+                "localhost", "127.0.0.1", "0.0.0.0", "::1",
+                ".exe", ".bat", ".cmd", ".scr", ".com"
         };
 
         for (String pattern : suspiciousPatterns) {
@@ -259,8 +261,8 @@ public class ImageUtils {
         }
 
         String[] trustedCdns = {
-            "cloudinary.com", "amazonaws.com", "cloudfront.net",
-            "imgix.net", "fastly.com", "jsdelivr.net", "unpkg.com"
+                "cloudinary.com", "amazonaws.com", "cloudfront.net",
+                "imgix.net", "fastly.com", "jsdelivr.net", "unpkg.com"
         };
 
         String lowerUrl = imageUrl.toLowerCase();

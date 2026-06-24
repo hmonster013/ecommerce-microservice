@@ -7,23 +7,21 @@ import org.de013.productcatalog.dto.category.*;
 import org.de013.productcatalog.entity.Category;
 import org.de013.productcatalog.exception.CategoryNotFoundException;
 import org.de013.productcatalog.exception.InvalidCategoryHierarchyException;
+import org.de013.productcatalog.mapper.CategoryMapper;
 import org.de013.productcatalog.repository.CategoryRepository;
 import org.de013.productcatalog.repository.ProductCategoryRepository;
 import org.de013.productcatalog.service.CategoryService;
-import org.de013.productcatalog.mapper.CategoryMapper;
 import org.de013.productcatalog.util.SlugUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,13 +38,13 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponseDto createCategory(CategoryCreateDto createDto) {
         log.info("Creating category with name: {}", createDto.getName());
-        
+
         validateCategoryData(createDto);
-        
+
         // Generate slug if not provided
-        String slug = StringUtils.hasText(createDto.getSlug()) ? 
+        String slug = StringUtils.hasText(createDto.getSlug()) ?
                 createDto.getSlug() : generateUniqueSlug(createDto.getName());
-        
+
         // Determine level and parent
         Category parent = null;
         int level = 0;
@@ -54,13 +52,13 @@ public class CategoryServiceImpl implements CategoryService {
             parent = findCategoryById(createDto.getParentId());
             level = parent.getLevel() + 1;
         }
-        
+
         // Determine display order
         Integer displayOrder = createDto.getDisplayOrder();
         if (displayOrder == null) {
             displayOrder = categoryRepository.findMaxDisplayOrderBySiblings(createDto.getParentId()) + 1;
         }
-        
+
         Category category = Category.builder()
                 .name(createDto.getName())
                 .description(createDto.getDescription())
@@ -70,9 +68,9 @@ public class CategoryServiceImpl implements CategoryService {
                 .displayOrder(displayOrder)
                 .isActive(createDto.getIsActive())
                 .build();
-        
+
         category = categoryRepository.save(category);
-        
+
         log.info("Category created successfully with ID: {}", category.getId());
         return categoryMapper.toCategoryResponseDto(category);
     }
@@ -82,21 +80,21 @@ public class CategoryServiceImpl implements CategoryService {
     @CacheEvict(value = "categories", key = "#id")
     public CategoryResponseDto updateCategory(Long id, CategoryUpdateDto updateDto) {
         log.info("Updating category with ID: {}", id);
-        
+
         Category category = findCategoryById(id);
         validateCategoryData(updateDto, id);
-        
+
         // Update fields
         updateCategoryFields(category, updateDto);
-        
+
         // Handle parent change
         if (updateDto.getParentId() != null && !updateDto.getParentId().equals(
                 category.getParent() != null ? category.getParent().getId() : null)) {
             updateCategoryParent(category, updateDto.getParentId());
         }
-        
+
         category = categoryRepository.save(category);
-        
+
         log.info("Category updated successfully with ID: {}", id);
         return categoryMapper.toCategoryResponseDto(category);
     }
@@ -106,9 +104,9 @@ public class CategoryServiceImpl implements CategoryService {
     @CacheEvict(value = "categories", key = "#id")
     public void deleteCategory(Long id) {
         log.info("Deleting category with ID: {}", id);
-        
+
         Category category = findCategoryById(id);
-        
+
         if (!canBeDeleted(id)) {
             long childCount = categoryRepository.countByParentIdAndIsActiveTrue(id);
             long productCount = productCategoryRepository.countByCategoryId(id);
@@ -120,9 +118,9 @@ public class CategoryServiceImpl implements CategoryService {
                 throw InvalidCategoryHierarchyException.cannotDeleteWithProducts(id, (int) productCount);
             }
         }
-        
+
         categoryRepository.delete(category);
-        
+
         log.info("Category deleted successfully with ID: {}", id);
     }
 
@@ -130,7 +128,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "#id")
     public CategoryResponseDto getCategoryById(Long id) {
         log.debug("Getting category by ID: {}", id);
-        
+
         Category category = findCategoryById(id);
         return categoryMapper.toCategoryResponseDto(category);
     }
@@ -139,10 +137,10 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "#slug")
     public CategoryResponseDto getCategoryBySlug(String slug) {
         log.debug("Getting category by slug: {}", slug);
-        
+
         Category category = categoryRepository.findBySlug(slug)
                 .orElseThrow(() -> new CategoryNotFoundException(slug));
-        
+
         return categoryMapper.toCategoryResponseDto(category);
     }
 
@@ -150,12 +148,12 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "'all:' + #pageable.pageNumber + ':' + #pageable.pageSize")
     public PageResponse<CategoryResponseDto> getAllCategories(Pageable pageable) {
         log.debug("Getting all categories with pagination: {}", pageable);
-        
+
         Page<Category> categories = categoryRepository.findAll(pageable);
         List<CategoryResponseDto> content = categories.getContent().stream()
                 .map(categoryMapper::toCategoryResponseDto)
                 .collect(Collectors.toList());
-        
+
         return PageResponse.<CategoryResponseDto>builder()
                 .content(content)
                 .page(categories.getNumber())
@@ -172,7 +170,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "'all_active'")
     public List<CategorySummaryDto> getAllActiveCategories() {
         log.debug("Getting all active categories");
-        
+
         List<Category> categories = categoryRepository.findByIsActiveTrue();
         return categories.stream()
                 .map(categoryMapper::toCategorySummaryDto)
@@ -183,7 +181,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "'all_active_ordered'")
     public List<CategorySummaryDto> getAllActiveCategoriesOrdered() {
         log.debug("Getting all active categories ordered");
-        
+
         List<Category> categories = categoryRepository.findByIsActiveTrueOrderByDisplayOrderAsc();
         return categories.stream()
                 .map(categoryMapper::toCategorySummaryDto)
@@ -211,7 +209,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "'root'")
     public List<CategorySummaryDto> getRootCategories() {
         log.debug("Getting root categories");
-        
+
         List<Category> categories = categoryRepository.findByParentIsNullAndIsActiveTrueOrderByDisplayOrderAsc();
         return categories.stream()
                 .map(categoryMapper::toCategorySummaryDto)
@@ -222,7 +220,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "'children_' + #parentId")
     public List<CategorySummaryDto> getChildCategories(Long parentId) {
         log.debug("Getting child categories for parent ID: {}", parentId);
-        
+
         List<Category> categories = categoryRepository.findByParentIdAndIsActiveTrueOrderByDisplayOrderAsc(parentId);
         return categories.stream()
                 .map(categoryMapper::toCategorySummaryDto)
@@ -266,13 +264,13 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public void validateCategoryData(CategoryCreateDto createDto) {
         // Validate slug uniqueness
-        String slug = StringUtils.hasText(createDto.getSlug()) ? 
+        String slug = StringUtils.hasText(createDto.getSlug()) ?
                 createDto.getSlug() : generateSlug(createDto.getName());
-        
+
         if (!isSlugUnique(slug)) {
             throw new RuntimeException("Category slug already exists: " + slug);
         }
-        
+
         // Validate parent exists
         if (createDto.getParentId() != null && !categoryRepository.existsById(createDto.getParentId())) {
             throw new RuntimeException("Parent category not found with ID: " + createDto.getParentId());
@@ -285,7 +283,7 @@ public class CategoryServiceImpl implements CategoryService {
         if (StringUtils.hasText(updateDto.getSlug()) && !isSlugUnique(updateDto.getSlug(), categoryId)) {
             throw new RuntimeException("Category slug already exists: " + updateDto.getSlug());
         }
-        
+
         // Validate parent exists and not creating circular reference
         if (updateDto.getParentId() != null) {
             validateCategoryHierarchy(updateDto.getParentId(), categoryId);
@@ -297,11 +295,11 @@ public class CategoryServiceImpl implements CategoryService {
         if (parentId.equals(categoryId)) {
             throw new RuntimeException("Category cannot be its own parent");
         }
-        
+
         if (!categoryRepository.existsById(parentId)) {
             throw new RuntimeException("Parent category not found with ID: " + parentId);
         }
-        
+
         // Check for circular reference by checking if parentId is a descendant of categoryId
         // This would require a recursive check - simplified for now
     }

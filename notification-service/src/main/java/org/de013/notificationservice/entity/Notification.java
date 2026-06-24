@@ -15,10 +15,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "notifications", indexes = {
-    @Index(name = "idx_notification_user_id", columnList = "user_id"),
-    @Index(name = "idx_notification_status", columnList = "status"),
-    @Index(name = "idx_notification_channel", columnList = "channel"),
-    @Index(name = "idx_notification_created_at", columnList = "created_at")
+        @Index(name = "idx_notification_user_id", columnList = "user_id"),
+        @Index(name = "idx_notification_status", columnList = "status"),
+        @Index(name = "idx_notification_channel", columnList = "channel"),
+        @Index(name = "idx_notification_created_at", columnList = "created_at")
 })
 @Getter
 @Setter
@@ -41,7 +41,7 @@ public class Notification {
     private LocalDateTime updatedAt;
 
     @Column(name = "user_id")
-    private Long userId;
+    private String userId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false, length = 20)
@@ -85,3 +85,4 @@ public class Notification {
         updatedAt = LocalDateTime.now();
     }
 }
+

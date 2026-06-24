@@ -14,23 +14,23 @@ import java.lang.annotation.*;
 @Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidPaymentMethod {
-    
+
     String message() default "Invalid payment method";
-    
+
     Class<?>[] groups() default {};
-    
+
     Class<? extends Payload>[] payload() default {};
-    
+
     /**
      * Whether to check if the payment method is active.
      */
     boolean checkActive() default true;
-    
+
     /**
      * Whether to check if the payment method is not expired.
      */
     boolean checkExpired() default true;
-    
+
     /**
      * Whether to allow null values.
      */

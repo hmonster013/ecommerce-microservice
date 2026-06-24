@@ -134,8 +134,6 @@ public class CartResponseDto {
     private Map<String, Object> validationStatus;
 
 
-
-
     /**
      * Calculate time until expiration in seconds
      */

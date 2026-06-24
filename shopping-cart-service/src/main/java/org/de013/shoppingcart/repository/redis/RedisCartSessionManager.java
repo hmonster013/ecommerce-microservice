@@ -3,7 +3,6 @@ package org.de013.shoppingcart.repository.redis;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.shoppingcart.entity.RedisCart;
-import org.de013.shoppingcart.entity.enums.CartStatus;
 import org.de013.shoppingcart.entity.enums.CartType;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
@@ -43,21 +42,21 @@ public class RedisCartSessionManager {
         try {
             String sessionId = generateSessionId();
             String metaKey = SESSION_METADATA + sessionId;
-            
+
             // Store session metadata
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("sessionId", sessionId);
             metadata.put("createdAt", LocalDateTime.now().toString());
             metadata.put("type", "GUEST");
             metadata.put("status", "ACTIVE");
-            
+
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
             valueOps.set(metaKey, metadata, Duration.ofHours(2)); // 2 hour session timeout
-            
+
             // Add to session registry
             SetOperations<String, Object> setOps = redisTemplate.opsForSet();
             setOps.add(SESSION_REGISTRY, sessionId);
-            
+
             log.debug("Created guest session: {}", sessionId);
             return sessionId;
         } catch (Exception e) {
@@ -73,28 +72,28 @@ public class RedisCartSessionManager {
         try {
             String metaKey = SESSION_METADATA + sessionId;
             String userSessionsKey = USER_SESSIONS + userId;
-            
+
             // Update session metadata
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
             @SuppressWarnings("unchecked")
             Map<String, Object> metadata = (Map<String, Object>) valueOps.get(metaKey);
-            
+
             if (metadata == null) {
                 log.warn("Session metadata not found for session: {}", sessionId);
                 return false;
             }
-            
+
             metadata.put("userId", userId);
             metadata.put("type", "USER");
             metadata.put("associatedAt", LocalDateTime.now().toString());
-            
+
             valueOps.set(metaKey, metadata, Duration.ofDays(30)); // Extend for logged-in users
-            
+
             // Add to user sessions
             SetOperations<String, Object> setOps = redisTemplate.opsForSet();
             setOps.add(userSessionsKey, sessionId);
             redisTemplate.expire(userSessionsKey, Duration.ofDays(30));
-            
+
             log.debug("Associated session {} with user {}", sessionId, userId);
             return true;
         } catch (Exception e) {
@@ -110,10 +109,10 @@ public class RedisCartSessionManager {
         try {
             String metaKey = SESSION_METADATA + sessionId;
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
-            
+
             @SuppressWarnings("unchecked")
             Map<String, Object> metadata = (Map<String, Object>) valueOps.get(metaKey);
-            
+
             return Optional.ofNullable(metadata);
         } catch (Exception e) {
             log.error("Error getting session metadata: {}", e.getMessage(), e);
@@ -128,26 +127,26 @@ public class RedisCartSessionManager {
      */
     public boolean migrateGuestCartToUser(String sessionId, String userId) {
         String migrationLockKey = MIGRATION_LOCK + sessionId + ":" + userId;
-        
+
         try {
             // Acquire migration lock
             if (!redisCartOperations.acquireCartLock(migrationLockKey, Duration.ofMinutes(5))) {
                 log.warn("Could not acquire migration lock for session {} to user {}", sessionId, userId);
                 return false;
             }
-            
+
             // Get guest cart
             Optional<RedisCart> guestCartOpt = redisCartOperations.getCartBySessionId(sessionId);
             if (guestCartOpt.isEmpty()) {
                 log.debug("No guest cart found for session: {}", sessionId);
                 return true; // No cart to migrate is success
             }
-            
+
             RedisCart guestCart = guestCartOpt.get();
-            
+
             // Check if user already has a cart
             Optional<RedisCart> userCartOpt = redisCartOperations.getCartByUserId(userId);
-            
+
             if (userCartOpt.isPresent()) {
                 // Merge carts
                 return mergeGuestCartWithUserCart(guestCart, userCartOpt.get(), userId);
@@ -155,7 +154,7 @@ public class RedisCartSessionManager {
                 // Convert guest cart to user cart
                 return convertGuestCartToUserCart(guestCart, userId);
             }
-            
+
         } catch (Exception e) {
             log.error("Error migrating guest cart to user: {}", e.getMessage(), e);
             return false;
@@ -175,18 +174,18 @@ public class RedisCartSessionManager {
                 for (RedisCart.RedisCartItem guestItem : guestCart.getItems()) {
                     // Check if item already exists in user cart
                     boolean itemExists = userCart.getItems().stream()
-                            .anyMatch(userItem -> 
-                                userItem.getProductId().equals(guestItem.getProductId()) &&
-                                Objects.equals(userItem.getVariantId(), guestItem.getVariantId()));
-                    
+                            .anyMatch(userItem ->
+                                    userItem.getProductId().equals(guestItem.getProductId()) &&
+                                            Objects.equals(userItem.getVariantId(), guestItem.getVariantId()));
+
                     if (!itemExists) {
                         userCart.addItem(guestItem);
                     } else {
                         // Update quantity if item exists
                         userCart.getItems().stream()
-                                .filter(userItem -> 
-                                    userItem.getProductId().equals(guestItem.getProductId()) &&
-                                    Objects.equals(userItem.getVariantId(), guestItem.getVariantId()))
+                                .filter(userItem ->
+                                        userItem.getProductId().equals(guestItem.getProductId()) &&
+                                                Objects.equals(userItem.getVariantId(), guestItem.getVariantId()))
                                 .findFirst()
                                 .ifPresent(userItem -> {
                                     userItem.setQuantity(userItem.getQuantity() + guestItem.getQuantity());
@@ -195,21 +194,21 @@ public class RedisCartSessionManager {
                     }
                 }
             }
-            
+
             // Update cart totals
             userCart.updateCartTotals();
             userCart.setCartType(CartType.USER);
             userCart.setUserId(userId);
-            
+
             // Save merged cart
             redisCartOperations.saveCartWithTTL(userCart, Duration.ofSeconds(CartType.USER.getDefaultTtlSeconds()));
-            
+
             // Delete guest cart
             redisCartOperations.deleteCart("session_cart:" + guestCart.getSessionId());
-            
+
             log.debug("Merged guest cart {} with user cart for user {}", guestCart.getSessionId(), userId);
             return true;
-            
+
         } catch (Exception e) {
             log.error("Error merging guest cart with user cart: {}", e.getMessage(), e);
             return false;
@@ -225,16 +224,16 @@ public class RedisCartSessionManager {
             guestCart.setUserId(userId);
             guestCart.setCartType(CartType.USER);
             guestCart.setUpdatedAt(LocalDateTime.now());
-            
+
             // Save as user cart
             redisCartOperations.saveCartWithTTL(guestCart, Duration.ofSeconds(CartType.USER.getDefaultTtlSeconds()));
-            
+
             // Delete guest cart
             redisCartOperations.deleteCart("session_cart:" + guestCart.getSessionId());
-            
+
             log.debug("Converted guest cart {} to user cart for user {}", guestCart.getSessionId(), userId);
             return true;
-            
+
         } catch (Exception e) {
             log.error("Error converting guest cart to user cart: {}", e.getMessage(), e);
             return false;
@@ -250,17 +249,17 @@ public class RedisCartSessionManager {
         try {
             SetOperations<String, Object> setOps = redisTemplate.opsForSet();
             Set<Object> allSessions = setOps.members(SESSION_REGISTRY);
-            
+
             if (allSessions == null || allSessions.isEmpty()) {
                 return 0;
             }
-            
+
             int cleanedCount = 0;
             LocalDateTime cutoffTime = LocalDateTime.now().minusHours(24);
-            
+
             for (Object sessionObj : allSessions) {
                 String sessionId = sessionObj.toString();
-                
+
                 Optional<Map<String, Object>> metadataOpt = getSessionMetadata(sessionId);
                 if (metadataOpt.isEmpty()) {
                     // Remove from registry if metadata is missing
@@ -268,10 +267,10 @@ public class RedisCartSessionManager {
                     cleanedCount++;
                     continue;
                 }
-                
+
                 Map<String, Object> metadata = metadataOpt.get();
                 String createdAtStr = (String) metadata.get("createdAt");
-                
+
                 if (createdAtStr != null) {
                     LocalDateTime createdAt = LocalDateTime.parse(createdAtStr);
                     if (createdAt.isBefore(cutoffTime)) {
@@ -280,10 +279,10 @@ public class RedisCartSessionManager {
                     }
                 }
             }
-            
+
             log.debug("Cleaned up {} expired sessions", cleanedCount);
             return cleanedCount;
-            
+
         } catch (Exception e) {
             log.error("Error cleaning up expired sessions: {}", e.getMessage(), e);
             return 0;
@@ -298,17 +297,17 @@ public class RedisCartSessionManager {
             // Remove session metadata
             String metaKey = SESSION_METADATA + sessionId;
             redisTemplate.delete(metaKey);
-            
+
             // Remove from session registry
             SetOperations<String, Object> setOps = redisTemplate.opsForSet();
             setOps.remove(SESSION_REGISTRY, sessionId);
-            
+
             // Delete associated guest cart
             redisCartOperations.deleteCart("session_cart:" + sessionId);
-            
+
             log.debug("Cleaned up session: {}", sessionId);
             return true;
-            
+
         } catch (Exception e) {
             log.error("Error cleaning up session {}: {}", sessionId, e.getMessage(), e);
             return false;
@@ -339,11 +338,11 @@ public class RedisCartSessionManager {
             String userSessionsKey = USER_SESSIONS + userId;
             SetOperations<String, Object> setOps = redisTemplate.opsForSet();
             Set<Object> sessions = setOps.members(userSessionsKey);
-            
+
             if (sessions == null) {
                 return new HashSet<>();
             }
-            
+
             return sessions.stream()
                     .map(Object::toString)
                     .collect(Collectors.toSet());
