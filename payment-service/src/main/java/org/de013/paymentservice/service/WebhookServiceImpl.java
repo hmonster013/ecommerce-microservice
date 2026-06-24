@@ -376,13 +376,33 @@ public class WebhookServiceImpl implements WebhookService {
 
     @Override
     public void handleWebhookError(String payload, String signature, Exception error) {
-        log.error("Webhook processing error - Payload length: {}, Signature: {}, Error: {}",
-                payload != null ? payload.length() : 0, signature, error.getMessage());
+        String eventType = "UNKNOWN";
+        String eventId = "UNKNOWN";
 
-        // TODO: Implement error handling logic
-        // - Store failed webhook for retry
-        // - Send alert to monitoring system
-        // - Log to error tracking system
+        try {
+            if (payload != null) {
+                StripeWebhookRequest webhookRequest = stripeWebhookService.parseWebhookPayload(payload);
+                if (webhookRequest != null) {
+                    eventType = webhookRequest.getEventType() != null ? webhookRequest.getEventType() : "UNKNOWN";
+                    eventId = webhookRequest.getEventId() != null ? webhookRequest.getEventId() : "UNKNOWN";
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse payload during webhook error handling: {}", e.getMessage());
+        }
+
+        log.error("WEBHOOK_ALERT - Webhook processing failed! " +
+                        "Payload length: {}, Signature present: {}, EventType: {}, EventId: {}, " +
+                        "Error Class: {}, Error Message: {}",
+                payload != null ? payload.length() : 0,
+                signature != null && !signature.isBlank(),
+                eventType,
+                eventId,
+                error.getClass().getName(),
+                error.getMessage());
+
+        // NOTE (deferred): A durable retry store (e.g. database table or dead-letter queue)
+        // is recommended as a future enhancement to ensure guaranteed processing of failed webhooks.
     }
 
     @Override

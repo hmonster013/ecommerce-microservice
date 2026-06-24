@@ -51,10 +51,10 @@ public class OrderItem extends BaseEntity {
     /**
      * Product ID from product catalog service
      */
-    @Column(name = "product_id", nullable = false)
-    @NotNull(message = "Product ID is required")
-    @Positive(message = "Product ID must be positive")
-    private Long productId;
+    @Column(name = "product_id", length = 36, nullable = false)
+    @NotBlank(message = "Product ID is required")
+    @Size(max = 36, message = "Product ID must not exceed 36 characters")
+    private String productId;
 
     /**
      * Product SKU for reference

@@ -125,7 +125,7 @@ public class SmsService {
     }
 
     private void sendViaAWS(String phoneNumber, String message) {
-        // TODO: Implement AWS SNS integration
+        // NOTE (deferred): Twilio là provider chính đã hoạt động; AWS SNS chỉ là provider thay thế — chưa cần AWS SDK/credentials.
         log.info("AWS SNS SMS - To: {}, Message: {}", phoneNumber, message);
     }
 

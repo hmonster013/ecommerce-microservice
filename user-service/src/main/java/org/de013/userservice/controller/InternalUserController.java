@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ApiResponse;
 import org.de013.userservice.dto.SyncUserRequest;
 import org.de013.userservice.dto.UserResponse;
+import org.de013.userservice.dto.UserValidationResponse;
 import org.de013.userservice.entity.User;
 import org.de013.userservice.repository.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -111,5 +112,24 @@ public class InternalUserController {
 
         UserResponse response = UserResponse.fromEntity(user);
         return ResponseEntity.ok(ApiResponse.success(response, "User retrieved successfully"));
+    }
+
+    /**
+     * Validate user for payment processing (Internal)
+     */
+    @GetMapping("/{keycloakId}/validate-payment")
+    public ResponseEntity<UserValidationResponse> validateUserForPayment(@PathVariable String keycloakId) {
+        log.info("Internal request to validate user for payment: {}", keycloakId);
+
+        return userRepository.findByKeycloakId(keycloakId)
+                .map(user -> ResponseEntity.ok(UserValidationResponse.valid(
+                        user.getKeycloakId(),
+                        user.getUsername(),
+                        user.getEmail()
+                )))
+                .orElseGet(() -> {
+                    log.warn("User validation failed - user not found: {}", keycloakId);
+                    return ResponseEntity.ok(UserValidationResponse.userNotFound(keycloakId));
+                });
     }
 }

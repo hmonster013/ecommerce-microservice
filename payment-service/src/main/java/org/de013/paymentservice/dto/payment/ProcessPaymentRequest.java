@@ -39,6 +39,9 @@ public class ProcessPaymentRequest {
     @NotNull(message = "Payment method type is required")
     private PaymentMethodType paymentMethodType;
 
+    // Gateway Provider (e.g. STRIPE, VNPAY). Defaults to STRIPE if null
+    private String provider;
+
     // Stripe-specific fields
     @Size(max = 100, message = "Stripe payment method ID must not exceed 100 characters")
     private String stripePaymentMethodId;

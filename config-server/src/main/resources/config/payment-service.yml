@@ -28,6 +28,9 @@ spring:
   cloud:
     compatibility-verifier:
       enabled: false
+    openfeign:
+      circuitbreaker:
+        enabled: true
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/payment_service_db}
@@ -102,6 +105,15 @@ payment:
       api-version: ${STRIPE_API_VERSION:2023-10-16}
       success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/payment/success}
       cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/payment/cancel}
+    vnpay:
+      enabled: ${VNPAY_ENABLED:false}
+      tmn-code: ${VNPAY_TMN_CODE:}
+      hash-secret: ${VNPAY_HASH_SECRET:}
+      pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      return-url: ${VNPAY_RETURN_URL:http://localhost:8080/api/v1/payment-service/webhooks/vnpay/return}
+      ipn-url: ${VNPAY_IPN_URL:http://localhost:8080/api/v1/payment-service/webhooks/vnpay/ipn}
+      version: ${VNPAY_VERSION:2.1.0}
+      vnd-rate: ${VNPAY_VND_RATE:25000}
 
   # Payment processing configuration
   processing:
@@ -160,8 +172,6 @@ feign:
         readTimeout: 5000
         loggerLevel: full
         url: http://localhost:8081
-  hystrix:
-    enabled: true
   compression:
     request:
       enabled: true
@@ -169,6 +179,17 @@ feign:
       min-request-size: 2048
     response:
       enabled: true
+
+# Resilience4j Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 15s
+        failureRateThreshold: 50
+        slidingWindowType: COUNT_BASED
 
 # User Sync Configuration
 user-sync:

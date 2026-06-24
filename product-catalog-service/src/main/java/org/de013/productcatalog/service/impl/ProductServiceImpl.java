@@ -3,6 +3,7 @@ package org.de013.productcatalog.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.PageResponse;
+import org.de013.common.exception.ResourceNotFoundException;
 import org.de013.productcatalog.dto.product.*;
 import org.de013.productcatalog.entity.Category;
 import org.de013.productcatalog.entity.Inventory;
@@ -18,7 +19,6 @@ import org.de013.productcatalog.repository.ProductCategoryRepository;
 import org.de013.productcatalog.repository.ProductRepository;
 import org.de013.productcatalog.service.ProductService;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -101,8 +101,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    @CachePut(value = "products", key = "#id")
-    @CacheEvict(value = {"featuredProducts", "popularProducts", "searchResults"}, allEntries = true)
+    @CacheEvict(value = {"products", "featuredProducts", "popularProducts", "searchResults"}, allEntries = true)
     public ProductResponseDto updateProduct(Long id, ProductUpdateDto updateDto) {
         log.info("Updating product with ID: {}", id);
 
@@ -377,7 +376,62 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private void updateProductCategoryRelationships(Product product, List<Long> categoryIds, Long primaryCategoryId) {
-        // TODO: Implement category relationship updates
+        log.debug("Updating category relationships for product ID: {} with categories: {}", product.getId(), categoryIds);
+
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            log.warn("No category IDs provided for product: {}", product.getSku());
+            return;
+        }
+
+        // Validate all categories exist and are active
+        List<Category> categories = categoryRepository.findAllById(categoryIds);
+
+        if (categories.size() != categoryIds.size()) {
+            List<Long> foundIds = categories.stream().map(Category::getId).toList();
+            List<Long> missingIds = categoryIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .toList();
+            throw new ResourceNotFoundException("Categories not found: " + missingIds);
+        }
+
+        // Check if all categories are active
+        List<Category> inactiveCategories = categories.stream()
+                .filter(category -> !category.getIsActive())
+                .toList();
+        if (!inactiveCategories.isEmpty()) {
+            List<Long> inactiveIds = inactiveCategories.stream().map(Category::getId).toList();
+            throw new IllegalArgumentException("Cannot assign product to inactive categories: " + inactiveIds);
+        }
+
+        // Remove old relationships
+        productCategoryRepository.deleteByProductId(product.getId());
+        productCategoryRepository.flush(); // ensure delete is executed before insert
+
+        // Create new ProductCategory relationships
+        List<ProductCategory> productCategories = new ArrayList<>();
+        for (Category category : categories) {
+            boolean isPrimary = primaryCategoryId != null && primaryCategoryId.equals(category.getId());
+
+            ProductCategory productCategory = ProductCategory.builder()
+                    .product(product)
+                    .category(category)
+                    .isPrimary(isPrimary)
+                    .build();
+
+            productCategories.add(productCategory);
+        }
+
+        // If no primary category specified, make the first one primary
+        if (primaryCategoryId == null && !productCategories.isEmpty()) {
+            productCategories.get(0).setPrimary(true);
+            log.debug("No primary category specified, setting first category as primary: {}",
+                    productCategories.get(0).getCategory().getId());
+        }
+
+        // Save all relationships
+        productCategoryRepository.saveAll(productCategories);
+
+        log.info("Updated {} category relationships for product: {}", productCategories.size(), product.getSku());
     }
 
     private void createInitialInventory(Product product, ProductCreateDto createDto) {

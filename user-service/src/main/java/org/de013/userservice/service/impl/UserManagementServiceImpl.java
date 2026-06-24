@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.PageResponse;
 import org.de013.common.exception.BusinessException;
 import org.de013.common.exception.ResourceNotFoundException;
+import org.de013.userservice.exception.EmailAlreadyExistsException;
+import org.de013.userservice.exception.UsernameAlreadyExistsException;
 import org.de013.userservice.dto.UserProfileDto;
 import org.de013.userservice.dto.UserRegistrationDto;
 import org.de013.userservice.dto.UserResponse;
@@ -145,7 +147,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         // Validate email uniqueness if changed
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (!isEmailAvailableForUpdate(request.getEmail(), user.getId())) {
-                throw new BusinessException("Email already exists: " + request.getEmail());
+                throw new EmailAlreadyExistsException(request.getEmail());
             }
             user.setEmail(request.getEmail());
         }
@@ -243,11 +245,11 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     private void validateUserRegistration(UserRegistrationDto request) {
         if (existsByUsername(request.getUsername())) {
-            throw new BusinessException("Username already exists: " + request.getUsername());
+            throw new UsernameAlreadyExistsException(request.getUsername());
         }
 
         if (existsByEmail(request.getEmail())) {
-            throw new BusinessException("Email already exists: " + request.getEmail());
+            throw new EmailAlreadyExistsException(request.getEmail());
         }
     }
 }

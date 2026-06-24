@@ -8,6 +8,7 @@ import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
+import org.de013.common.exception.ConflictException;
 import org.de013.paymentservice.exception.PaymentNotFoundException;
 import org.de013.paymentservice.exception.PaymentProcessingException;
 import org.de013.paymentservice.gateway.PaymentGateway;
@@ -22,6 +23,7 @@ import org.de013.paymentservice.util.PaymentNumberGenerator;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.de013.paymentservice.entity.PaymentTransaction;
 import org.de013.paymentservice.entity.enums.TransactionType;
+import org.de013.paymentservice.service.vnpay.VnpayService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -48,6 +50,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderServiceClient orderServiceClient;
     private final UserServiceClient userServiceClient;
     private final NotificationServiceClient notificationServiceClient;
+    private final VnpayService vnpayService;
 
     // ========== PAYMENT PROCESSING ==========
 
@@ -55,6 +58,12 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse processPayment(ProcessPaymentRequest request) {
         log.info("Processing payment for order: {}, user: {}, amount: {}",
                 request.getOrderId(), request.getUserId(), request.getAmount());
+
+        // Dynamic gateway provider routing (Early-return for VNPay checkout)
+        String provider = request.getProvider() != null ? request.getProvider() : "STRIPE";
+        if ("VNPAY".equalsIgnoreCase(provider)) {
+            return vnpayService.createCheckout(request);
+        }
 
         try {
             validatePaymentRequest(request);
@@ -378,6 +387,17 @@ public class PaymentServiceImpl implements PaymentService {
             ResponseEntity<org.de013.paymentservice.dto.external.OrderDto> response = orderServiceClient.getOrderById(orderId);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 org.de013.paymentservice.dto.external.OrderDto order = response.getBody();
+                
+                // Business rule validation: Do not allow payment for an order in a non-payable state
+                if ("PAID".equals(order.getStatus()) || "COMPLETED".equals(order.getStatus())) {
+                    log.error("Order {} is already paid or completed. Status: {}", orderId, order.getStatus());
+                    throw new ConflictException("Order is already paid: " + orderId);
+                }
+                if ("CANCELLED".equals(order.getStatus())) {
+                    log.error("Order {} is cancelled, cannot process payment", orderId);
+                    throw new ConflictException("Order is cancelled: " + orderId);
+                }
+
                 BigDecimal orderTotal = order.getTotalAmount() != null ? order.getTotalAmount().getAmount() : BigDecimal.ZERO;
                 if (orderTotal.compareTo(amount) != 0) {
                     log.error("Payment amount mismatch: request amount={}, order total={}", amount, orderTotal);
@@ -387,7 +407,7 @@ public class PaymentServiceImpl implements PaymentService {
             } else {
                 throw new PaymentProcessingException("Failed to validate payment: Order not found: " + orderId);
             }
-        } catch (PaymentProcessingException e) {
+        } catch (ConflictException | PaymentProcessingException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error communicating with Order Service for verification: ", e);
@@ -417,7 +437,8 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (PaymentProcessingException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("Error communicating with User Service for verification. Proceeding with fallback.", e);
+            log.error("Error communicating with User Service for verification: ", e);
+            throw new PaymentProcessingException("User validation failed due to communication error: " + e.getMessage(), e);
         }
     }
 

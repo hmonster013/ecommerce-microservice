@@ -37,7 +37,7 @@ spring:
   # JPA Configuration
   jpa:
     hibernate:
-      ddl-auto: update  # Use update for development
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:

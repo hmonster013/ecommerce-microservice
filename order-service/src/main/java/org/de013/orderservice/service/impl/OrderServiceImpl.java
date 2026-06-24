@@ -71,15 +71,7 @@ public class OrderServiceImpl implements OrderService {
         for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
 
-            // Convert String productId to Long (assuming it's numeric)
-            Long productId;
-            try {
-                productId = Long.parseLong(cartItem.getProductId());
-                orderItem.setProductId(productId);
-            } catch (NumberFormatException e) {
-                log.warn("Invalid productId format: {}, skipping item", cartItem.getProductId());
-                continue;
-            }
+            orderItem.setProductId(cartItem.getProductId());
 
             orderItem.setSku(cartItem.getProductSku());
             orderItem.setProductName(cartItem.getProductName());
@@ -107,10 +99,10 @@ public class OrderServiceImpl implements OrderService {
 
             // Deduct stock in Product Catalog Service
             try {
-                log.info("Deducting {} stock for product ID: {}", cartItem.getQuantity(), productId);
-                productCatalogClient.removeStock(productId, cartItem.getQuantity());
+                log.info("Deducting {} stock for product ID: {}", cartItem.getQuantity(), cartItem.getProductId());
+                productCatalogClient.removeStock(cartItem.getProductId(), cartItem.getQuantity());
             } catch (Exception e) {
-                log.error("Failed to deduct stock for product ID: {} - Error: {}", productId, e.getMessage());
+                log.error("Failed to deduct stock for product ID: {} - Error: {}", cartItem.getProductId(), e.getMessage());
                 throw new IllegalStateException("Failed to allocate inventory for product: " + cartItem.getProductName());
             }
         }

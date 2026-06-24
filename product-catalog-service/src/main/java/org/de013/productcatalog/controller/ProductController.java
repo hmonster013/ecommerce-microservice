@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
@@ -16,6 +17,7 @@ import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.*;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.de013.productcatalog.service.ProductService;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -28,6 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/products")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Products", description = "Product management API")
 public class ProductController extends BaseController {
 
@@ -77,7 +80,7 @@ public class ProductController extends BaseController {
     @GetMapping("/{id}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<ProductDetailDto>> getProductById(
             @Parameter(description = "Product ID", required = true)
-            @PathVariable Long id) {
+            @PathVariable @Positive(message = "Product ID must be positive") Long id) {
 
         log.info("Getting product by ID: {}", id);
 

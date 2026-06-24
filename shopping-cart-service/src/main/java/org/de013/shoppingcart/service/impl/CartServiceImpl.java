@@ -655,7 +655,7 @@ public class CartServiceImpl implements CartService {
                 .updatedAt(redisCart.getUpdatedAt())
                 .lastActivityAt(redisCart.getLastActivityAt())
                 .expiresAt(redisCart.getExpiresAt())
-                .items(items) // TODO(P11): RedisCart không lưu item chi tiết, map khi hoàn thiện cart Redis
+                .items(items) // NOTE (deferred): RedisCart fast-path chưa lưu item chi tiết; luồng chính đọc cart từ DB. Map item khi hoàn thiện Redis cart layer.
                 .build();
     }
 

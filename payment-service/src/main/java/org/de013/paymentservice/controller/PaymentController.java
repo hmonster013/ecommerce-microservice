@@ -6,8 +6,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.PageResponse;
 import org.de013.common.security.UserContext;
@@ -36,6 +38,7 @@ import java.util.List;
 @RequestMapping("/payments")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 @Tag(name = "Payments", description = "Payment processing and management operations")
 public class PaymentController extends BaseController {
 
@@ -179,7 +182,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> getPaymentById(
-            @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
+            @Parameter(description = "Payment ID") @PathVariable @Positive(message = "Payment ID must be positive") Long paymentId) {
         log.debug("Getting payment by ID: {}", paymentId);
 
         return paymentService.getPaymentById(paymentId)
@@ -208,7 +211,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getPaymentsByOrderId(
-            @Parameter(description = "Order ID") @PathVariable Long orderId) {
+            @Parameter(description = "Order ID") @PathVariable @Positive(message = "Order ID must be positive") Long orderId) {
         log.debug("Getting payments for order: {}", orderId);
 
         List<PaymentResponse> payments = paymentService.getPaymentsByOrderId(orderId);

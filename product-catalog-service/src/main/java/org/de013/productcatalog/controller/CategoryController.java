@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.PageResponse;
@@ -14,6 +15,7 @@ import org.de013.productcatalog.dto.category.*;
 import org.de013.productcatalog.dto.product.ProductSummaryDto;
 import org.de013.productcatalog.service.CategoryService;
 import org.de013.productcatalog.service.ProductService;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -25,6 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/categories")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Categories", description = "Category management API")
 public class CategoryController extends BaseController {
 
@@ -59,7 +62,7 @@ public class CategoryController extends BaseController {
     @GetMapping("/{id}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> getCategoryById(
             @Parameter(description = "Category ID", required = true)
-            @PathVariable Long id) {
+            @PathVariable @Positive(message = "Category ID must be positive") Long id) {
 
         log.info("Getting category by ID: {}", id);
 

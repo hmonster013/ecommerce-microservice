@@ -186,6 +186,29 @@ public class UserExceptionHandler {
     }
 
     /**
+     * Handle username already exists exceptions
+     */
+    @ExceptionHandler(UsernameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleUsernameAlreadyExistsException(
+            UsernameAlreadyExistsException ex, HttpServletRequest request) {
+
+        String traceId = generateTraceId();
+        log.warn("Username already exists [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "USERNAME_ALREADY_EXISTS",
+                ex.getMessage(),
+                request.getRequestURI(),
+                request.getMethod(),
+                traceId
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    /**
      * Handle authentication exceptions (fallback for other auth exceptions)
      */
     @ExceptionHandler(BadCredentialsException.class)
