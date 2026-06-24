@@ -20,6 +20,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final InventoryMapper inventoryMapper;
+    private final org.springframework.cache.CacheManager cacheManager;
 
     @Override
     @Cacheable(value = "inventory", key = "#productId")
@@ -32,7 +33,6 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "inventory", key = "#productId")
     public InventoryDto addStock(Long productId, Integer quantity) {
         log.info("Adding {} stock to product ID: {}", quantity, productId);
 
@@ -45,13 +45,13 @@ public class InventoryServiceImpl implements InventoryService {
 
         inventory = inventoryRepository.save(inventory);
 
+        clearInventoryCache(productId);
         log.info("Added {} stock to product ID: {}, new quantity: {}", quantity, productId, inventory.getQuantity());
         return inventoryMapper.toInventoryDto(inventory);
     }
 
     @Override
     @Transactional
-    @CacheEvict(value = "inventory", key = "#productId")
     public InventoryDto removeStock(Long productId, Integer quantity) {
         log.info("Removing {} stock from product ID: {}", quantity, productId);
 
@@ -64,6 +64,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         inventory = inventoryRepository.save(inventory);
 
+        clearInventoryCache(productId);
         log.info("Removed {} stock from product ID: {}, new quantity: {}", quantity, productId, inventory.getQuantity());
         return inventoryMapper.toInventoryDto(inventory);
     }
@@ -71,7 +72,6 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "inventory", key = "#productId")
     public InventoryDto setStock(Long productId, Integer quantity) {
         log.info("Setting stock to {} for product ID: {}", quantity, productId);
 
@@ -84,6 +84,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         inventory = inventoryRepository.save(inventory);
 
+        clearInventoryCache(productId);
         log.info("Set stock to {} for product ID: {}", quantity, productId);
         return inventoryMapper.toInventoryDto(inventory);
     }
@@ -172,8 +173,15 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     // Helper method for cache management
-    @CacheEvict(value = "inventory", key = "#productId")
     private void clearInventoryCache(Long productId) {
-        log.debug("Clearing inventory cache for product ID: {}", productId);
+        log.debug("Clearing inventory and products cache for product ID: {}", productId);
+        org.springframework.cache.Cache inventoryCache = cacheManager.getCache("inventory");
+        if (inventoryCache != null) {
+            inventoryCache.evict(productId);
+        }
+        org.springframework.cache.Cache productsCache = cacheManager.getCache("products");
+        if (productsCache != null) {
+            productsCache.evict(productId);
+        }
     }
 }
