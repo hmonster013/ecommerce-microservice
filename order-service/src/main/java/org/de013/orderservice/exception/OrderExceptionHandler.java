@@ -1,6 +1,7 @@
 package org.de013.orderservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ErrorResponse;
 import org.de013.common.exception.BusinessException;
@@ -48,6 +49,32 @@ public class OrderExceptionHandler {
 
         String traceId = generateTraceId();
         log.warn("Validation failed [{}] for {}: {}", traceId, request.getRequestURI(), errors);
+
+        ErrorResponse response = ErrorResponse.withMetadata(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "VALIDATION_ERROR",
+                "Validation failed",
+                errors,
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * Handle constraint violations from @Validated path/query parameters
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
+            ConstraintViolationException ex, HttpServletRequest request) {
+
+        Map<String, Object> errors = new HashMap<>();
+        ex.getConstraintViolations().forEach((violation) ->
+                errors.put(violation.getPropertyPath().toString(), violation.getMessage()));
+
+        String traceId = generateTraceId();
+        log.warn("Constraint violation [{}] for {}: {}", traceId, request.getRequestURI(), errors);
 
         ErrorResponse response = ErrorResponse.withMetadata(
                 HttpStatus.BAD_REQUEST.value(),

@@ -8,8 +8,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.orderservice.dto.request.CancelOrderRequest;
@@ -30,6 +32,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @RequestMapping("/orders")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 @Tag(name = "Order Management", description = "APIs for order management including creation, retrieval, updates, and cancellation")
 public class OrderController {
 
@@ -78,7 +81,7 @@ public class OrderController {
     @PreAuthorize("@orderSecurity.canAccessOrder(#orderId)")
     public OrderResponse getOrder(
             @Parameter(description = "Order ID", required = true, example = "1")
-            @PathVariable Long orderId) {
+            @PathVariable @Positive(message = "Order ID must be positive") Long orderId) {
         log.debug("Getting order {}", orderId);
         return orderService.getOrderById(orderId);
     }

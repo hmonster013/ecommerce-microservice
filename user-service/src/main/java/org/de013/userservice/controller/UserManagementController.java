@@ -4,7 +4,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResponse;
 import org.de013.common.dto.PageResponse;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "User Management", description = "User profile and administration endpoints")
 public class UserManagementController extends BaseController {
 
@@ -56,7 +59,7 @@ public class UserManagementController extends BaseController {
     @Operation(summary = "Get user by ID (Admin only)", description = "Retrieve user information by user ID. Authorization handled by API Gateway.")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(
             @Parameter(description = "User ID", required = true)
-            @PathVariable Long id) {
+            @PathVariable @Positive(message = "User ID must be positive") Long id) {
 
         UserResponse user = userManagementService.getUserById(id);
         return ok(user);
@@ -96,7 +99,7 @@ public class UserManagementController extends BaseController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete user (Admin only)", description = "Delete user account. Authorization handled by API Gateway.")
-    public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable @Positive(message = "User ID must be positive") Long id) {
         userManagementService.deleteUser(id);
         return ok("User deleted successfully");
     }

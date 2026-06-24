@@ -1,9 +1,11 @@
 package org.de013.paymentservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ErrorResponse;
 import org.de013.common.exception.BusinessException;
+import org.de013.common.exception.ConflictException;
 import org.de013.common.exception.ResourceNotFoundException;
 import org.de013.paymentservice.constant.PaymentConstants;
 import org.springframework.http.HttpStatus;
@@ -60,6 +62,55 @@ public class PaymentExceptionHandler {
         );
 
         return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * Handle constraint violations from @Validated path/query parameters
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
+            ConstraintViolationException ex, HttpServletRequest request) {
+
+        Map<String, Object> errors = new HashMap<>();
+        ex.getConstraintViolations().forEach((violation) ->
+                errors.put(violation.getPropertyPath().toString(), violation.getMessage()));
+
+        String traceId = generateTraceId();
+        log.warn("Constraint violation [{}] for {}: {}", traceId, request.getRequestURI(), errors);
+
+        ErrorResponse response = ErrorResponse.withMetadata(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "VALIDATION_ERROR",
+                "Validation failed",
+                errors,
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * Handle conflict (e.g. payment for an order in a non-payable state)
+     */
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflictException(
+            ConflictException ex, HttpServletRequest request) {
+
+        String traceId = generateTraceId();
+        log.warn("Conflict [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "CONFLICT",
+                ex.getMessage(),
+                request.getRequestURI(),
+                request.getMethod(),
+                traceId
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     // ========== PAYMENT SPECIFIC EXCEPTIONS ==========

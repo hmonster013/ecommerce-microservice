@@ -8,8 +8,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.de013.common.controller.BaseController;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
@@ -35,6 +37,7 @@ import java.util.Optional;
 @RequestMapping("/cart-items") // Gateway routes /api/v1/cart/** to /cart/**
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 @Tag(name = "Cart Items", description = "APIs for cart item management")
 public class CartItemController extends BaseController {
 
@@ -220,7 +223,7 @@ public class CartItemController extends BaseController {
     @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
     public ResponseEntity<org.de013.common.dto.ApiResponse<List<CartItemResponseDto>>> getCartItems(
             @Parameter(description = "Cart ID", required = true)
-            @PathVariable Long cartId) {
+            @PathVariable @Positive(message = "Cart ID must be positive") Long cartId) {
 
         try {
             log.debug("Getting items for cart: {}", cartId);
@@ -244,7 +247,7 @@ public class CartItemController extends BaseController {
     @GetMapping("/{itemId}")
     public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> getCartItemById(
             @Parameter(description = "Cart item ID", required = true)
-            @PathVariable Long itemId) {
+            @PathVariable @Positive(message = "Cart item ID must be positive") Long itemId) {
 
         try {
             log.debug("Getting cart item by ID: {}", itemId);
