@@ -12,6 +12,96 @@ A scalable e-commerce platform built with microservices architecture using Sprin
 
 ## 🏗️ Architecture
 
+### 1. Sơ đồ hệ thống (System Architecture)
+
+```mermaid
+graph TD
+    Client[Client / Browser] -->|Requests| Gateway[API Gateway - Port 8080]
+    
+    subgraph Identity & IAM
+        Gateway -->|Validate JWT / RBAC| Keycloak[Keycloak IAM - Port 8090]
+    end
+    
+    subgraph Core Business Services
+        Gateway -->|Route| UserSvc[User Service - Port 8081]
+        Gateway -->|Route| ProductSvc[Product Catalog - Port 8082]
+        Gateway -->|Route| CartSvc[Shopping Cart - Port 8083]
+        Gateway -->|Route| OrderSvc[Order Service - Port 8084]
+        Gateway -->|Route| PaymentSvc[Payment Service - Port 8085]
+        Gateway -->|Route| NotificationSvc[Notification Service - Port 8086]
+    end
+
+    subgraph Service Discovery & Configuration
+        UserSvc & ProductSvc & CartSvc & OrderSvc & PaymentSvc & NotificationSvc -->|Registry| Eureka[Eureka Registry - Port 8761]
+        UserSvc & ProductSvc & CartSvc & OrderSvc & PaymentSvc & NotificationSvc -->|Fetch Props| ConfigSvc[Config Server - Port 8071]
+    end
+
+    subgraph Datastores & Event Broker
+        UserSvc -->|DB| UserDB[(PostgreSQL)]
+        ProductSvc -->|DB| ProductDB[(PostgreSQL)]
+        ProductSvc -->|Cache| Redis[(Redis Cache)]
+        CartSvc -->|Cache| RedisCart[(Redis Cache)]
+        OrderSvc -->|DB| OrderDB[(PostgreSQL)]
+        PaymentSvc -->|DB| PaymentDB[(PostgreSQL)]
+        NotificationSvc -->|DB| NotifDB[(PostgreSQL)]
+        
+        OrderSvc -->|Feign Call| ProductSvc
+        PaymentSvc -->|Feign Call| UserSvc
+        PaymentSvc -->|Feign Call| OrderSvc
+        PaymentSvc -->|Feign/HTTP| NotificationSvc
+    end
+```
+
+### 2. Luồng nghiệp vụ cốt lõi - Golden Path (Order & Checkout Sequence)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as Khách hàng
+    participant Gateway as API Gateway (8080)
+    participant Cart as Shopping Cart Svc (8083)
+    participant Order as Order Svc (8084)
+    participant Catalog as Product Catalog Svc (8082)
+    participant Payment as Payment Svc (8085)
+    participant User as User Svc (8081)
+    participant Stripe as Stripe API (External)
+    participant Notif as Notification Svc (8086)
+
+    Customer->>Gateway: POST /api/v1/order-service/orders (Checkout)
+    Gateway->>Order: Create order
+    Order->>Cart: Get cart items
+    Cart-->>Order: Return items
+    Order->>Catalog: Reserve / deduct stock
+    Catalog-->>Order: Stock reserved
+    Order-->>Customer: Order created (PENDING_PAYMENT)
+
+    Customer->>Gateway: POST /api/v1/payment-service/payments/process
+    Gateway->>Payment: Process payment (Stripe)
+    Payment->>Order: Validate amount & order state
+    Order-->>Payment: OK (amount matches, order payable)
+    Note right of Payment: Reject with 409 if order already PAID/CANCELLED
+    Payment->>User: Validate user (fail-closed)
+    User-->>Payment: User valid
+    Payment->>Stripe: Create & confirm charge
+    Stripe-->>Payment: SUCCEEDED
+    Payment->>Order: Mark order PAID
+    Payment->>Notif: Send confirmation (email/SMS via Feign)
+    Payment-->>Customer: Payment SUCCEEDED
+    Note over Stripe,Payment: Stripe webhook (/webhooks/stripe) also confirms async (idempotent)
+```
+
+### 3. Sơ đồ mô phỏng Tracing (Trace-to-Logs with Grafana & Tempo)
+
+```mermaid
+graph LR
+    subgraph Request Trace [Trace ID: 7c5e1829af01d93c]
+        GatewayTrace[API Gateway - 15ms] --> UserTrace[User Service - 5ms]
+        GatewayTrace --> PaymentTrace[Payment Service - 120ms]
+        PaymentTrace --> StripeTrace[Stripe HTTP Call - 95ms]
+        PaymentTrace --> NotifTrace[Notification Service - 10ms]
+    end
+```
+
 ### Microservices
 - **API Gateway** (8080) - Single entry point with OAuth2 authentication
 - **User Service** (8081) - User profile management
@@ -37,34 +127,37 @@ A scalable e-commerce platform built with microservices architecture using Sprin
 - **Tempo** (3200, 4317, 4318) - Distributed tracing
 - **OpenTelemetry Java Agent** - Automatic instrumentation
 
-## 🚀 Quick Start
+## 🚀 Quick Start & 1-Command Demo
 
 ### Prerequisites
 - Docker & Docker Compose
-- Java 17+ and Maven 3.6+ (for development)
+- Java 17+ (Microsoft OpenJDK / Temurin recommended) và Maven 3.6+
 
-### Run modes
+### 🛠️ Khởi động full-stack (toàn bộ hạ tầng + 8 microservices)
 
-Có 2 profile compose:
+Chạy toàn bộ hệ thống (hạ tầng database, caching, IAM, message broker, observability stack và **tất cả 8 microservices**) từ thư mục root. Image của prod copy sẵn jar đã build (`COPY target/*.jar`), nên **phải build jar trước** rồi mới build image:
 
-- **`docker/default/`** — local development: chỉ chạy **hạ tầng** (Postgres, Redis, RabbitMQ, Kafka, Keycloak, Eureka, Config Server, observability). Business service chạy trên **IntelliJ**.
-- **`docker/prod/`** — full Docker: build & chạy **toàn bộ** (hạ tầng + tất cả business service) cho môi trường gần production.
-
-File `.env` nằm ở **root project**, mọi lệnh phải kèm `--env-file .env` và chạy từ root.
-
-#### Local dev (infrastructure only)
 ```bash
-# Start hạ tầng
-docker compose --env-file .env -f docker/default/docker-compose.yml up -d
+# 1) Build tất cả jar (chạy từ root)
+./mvnw clean package -DskipTests
 
-# Sau đó mở IntelliJ và Run các business service, hoặc:
-cd user-service && mvn spring-boot:run
+# 2) Build image & chạy toàn bộ stack
+docker compose -p prod --env-file .env.prod -f docker/prod/docker-compose.yml up -d --build
 ```
 
-#### Production / full Docker
-```bash
-docker compose --env-file .env -f docker/prod/docker-compose.yml up -d --build
-```
+### Run Profiles
+
+Hệ thống hỗ trợ 2 profile chạy linh hoạt:
+
+- **`docker/default/` (Infrastructure-only local development)**: Chỉ chạy **hạ tầng** (PostgreSQL, Redis, RabbitMQ, Kafka, Keycloak, Eureka, Config Server, và Observability Stack). Các business services sẽ chạy trực tiếp trên máy của bạn (qua IntelliJ IDEA / Eclipse hoặc dòng lệnh) để phục vụ debug nhanh.
+  ```bash
+  docker compose --env-file .env -f docker/default/docker-compose.yml up -d
+  # Sau đó chạy các services mong muốn qua IntelliJ hoặc Maven wrapper:
+  $env:JAVA_HOME="<path-to-jdk-17>"; .\mvnw.cmd -pl order-service spring-boot:run
+  ```
+- **`docker/prod/` (Full Containerized Production-like environment)**: Đóng gói và chạy **toàn bộ** hệ thống trong Docker containers (như mục khởi động full-stack ở trên), dùng file `.env.prod`.
+
+*Lưu ý: Mọi lệnh Docker Compose phải chạy tại root project và truyền env qua `--env-file` (`.env` cho `docker/default`, `.env.prod` cho `docker/prod`) để tránh lỗi biến môi trường trống.*
 
 ### Access Services
 - **API Gateway**: http://localhost:8080
