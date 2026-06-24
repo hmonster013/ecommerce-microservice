@@ -45,7 +45,40 @@ public class CartItemDto {
     @JsonProperty("added_at")
     private LocalDateTime addedAt;
 
+    @JsonProperty("category_name")
+    private String categoryName;
+
+    @JsonProperty("product_brand")
+    private String productBrand;
+
+    @JsonProperty("discount_amount")
+    private BigDecimal discountAmount;
+
     // Getters and setters
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public String getProductBrand() {
+        return productBrand;
+    }
+
+    public void setProductBrand(String productBrand) {
+        this.productBrand = productBrand;
+    }
+
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(BigDecimal discountAmount) {
+        this.discountAmount = discountAmount;
+    }
+
     public Long getItemId() {
         return itemId;
     }

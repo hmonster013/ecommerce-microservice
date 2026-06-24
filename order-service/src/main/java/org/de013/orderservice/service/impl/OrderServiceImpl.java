@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -61,6 +62,11 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
+        String currency = request.getCurrency() != null ? request.getCurrency() : "USD";
+        order.setTaxAmount(new Money(BigDecimal.ZERO, currency));
+        order.setShippingAmount(new Money(BigDecimal.ZERO, currency));
+        order.setDiscountAmount(new Money(BigDecimal.ZERO, currency));
+
         // Convert cart items to order items and deduct stock
         for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
@@ -79,8 +85,23 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setProductName(cartItem.getProductName());
             orderItem.setProductDescription(cartItem.getProductDescription());
             orderItem.setQuantity(cartItem.getQuantity());
+            // unitPrice is the list price per unit; totalPrice is the GROSS line amount (unitPrice * qty).
+            // The order-level recalculation subtracts the per-line discount once to reach the net total.
+            BigDecimal qty = BigDecimal.valueOf(cartItem.getQuantity());
             orderItem.setUnitPrice(new Money(cartItem.getUnitPrice(), cartItem.getCurrency()));
-            orderItem.setTotalPrice(new Money(cartItem.getTotalPrice(), cartItem.getCurrency()));
+            orderItem.setTotalPrice(new Money(cartItem.getUnitPrice().multiply(qty), cartItem.getCurrency()));
+
+            // cart exposes discount per unit; scale by quantity for the line-level discount
+            BigDecimal discountPerUnit = cartItem.getDiscountAmount() != null ? cartItem.getDiscountAmount() : BigDecimal.ZERO;
+            orderItem.setDiscountAmount(new Money(discountPerUnit.multiply(qty), cartItem.getCurrency()));
+            
+            // Set tax amount (default to 0)
+            orderItem.setTaxAmount(new Money(BigDecimal.ZERO, cartItem.getCurrency()));
+            
+            // Set product category and brand
+            orderItem.setProductCategory(cartItem.getCategoryName());
+            orderItem.setProductBrand(cartItem.getProductBrand());
+            
             orderItem.setOrder(order);
             order.getOrderItems().add(orderItem);
 

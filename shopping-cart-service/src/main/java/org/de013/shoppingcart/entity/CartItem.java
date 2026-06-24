@@ -125,11 +125,14 @@ public class CartItem extends BaseEntity {
      */
     public void calculateTotalPrice() {
         if (quantity != null && unitPrice != null) {
-            BigDecimal baseTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-            BigDecimal discount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+            BigDecimal qty = BigDecimal.valueOf(quantity);
+            BigDecimal baseTotal = unitPrice.multiply(qty);
+            // discountAmount is stored per unit; scale it by quantity for the line total
+            BigDecimal discountPerUnit = discountAmount != null ? discountAmount : BigDecimal.ZERO;
+            BigDecimal lineDiscount = discountPerUnit.multiply(qty);
             BigDecimal giftWrap = (isGift && giftWrapPrice != null) ? giftWrapPrice : BigDecimal.ZERO;
 
-            this.totalPrice = baseTotal.subtract(discount).add(giftWrap);
+            this.totalPrice = baseTotal.subtract(lineDiscount).add(giftWrap);
         } else {
             // Set to zero if quantity or unitPrice is null
             this.totalPrice = BigDecimal.ZERO;

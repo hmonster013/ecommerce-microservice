@@ -367,11 +367,15 @@ public class CartItemServiceImpl implements CartItemService {
 
             ProductDetailDto productInfo = productCatalogClient.getProductInfo(item.getProductId());
             if (productInfo != null && productInfo.getCurrentPrice() != null) {
-                BigDecimal newPrice = productInfo.getCurrentPrice();
-                if (!newPrice.equals(item.getUnitPrice())) {
-                    log.info("Updating price for product {} from {} to {}",
-                            item.getProductId(), item.getUnitPrice(), newPrice);
-                    item.updateUnitPrice(newPrice);
+                // Keep list-price semantics: unitPrice = current + per-unit discount, so net stays correct
+                BigDecimal discountPerUnit = productInfo.getDiscountAmount() != null ?
+                        productInfo.getDiscountAmount() : BigDecimal.ZERO;
+                BigDecimal newListPrice = productInfo.getCurrentPrice().add(discountPerUnit);
+                if (!newListPrice.equals(item.getUnitPrice())) {
+                    log.info("Updating price for product {} from {} to {} (discount/unit {})",
+                            item.getProductId(), item.getUnitPrice(), newListPrice, discountPerUnit);
+                    item.setDiscountAmount(discountPerUnit);
+                    item.updateUnitPrice(newListPrice);
                 }
             }
         } catch (Exception e) {
@@ -381,12 +385,17 @@ public class CartItemServiceImpl implements CartItemService {
     }
 
     private CartItem createNewCartItem(Cart cart, AddToCartDto request, ProductDetailDto productInfo) {
-        // Always use price from Product Catalog for security - never trust client-provided prices
-        BigDecimal finalUnitPrice = productInfo.getCurrentPrice() != null ?
+        // Always use price from Product Catalog for security - never trust client-provided prices.
+        // Store unitPrice as the list price (per unit) so that (unitPrice - discountAmount) equals the
+        // net price actually charged. This keeps the discount applied exactly once in cart and order totals.
+        BigDecimal currentPrice = productInfo.getCurrentPrice() != null ?
                 productInfo.getCurrentPrice() : BigDecimal.ZERO;
+        BigDecimal discountPerUnit = productInfo.getDiscountAmount() != null ?
+                productInfo.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal listUnitPrice = currentPrice.add(discountPerUnit);
 
-        log.debug("Creating cart item - productInfo.currentPrice: {}, final unitPrice: {}",
-                productInfo.getCurrentPrice(), finalUnitPrice);
+        log.debug("Creating cart item - currentPrice: {}, discountPerUnit: {}, listUnitPrice: {}",
+                currentPrice, discountPerUnit, listUnitPrice);
 
         return CartItem.builder()
                 .cart(cart)
@@ -398,8 +407,9 @@ public class CartItemServiceImpl implements CartItemService {
                 .categoryId(productInfo.getCategoryId())
                 .categoryName(productInfo.getCategoryName())
                 .quantity(request.getQuantity())
-                .unitPrice(finalUnitPrice)
+                .unitPrice(listUnitPrice)
                 .originalPrice(productInfo.getOriginalPrice())
+                .discountAmount(discountPerUnit)
                 .currency("USD")
                 .variantId(request.getVariantId())
                 .specialInstructions(request.getSpecialInstructions())
