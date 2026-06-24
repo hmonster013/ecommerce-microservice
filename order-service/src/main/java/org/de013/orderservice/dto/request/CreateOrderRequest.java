@@ -29,8 +29,8 @@ public class CreateOrderRequest {
     /**
      * ID of the user placing the order
      */
-    @Schema(description = "ID of the user placing the order", example = "123e4567-e89b-12d3-a456-426614174000")
-    @NotBlank(message = "{user.id.required}")
+    @Schema(hidden = true)
+    @JsonIgnore
     private String userId;
 
     /**

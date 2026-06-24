@@ -24,7 +24,8 @@ public class ProcessPaymentRequest {
     @Positive(message = "Order ID must be positive")
     private Long orderId;
 
-    @NotBlank(message = "User ID is required")
+    @io.swagger.v3.oas.annotations.media.Schema(hidden = true)
+    @JsonIgnore
     private String userId;
 
     @NotNull(message = "Amount is required")
