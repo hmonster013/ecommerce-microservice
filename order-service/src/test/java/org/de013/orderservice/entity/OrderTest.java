@@ -21,7 +21,7 @@ class OrderTest {
                 .build();
 
         OrderItem item1 = OrderItem.builder()
-                .productId(1L)
+                .productId("1")
                 .sku("SKU-1")
                 .productName("Item 1")
                 .quantity(1)
@@ -32,7 +32,7 @@ class OrderTest {
                 .build();
 
         OrderItem item2 = OrderItem.builder()
-                .productId(2L)
+                .productId("2")
                 .sku("SKU-2")
                 .productName("Item 2")
                 .quantity(2)

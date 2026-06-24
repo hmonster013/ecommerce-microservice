@@ -18,7 +18,7 @@ public interface ProductCatalogClient {
      */
     @PostMapping("/products/{id}/inventory/remove")
     ApiResponse<Object> removeStock(
-            @PathVariable("id") Long id,
+            @PathVariable("id") String id,
             @RequestParam("quantity") Integer quantity
     );
 }

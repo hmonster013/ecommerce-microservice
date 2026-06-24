@@ -271,7 +271,7 @@ public class OrderResponse {
         /**
          * Product ID
          */
-        private Long productId;
+        private String productId;
 
         /**
          * Product SKU

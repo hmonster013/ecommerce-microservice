@@ -50,7 +50,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long>, Jpa
      * @param pageable  pagination information
      * @return page of order items
      */
-    Page<OrderItem> findByProductId(Long productId, Pageable pageable);
+    Page<OrderItem> findByProductId(String productId, Pageable pageable);
 
     /**
      * Find order items by SKU
@@ -143,7 +143,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long>, Jpa
      * @param productId the product ID
      * @return count of order items
      */
-    long countByProductId(Long productId);
+    long countByProductId(String productId);
 
     /**
      * Sum quantity by product ID
@@ -152,7 +152,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long>, Jpa
      * @return total quantity ordered
      */
     @Query("SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi WHERE oi.productId = :productId")
-    Long sumQuantityByProductId(@Param("productId") Long productId);
+    Long sumQuantityByProductId(@Param("productId") String productId);
 
     /**
      * Sum quantity by product ID for date range
@@ -164,7 +164,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long>, Jpa
      */
     @Query("SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi " +
             "WHERE oi.productId = :productId AND oi.createdAt BETWEEN :startDate AND :endDate")
-    Long sumQuantityByProductIdAndDateRange(@Param("productId") Long productId,
+    Long sumQuantityByProductIdAndDateRange(@Param("productId") String productId,
                                             @Param("startDate") LocalDateTime startDate,
                                             @Param("endDate") LocalDateTime endDate);
 
@@ -410,6 +410,6 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long>, Jpa
      * @return list of recent items
      */
     @Query("SELECT oi FROM OrderItem oi WHERE oi.productId = :productId AND oi.createdAt >= :since")
-    List<OrderItem> findRecentItemsForProduct(@Param("productId") Long productId,
+    List<OrderItem> findRecentItemsForProduct(@Param("productId") String productId,
                                               @Param("since") LocalDateTime since);
 }
