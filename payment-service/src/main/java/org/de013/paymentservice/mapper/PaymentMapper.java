@@ -2,9 +2,11 @@ package org.de013.paymentservice.mapper;
 
 import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
+import org.de013.paymentservice.dto.paymentmethod.PaymentMethodResponse;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.PaymentTransaction;
 import org.de013.paymentservice.entity.Refund;
+import org.de013.paymentservice.service.PaymentMethodService;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,6 +16,12 @@ import java.util.List;
  */
 @Component
 public class PaymentMapper {
+
+    private final PaymentMethodService paymentMethodService;
+
+    public PaymentMapper(PaymentMethodService paymentMethodService) {
+        this.paymentMethodService = paymentMethodService;
+    }
 
     /**
      * Convert Payment entity to PaymentResponse DTO
@@ -45,10 +53,26 @@ public class PaymentMapper {
 
         // Map payment method info
         if (payment.getStripePaymentMethodId() != null) {
-            // TODO: Get payment method details from PaymentMethodService
-            builder.paymentMethodInfo(PaymentResponse.PaymentMethodInfo.builder()
-                    .type(payment.getMethod().name())
-                    .build());
+            PaymentResponse.PaymentMethodInfo.PaymentMethodInfoBuilder pmBuilder = PaymentResponse.PaymentMethodInfo.builder()
+                    .type(payment.getMethod().name());
+            
+            try {
+                paymentMethodService.getPaymentMethodByStripeId(payment.getStripePaymentMethodId())
+                        .ifPresent(pm -> {
+                            if (pm.getCardInfo() != null) {
+                                pmBuilder.brand(pm.getCardInfo().getBrand())
+                                        .last4(pm.getCardInfo().getMaskedNumber() != null ? pm.getCardInfo().getMaskedNumber().substring(Math.max(0, pm.getCardInfo().getMaskedNumber().length() - 4)) : null)
+                                        .expiryMonth(pm.getCardInfo().getExpiryMonth())
+                                        .expiryYear(pm.getCardInfo().getExpiryYear())
+                                        .country(pm.getCardInfo().getCountry())
+                                        .funding(pm.getCardInfo().getFunding());
+                            }
+                        });
+            } catch (Exception e) {
+                // Ignore exception if fetching payment method fails
+            }
+
+            builder.paymentMethodInfo(pmBuilder.build());
         }
 
         // Map transactions
