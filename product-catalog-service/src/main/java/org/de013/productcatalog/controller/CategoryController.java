@@ -40,7 +40,6 @@ public class CategoryController extends BaseController {
     })
     @GetMapping
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<CategoryResponseDto>>> getAllCategories(
-            @Parameter(description = "Pagination and sorting parameters")
             @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable,
 
             @Parameter(description = "Show only active categories")
@@ -149,8 +148,6 @@ public class CategoryController extends BaseController {
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<ProductSummaryDto>>> getProductsInCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id,
-
-            @Parameter(description = "Pagination and sorting parameters")
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
 
         log.info("Getting products in category ID: {}", id);

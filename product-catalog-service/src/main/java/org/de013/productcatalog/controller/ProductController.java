@@ -40,7 +40,6 @@ public class ProductController extends BaseController {
     })
     @GetMapping
     public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<ProductSummaryDto>>> getAllProducts(
-            @Parameter(description = "Pagination and sorting parameters")
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable,
 
             @Parameter(description = "Filter by product status")

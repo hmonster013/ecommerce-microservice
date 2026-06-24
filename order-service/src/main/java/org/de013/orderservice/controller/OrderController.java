@@ -94,7 +94,7 @@ public class OrderController {
     })
     @GetMapping("/my-orders")
     public Page<OrderResponse> getMyOrders(
-            @Parameter(description = "Pagination parameters") Pageable pageable) {
+            Pageable pageable) {
         UserContext userContext = UserContextHolder.requireAuthenticated();
         log.info("User {} requesting their orders", userContext.getUsername());
         return orderService.listOrdersByUser(userContext.getUserId(), pageable);
@@ -115,7 +115,7 @@ public class OrderController {
     public Page<OrderResponse> getUserOrders(
             @Parameter(description = "User ID", required = true, example = "1")
             @PathVariable String userId,
-            @Parameter(description = "Pagination parameters") Pageable pageable) {
+            Pageable pageable) {
         log.debug("Getting orders for user {}", userId);
         return orderService.listOrdersByUser(userId, pageable);
     }
@@ -132,7 +132,7 @@ public class OrderController {
     })
     @GetMapping
     public Page<OrderResponse> getAllOrders(
-            @Parameter(description = "Pagination parameters") Pageable pageable) {
+            Pageable pageable) {
         log.debug("Admin getting all orders");
         return orderService.listAllOrders(pageable);
     }
