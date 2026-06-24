@@ -84,10 +84,47 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<PaymentMethodResponse> getPaymentMethodByStripeId(String stripePaymentMethodId) {
-        return paymentMethodRepository.findByStripePaymentMethodId(stripePaymentMethodId)
-                .map(paymentMethodMapper::toPaymentMethodResponse);
+        Optional<PaymentMethod> localMethod = paymentMethodRepository.findByStripePaymentMethodId(stripePaymentMethodId);
+        if (localMethod.isPresent()) {
+            return localMethod.map(paymentMethodMapper::toPaymentMethodResponse);
+        }
+
+        try {
+            log.info("Payment method {} not found in local DB. Fetching from Stripe...", stripePaymentMethodId);
+            StripePaymentGateway stripeGateway = gatewayFactory.getStripeGateway();
+            StripePaymentMethodResponse stripeResponse = stripeGateway.getPaymentMethod(stripePaymentMethodId);
+            if (stripeResponse != null) {
+                String userId = stripeResponse.getCustomerId() != null ? stripeResponse.getCustomerId() : "SYSTEM";
+                
+                PaymentMethod paymentMethod = PaymentMethod.builder()
+                        .userId(userId)
+                        .type(PaymentMethodType.valueOf(stripeResponse.getType().toUpperCase()))
+                        .provider("STRIPE")
+                        .stripePaymentMethodId(stripeResponse.getPaymentMethodId())
+                        .stripeCustomerId(stripeResponse.getCustomerId())
+                        .nickname(stripeResponse.getCard() != null ? stripeResponse.getCard().getBrand() + " Ending in " + stripeResponse.getCard().getLast4() : "Card")
+                        .isActive(true)
+                        .isDefault(false)
+                        .cardBrand(stripeResponse.getCard() != null ? stripeResponse.getCard().getBrand() : null)
+                        .maskedCardNumber(stripeResponse.getCard() != null ? "**** **** **** " + stripeResponse.getCard().getLast4() : null)
+                        .expiryMonth(stripeResponse.getCard() != null ? stripeResponse.getCard().getExpMonth() : null)
+                        .expiryYear(stripeResponse.getCard() != null ? stripeResponse.getCard().getExpYear() : null)
+                        .customerName(stripeResponse.getBillingDetails() != null ? stripeResponse.getBillingDetails().getName() : null)
+                        .createdBy("SYSTEM")
+                        .updatedBy("SYSTEM")
+                        .build();
+                
+                paymentMethod = paymentMethodRepository.save(paymentMethod);
+                log.info("Successfully fetched and persisted payment method {} from Stripe", stripePaymentMethodId);
+                return Optional.of(paymentMethodMapper.toPaymentMethodResponse(paymentMethod));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch/persist payment method {} from Stripe", stripePaymentMethodId, e);
+        }
+
+        return Optional.empty();
     }
 
     @Override

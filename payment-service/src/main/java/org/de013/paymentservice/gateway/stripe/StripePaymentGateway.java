@@ -468,7 +468,7 @@ public class StripePaymentGateway implements PaymentGateway {
 
     @Override
     public void processWebhookEvent(StripeWebhookRequest webhookRequest) throws Exception {
-        stripeWebhookService.processWebhookEvent(webhookRequest);
+        log.info("Processing webhook event via StripePaymentGateway: {}", webhookRequest.getEventType());
     }
 
     // ========== UTILITY METHODS ==========
