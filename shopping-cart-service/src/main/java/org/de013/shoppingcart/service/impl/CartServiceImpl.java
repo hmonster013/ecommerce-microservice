@@ -627,6 +627,7 @@ public class CartServiceImpl implements CartService {
                     .addedAt(item.getAddedAt())
                     .lastPriceCheckAt(item.getLastPriceCheckAt())
                     .priceChanged(item.getPriceChanged())
+                    .productBrand(item.getProductBrand())
                     .availabilityStatus(item.getAvailabilityStatus())
                     .stockQuantity(item.getStockQuantity())
                     .maxQuantityPerOrder(item.getMaxQuantityPerOrder())

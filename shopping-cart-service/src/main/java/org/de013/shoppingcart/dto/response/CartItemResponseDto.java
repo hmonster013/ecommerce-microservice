@@ -176,6 +176,10 @@ public class CartItemResponseDto {
     @Schema(description = "Item tags or labels")
     private java.util.List<String> tags;
 
+    @Schema(description = "Product brand", example = "Apple")
+    @JsonProperty("product_brand")
+    private String productBrand;
+
     /**
      * Calculate discount percentage
      */

@@ -111,6 +111,7 @@ public class RedisCart implements Serializable {
         private String giftWrapType;
         private BigDecimal giftWrapPrice;
         private Boolean priceChanged;
+        private String productBrand;
 
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime addedAt;
@@ -170,6 +171,7 @@ public class RedisCart implements Serializable {
                     .giftWrapType(giftWrapType)
                     .giftWrapPrice(giftWrapPrice)
                     .priceChanged(priceChanged)
+                    .productBrand(productBrand)
                     .addedAt(addedAt)
                     .lastPriceCheckAt(lastPriceCheckAt)
                     .build();
@@ -214,6 +216,7 @@ public class RedisCart implements Serializable {
                     .giftWrapType(cartItem.getGiftWrapType())
                     .giftWrapPrice(cartItem.getGiftWrapPrice())
                     .priceChanged(cartItem.getPriceChanged())
+                    .productBrand(cartItem.getProductBrand())
                     .addedAt(cartItem.getAddedAt())
                     .lastPriceCheckAt(cartItem.getLastPriceCheckAt())
                     .build();

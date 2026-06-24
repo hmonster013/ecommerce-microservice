@@ -40,6 +40,9 @@ public class CartItem extends BaseEntity {
     @Column(name = "product_name", nullable = false, length = 255)
     private String productName;
 
+    @Column(name = "product_brand", length = 100)
+    private String productBrand;
+
     @Column(name = "product_description", length = 1000)
     private String productDescription;
 
