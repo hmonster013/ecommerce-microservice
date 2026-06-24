@@ -417,7 +417,8 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (PaymentProcessingException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("Error communicating with User Service for verification. Proceeding with fallback.", e);
+            log.error("Error communicating with User Service for verification: ", e);
+            throw new PaymentProcessingException("User validation failed due to communication error: " + e.getMessage(), e);
         }
     }
 

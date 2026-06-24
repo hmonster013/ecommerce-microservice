@@ -97,4 +97,14 @@ class PaymentValidationTest {
         assertThrows(PaymentProcessingException.class, () -> 
                 paymentService.validateUserCanMakePayment(userId));
     }
+
+    @Test
+    void validateUserCanMakePayment_WhenUserServiceFails_ShouldThrowException() {
+        String userId = "user-abc";
+
+        when(userServiceClient.validateUserForPayment(userId)).thenThrow(new RuntimeException("Connection refused"));
+
+        assertThrows(PaymentProcessingException.class, () -> 
+                paymentService.validateUserCanMakePayment(userId));
+    }
 }
