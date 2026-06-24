@@ -120,6 +120,7 @@ public class SecurityConfig {
 
                             // Webhooks (public - but should be validated by service)
                             .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/webhooks/**").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/payment-service/webhooks/vnpay/**").permitAll()
 
                             // ========== NOTIFICATION SERVICE ==========
                             // Send notifications (admin, support)

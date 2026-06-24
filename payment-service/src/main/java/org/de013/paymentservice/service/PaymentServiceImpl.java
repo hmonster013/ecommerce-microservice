@@ -23,6 +23,7 @@ import org.de013.paymentservice.util.PaymentNumberGenerator;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.de013.paymentservice.entity.PaymentTransaction;
 import org.de013.paymentservice.entity.enums.TransactionType;
+import org.de013.paymentservice.service.vnpay.VnpayService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderServiceClient orderServiceClient;
     private final UserServiceClient userServiceClient;
     private final NotificationServiceClient notificationServiceClient;
+    private final VnpayService vnpayService;
 
     // ========== PAYMENT PROCESSING ==========
 
@@ -56,6 +58,12 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse processPayment(ProcessPaymentRequest request) {
         log.info("Processing payment for order: {}, user: {}, amount: {}",
                 request.getOrderId(), request.getUserId(), request.getAmount());
+
+        // Dynamic gateway provider routing (Early-return for VNPay checkout)
+        String provider = request.getProvider() != null ? request.getProvider() : "STRIPE";
+        if ("VNPAY".equalsIgnoreCase(provider)) {
+            return vnpayService.createCheckout(request);
+        }
 
         try {
             validatePaymentRequest(request);
