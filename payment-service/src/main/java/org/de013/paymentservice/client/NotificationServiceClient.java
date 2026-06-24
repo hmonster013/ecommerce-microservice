@@ -18,4 +18,10 @@ public interface NotificationServiceClient {
      */
     @PostMapping("/send-email")
     ResponseEntity<Object> sendEmail(@RequestBody Map<String, Object> request);
+
+    /**
+     * Send SMS notification
+     */
+    @PostMapping("/send-sms")
+    ResponseEntity<Object> sendSms(@RequestBody Map<String, Object> request);
 }

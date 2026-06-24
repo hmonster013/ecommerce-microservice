@@ -2,6 +2,7 @@ package org.de013.paymentservice.service.notification;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.paymentservice.client.NotificationServiceClient;
 import org.de013.paymentservice.dto.external.UserDto;
 import org.de013.paymentservice.event.PaymentEvent;
 import org.de013.paymentservice.event.RefundEvent;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class NotificationServiceImpl implements NotificationService {
 
     private final UserValidationService userValidationService;
+    private final NotificationServiceClient notificationServiceClient;
 
     @Override
     public void sendPaymentNotification(PaymentEvent event) {
@@ -99,13 +101,17 @@ public class NotificationServiceImpl implements NotificationService {
         try {
             log.info("Sending email notification: to={}, subject={}, template={}", to, subject, templateName);
 
-            // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
-            // For now, just log the notification
-            log.info("EMAIL NOTIFICATION - To: {}, Subject: {}, Body: {}", to, subject, body);
+            Map<String, Object> request = new HashMap<>();
+            request.put("to", to);
+            request.put("subject", subject);
+            request.put("message", body);
 
-            if (templateData != null) {
-                log.debug("Email template data: {}", templateData);
+            if (templateData != null && templateData.get("userId") != null) {
+                request.put("userId", templateData.get("userId"));
             }
+
+            notificationServiceClient.sendEmail(request);
+            log.info("Successfully sent email notification to: {}", to);
 
         } catch (Exception e) {
             log.error("Error sending email notification: to={}, subject={}", to, subject, e);
@@ -117,9 +123,12 @@ public class NotificationServiceImpl implements NotificationService {
         try {
             log.info("Sending SMS notification: to={}, message length={}", phoneNumber, message.length());
 
-            // TODO: Integrate with SMS service (Twilio, AWS SNS, etc.)
-            // For now, just log the notification
-            log.info("SMS NOTIFICATION - To: {}, Message: {}", phoneNumber, message);
+            Map<String, Object> request = new HashMap<>();
+            request.put("phoneNumber", phoneNumber);
+            request.put("message", message);
+
+            notificationServiceClient.sendSms(request);
+            log.info("Successfully sent SMS notification to: {}", phoneNumber);
 
         } catch (Exception e) {
             log.error("Error sending SMS notification: to={}", phoneNumber, e);
@@ -131,7 +140,7 @@ public class NotificationServiceImpl implements NotificationService {
         try {
             log.info("Sending push notification: userId={}, title={}", userId, title);
 
-            // TODO: Integrate with push notification service (Firebase, AWS SNS, etc.)
+            // NOTE (deferred): notification-service hiện chỉ hỗ trợ Email + SMS; push notification chưa nằm trong phạm vi — giữ log để debug, wire khi notification-service bổ sung push channel.
             // For now, just log the notification
             log.info("PUSH NOTIFICATION - UserId: {}, Title: {}, Message: {}", userId, title, message);
 
@@ -149,7 +158,7 @@ public class NotificationServiceImpl implements NotificationService {
         try {
             log.info("Sending webhook notification: url={}", webhookUrl);
 
-            // TODO: Implement HTTP POST to webhook URL
+            // NOTE (deferred): merchant outbound webhook là feature riêng, không thuộc notification-service; giữ log, triển khai khi có yêu cầu.
             // For now, just log the notification
             log.info("WEBHOOK NOTIFICATION - URL: {}, Payload: {}", webhookUrl, payload);
 
@@ -247,15 +256,23 @@ public class NotificationServiceImpl implements NotificationService {
         String body = getPaymentEmailBody(event);
         String templateName = getPaymentEmailTemplate(event);
 
+        if (templateData != null && event.getUserId() != null) {
+            templateData.put("userId", event.getUserId());
+        }
+
         sendEmailNotification(event.getUserEmail(), subject, body, templateName, templateData);
     }
 
     private void sendPaymentSmsNotification(PaymentEvent event) {
         String message = getPaymentSmsMessage(event);
-        // TODO: Get user phone number from user service
-        String phoneNumber = null; // userValidationService.getUserPhoneNumber(event.getUserId());
-
-        if (phoneNumber != null) {
+        String phoneNumber = null;
+        try {
+            UserDto user = userValidationService.getUserById(event.getUserId());
+            phoneNumber = (user != null) ? user.getPhone() : null;
+        } catch (Exception e) {
+            log.warn("Could not resolve phone for SMS: userId={}", event.getUserId(), e);
+        }
+        if (phoneNumber != null && !phoneNumber.isBlank()) {
             sendSmsNotification(phoneNumber, message);
         }
     }
@@ -272,15 +289,23 @@ public class NotificationServiceImpl implements NotificationService {
         String body = getRefundEmailBody(event);
         String templateName = getRefundEmailTemplate(event);
 
+        if (templateData != null && event.getUserId() != null) {
+            templateData.put("userId", event.getUserId());
+        }
+
         sendEmailNotification(event.getUserEmail(), subject, body, templateName, templateData);
     }
 
     private void sendRefundSmsNotification(RefundEvent event) {
         String message = getRefundSmsMessage(event);
-        // TODO: Get user phone number from user service
-        String phoneNumber = null; // userValidationService.getUserPhoneNumber(event.getUserId());
-
-        if (phoneNumber != null) {
+        String phoneNumber = null;
+        try {
+            UserDto user = userValidationService.getUserById(event.getUserId());
+            phoneNumber = (user != null) ? user.getPhone() : null;
+        } catch (Exception e) {
+            log.warn("Could not resolve phone for SMS: userId={}", event.getUserId(), e);
+        }
+        if (phoneNumber != null && !phoneNumber.isBlank()) {
             sendSmsNotification(phoneNumber, message);
         }
     }
