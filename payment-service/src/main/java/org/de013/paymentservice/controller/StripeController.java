@@ -20,7 +20,6 @@ import org.de013.paymentservice.gateway.stripe.StripeCustomerService;
 import org.de013.paymentservice.gateway.stripe.StripePaymentGateway;
 import org.de013.paymentservice.service.PaymentMethodService;
 import org.de013.paymentservice.service.PaymentService;
-import org.de013.paymentservice.service.WebhookService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -37,76 +36,9 @@ import org.springframework.web.bind.annotation.*;
 public class StripeController extends BaseController {
 
     private final PaymentService paymentService;
-    private final WebhookService webhookService;
     private final PaymentMethodService paymentMethodService;
     private final StripePaymentGateway stripePaymentGateway;
     private final StripeCustomerService stripeCustomerService;
-
-    @PostMapping("/webhooks")
-    @Operation(
-            summary = "Handle Stripe webhooks",
-            description = """
-                    Handle incoming webhooks from Stripe for payment events.
-                    
-                    **Supported Webhook Events:**
-                    - `payment_intent.succeeded` - Payment completed successfully
-                    - `payment_intent.payment_failed` - Payment failed
-                    - `payment_intent.requires_action` - Payment requires additional authentication
-                    - `payment_intent.canceled` - Payment was canceled
-                    - `charge.dispute.created` - Chargeback/dispute created
-                    - `invoice.payment_succeeded` - Subscription payment succeeded
-                    - `customer.subscription.deleted` - Subscription canceled
-                    
-                    **Webhook Security:**
-                    - Stripe signature verification is performed
-                    - Idempotency is handled to prevent duplicate processing
-                    - Events are logged for audit purposes
-                    
-                    **Example Webhook Payload:**
-                    ```json
-                    {
-                      "id": "evt_1234567890",
-                      "object": "event",
-                      "type": "payment_intent.succeeded",
-                      "data": {
-                        "object": {
-                          "id": "pi_1234567890",
-                          "amount": 9999,
-                          "currency": "usd",
-                          "status": "succeeded"
-                        }
-                      }
-                    }
-                    ```
-                    """)
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Webhook processed successfully",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(value = "{\"received\": true}")
-                    )),
-            @ApiResponse(responseCode = "400", description = "Invalid webhook signature or payload"),
-            @ApiResponse(responseCode = "500", description = "Webhook processing failed")
-    })
-    public ResponseEntity<String> handleStripeWebhook(
-            @Parameter(description = "Stripe webhook signature", required = true)
-            @RequestHeader("Stripe-Signature") String signature,
-            @Parameter(description = "Stripe webhook payload", required = true)
-            @RequestBody String payload) {
-
-        log.info("Received Stripe webhook with signature: {}", signature);
-
-        try {
-            // Process webhook through webhook service
-            webhookService.processStripeWebhook(payload, signature);
-            return ResponseEntity.ok("{\"received\": true}");
-        } catch (Exception e) {
-            log.error("Error processing Stripe webhook", e);
-            return ResponseEntity.badRequest().body("{\"error\": \"Webhook processing failed\"}");
-        }
-    }
 
     @PostMapping("/payment-intents")
     @Operation(
