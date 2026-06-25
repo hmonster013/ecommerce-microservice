@@ -14,17 +14,16 @@ import org.de013.paymentservice.service.WebhookService;
 import org.de013.paymentservice.gateway.vnpay.VnpayPaymentGateway;
 import org.de013.paymentservice.repository.PaymentRepository;
 import org.de013.paymentservice.repository.ProcessedStripeEventRepository;
-import org.de013.paymentservice.entity.ProcessedStripeEvent;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.de013.paymentservice.client.OrderServiceClient;
 import org.de013.paymentservice.client.NotificationServiceClient;
 import org.de013.paymentservice.client.UserServiceClient;
+import org.de013.paymentservice.service.vnpay.VnpayIpnService;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Optional;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,6 +46,7 @@ public class WebhookController extends BaseController {
     private final OrderServiceClient orderServiceClient;
     private final NotificationServiceClient notificationServiceClient;
     private final UserServiceClient userServiceClient;
+    private final VnpayIpnService vnpayIpnService;
 
     // ========== STRIPE WEBHOOK ==========
 
@@ -240,32 +240,18 @@ public class WebhookController extends BaseController {
                 return ResponseEntity.ok(response);
             }
 
-            // 5. Update Status
-            if ("00".equals(responseCode)) {
-                payment.setStatus(PaymentStatus.SUCCEEDED);
-                payment.setGatewayResponse(params.toString());
-                paymentRepository.save(payment);
+            // 5. Update Status via Transactional Service
+            vnpayIpnService.confirmPayment(payment, responseCode, params, eventId);
 
+            if ("00".equals(responseCode)) {
                 // Update order status
                 updateOrderStatus(payment.getOrderId(), "PAID", payment);
 
                 // Send email notification
                 sendPaymentSuccessNotification(payment);
 
-                // Save processed event for idempotency
-                processedStripeEventRepository.save(
-                        ProcessedStripeEvent.builder()
-                                .eventId(eventId)
-                                .processedAt(LocalDateTime.now())
-                                .build()
-                );
-
                 log.info("VNPay IPN processed successfully, Payment SUCCEEDED: {}", txnRef);
             } else {
-                payment.setStatus(PaymentStatus.FAILED);
-                payment.setFailureReason("VNPay failed with response code: " + responseCode);
-                paymentRepository.save(payment);
-
                 // Update order status
                 updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
                 log.info("VNPay IPN processed, Payment FAILED: {}", txnRef);

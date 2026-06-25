@@ -22,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -49,6 +50,8 @@ class VnpayIpnTest {
     @Autowired
     private ProcessedStripeEventRepository processedStripeEventRepository;
     @Autowired
+    private org.de013.paymentservice.repository.OutboxEventRepository outboxEventRepository;
+    @Autowired
     private PaymentGatewayConfig config;
 
     @MockBean
@@ -70,6 +73,7 @@ class VnpayIpnTest {
         vndRate = vnpay.getVndRate();
         processedStripeEventRepository.deleteAll();
         paymentRepository.deleteAll();
+        outboxEventRepository.deleteAll();
     }
 
     @Test
@@ -85,6 +89,15 @@ class VnpayIpnTest {
                 paymentRepository.findByPaymentNumber(txnRef).orElseThrow().getStatus());
         verify(orderServiceClient, times(1)).markOrderAsPaid(eq(1L), anyLong(), eq(txnRef));
         assertTrue(processedStripeEventRepository.existsById("vnpay_" + txnRef));
+
+        // Verify outbox event is created
+        List<org.de013.paymentservice.entity.OutboxEvent> outboxEvents = outboxEventRepository.findAll();
+        assertEquals(1, outboxEvents.size());
+        org.de013.paymentservice.entity.OutboxEvent outboxEvent = outboxEvents.get(0);
+        assertEquals(txnRef, outboxEvent.getAggregateId());
+        assertEquals("PAYMENT", outboxEvent.getAggregateType());
+        assertEquals("payment.succeeded", outboxEvent.getEventType());
+        assertEquals(org.de013.paymentservice.entity.enums.OutboxStatus.PENDING, outboxEvent.getStatus());
     }
 
     @Test
@@ -99,6 +112,10 @@ class VnpayIpnTest {
         assertEquals("02", second.getBody().get("RspCode"));
         // Order must be marked paid exactly once across the two callbacks
         verify(orderServiceClient, times(1)).markOrderAsPaid(eq(1L), anyLong(), eq(txnRef));
+
+        // Verify ONLY one outbox event is created
+        List<org.de013.paymentservice.entity.OutboxEvent> outboxEvents = outboxEventRepository.findAll();
+        assertEquals(1, outboxEvents.size());
     }
 
     @Test
@@ -129,6 +146,30 @@ class VnpayIpnTest {
         assertEquals(PaymentStatus.PENDING,
                 paymentRepository.findByPaymentNumber(txnRef).orElseThrow().getStatus());
         verify(orderServiceClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    void ipn_failureCode_marksPaymentFailed_andWritesToOutbox() {
+        String txnRef = "PMT-IPN-005";
+        seedPendingPayment(txnRef, new BigDecimal("10.00"));
+        // VNPay IPN with failure code (e.g. 01 - Transaction incomplete)
+        Map<String, String> params = signedIpn(txnRef, toVnpAmount(new BigDecimal("10.00")), "01");
+
+        ResponseEntity<Map<String, String>> resp = webhookController.handleVnpayIpn(params);
+
+        assertEquals("00", resp.getBody().get("RspCode"));
+        assertEquals(PaymentStatus.FAILED,
+                paymentRepository.findByPaymentNumber(txnRef).orElseThrow().getStatus());
+        verify(orderServiceClient, times(1)).markOrderPaymentFailed(eq(1L), anyString());
+
+        // Verify outbox event is created for failure
+        List<org.de013.paymentservice.entity.OutboxEvent> outboxEvents = outboxEventRepository.findAll();
+        assertEquals(1, outboxEvents.size());
+        org.de013.paymentservice.entity.OutboxEvent outboxEvent = outboxEvents.get(0);
+        assertEquals(txnRef, outboxEvent.getAggregateId());
+        assertEquals("PAYMENT", outboxEvent.getAggregateType());
+        assertEquals("payment.failed", outboxEvent.getEventType());
+        assertEquals(org.de013.paymentservice.entity.enums.OutboxStatus.PENDING, outboxEvent.getStatus());
     }
 
     // ----- helpers -----

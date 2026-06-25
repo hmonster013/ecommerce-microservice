@@ -42,6 +42,7 @@ public class WebhookServiceImpl implements WebhookService {
     private final ProcessedStripeEventRepository processedStripeEventRepository;
     private final UserServiceClient userServiceClient;
     private final NotificationServiceClient notificationServiceClient;
+    private final org.de013.paymentservice.outbox.OutboxWriter outboxWriter;
 
     // ========== WEBHOOK PROCESSING ==========
 
@@ -159,6 +160,23 @@ public class WebhookServiceImpl implements WebhookService {
             payment.setStatus(PaymentStatus.SUCCEEDED);
             paymentRepository.save(payment);
 
+            // Write outbox event for payment succeeded
+            outboxWriter.write(
+                    org.de013.common.event.Topics.PAYMENT_EVENTS,
+                    "PAYMENT",
+                    payment.getPaymentNumber(),
+                    org.de013.common.event.EventTypes.PAYMENT_SUCCEEDED,
+                    org.de013.common.event.PaymentSucceededPayload.builder()
+                            .orderId(payment.getOrderId())
+                            .paymentId(payment.getId())
+                            .paymentNumber(payment.getPaymentNumber())
+                            .userId(payment.getUserId())
+                            .amount(payment.getAmount())
+                            .currency(payment.getCurrency().name())
+                            .receiptEmail(payment.getReceiptEmail())
+                            .build()
+            );
+
             // Update order status
             updateOrderStatus(payment.getOrderId(), "PAID", payment);
 
@@ -183,6 +201,20 @@ public class WebhookServiceImpl implements WebhookService {
             payment.setFailureReason(webhookRequest.getFailureReason() != null ?
                     webhookRequest.getFailureReason() : "Payment failed via webhook");
             paymentRepository.save(payment);
+
+            // Write outbox event for payment failed
+            outboxWriter.write(
+                    org.de013.common.event.Topics.PAYMENT_EVENTS,
+                    "PAYMENT",
+                    payment.getPaymentNumber(),
+                    org.de013.common.event.EventTypes.PAYMENT_FAILED,
+                    org.de013.common.event.PaymentFailedPayload.builder()
+                            .orderId(payment.getOrderId())
+                            .paymentNumber(payment.getPaymentNumber())
+                            .userId(payment.getUserId())
+                            .failureReason(payment.getFailureReason())
+                            .build()
+            );
 
             // Update order status
             updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
