@@ -2,6 +2,11 @@ spring:
   application:
     name: payment-service-test
   
+  kafka:
+    bootstrap-servers: localhost:59092
+    listener:
+      missing-topics-fatal: false
+  
   # Use H2 in-memory database for testing
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
@@ -77,3 +82,7 @@ payment:
   security:
     encryption-key: mock_encryption_key_32_chars_long
     webhook-timeout: 1000
+
+outbox:
+  relay:
+    enabled: false

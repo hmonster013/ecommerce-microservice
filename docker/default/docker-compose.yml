@@ -70,6 +70,7 @@ services:
     container_name: ecommerce-kafka
     ports:
       - "${KAFKA_PORT}:9092"
+      - "29092:29092"
     environment:
       KAFKA_NODE_ID: ${KAFKA_NODE_ID}
       KAFKA_PROCESS_ROLES: ${KAFKA_PROCESS_ROLES}

@@ -1,6 +1,10 @@
 spring:
   application:
     name: order-service-test
+  kafka:
+    bootstrap-servers: localhost:59092
+    listener:
+      missing-topics-fatal: false
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
     username: sa
@@ -31,3 +35,7 @@ logging:
     org.de013.orderservice: DEBUG
     org.springframework.security: WARN
     org.hibernate.SQL: DEBUG
+
+outbox:
+  relay:
+    enabled: false

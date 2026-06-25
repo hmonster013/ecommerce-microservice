@@ -163,6 +163,17 @@
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
 
+        <!-- Spring Kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Spring Cloud Circuit Breaker / Resilience4j for Feign Fallback Support -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>

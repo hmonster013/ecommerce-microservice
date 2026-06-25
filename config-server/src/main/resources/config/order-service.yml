@@ -10,6 +10,15 @@ server:
     accept-count: 100
 
 spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+    listener:
+      missing-topics-fatal: false
+
   # Enable ANSI colors in console output
   output:
     ansi:
