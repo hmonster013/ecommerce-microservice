@@ -277,6 +277,50 @@ See [AUTHENTICATION_TEST_GUIDE.md](AUTHENTICATION_TEST_GUIDE.md) for detailed te
 - **Event-Driven** - Kafka for async communication
 - **Caching** - Redis for performance optimization
 
+## 💳 Payment Gateways (Stripe & VNPay)
+
+Payment Service hỗ trợ **đa cổng thanh toán**. Client chọn cổng qua trường `provider` trong request `POST /api/v1/payment-service/payments/process` (mặc định `STRIPE`).
+
+| Cổng | Mô hình | Ghi chú |
+|------|---------|---------|
+| **Stripe** | Charge đồng bộ → trả `SUCCEEDED` ngay | Golden path, không đổi |
+| **VNPay** | Redirect + IPN (bất đồng bộ) | Sandbox, dùng cho thị trường VN |
+
+VNPay không implement chung interface với Stripe (tránh couple chặt) mà là **luồng redirect/IPN riêng**. Catalog định giá USD → quy đổi sang VND theo tỷ giá cố định `VNPAY_VND_RATE` (mặc định `25000`) khi tạo payment.
+
+### Luồng VNPay (redirect + IPN)
+
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant GW as API Gateway
+    participant PS as Payment Service
+    participant VN as VNPay Sandbox
+
+    U->>GW: POST /payments/process (provider=VNPAY)
+    GW->>PS: route + inject X-User-*
+    PS->>PS: tạo Payment PENDING + ký vnp_SecureHash
+    PS-->>U: redirectUrl (vpcpay.html)
+    U->>VN: mở redirectUrl, trả thẻ test
+    VN-->>PS: IPN GET /webhooks/vnpay/ipn (server→server)
+    PS->>PS: verify chữ ký + amount → Payment SUCCEEDED, order PAID
+    PS-->>VN: {"RspCode":"00"}
+    VN-->>U: redirect về Return URL (chỉ hiển thị kết quả)
+```
+
+> **Quan trọng:** **IPN** (server-to-server) là nguồn chốt trạng thái (`SUCCEEDED`/`PAID`). **Return URL** chỉ hiển thị trang kết quả cho người dùng, không cập nhật trạng thái. IPN trả mã chuẩn VNPay: `00` thành công, `97` sai chữ ký, `01` không thấy đơn, `02` đã xử lý (idempotent), `04` sai số tiền.
+
+### Cấu hình
+- Secret qua `.env.prod` (gitignored): `VNPAY_ENABLED`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL`. **Không hardcode** trong code/yml.
+- API Gateway cho phép **GET** `/api/v1/payment-service/webhooks/vnpay/**` (IPN/return là GET) — xem `SecurityConfig`.
+
+### Test trên VNPay sandbox (local)
+1. Đăng ký merchant test: https://sandbox.vnpayment.vn/devreg/ — **"Địa chỉ URL" website phải khớp domain `vnp_ReturnUrl`** (lệch → lỗi `code=71`).
+2. IPN là server-to-server nên không gọi được `localhost` → expose qua **ngrok** (nên dùng *static domain* để không phải đăng ký lại): `ngrok http --url=https://<static>.ngrok-free.dev 8080`. Đăng ký URL ngrok đó làm IPN URL trong merchant admin.
+3. Thẻ test: **NCB** · `9704198526191432198` · `NGUYEN VAN A` · `07/15` · OTP `123456`.
+
+Chi tiết: [`docs/vnpay-integration-guide.md`](docs/vnpay-integration-guide.md) · plan: [`docs/plan/vnpay-integration.md`](docs/plan/vnpay-integration.md).
+
 ## 🚀 Development
 
 ### Build Services
