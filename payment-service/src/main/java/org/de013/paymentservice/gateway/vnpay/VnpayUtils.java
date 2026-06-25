@@ -39,15 +39,16 @@ public class VnpayUtils {
     }
 
     /**
-     * URL encode values with UTF-8 and replace "+" with "%20" to match VNPay specification
+     * URL encode values exactly as the VNPay spec/sample does: URLEncoder with US-ASCII,
+     * which encodes spaces as "+". Both the redirect query string and the checksum hashData
+     * must use this same encoding, otherwise vnp_SecureHash will not match (error code 70).
      */
     public static String urlEncode(String value) {
         if (value == null) {
             return "";
         }
         try {
-            return URLEncoder.encode(value, StandardCharsets.UTF_8.toString())
-                    .replace("+", "%20");
+            return URLEncoder.encode(value, StandardCharsets.US_ASCII.toString());
         } catch (UnsupportedEncodingException e) {
             return "";
         }
