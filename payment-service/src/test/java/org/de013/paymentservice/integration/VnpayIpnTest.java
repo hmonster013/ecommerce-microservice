@@ -1,6 +1,5 @@
 package org.de013.paymentservice.integration;
 
-import org.de013.paymentservice.client.NotificationServiceClient;
 import org.de013.paymentservice.client.OrderServiceClient;
 import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
@@ -57,8 +56,6 @@ class VnpayIpnTest {
     @MockBean
     private OrderServiceClient orderServiceClient;
     @MockBean
-    private NotificationServiceClient notificationServiceClient;
-    @MockBean
     private UserServiceClient userServiceClient;
 
     private String secret;
@@ -87,7 +84,6 @@ class VnpayIpnTest {
         assertEquals("00", resp.getBody().get("RspCode"));
         assertEquals(PaymentStatus.SUCCEEDED,
                 paymentRepository.findByPaymentNumber(txnRef).orElseThrow().getStatus());
-        verify(orderServiceClient, times(1)).markOrderAsPaid(eq(1L), anyLong(), eq(txnRef));
         assertTrue(processedStripeEventRepository.existsById("vnpay_" + txnRef));
 
         // Verify outbox event is created
@@ -110,8 +106,6 @@ class VnpayIpnTest {
         ResponseEntity<Map<String, String>> second = webhookController.handleVnpayIpn(params);
 
         assertEquals("02", second.getBody().get("RspCode"));
-        // Order must be marked paid exactly once across the two callbacks
-        verify(orderServiceClient, times(1)).markOrderAsPaid(eq(1L), anyLong(), eq(txnRef));
 
         // Verify ONLY one outbox event is created
         List<org.de013.paymentservice.entity.OutboxEvent> outboxEvents = outboxEventRepository.findAll();
@@ -130,7 +124,6 @@ class VnpayIpnTest {
         assertEquals("97", resp.getBody().get("RspCode"));
         assertEquals(PaymentStatus.PENDING,
                 paymentRepository.findByPaymentNumber(txnRef).orElseThrow().getStatus());
-        verify(orderServiceClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
     }
 
     @Test
@@ -145,7 +138,6 @@ class VnpayIpnTest {
         assertEquals("04", resp.getBody().get("RspCode"));
         assertEquals(PaymentStatus.PENDING,
                 paymentRepository.findByPaymentNumber(txnRef).orElseThrow().getStatus());
-        verify(orderServiceClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
     }
 
     @Test
@@ -160,7 +152,6 @@ class VnpayIpnTest {
         assertEquals("00", resp.getBody().get("RspCode"));
         assertEquals(PaymentStatus.FAILED,
                 paymentRepository.findByPaymentNumber(txnRef).orElseThrow().getStatus());
-        verify(orderServiceClient, times(1)).markOrderPaymentFailed(eq(1L), anyString());
 
         // Verify outbox event is created for failure
         List<org.de013.paymentservice.entity.OutboxEvent> outboxEvents = outboxEventRepository.findAll();

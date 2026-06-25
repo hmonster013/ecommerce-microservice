@@ -16,14 +16,10 @@ import org.de013.paymentservice.repository.PaymentRepository;
 import org.de013.paymentservice.repository.ProcessedStripeEventRepository;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
-import org.de013.paymentservice.client.OrderServiceClient;
-import org.de013.paymentservice.client.NotificationServiceClient;
-import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.service.vnpay.VnpayIpnService;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Optional;
-import java.math.BigDecimal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -43,9 +39,6 @@ public class WebhookController extends BaseController {
     private final VnpayPaymentGateway vnpayPaymentGateway;
     private final PaymentRepository paymentRepository;
     private final ProcessedStripeEventRepository processedStripeEventRepository;
-    private final OrderServiceClient orderServiceClient;
-    private final NotificationServiceClient notificationServiceClient;
-    private final UserServiceClient userServiceClient;
     private final VnpayIpnService vnpayIpnService;
 
     // ========== STRIPE WEBHOOK ==========
@@ -244,16 +237,8 @@ public class WebhookController extends BaseController {
             vnpayIpnService.confirmPayment(payment, responseCode, params, eventId);
 
             if ("00".equals(responseCode)) {
-                // Update order status
-                updateOrderStatus(payment.getOrderId(), "PAID", payment);
-
-                // Send email notification
-                sendPaymentSuccessNotification(payment);
-
                 log.info("VNPay IPN processed successfully, Payment SUCCEEDED: {}", txnRef);
             } else {
-                // Update order status
-                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
                 log.info("VNPay IPN processed, Payment FAILED: {}", txnRef);
             }
 
@@ -297,76 +282,6 @@ public class WebhookController extends BaseController {
         } catch (Exception e) {
             log.error("Error processing VNPay Return", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing transaction");
-        }
-    }
-
-    private void updateOrderStatus(Long orderId, String status, Payment payment) {
-        try {
-            log.info("Updating order {} status to: {}", orderId, status);
-            if ("PAID".equals(status)) {
-                orderServiceClient.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber());
-            } else if ("PAYMENT_FAILED".equals(status)) {
-                orderServiceClient.markOrderPaymentFailed(orderId, payment.getFailureReason() != null ? payment.getFailureReason() : "Payment failed");
-            } else {
-                org.de013.paymentservice.dto.external.OrderStatusUpdateRequest request = org.de013.paymentservice.dto.external.OrderStatusUpdateRequest.builder()
-                        .status(status)
-                        .reason("Payment status updated to " + status)
-                        .build();
-                orderServiceClient.updateOrderStatus(orderId, request);
-            }
-            log.info("Successfully updated order {} status to: {}", orderId, status);
-        } catch (Exception e) {
-            log.warn("Failed to update order status for order: {}", orderId, e);
-        }
-    }
-
-    private void sendPaymentSuccessNotification(Payment payment) {
-        try {
-            String recipientEmail = payment.getReceiptEmail();
-            if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
-                try {
-                    org.de013.common.dto.ApiResponse<org.de013.paymentservice.dto.external.UserDto> apiResponse = userServiceClient.getUserById(payment.getUserId()).getBody();
-                    if (apiResponse != null && apiResponse.getData() != null) {
-                        org.de013.paymentservice.dto.external.UserDto userDto = apiResponse.getData();
-                        if (userDto.getEmail() != null) {
-                            recipientEmail = userDto.getEmail();
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to fetch user email from User Service for user: {}", payment.getUserId(), e);
-                }
-            }
-
-            if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
-                log.warn("Cannot send email notification: recipient email is missing");
-                return;
-            }
-
-            log.info("Sending payment success email notification to: {}", recipientEmail);
-            java.util.Map<String, Object> emailRequest = new java.util.HashMap<>();
-            emailRequest.put("userId", payment.getUserId());
-            emailRequest.put("to", recipientEmail);
-            emailRequest.put("subject", "Thanh to\u00e1n th\u00e0nh c\u00f4ng cho \u0110\u01a1n h\u00e0ng #" + payment.getOrderId());
-            emailRequest.put("message", String.format(
-                    "Xin ch\u00e0o,\n\nGiao d\u1ecbch thanh to\u00e1n c\u1ee7a b\u1ea1n cho \u0110\u01a1n h\u00e0ng #%d \u0111\u00e3 \u0111\u01b0\u1ee3c x\u1eed l\u00fd TH\u00c0NH C\u00d4NG.\n" +
-                    "M\u00e3 giao d\u1ecbch: %s\n" +
-                    "S\u1ed1 ti\u1ec1n: %s %s\n" +
-                    "Ph\u01b0\u01a1ng th\u1ee9c thanh to\u00e1n: %s\n" +
-                    "Th\u1eddi gian: %s\n\n" +
-                    "C\u1ea3m \u01a1n b\u1ea1n \u0111\u00e3 mua s\u1eafm t\u1ea1i c\u1eeda h\u00e0ng c\u1ee7a ch\u00fang t\u00f4i!\n" +
-                    "Tr\u00e2n tr\u1ecdng,\nGlobal Travel Buddy & Local Service Team",
-                    payment.getOrderId(),
-                    payment.getPaymentNumber(),
-                    payment.getAmount(),
-                    payment.getCurrency(),
-                    payment.getMethod(),
-                    java.time.LocalDateTime.now().toString()
-            ));
-
-            notificationServiceClient.sendEmail(emailRequest);
-            log.info("Successfully sent payment success email notification to: {}", recipientEmail);
-        } catch (Exception e) {
-            log.error("Failed to send email notification for payment: {}", payment.getPaymentNumber(), e);
         }
     }
 }
