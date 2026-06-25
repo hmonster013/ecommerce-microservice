@@ -2,6 +2,7 @@ package org.de013.orderservice.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.dto.ApiResponse;
 import org.de013.orderservice.client.CartServiceClient;
 import org.de013.orderservice.client.ProductCatalogClient;
 import org.de013.orderservice.dto.request.CreateOrderRequest;
@@ -67,44 +68,57 @@ public class OrderServiceImpl implements OrderService {
         order.setShippingAmount(new Money(BigDecimal.ZERO, currency));
         order.setDiscountAmount(new Money(BigDecimal.ZERO, currency));
 
-        // Convert cart items to order items and deduct stock
-        for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
-            OrderItem orderItem = new OrderItem();
+        // Convert cart items to order items and reserve stock with compensation
+        record ReservedItem(String productId, Integer quantity) {}
+        List<ReservedItem> reserved = new java.util.ArrayList<>();
+        try {
+            for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
+                OrderItem orderItem = new OrderItem();
 
-            orderItem.setProductId(cartItem.getProductId());
+                orderItem.setProductId(cartItem.getProductId());
 
-            orderItem.setSku(cartItem.getProductSku());
-            orderItem.setProductName(cartItem.getProductName());
-            orderItem.setProductDescription(cartItem.getProductDescription());
-            orderItem.setQuantity(cartItem.getQuantity());
-            // unitPrice is the list price per unit; totalPrice is the GROSS line amount (unitPrice * qty).
-            // The order-level recalculation subtracts the per-line discount once to reach the net total.
-            BigDecimal qty = BigDecimal.valueOf(cartItem.getQuantity());
-            orderItem.setUnitPrice(new Money(cartItem.getUnitPrice(), cartItem.getCurrency()));
-            orderItem.setTotalPrice(new Money(cartItem.getUnitPrice().multiply(qty), cartItem.getCurrency()));
+                orderItem.setSku(cartItem.getProductSku());
+                orderItem.setProductName(cartItem.getProductName());
+                orderItem.setProductDescription(cartItem.getProductDescription());
+                orderItem.setQuantity(cartItem.getQuantity());
+                // unitPrice is the list price per unit; totalPrice is the GROSS line amount (unitPrice * qty).
+                // The order-level recalculation subtracts the per-line discount once to reach the net total.
+                BigDecimal qty = BigDecimal.valueOf(cartItem.getQuantity());
+                orderItem.setUnitPrice(new Money(cartItem.getUnitPrice(), cartItem.getCurrency()));
+                orderItem.setTotalPrice(new Money(cartItem.getUnitPrice().multiply(qty), cartItem.getCurrency()));
 
-            // cart exposes discount per unit; scale by quantity for the line-level discount
-            BigDecimal discountPerUnit = cartItem.getDiscountAmount() != null ? cartItem.getDiscountAmount() : BigDecimal.ZERO;
-            orderItem.setDiscountAmount(new Money(discountPerUnit.multiply(qty), cartItem.getCurrency()));
-            
-            // Set tax amount (default to 0)
-            orderItem.setTaxAmount(new Money(BigDecimal.ZERO, cartItem.getCurrency()));
-            
-            // Set product category and brand
-            orderItem.setProductCategory(cartItem.getCategoryName());
-            orderItem.setProductBrand(cartItem.getProductBrand());
-            
-            orderItem.setOrder(order);
-            order.getOrderItems().add(orderItem);
+                // cart exposes discount per unit; scale by quantity for the line-level discount
+                BigDecimal discountPerUnit = cartItem.getDiscountAmount() != null ? cartItem.getDiscountAmount() : BigDecimal.ZERO;
+                orderItem.setDiscountAmount(new Money(discountPerUnit.multiply(qty), cartItem.getCurrency()));
+                
+                // Set tax amount (default to 0)
+                orderItem.setTaxAmount(new Money(BigDecimal.ZERO, cartItem.getCurrency()));
+                
+                // Set product category and brand
+                orderItem.setProductCategory(cartItem.getCategoryName());
+                orderItem.setProductBrand(cartItem.getProductBrand());
+                
+                orderItem.setOrder(order);
+                order.getOrderItems().add(orderItem);
 
-            // Deduct stock in Product Catalog Service
-            try {
-                log.info("Deducting {} stock for product ID: {}", cartItem.getQuantity(), cartItem.getProductId());
-                productCatalogClient.removeStock(cartItem.getProductId(), cartItem.getQuantity());
-            } catch (Exception e) {
-                log.error("Failed to deduct stock for product ID: {} - Error: {}", cartItem.getProductId(), e.getMessage());
-                throw new IllegalStateException("Failed to allocate inventory for product: " + cartItem.getProductName());
+                // Reserve stock in Product Catalog Service
+                log.info("Reserving {} stock for product ID: {}", cartItem.getQuantity(), cartItem.getProductId());
+                ApiResponse<Boolean> r = productCatalogClient.reserveStock(cartItem.getProductId(), cartItem.getQuantity());
+                if (r == null || !Boolean.TRUE.equals(r.getData())) {
+                    throw new IllegalStateException("Insufficient stock for product: " + cartItem.getProductName());
+                }
+                reserved.add(new ReservedItem(cartItem.getProductId(), cartItem.getQuantity()));
             }
+        } catch (Exception ex) {
+            log.error("Failed to create order or reserve stock, executing compensation release. Reserved list size: {}", reserved.size());
+            for (ReservedItem ri : reserved) {
+                try {
+                    productCatalogClient.releaseStock(ri.productId(), ri.quantity());
+                } catch (Exception rex) {
+                    log.error("Compensation release failed for product ID: {} - Error: {}", ri.productId(), rex.getMessage());
+                }
+            }
+            throw ex;
         }
 
         order.recalculateTotals();

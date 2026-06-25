@@ -14,10 +14,28 @@ import org.springframework.web.bind.annotation.RequestParam;
 public interface ProductCatalogClient {
 
     /**
-     * Deduct inventory for a product
+     * Reserve inventory for a product
      */
-    @PostMapping("/products/{id}/inventory/remove")
-    ApiResponse<Object> removeStock(
+    @PostMapping("/products/{id}/inventory/reserve")
+    ApiResponse<Boolean> reserveStock(
+            @PathVariable("id") String id,
+            @RequestParam("quantity") Integer quantity
+    );
+
+    /**
+     * Release reserved stock for a product
+     */
+    @PostMapping("/products/{id}/inventory/release")
+    ApiResponse<Boolean> releaseStock(
+            @PathVariable("id") String id,
+            @RequestParam("quantity") Integer quantity
+    );
+
+    /**
+     * Fulfill reserved stock for a product
+     */
+    @PostMapping("/products/{id}/inventory/fulfill")
+    ApiResponse<Boolean> fulfillStock(
             @PathVariable("id") String id,
             @RequestParam("quantity") Integer quantity
     );
