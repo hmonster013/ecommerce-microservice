@@ -46,7 +46,6 @@ application-local.yml
 application-local.properties
 application-dev.yml
 application-prod.yml
-application-test.yml
 
 # Logs
 logs/
@@ -106,7 +105,6 @@ AGENTS.md
 
 # Maven specific
 .mvn/timing.properties
-.mvn/wrapper/maven-wrapper.properties
 dependency-reduced-pom.xml
 
 # Spring Boot specific

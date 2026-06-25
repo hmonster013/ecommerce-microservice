@@ -19,10 +19,11 @@ class VnpayUtilsTest {
     }
 
     @Test
-    void urlEncode_ShouldEncodeSpacesAsPct20() {
+    void urlEncode_ShouldEncodeSpacesAsPlus_MatchingVnpaySpec() {
         String input = "Hello World";
         String encoded = VnpayUtils.urlEncode(input);
-        assertEquals("Hello%20World", encoded); // spaces become %20
+        // VNPay's URLEncoder-based checksum encodes spaces as "+", not "%20"
+        assertEquals("Hello+World", encoded);
     }
 
     @Test
