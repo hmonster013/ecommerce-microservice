@@ -106,7 +106,6 @@ AGENTS.md
 
 # Maven specific
 .mvn/timing.properties
-.mvn/wrapper/maven-wrapper.properties
 dependency-reduced-pom.xml
 
 # Spring Boot specific
