@@ -62,6 +62,14 @@ payment:
       api-version: 2023-10-16
       success-url: http://localhost:3000/payment/success
       cancel-url: http://localhost:3000/payment/cancel
+    # Fixed test credentials for VNPay IPN tests (NOT real sandbox creds).
+    # Tests sign fake IPN callbacks with this same secret, so the suite is
+    # self-contained and independent of the real VNPay account.
+    vnpay:
+      enabled: true
+      tmn-code: TESTTMN
+      hash-secret: TESTSECRET
+      vnd-rate: 25000
   processing:
     timeout: 30000
     retry-attempts: 1
