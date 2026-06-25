@@ -8,7 +8,6 @@ import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
-import org.de013.common.exception.ConflictException;
 import org.de013.paymentservice.exception.PaymentNotFoundException;
 import org.de013.paymentservice.exception.PaymentProcessingException;
 import org.de013.paymentservice.gateway.PaymentGateway;
@@ -20,15 +19,14 @@ import org.de013.paymentservice.client.OrderServiceClient;
 import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.client.NotificationServiceClient;
 import org.de013.paymentservice.util.PaymentNumberGenerator;
-import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.de013.paymentservice.entity.PaymentTransaction;
 import org.de013.paymentservice.entity.enums.TransactionType;
+import org.de013.paymentservice.service.validation.PaymentRequestValidator;
 import org.de013.paymentservice.service.vnpay.VnpayService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -50,6 +48,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderServiceClient orderServiceClient;
     private final UserServiceClient userServiceClient;
     private final NotificationServiceClient notificationServiceClient;
+    private final PaymentRequestValidator paymentRequestValidator;
     private final VnpayService vnpayService;
 
     // ========== PAYMENT PROCESSING ==========
@@ -360,86 +359,17 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public void validatePaymentRequest(ProcessPaymentRequest request) {
-        if (request == null) {
-            throw new PaymentProcessingException("Payment request cannot be null");
-        }
-        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new PaymentProcessingException("Payment amount must be greater than zero");
-        }
-        if (request.getOrderId() == null) {
-            throw new PaymentProcessingException("Order ID is required");
-        }
-        if (request.getUserId() == null) {
-            throw new PaymentProcessingException("User ID is required");
-        }
-
-        // Validate with Order Service (Stripe Amount Tampering Protection)
-        validatePaymentAmount(request.getOrderId(), request.getAmount());
-
-        // Validate with User Service (Check blocked / high risk status)
-        validateUserCanMakePayment(request.getUserId());
+        paymentRequestValidator.validatePaymentRequest(request);
     }
 
     @Override
     public void validatePaymentAmount(Long orderId, BigDecimal amount) {
-        log.info("Validating payment amount {} for order {}", amount, orderId);
-        try {
-            ResponseEntity<org.de013.paymentservice.dto.external.OrderDto> response = orderServiceClient.getOrderById(orderId);
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                org.de013.paymentservice.dto.external.OrderDto order = response.getBody();
-                
-                // Business rule validation: Do not allow payment for an order in a non-payable state
-                if ("PAID".equals(order.getStatus()) || "COMPLETED".equals(order.getStatus())) {
-                    log.error("Order {} is already paid or completed. Status: {}", orderId, order.getStatus());
-                    throw new ConflictException("Order is already paid: " + orderId);
-                }
-                if ("CANCELLED".equals(order.getStatus())) {
-                    log.error("Order {} is cancelled, cannot process payment", orderId);
-                    throw new ConflictException("Order is cancelled: " + orderId);
-                }
-
-                BigDecimal orderTotal = order.getTotalAmount() != null ? order.getTotalAmount().getAmount() : BigDecimal.ZERO;
-                if (orderTotal.compareTo(amount) != 0) {
-                    log.error("Payment amount mismatch: request amount={}, order total={}", amount, orderTotal);
-                    throw new PaymentProcessingException("Payment amount mismatch. Required: " + orderTotal + ", Provided: " + amount);
-                }
-                log.info("Payment amount matches order total: {}", orderTotal);
-            } else {
-                throw new PaymentProcessingException("Failed to validate payment: Order not found: " + orderId);
-            }
-        } catch (ConflictException | PaymentProcessingException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error communicating with Order Service for verification: ", e);
-            throw new PaymentProcessingException("Failed to verify payment amount: " + e.getMessage(), e);
-        }
+        paymentRequestValidator.validatePaymentAmount(orderId, amount);
     }
 
     @Override
     public void validateUserCanMakePayment(String userId) {
-        log.info("Validating with User Service if user can make payment: {}", userId);
-        try {
-            ResponseEntity<UserValidationResponse> response = userServiceClient.validateUserForPayment(userId);
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                UserValidationResponse validation = response.getBody();
-                if (!validation.isValid()) {
-                    log.error("User validation failed: {}", validation.getMessage());
-                    throw new PaymentProcessingException("User is not allowed to make payment: " + validation.getMessage());
-                }
-                if (!validation.isCanMakePayments()) {
-                    log.error("User cannot make payments. Reason: {}", validation.getPaymentBlockReason());
-                    throw new PaymentProcessingException("User payment authorization is disabled: " + validation.getPaymentBlockReason());
-                }
-                log.info("User validation successful for user: {}", userId);
-            } else {
-                throw new PaymentProcessingException("Failed to validate user: User not found: " + userId);
-            }
-        } catch (PaymentProcessingException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error communicating with User Service for verification: ", e);
-            throw new PaymentProcessingException("User validation failed due to communication error: " + e.getMessage(), e);
-        }
+        paymentRequestValidator.validateUserCanMakePayment(userId);
     }
 
     @Override

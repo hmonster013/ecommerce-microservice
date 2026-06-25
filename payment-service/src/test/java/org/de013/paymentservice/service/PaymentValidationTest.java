@@ -6,6 +6,7 @@ import org.de013.paymentservice.dto.external.OrderDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.de013.common.exception.ConflictException;
 import org.de013.paymentservice.exception.PaymentProcessingException;
+import org.de013.paymentservice.service.validation.PaymentRequestValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -27,7 +28,7 @@ class PaymentValidationTest {
     private UserServiceClient userServiceClient;
 
     @InjectMocks
-    private PaymentServiceImpl paymentService;
+    private PaymentRequestValidator validator;
 
     private AutoCloseable mocks;
 
@@ -48,7 +49,7 @@ class PaymentValidationTest {
 
         when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
 
-        assertDoesNotThrow(() -> paymentService.validatePaymentAmount(orderId, amount));
+        assertDoesNotThrow(() -> validator.validatePaymentAmount(orderId, amount));
     }
 
     @Test
@@ -65,7 +66,7 @@ class PaymentValidationTest {
         when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
 
         assertThrows(PaymentProcessingException.class, () -> 
-                paymentService.validatePaymentAmount(orderId, amount));
+                validator.validatePaymentAmount(orderId, amount));
     }
 
     @Test
@@ -82,7 +83,7 @@ class PaymentValidationTest {
         when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
 
         assertThrows(ConflictException.class, () ->
-                paymentService.validatePaymentAmount(orderId, amount));
+                validator.validatePaymentAmount(orderId, amount));
     }
 
     @Test
@@ -99,7 +100,7 @@ class PaymentValidationTest {
         when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
 
         assertThrows(ConflictException.class, () ->
-                paymentService.validatePaymentAmount(orderId, amount));
+                validator.validatePaymentAmount(orderId, amount));
     }
 
     @Test
@@ -113,7 +114,7 @@ class PaymentValidationTest {
 
         when(userServiceClient.validateUserForPayment(userId)).thenReturn(ResponseEntity.ok(userResponse));
 
-        assertDoesNotThrow(() -> paymentService.validateUserCanMakePayment(userId));
+        assertDoesNotThrow(() -> validator.validateUserCanMakePayment(userId));
     }
 
     @Test
@@ -130,7 +131,7 @@ class PaymentValidationTest {
         when(userServiceClient.validateUserForPayment(userId)).thenReturn(ResponseEntity.ok(userResponse));
 
         assertThrows(PaymentProcessingException.class, () -> 
-                paymentService.validateUserCanMakePayment(userId));
+                validator.validateUserCanMakePayment(userId));
     }
 
     @Test
@@ -140,6 +141,6 @@ class PaymentValidationTest {
         when(userServiceClient.validateUserForPayment(userId)).thenThrow(new RuntimeException("Connection refused"));
 
         assertThrows(PaymentProcessingException.class, () -> 
-                paymentService.validateUserCanMakePayment(userId));
+                validator.validateUserCanMakePayment(userId));
     }
 }
