@@ -137,4 +137,58 @@ class OrderServiceImplTest {
         // Verify order was not saved
         verify(orderRepository, never()).save(any(Order.class));
     }
+
+    @Test
+    void testCreateOrder_WithIdempotencyKey_ExistingOrder_ReturnsExistingOrder() {
+        // Arrange
+        String key = "idempotency_123";
+        Order existing = new Order();
+        existing.setId(100L);
+        existing.setOrderNumber("ORD-EXISTING");
+        existing.setStatus(OrderStatus.PENDING);
+        
+        when(orderRepository.findByIdempotencyKey(key)).thenReturn(java.util.Optional.of(existing));
+
+        // Act
+        OrderResponse response = orderService.createOrder(createOrderRequest, key);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(100L, response.getId());
+        assertEquals("ORD-EXISTING", response.getOrderNumber());
+        verify(cartServiceClient, never()).getCartItems(anyLong());
+        verify(productCatalogClient, never()).reserveStock(anyString(), anyInt());
+    }
+
+    @Test
+    void testCreateOrder_WithIdempotencyKey_ConcurrentDuplicate_ReleasesStockAndReturnsExisting() {
+        // Arrange
+        String key = "idempotency_123";
+        ApiResponse<List<CartItemDto>> cartResponse = ApiResponse.success(cartItems);
+        when(cartServiceClient.getCartItems(123L)).thenReturn(cartResponse);
+        when(orderRepository.existsByOrderNumber(anyString())).thenReturn(false);
+
+        ApiResponse<Boolean> successResponse = ApiResponse.success(true);
+        when(productCatalogClient.reserveStock("prod_1", 2)).thenReturn(successResponse);
+        when(productCatalogClient.reserveStock("prod_2", 1)).thenReturn(successResponse);
+
+        when(orderRepository.save(any(Order.class))).thenThrow(new org.springframework.dao.DataIntegrityViolationException("Duplicate key"));
+        
+        Order existing = new Order();
+        existing.setId(100L);
+        existing.setOrderNumber("ORD-EXISTING");
+        existing.setStatus(OrderStatus.PENDING);
+        when(orderRepository.findByIdempotencyKey(key)).thenReturn(java.util.Optional.empty(), java.util.Optional.of(existing));
+
+        // Act
+        OrderResponse response = orderService.createOrder(createOrderRequest, key);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(100L, response.getId());
+        verify(productCatalogClient, times(1)).reserveStock("prod_1", 2);
+        verify(productCatalogClient, times(1)).reserveStock("prod_2", 1);
+        verify(productCatalogClient, times(1)).releaseStock("prod_1", 2);
+        verify(productCatalogClient, times(1)).releaseStock("prod_2", 1);
+    }
 }

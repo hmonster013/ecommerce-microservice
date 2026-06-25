@@ -275,6 +275,12 @@ public class Order extends BaseEntity {
     private LocalDateTime deletedAt;
 
     /**
+     * Idempotency key for creation
+     */
+    @Column(name = "idempotency_key", length = 100)
+    private String idempotencyKey;
+
+    /**
      * Order items
      */
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)

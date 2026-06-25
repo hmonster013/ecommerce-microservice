@@ -37,6 +37,14 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     Optional<Order> findByOrderNumber(String orderNumber);
 
     /**
+     * Find order by idempotency key
+     *
+     * @param idempotencyKey the idempotency key
+     * @return optional order
+     */
+    Optional<Order> findByIdempotencyKey(String idempotencyKey);
+
+    /**
      * Find orders by user ID
      *
      * @param userId   the user ID

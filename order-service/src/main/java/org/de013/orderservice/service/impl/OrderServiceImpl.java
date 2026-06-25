@@ -42,7 +42,20 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
-        log.info("Creating order for user: {} from cart: {}", request.getUserId(), request.getCartId());
+        return createOrder(request, null);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse createOrder(CreateOrderRequest request, String idempotencyKey) {
+        if (idempotencyKey != null) {
+            java.util.Optional<Order> existing = orderRepository.findByIdempotencyKey(idempotencyKey);
+            if (existing.isPresent()) {
+                log.info("Order already exists for idempotency key: {}. Returning existing order ID: {}", idempotencyKey, existing.get().getId());
+                return orderMapper.toResponse(existing.get());
+            }
+        }
+        log.info("Creating order for user: {} from cart: {} with idempotency key: {}", request.getUserId(), request.getCartId(), idempotencyKey);
 
         // Get cart items from Shopping Cart Service
         List<org.de013.orderservice.dto.CartItemDto> cartItems = cartServiceClient.getCartItems(request.getCartId()).getData();
@@ -62,6 +75,9 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
+        if (idempotencyKey != null) {
+            order.setIdempotencyKey(idempotencyKey);
+        }
 
         String currency = request.getCurrency() != null ? request.getCurrency() : "USD";
         order.setTaxAmount(new Money(BigDecimal.ZERO, currency));
@@ -123,8 +139,26 @@ public class OrderServiceImpl implements OrderService {
 
         order.recalculateTotals();
 
-        order = orderRepository.save(order);
-        log.info("Order created successfully: {} with {} items", orderNumber, cartItems.size());
+        try {
+            order = orderRepository.save(order);
+            log.info("Order created successfully: {} with {} items", orderNumber, cartItems.size());
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            if (idempotencyKey != null) {
+                log.warn("Concurrent duplicate order request detected for key: {}. Releasing reserved stock and retrieving existing order.", idempotencyKey);
+                for (ReservedItem ri : reserved) {
+                    try {
+                        productCatalogClient.releaseStock(ri.productId(), ri.quantity());
+                    } catch (Exception rex) {
+                        log.error("Compensation release failed on duplicate exception for product ID: {} - Error: {}", ri.productId(), rex.getMessage());
+                    }
+                }
+                Order existingOrder = orderRepository.findByIdempotencyKey(idempotencyKey)
+                    .orElseThrow(() -> new IllegalStateException("Duplicate order save failed but existing order not found by key: " + idempotencyKey));
+                return orderMapper.toResponse(existingOrder);
+            } else {
+                throw ex;
+            }
+        }
 
         return orderMapper.toResponse(order);
     }

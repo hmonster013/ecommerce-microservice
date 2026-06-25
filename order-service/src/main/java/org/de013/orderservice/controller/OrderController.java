@@ -54,7 +54,8 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse createOrder(
             @Parameter(description = "Order creation request", required = true)
-            @Valid @RequestBody CreateOrderRequest request) {
+            @Valid @RequestBody CreateOrderRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         UserContext userContext = UserContextHolder.getCurrentUser();
         if (userContext != null && userContext.getUserId() != null) {
             log.info("Overriding request userId with Keycloak authenticated userId: {}", userContext.getUserId());
@@ -62,7 +63,7 @@ public class OrderController {
         } else {
             throw new IllegalArgumentException("User context is missing");
         }
-        return orderService.createOrder(request);
+        return orderService.createOrder(request, idempotencyKey);
     }
 
     /**
