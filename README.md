@@ -103,8 +103,8 @@ graph LR
 ```
 
 ### Microservices
-- **API Gateway** (8080) - Single entry point with OAuth2 authentication
-- **User Service** (8081) - User profile management
+- **API Gateway** (8080) - Single entry point with OAuth2 authentication and auth endpoints
+- **User Service** (8081) - User profile, Keycloak sync, and internal user validation
 - **Product Catalog** (8082) - Product and inventory management
 - **Shopping Cart** (8083) - Shopping cart operations
 - **Order Service** (8084) - Order processing
@@ -252,15 +252,15 @@ Environment file:
 - **JWT Token-Based Auth** - Access tokens with refresh mechanism
 - **API Gateway Security** - Centralized authentication/authorization
 - **Role-Based Access Control (RBAC)** - Multiple roles (ADMIN, CUSTOMER, MANAGER, SUPPORT)
-- **User Sync** - Automatic synchronization between Keycloak and User Service
+- **User Sync** - API Gateway creates users in Keycloak and syncs profile data to User Service
 - **Rate Limiting** - API Gateway level rate limiting
 - **Password Policy** - Managed by Keycloak
 
 ### Authentication Endpoints
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Token refresh
-- `POST /api/auth/logout` - User logout
+- `POST /api/v1/auth/register` - User registration via API Gateway and Keycloak
+- `POST /api/v1/auth/login` - User login via API Gateway and Keycloak
+- `POST /api/v1/auth/refresh` - Token refresh via API Gateway and Keycloak
+- `POST /api/v1/auth/logout` - User logout via API Gateway and Keycloak
 
 See [AUTHENTICATION_TEST_GUIDE.md](AUTHENTICATION_TEST_GUIDE.md) for detailed testing guide.
 
@@ -350,11 +350,11 @@ ecommerce-microservice/
 ├── api-gateway/               # API Gateway with security
 ├── config-server/            # Configuration server
 ├── eureka-server/            # Service registry
-├── user-service/             # User & auth management
+├── user-service/             # User profile, sync, and validation
 ├── product-catalog-service/  # Product management
 ├── shopping-cart-service/    # Shopping cart
 ├── order-service/            # Order processing
-├── payment-service/          # Payment with Stripe
+├── payment-service/          # Payment with Stripe and VNPay
 ├── notification-service/     # Email/SMS notifications
 ├── docker/
 │   ├── default/              # Local dev: infrastructure only (business svc chạy IntelliJ)
