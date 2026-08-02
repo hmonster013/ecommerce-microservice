@@ -42,7 +42,7 @@ public class ProductImageServiceImpl implements ProductImageService {
     @Transactional
     public ProductImageDto createImage(Long productId, ProductImageCreateDto createDto) {
         log.info("Creating image for product ID: {}, type: {}",
-                productId, createDto.getImageType());
+                productId, createDto.imageType());
 
         validateImageData(createDto);
 
@@ -51,8 +51,8 @@ public class ProductImageServiceImpl implements ProductImageService {
 
         // Find variant if specified
         ProductVariant variant = null;
-        if (createDto.getVariantId() != null) {
-            variant = findVariantById(createDto.getVariantId());
+        if (createDto.variantId() != null) {
+            variant = findVariantById(createDto.variantId());
             // Ensure variant belongs to the same product
             if (!variant.getProduct().getId().equals(productId)) {
                 throw new IllegalArgumentException("Variant does not belong to the specified product");
@@ -60,28 +60,28 @@ public class ProductImageServiceImpl implements ProductImageService {
         }
 
         // Validate MAIN image constraint
-        if (createDto.getImageType() == ImageType.MAIN) {
+        if (createDto.imageType() == ImageType.MAIN) {
             validateMainImageConstraint(productId, ImageType.MAIN);
         }
 
         // Extract file format from URL if not provided
-        String fileFormat = createDto.getFileFormat();
+        String fileFormat = createDto.fileFormat();
         if (!StringUtils.hasText(fileFormat)) {
-            fileFormat = extractFileFormatFromUrl(createDto.getUrl());
+            fileFormat = extractFileFormatFromUrl(createDto.url());
         }
 
         // Create image entity
         ProductImage image = ProductImage.builder()
                 .product(product)
-                .url(createDto.getUrl())
-                .altText(createDto.getAltText())
-                .imageType(createDto.getImageType())
-                .displayOrder(createDto.getDisplayOrder())
-                .isActive(createDto.getIsActive())
-                .title(createDto.getTitle())
-                .description(createDto.getDescription())
-                .fileSize(createDto.getFileSize())
-                .dimensions(createDto.getDimensions())
+                .url(createDto.url())
+                .altText(createDto.altText())
+                .imageType(createDto.imageType())
+                .displayOrder(createDto.displayOrder())
+                .isActive(createDto.isActive())
+                .title(createDto.title())
+                .description(createDto.description())
+                .fileSize(createDto.fileSize())
+                .dimensions(createDto.dimensions())
                 .fileFormat(fileFormat)
                 .variant(variant)
                 .build();
@@ -103,58 +103,58 @@ public class ProductImageServiceImpl implements ProductImageService {
         ProductImage image = findImageById(imageId);
 
         // Update fields if provided
-        if (StringUtils.hasText(updateDto.getUrl())) {
-            validateImageUrl(updateDto.getUrl());
-            image.setUrl(updateDto.getUrl());
+        if (StringUtils.hasText(updateDto.url())) {
+            validateImageUrl(updateDto.url());
+            image.setUrl(updateDto.url());
 
             // Update file format if URL changed and format not explicitly provided
-            if (updateDto.getFileFormat() == null) {
-                image.setFileFormat(extractFileFormatFromUrl(updateDto.getUrl()));
+            if (updateDto.fileFormat() == null) {
+                image.setFileFormat(extractFileFormatFromUrl(updateDto.url()));
             }
         }
 
-        if (updateDto.getAltText() != null) {
-            image.setAltText(updateDto.getAltText());
+        if (updateDto.altText() != null) {
+            image.setAltText(updateDto.altText());
         }
 
-        if (updateDto.getImageType() != null) {
+        if (updateDto.imageType() != null) {
             // Validate MAIN image constraint if changing to MAIN
-            if (updateDto.getImageType() == ImageType.MAIN && image.getImageType() != ImageType.MAIN) {
+            if (updateDto.imageType() == ImageType.MAIN && image.getImageType() != ImageType.MAIN) {
                 validateMainImageConstraint(image.getProduct().getId(), ImageType.MAIN, imageId);
             }
-            image.setImageType(updateDto.getImageType());
+            image.setImageType(updateDto.imageType());
         }
 
-        if (updateDto.getDisplayOrder() != null) {
-            image.setDisplayOrder(updateDto.getDisplayOrder());
+        if (updateDto.displayOrder() != null) {
+            image.setDisplayOrder(updateDto.displayOrder());
         }
 
-        if (updateDto.getIsActive() != null) {
-            image.setIsActive(updateDto.getIsActive());
+        if (updateDto.isActive() != null) {
+            image.setIsActive(updateDto.isActive());
         }
 
-        if (updateDto.getTitle() != null) {
-            image.setTitle(updateDto.getTitle());
+        if (updateDto.title() != null) {
+            image.setTitle(updateDto.title());
         }
 
-        if (updateDto.getDescription() != null) {
-            image.setDescription(updateDto.getDescription());
+        if (updateDto.description() != null) {
+            image.setDescription(updateDto.description());
         }
 
-        if (updateDto.getFileSize() != null) {
-            image.setFileSize(updateDto.getFileSize());
+        if (updateDto.fileSize() != null) {
+            image.setFileSize(updateDto.fileSize());
         }
 
-        if (updateDto.getDimensions() != null) {
-            image.setDimensions(updateDto.getDimensions());
+        if (updateDto.dimensions() != null) {
+            image.setDimensions(updateDto.dimensions());
         }
 
-        if (updateDto.getFileFormat() != null) {
-            image.setFileFormat(updateDto.getFileFormat());
+        if (updateDto.fileFormat() != null) {
+            image.setFileFormat(updateDto.fileFormat());
         }
 
-        if (updateDto.getVariantId() != null) {
-            ProductVariant variant = findVariantById(updateDto.getVariantId());
+        if (updateDto.variantId() != null) {
+            ProductVariant variant = findVariantById(updateDto.variantId());
             // Ensure variant belongs to the same product
             if (!variant.getProduct().getId().equals(image.getProduct().getId())) {
                 throw new IllegalArgumentException("Variant does not belong to the same product as the image");
@@ -262,11 +262,11 @@ public class ProductImageServiceImpl implements ProductImageService {
         }
         // Product ID validation removed - now handled via path parameter
 
-        if (!StringUtils.hasText(createDto.getUrl())) {
+        if (!StringUtils.hasText(createDto.url())) {
             throw new IllegalArgumentException("Image URL is required");
         }
 
-        validateImageUrl(createDto.getUrl());
+        validateImageUrl(createDto.url());
     }
 
     @Override
@@ -283,8 +283,8 @@ public class ProductImageServiceImpl implements ProductImageService {
             throw new ResourceNotFoundException("Image not found with ID: " + imageId);
         }
 
-        if (StringUtils.hasText(updateDto.getUrl())) {
-            validateImageUrl(updateDto.getUrl());
+        if (StringUtils.hasText(updateDto.url())) {
+            validateImageUrl(updateDto.url());
         }
     }
 

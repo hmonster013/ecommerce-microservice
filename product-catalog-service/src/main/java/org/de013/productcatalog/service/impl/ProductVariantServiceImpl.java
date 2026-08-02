@@ -42,7 +42,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
     @Transactional
     public ProductVariantDto createVariant(Long productId, ProductVariantCreateDto createDto) {
         log.info("Creating variant for product ID: {}, type: {}, value: {}",
-                productId, createDto.getVariantType(), createDto.getValue());
+                productId, createDto.variantType(), createDto.value());
 
         validateVariantData(createDto);
 
@@ -50,29 +50,29 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         Product product = findProductById(productId);
 
         // Check for duplicate variant combination
-        if (!isVariantCombinationUnique(productId, createDto.getVariantType(), createDto.getValue())) {
+        if (!isVariantCombinationUnique(productId, createDto.variantType(), createDto.value())) {
             throw new IllegalArgumentException(
                     String.format("Variant combination already exists: %s = %s",
-                            createDto.getVariantType(), createDto.getValue()));
+                            createDto.variantType(), createDto.value()));
         }
 
         // Check SKU uniqueness if provided
-        if (StringUtils.hasText(createDto.getSku()) && !isSkuUnique(createDto.getSku())) {
-            throw new IllegalArgumentException("Variant SKU already exists: " + createDto.getSku());
+        if (StringUtils.hasText(createDto.sku()) && !isSkuUnique(createDto.sku())) {
+            throw new IllegalArgumentException("Variant SKU already exists: " + createDto.sku());
         }
 
         // Create variant entity
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
-                .variantType(createDto.getVariantType())
-                .name(createDto.getName())
-                .value(createDto.getValue())
-                .priceAdjustment(createDto.getPriceAdjustment())
-                .sku(createDto.getSku())
-                .displayOrder(createDto.getDisplayOrder())
-                .isActive(createDto.getIsActive())
-                .imageUrl(createDto.getImageUrl())
-                .description(createDto.getDescription())
+                .variantType(createDto.variantType())
+                .name(createDto.name())
+                .value(createDto.value())
+                .priceAdjustment(createDto.priceAdjustment())
+                .sku(createDto.sku())
+                .displayOrder(createDto.displayOrder())
+                .isActive(createDto.isActive())
+                .imageUrl(createDto.imageUrl())
+                .description(createDto.description())
                 .build();
 
         ProductVariant savedVariant = variantRepository.save(variant);
@@ -92,60 +92,60 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         ProductVariant variant = findVariantById(variantId);
 
         // Update fields if provided
-        if (updateDto.getVariantType() != null) {
+        if (updateDto.variantType() != null) {
             // Check for duplicate variant combination if type or value changed
-            String newValue = updateDto.getValue() != null ? updateDto.getValue() : variant.getValue();
+            String newValue = updateDto.value() != null ? updateDto.value() : variant.getValue();
             if (!isVariantCombinationUnique(variant.getProduct().getId(),
-                    updateDto.getVariantType(), newValue, variantId)) {
+                    updateDto.variantType(), newValue, variantId)) {
                 throw new IllegalArgumentException(
                         String.format("Variant combination already exists: %s = %s",
-                                updateDto.getVariantType(), newValue));
+                                updateDto.variantType(), newValue));
             }
-            variant.setVariantType(updateDto.getVariantType());
+            variant.setVariantType(updateDto.variantType());
         }
 
-        if (StringUtils.hasText(updateDto.getName())) {
-            variant.setName(updateDto.getName());
+        if (StringUtils.hasText(updateDto.name())) {
+            variant.setName(updateDto.name());
         }
 
-        if (StringUtils.hasText(updateDto.getValue())) {
+        if (StringUtils.hasText(updateDto.value())) {
             // Check for duplicate variant combination if value changed
-            VariantType currentType = updateDto.getVariantType() != null ?
-                    updateDto.getVariantType() : variant.getVariantType();
+            VariantType currentType = updateDto.variantType() != null ?
+                    updateDto.variantType() : variant.getVariantType();
             if (!isVariantCombinationUnique(variant.getProduct().getId(),
-                    currentType, updateDto.getValue(), variantId)) {
+                    currentType, updateDto.value(), variantId)) {
                 throw new IllegalArgumentException(
                         String.format("Variant combination already exists: %s = %s",
-                                currentType, updateDto.getValue()));
+                                currentType, updateDto.value()));
             }
-            variant.setValue(updateDto.getValue());
+            variant.setValue(updateDto.value());
         }
 
-        if (updateDto.getPriceAdjustment() != null) {
-            variant.setPriceAdjustment(updateDto.getPriceAdjustment());
+        if (updateDto.priceAdjustment() != null) {
+            variant.setPriceAdjustment(updateDto.priceAdjustment());
         }
 
-        if (StringUtils.hasText(updateDto.getSku())) {
-            if (!isSkuUnique(updateDto.getSku(), variantId)) {
-                throw new IllegalArgumentException("Variant SKU already exists: " + updateDto.getSku());
+        if (StringUtils.hasText(updateDto.sku())) {
+            if (!isSkuUnique(updateDto.sku(), variantId)) {
+                throw new IllegalArgumentException("Variant SKU already exists: " + updateDto.sku());
             }
-            variant.setSku(updateDto.getSku());
+            variant.setSku(updateDto.sku());
         }
 
-        if (updateDto.getDisplayOrder() != null) {
-            variant.setDisplayOrder(updateDto.getDisplayOrder());
+        if (updateDto.displayOrder() != null) {
+            variant.setDisplayOrder(updateDto.displayOrder());
         }
 
-        if (updateDto.getIsActive() != null) {
-            variant.setIsActive(updateDto.getIsActive());
+        if (updateDto.isActive() != null) {
+            variant.setIsActive(updateDto.isActive());
         }
 
-        if (updateDto.getImageUrl() != null) {
-            variant.setImageUrl(updateDto.getImageUrl());
+        if (updateDto.imageUrl() != null) {
+            variant.setImageUrl(updateDto.imageUrl());
         }
 
-        if (updateDto.getDescription() != null) {
-            variant.setDescription(updateDto.getDescription());
+        if (updateDto.description() != null) {
+            variant.setDescription(updateDto.description());
         }
 
         ProductVariant savedVariant = variantRepository.save(variant);

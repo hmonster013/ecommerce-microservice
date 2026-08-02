@@ -97,7 +97,7 @@ public class CategoryController extends BaseController {
             @Parameter(description = "Category creation data", required = true)
             @Valid @RequestBody CategoryCreateDto createDto) {
 
-        log.info("Creating new category with name: {}", createDto.getName());
+        log.info("Creating new category with name: {}", createDto.name());
 
         CategoryResponseDto category = categoryService.createCategory(createDto);
         return created(category, "Category created successfully");

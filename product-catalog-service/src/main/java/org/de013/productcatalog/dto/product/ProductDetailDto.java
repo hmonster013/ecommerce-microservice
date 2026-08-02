@@ -202,7 +202,7 @@ public class ProductDetailDto {
             return null;
         }
         return images.stream()
-                .filter(img -> "MAIN".equals(img.getImageType()))
+                .filter(img -> "MAIN".equals(img.imageType()))
                 .findFirst()
                 .orElse(images.get(0));
     }

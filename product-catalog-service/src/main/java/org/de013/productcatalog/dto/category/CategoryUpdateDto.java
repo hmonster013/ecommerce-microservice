@@ -7,38 +7,33 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.*;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Category update request")
-public class CategoryUpdateDto {
+public record CategoryUpdateDto(
 
     @Size(max = 255, message = "{category.name.too.long}")
     @Schema(description = "Category name", example = "Smartphones")
-    private String name;
+    String name,
 
     @Schema(description = "Category description", example = "Mobile phones and accessories")
-    private String description;
+    String description,
 
     @Size(max = 255, message = "{field.too.long}")
     @Pattern(regexp = "^[a-z0-9-]+$", message = "{ValidSlug.message}")
     @Schema(description = "Category slug", example = "smartphones")
-    private String slug;
+    String slug,
 
     @Schema(description = "Parent category ID", example = "1")
-    private Long parentId;
+    Long parentId,
 
     @Min(value = 0, message = "{category.display.order.invalid}")
     @Schema(description = "Display order", example = "1")
-    private Integer displayOrder;
+    Integer displayOrder,
 
     @Schema(description = "Is category active", example = "true")
-    private Boolean isActive;
+    Boolean isActive
+) {
 
     // Validation method
     @JsonIgnore
