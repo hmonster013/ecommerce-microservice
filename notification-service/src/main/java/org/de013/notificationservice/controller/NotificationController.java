@@ -93,13 +93,13 @@ public class NotificationController {
             @Valid @RequestBody EmailNotificationRequest request) {
 
         try {
-            log.info("Sending email to: {}, subject: {}", request.getTo(), request.getSubject());
+            log.info("Sending email to: {}, subject: {}", request.to(), request.subject());
 
             Notification notification = notificationService.sendEmail(
-                    request.getUserId(),
-                    request.getTo(),
-                    request.getSubject(),
-                    request.getMessage()
+                    request.userId(),
+                    request.to(),
+                    request.subject(),
+                    request.message()
             );
 
             NotificationResponse response = NotificationResponse.success(
@@ -171,12 +171,12 @@ public class NotificationController {
             @Valid @RequestBody SmsNotificationRequest request) {
 
         try {
-            log.info("Sending SMS to: {}", request.getPhoneNumber());
+            log.info("Sending SMS to: {}", request.phoneNumber());
 
             Notification notification = notificationService.sendSms(
-                    request.getUserId(),
-                    request.getPhoneNumber(),
-                    request.getMessage()
+                    request.userId(),
+                    request.phoneNumber(),
+                    request.message()
             );
 
             NotificationResponse response = NotificationResponse.success(
@@ -252,14 +252,14 @@ public class NotificationController {
             @Valid @RequestBody BothNotificationRequest request) {
 
         try {
-            log.info("Sending both email and SMS to user: {}", request.getUserId());
+            log.info("Sending both email and SMS to user: {}", request.userId());
 
             List<Notification> notifications = notificationService.sendBoth(
-                    request.getUserId(),
-                    request.getEmail(),
-                    request.getPhoneNumber(),
-                    request.getSubject(),
-                    request.getMessage()
+                    request.userId(),
+                    request.email(),
+                    request.phoneNumber(),
+                    request.subject(),
+                    request.message()
             );
 
             BothNotificationResponse response = BothNotificationResponse.success(
