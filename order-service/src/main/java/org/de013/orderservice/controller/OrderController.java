@@ -58,7 +58,7 @@ public class OrderController {
         UserContext userContext = UserContextHolder.getCurrentUser();
         if (userContext != null && userContext.getUserId() != null) {
             log.info("Overriding request userId with Keycloak authenticated userId: {}", userContext.getUserId());
-            request.setUserId(userContext.getUserId());
+            request = request.withUserId(userContext.getUserId());
         } else {
             throw new IllegalArgumentException("User context is missing");
         }
@@ -204,7 +204,7 @@ public class OrderController {
             @Parameter(description = "Cancellation request with optional reason")
             @RequestBody(required = false) CancelOrderRequest request) {
         log.debug("Cancelling order {}", orderId);
-        String reason = (request != null && request.getReason() != null) ? request.getReason() : "Cancelled by user";
+        String reason = (request != null && request.reason() != null) ? request.reason() : "Cancelled by user";
         orderService.cancelOrder(orderId, reason);
     }
 

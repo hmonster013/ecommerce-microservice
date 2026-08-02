@@ -17,8 +17,7 @@ class CreateOrderRequestTest {
     @Test
     void deserialize_WhenUserIdIsPresentInBody_ShouldIgnoreUserId() throws Exception {
         // Regression R4/S2-BOLA: client-submitted userId must be ignored
-        String json = "{\n" +
-                "  \"user_id\": \"malicious-user-uuid\",\n" +
+        String json = "{\n  \"user_id\": \"malicious-user-uuid\",\n" +
                 "  \"cart_id\": 123,\n" +
                 "  \"order_type\": \"STANDARD\",\n" +
                 "  \"payment_method\": \"CREDIT_CARD\",\n" +
@@ -27,8 +26,8 @@ class CreateOrderRequestTest {
 
         CreateOrderRequest request = objectMapper.readValue(json, CreateOrderRequest.class);
 
-        assertNull(request.getUserId());
-        assertEquals(123L, request.getCartId());
-        assertEquals("CREDIT_CARD", request.getPaymentMethod());
+        assertNull(request.userId());
+        assertEquals(123L, request.cartId());
+        assertEquals("CREDIT_CARD", request.paymentMethod());
     }
 }

@@ -41,10 +41,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
-        log.info("Creating order for user: {} from cart: {}", request.getUserId(), request.getCartId());
+        log.info("Creating order for user: {} from cart: {}", request.userId(), request.cartId());
 
         // Get cart items from Shopping Cart Service
-        List<org.de013.orderservice.dto.CartItemDto> cartItems = cartServiceClient.getCartItems(request.getCartId()).getData();
+        List<org.de013.orderservice.dto.CartItemDto> cartItems = cartServiceClient.getCartItems(request.cartId()).getData();
         if (cartItems == null || cartItems.isEmpty()) {
             throw new IllegalArgumentException("Cart is empty or not found");
         }
@@ -62,7 +62,7 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
-        String currency = request.getCurrency() != null ? request.getCurrency() : "USD";
+        String currency = request.currency() != null ? request.currency() : "USD";
         order.setTaxAmount(new Money(BigDecimal.ZERO, currency));
         order.setShippingAmount(new Money(BigDecimal.ZERO, currency));
         order.setDiscountAmount(new Money(BigDecimal.ZERO, currency));
@@ -71,39 +71,39 @@ public class OrderServiceImpl implements OrderService {
         for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
 
-            orderItem.setProductId(cartItem.getProductId());
+            orderItem.setProductId(cartItem.productId());
 
-            orderItem.setSku(cartItem.getProductSku());
-            orderItem.setProductName(cartItem.getProductName());
-            orderItem.setProductDescription(cartItem.getProductDescription());
-            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setSku(cartItem.productSku());
+            orderItem.setProductName(cartItem.productName());
+            orderItem.setProductDescription(cartItem.productDescription());
+            orderItem.setQuantity(cartItem.quantity());
             // unitPrice is the list price per unit; totalPrice is the GROSS line amount (unitPrice * qty).
             // The order-level recalculation subtracts the per-line discount once to reach the net total.
-            BigDecimal qty = BigDecimal.valueOf(cartItem.getQuantity());
-            orderItem.setUnitPrice(new Money(cartItem.getUnitPrice(), cartItem.getCurrency()));
-            orderItem.setTotalPrice(new Money(cartItem.getUnitPrice().multiply(qty), cartItem.getCurrency()));
+            BigDecimal qty = BigDecimal.valueOf(cartItem.quantity());
+            orderItem.setUnitPrice(new Money(cartItem.unitPrice(), cartItem.currency()));
+            orderItem.setTotalPrice(new Money(cartItem.unitPrice().multiply(qty), cartItem.currency()));
 
             // cart exposes discount per unit; scale by quantity for the line-level discount
-            BigDecimal discountPerUnit = cartItem.getDiscountAmount() != null ? cartItem.getDiscountAmount() : BigDecimal.ZERO;
-            orderItem.setDiscountAmount(new Money(discountPerUnit.multiply(qty), cartItem.getCurrency()));
+            BigDecimal discountPerUnit = cartItem.discountAmount() != null ? cartItem.discountAmount() : BigDecimal.ZERO;
+            orderItem.setDiscountAmount(new Money(discountPerUnit.multiply(qty), cartItem.currency()));
             
             // Set tax amount (default to 0)
-            orderItem.setTaxAmount(new Money(BigDecimal.ZERO, cartItem.getCurrency()));
+            orderItem.setTaxAmount(new Money(BigDecimal.ZERO, cartItem.currency()));
             
             // Set product category and brand
-            orderItem.setProductCategory(cartItem.getCategoryName());
-            orderItem.setProductBrand(cartItem.getProductBrand());
+            orderItem.setProductCategory(cartItem.categoryName());
+            orderItem.setProductBrand(cartItem.productBrand());
             
             orderItem.setOrder(order);
             order.getOrderItems().add(orderItem);
 
             // Deduct stock in Product Catalog Service
             try {
-                log.info("Deducting {} stock for product ID: {}", cartItem.getQuantity(), cartItem.getProductId());
-                productCatalogClient.removeStock(cartItem.getProductId(), cartItem.getQuantity());
+                log.info("Deducting {} stock for product ID: {}", cartItem.quantity(), cartItem.productId());
+                productCatalogClient.removeStock(cartItem.productId(), cartItem.quantity());
             } catch (Exception e) {
-                log.error("Failed to deduct stock for product ID: {} - Error: {}", cartItem.getProductId(), e.getMessage());
-                throw new IllegalStateException("Failed to allocate inventory for product: " + cartItem.getProductName());
+                log.error("Failed to deduct stock for product ID: {} - Error: {}", cartItem.productId(), e.getMessage());
+                throw new IllegalStateException("Failed to allocate inventory for product: " + cartItem.productName());
             }
         }
 
@@ -157,8 +157,8 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new NotFoundException("Order not found"));
 
         // Basic update - can be enhanced later
-        if (request.getCustomerNotes() != null) {
-            order.setCustomerNotes(request.getCustomerNotes());
+        if (request.customerNotes() != null) {
+            order.setCustomerNotes(request.customerNotes());
         }
 
         order.setUpdatedAt(LocalDateTime.now());
@@ -211,18 +211,19 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void updateOrderStatus(Long orderId, org.de013.orderservice.dto.request.OrderStatusUpdateRequest request) {
-        log.info("Updating order {} status to {}", orderId, request.getStatus());
+        log.info("Updating order {} status to {}", orderId, request.status());
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
-        OrderStatus newStatus = OrderStatus.fromCode(request.getStatus());
+        OrderStatus newStatus = OrderStatus.fromCode(request.status());
         if (newStatus == null) {
-            throw new IllegalArgumentException("Invalid order status code: " + request.getStatus());
+            throw new IllegalArgumentException("Invalid order status code: " + request.status());
         }
         order.setStatus(newStatus);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
         log.info("Order {} status successfully updated to {}", orderId, newStatus);
     }
+
 }
 
 
