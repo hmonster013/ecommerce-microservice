@@ -23,19 +23,19 @@ public class InternalUserController {
 
     @PostMapping("/sync")
     public ResponseEntity<ApiResponse<UserResponse>> syncUserFromKeycloak(@Valid @RequestBody SyncUserRequest request) {
-        log.info("Syncing user from Keycloak - keycloakId: {}, username: {}", request.getKeycloakId(), request.getUsername());
+        log.info("Syncing user from Keycloak - keycloakId: {}, username: {}", request.keycloakId(), request.username());
 
-        User user = userRepository.findByKeycloakId(request.getKeycloakId())
+        User user = userRepository.findByKeycloakId(request.keycloakId())
                 .orElseGet(() -> {
                     User newUser = User.builder()
-                            .keycloakId(request.getKeycloakId())
-                            .username(request.getUsername())
-                            .email(request.getEmail())
-                            .firstName(request.getFirstName() != null ? request.getFirstName() : "N/A")
-                            .lastName(request.getLastName() != null ? request.getLastName() : "N/A")
+                            .keycloakId(request.keycloakId())
+                            .username(request.username())
+                            .email(request.email())
+                            .firstName(request.firstName() != null ? request.firstName() : "N/A")
+                            .lastName(request.lastName() != null ? request.lastName() : "N/A")
                             .build();
 
-                    log.info("Creating new user profile for Keycloak user: {}", request.getKeycloakId());
+                    log.info("Creating new user profile for Keycloak user: {}", request.keycloakId());
                     return userRepository.save(newUser);
                 });
 

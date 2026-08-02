@@ -2,38 +2,16 @@ package org.de013.userservice.service;
 
 import org.de013.common.dto.PageResponse;
 import org.de013.userservice.dto.UserProfileDto;
-import org.de013.userservice.dto.UserRegistrationDto;
 import org.de013.userservice.dto.UserResponse;
 import org.de013.userservice.dto.UserUpdateDto;
 import org.de013.userservice.entity.User;
 import org.springframework.data.domain.Pageable;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * User Management Service Interface
  * Handles user CRUD operations, profile management, and user administration
  */
 public interface UserManagementService {
-
-    // ========== User Registration & Creation ==========
-
-    /**
-     * Register a new user
-     *
-     * @param request User registration details
-     * @return User response DTO
-     */
-    UserResponse registerUser(UserRegistrationDto request);
-
-    /**
-     * Create a new user (admin function)
-     *
-     * @param request User creation details
-     * @return User response DTO
-     */
-    UserResponse createUser(UserRegistrationDto request);
 
     // ========== User Retrieval ==========
 
@@ -52,14 +30,6 @@ public interface UserManagementService {
      * @return User response DTO
      */
     UserResponse getUserByUsername(String username);
-
-    /**
-     * Get user by email
-     *
-     * @param email Email address
-     * @return User response DTO
-     */
-    UserResponse getUserByEmail(String email);
 
     /**
      * Find user entity by username (internal use)
@@ -96,10 +66,6 @@ public interface UserManagementService {
      */
     UserResponse updateUserProfile(String username, UserUpdateDto request);
 
-    // Note: Password management is now handled by Keycloak
-
-    // ========== User Administration ==========
-
     /**
      * Get all users with pagination
      *
@@ -118,57 +84,10 @@ public interface UserManagementService {
     PageResponse<UserResponse> searchUsers(String keyword, Pageable pageable);
 
     /**
-     * Get users created in date range
-     *
-     * @param startDate Start date
-     * @param endDate   End date
-     * @param pageable  Pagination parameters
-     * @return Page of user responses
-     */
-    PageResponse<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
-
-    // ========== User Administration ==========
-
-    /**
      * Delete user by ID
      *
      * @param userId User ID
      */
     void deleteUser(Long userId);
 
-    // ========== Validation Methods ==========
-
-    /**
-     * Check if username exists
-     *
-     * @param username Username
-     * @return true if exists, false otherwise
-     */
-    boolean existsByUsername(String username);
-
-    /**
-     * Check if email exists
-     *
-     * @param email Email address
-     * @return true if exists, false otherwise
-     */
-    boolean existsByEmail(String email);
-
-    /**
-     * Validate username availability for update
-     *
-     * @param username Username
-     * @param userId   Current user ID
-     * @return true if available, false otherwise
-     */
-    boolean isUsernameAvailableForUpdate(String username, Long userId);
-
-    /**
-     * Validate email availability for update
-     *
-     * @param email  Email address
-     * @param userId Current user ID
-     * @return true if available, false otherwise
-     */
-    boolean isEmailAvailableForUpdate(String email, Long userId);
 }

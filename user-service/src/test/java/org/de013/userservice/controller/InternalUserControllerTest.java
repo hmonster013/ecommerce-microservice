@@ -67,13 +67,13 @@ class InternalUserControllerTest {
 
     @Test
     void syncUserFromKeycloak_WhenNewUser_ShouldCreateAndReturn() throws Exception {
-        SyncUserRequest request = SyncUserRequest.builder()
-                .keycloakId("user-uuid-new")
-                .username("jane_doe")
-                .email("jane@example.com")
-                .firstName("Jane")
-                .lastName("Doe")
-                .build();
+        SyncUserRequest request = new SyncUserRequest(
+                "user-uuid-new",
+                "jane_doe",
+                "jane@example.com",
+                "Jane",
+                "Doe"
+        );
 
         when(userRepository.findByKeycloakId("user-uuid-new")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
