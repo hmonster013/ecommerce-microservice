@@ -422,10 +422,10 @@ public class WebhookServiceImpl implements WebhookService {
             } else if ("PAYMENT_FAILED".equals(status)) {
                 orderServiceClient.markOrderPaymentFailed(orderId, payment.getFailureReason() != null ? payment.getFailureReason() : "Payment failed");
             } else {
-                org.de013.paymentservice.dto.external.OrderStatusUpdateRequest request = org.de013.paymentservice.dto.external.OrderStatusUpdateRequest.builder()
-                        .status(status)
-                        .reason("Payment status updated to " + status)
-                        .build();
+                org.de013.paymentservice.dto.external.OrderStatusUpdateRequest request = new org.de013.paymentservice.dto.external.OrderStatusUpdateRequest(
+                        status,
+                        "Payment status updated to " + status
+                );
                 orderServiceClient.updateOrderStatus(orderId, request);
             }
             log.info("Successfully updated order {} status to: {}", orderId, status);

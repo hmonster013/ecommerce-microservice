@@ -1,27 +1,26 @@
 package org.de013.paymentservice.dto.external;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 /**
  * Request DTO for updating order status
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class OrderStatusUpdateRequest {
-    private String status;
-    private String reason;
-    private String updatedBy;
-    private LocalDateTime updatedAt;
+public record OrderStatusUpdateRequest(
+        String status,
+        String reason,
+        String updatedBy,
+        LocalDateTime updatedAt,
 
-    // Additional fields for payment-related updates
-    private Long paymentId;
-    private String paymentNumber;
-    private String paymentStatus;
+        // Additional fields for payment-related updates
+        Long paymentId,
+        String paymentNumber,
+        String paymentStatus
+) {
+    public OrderStatusUpdateRequest(String status, String reason) {
+        this(status, reason, null, null, null, null, null);
+    }
+
+    public OrderStatusUpdateRequest(String status, String reason, String updatedBy) {
+        this(status, reason, updatedBy, null, null, null, null);
+    }
 }
