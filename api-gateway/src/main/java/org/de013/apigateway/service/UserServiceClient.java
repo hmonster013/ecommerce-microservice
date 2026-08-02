@@ -25,7 +25,7 @@ public class UserServiceClient {
      */
     public Mono<Void> syncUser(SyncUserRequest request) {
         log.info("Syncing user to User Service - username: {}, keycloakId: {}",
-                request.getUsername(), request.getKeycloakId());
+                request.username(), request.keycloakId());
 
         return webClientBuilder.build()
                 .post()
@@ -33,8 +33,8 @@ public class UserServiceClient {
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.info("User synced successfully: {}", request.getUsername()))
-                .doOnError(e -> log.error("Failed to sync user {}: {}", request.getUsername(), e.getMessage()))
+                .doOnSuccess(v -> log.info("User synced successfully: {}", request.username()))
+                .doOnError(e -> log.error("Failed to sync user {}: {}", request.username(), e.getMessage()))
                 .onErrorResume(e -> {
                     log.warn("User sync failed but continuing with registration: {}", e.getMessage());
                     return Mono.empty();

@@ -15,6 +15,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,8 +83,12 @@ public class KeycloakService {
                             .exchangeToMono(response -> {
                                 if (response.statusCode().equals(HttpStatus.CREATED)) {
                                     // Extract user ID from Location header
-                                    String location = response.headers().asHttpHeaders().getLocation().toString();
-                                    String userId = location.substring(location.lastIndexOf('/') + 1);
+                                    URI location = response.headers().asHttpHeaders().getLocation();
+                                    if (location == null) {
+                                        return Mono.error(new KeycloakException("User creation succeeded but Location header is missing"));
+                                    }
+
+                                    String userId = location.getPath().substring(location.getPath().lastIndexOf('/') + 1);
                                     log.info("User created successfully in Keycloak: {}", userId);
                                     return Mono.just(userId);
                                 } else {
@@ -299,7 +304,7 @@ public class KeycloakService {
                 .body(BodyInserters.fromFormData(formData))
                 .retrieve()
                 .bodyToMono(AuthResponse.class)
-                .map(AuthResponse::getAccessToken)
+                .map(AuthResponse::accessToken)
                 .doOnSuccess(token -> log.debug("Admin token obtained"))
                 .onErrorResume(e -> {
                     log.error("Failed to get admin token: {}", e.getMessage());

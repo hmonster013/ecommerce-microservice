@@ -128,3 +128,5 @@ yarn-debug.log*
 yarn-error.log*
 
 bash.exe.stackdump
+.opencode/
+.opencode/

@@ -56,14 +56,14 @@ public class AuthController {
     @PostMapping("/register")
     public Mono<ResponseEntity<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
 
-        log.info("Registration request for username: {}", request.getUsername());
+        log.info("Registration request for username: {}", request.username());
 
         return keycloakService.createUser(
-                        request.getUsername(),
-                        request.getEmail(),
-                        request.getPassword(),
-                        request.getFirstName(),
-                        request.getLastName()
+                        request.username(),
+                        request.email(),
+                        request.password(),
+                        request.firstName(),
+                        request.lastName()
                 )
                 .flatMap(userId ->
                         // Assign default CUSTOMER role
@@ -72,30 +72,30 @@ public class AuthController {
                 )
                 .flatMap(userId -> {
                     // Sync user to User Service database
-                    SyncUserRequest syncRequest = SyncUserRequest.builder()
-                            .keycloakId(userId)
-                            .username(request.getUsername())
-                            .email(request.getEmail())
-                            .firstName(request.getFirstName())
-                            .lastName(request.getLastName())
-                            .build();
+                    SyncUserRequest syncRequest = new SyncUserRequest(
+                            userId,
+                            request.username(),
+                            request.email(),
+                            request.firstName(),
+                            request.lastName()
+                    );
 
                     return userServiceClient.syncUser(syncRequest)
                             .then(Mono.just(userId));
                 })
                 .flatMap(userId ->
                         // Auto login: Get token for newly created user
-                        keycloakService.getToken(request.getUsername(), request.getPassword())
+                        keycloakService.getToken(request.username(), request.password())
                 )
                 .map(authResponse -> {
-                    log.info("User registered and logged in successfully: {}", request.getUsername());
+                    log.info("User registered and logged in successfully: {}", request.username());
                     return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
                 })
                 .onErrorResume(KeycloakException.class, e -> {
                     log.error("Registration failed: {}", e.getMessage());
                     return Mono.just(
                             ResponseEntity.badRequest().body(
-                                    AuthResponse.builder().build()
+                                    new AuthResponse(null, null, null, null, null, null, null)
                             )
                     );
                 });
@@ -124,18 +124,18 @@ public class AuthController {
     @PostMapping("/login")
     public Mono<ResponseEntity<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
 
-        log.info("Login attempt for user: {}", request.getUsername());
+        log.info("Login attempt for user: {}", request.username());
 
-        return keycloakService.getToken(request.getUsername(), request.getPassword())
+        return keycloakService.getToken(request.username(), request.password())
                 .map(authResponse -> {
-                    log.info("User logged in successfully: {}", request.getUsername());
+                    log.info("User logged in successfully: {}", request.username());
                     return ResponseEntity.ok(authResponse);
                 })
                 .onErrorResume(KeycloakException.class, e -> {
-                    log.warn("Login failed for user {}: {}", request.getUsername(), e.getMessage());
+                    log.warn("Login failed for user {}: {}", request.username(), e.getMessage());
                     return Mono.just(
                             ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                                    AuthResponse.builder().build()
+                                    new AuthResponse(null, null, null, null, null, null, null)
                             )
                     );
                 });
@@ -166,7 +166,7 @@ public class AuthController {
 
         log.debug("Token refresh request");
 
-        return keycloakService.refreshToken(request.getRefreshToken())
+        return keycloakService.refreshToken(request.refreshToken())
                 .map(authResponse -> {
                     log.debug("Token refreshed successfully");
                     return ResponseEntity.ok(authResponse);
@@ -175,7 +175,7 @@ public class AuthController {
                     log.warn("Token refresh failed: {}", e.getMessage());
                     return Mono.just(
                             ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                                    AuthResponse.builder().build()
+                                    new AuthResponse(null, null, null, null, null, null, null)
                             )
                     );
                 });
@@ -197,12 +197,16 @@ public class AuthController {
 
         log.info("Logout request");
 
-        return keycloakService.logout(request.getRefreshToken())
-                .then(Mono.just(ResponseEntity.ok().<Void>build()))
+        return keycloakService.logout(request.refreshToken())
+                .thenReturn(okResponse())
                 .onErrorResume(e -> {
                     log.warn("Logout completed with warning: {}", e.getMessage());
                     // Return success even if logout fails (token might be already expired)
-                    return Mono.just(ResponseEntity.ok().<Void>build());
+                    return Mono.just(okResponse());
                 });
+    }
+
+    private static ResponseEntity<Void> okResponse() {
+        return ResponseEntity.ok().build();
     }
 }
