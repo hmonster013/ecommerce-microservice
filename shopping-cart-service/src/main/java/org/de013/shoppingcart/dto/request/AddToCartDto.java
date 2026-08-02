@@ -4,74 +4,78 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
-import lombok.*;
+import lombok.Builder;
 
 
 /**
  * DTO for adding items to cart
  */
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-@ToString
-@EqualsAndHashCode
 @Schema(description = "Request to add item to shopping cart")
-public class AddToCartDto {
+public record AddToCartDto(
 
     @Schema(description = "Product ID to add to cart", example = "prod-123e4567-e89b-12d3-a456-426614174000")
     @NotBlank(message = "{product.id.required}")
     @Size(max = 36, message = "{product.id.size}")
     @JsonProperty("product_id")
-    private String productId;
+    String productId,
 
     @Schema(description = "Quantity of the product to add", example = "2", minimum = "1", maximum = "99")
     @NotNull(message = "{quantity.required}")
     @Min(value = 1, message = "{quantity.min}")
     @Max(value = 99, message = "{quantity.max}")
-    private Integer quantity;
+    Integer quantity,
 
     @Schema(description = "Product variant ID (optional)", example = "var-123e4567-e89b-12d3-a456-426614174000")
     @Size(max = 36, message = "{variant.id.size}")
     @JsonProperty("variant_id")
-    private String variantId;
+    String variantId,
 
 
     @Schema(description = "Special instructions for this item", example = "Please wrap as gift")
     @Size(max = 500, message = "{instructions.size}")
     @JsonProperty("special_instructions")
-    private String specialInstructions;
+    String specialInstructions,
 
     @Schema(description = "Whether this item is a gift", example = "false")
     @JsonProperty("is_gift")
-    @Builder.Default
-    private Boolean isGift = false;
+    Boolean isGift,
 
     @Schema(description = "Gift message (required if is_gift is true)", example = "Happy Birthday!")
     @Size(max = 500, message = "{gift.message.size}")
     @JsonProperty("gift_message")
-    private String giftMessage;
+    String giftMessage,
 
     @Schema(description = "Gift wrap type", example = "premium", allowableValues = {"basic", "premium", "luxury"})
     @Size(max = 50, message = "{gift.wrap.size}")
     @JsonProperty("gift_wrap_type")
-    private String giftWrapType;
+    String giftWrapType,
 
     @Schema(description = "Session ID (for guest users only - authenticated users don't need this)", example = "sess-123e4567-e89b-12d3-a456-426614174000")
     @Size(max = 100, message = "{session.id.size}")
     @JsonProperty("session_id")
-    private String sessionId;
+    String sessionId,
 
     @Schema(description = "Force create new cart if none exists", example = "true")
     @JsonProperty("force_create_cart")
-    @Builder.Default
-    private Boolean forceCreateCart = false;
+    Boolean forceCreateCart,
 
     @Schema(description = "Replace existing item if same product+variant exists", example = "false")
     @JsonProperty("replace_existing")
-    @Builder.Default
-    private Boolean replaceExisting = false;
+    Boolean replaceExisting
+) {
+    public AddToCartDto {
+        if (isGift == null) {
+            isGift = false;
+        }
+        if (forceCreateCart == null) {
+            forceCreateCart = false;
+        }
+        if (replaceExisting == null) {
+            replaceExisting = false;
+        }
+    }
+
 
     /**
      * Validate gift message is provided when item is marked as gift

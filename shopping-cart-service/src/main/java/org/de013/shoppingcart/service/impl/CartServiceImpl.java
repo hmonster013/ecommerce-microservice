@@ -276,13 +276,13 @@ public class CartServiceImpl implements CartService {
             CartResponseDto cart = cartOpt.get();
 
             // Remove all items - use repository directly for bulk operation
-            cartItemRepository.deleteByCartId(cart.getCartId());
+            cartItemRepository.deleteByCartId(cart.cartId());
 
             // Update cart totals
-            updateCartTotals(cart.getCartId());
+            updateCartTotals(cart.cartId());
 
-            log.info("Cleared cart {}", cart.getCartId());
-            return getCartById(cart.getCartId()).orElse(cart);
+            log.info("Cleared cart {}", cart.cartId());
+            return getCartById(cart.cartId()).orElse(cart);
 
         } catch (Exception e) {
             log.error("Error clearing cart: {}", e.getMessage(), e);

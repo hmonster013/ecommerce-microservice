@@ -74,7 +74,7 @@ public class CartController extends BaseController {
             CartResponseDto cart = cartService.getOrCreateCart(userId, sessionId);
 
             // Return 201 if cart was just created, 200 if existing
-            boolean isNewCart = cart.getCreatedAt().equals(cart.getUpdatedAt());
+            boolean isNewCart = cart.createdAt().equals(cart.updatedAt());
 
             return isNewCart ? created(cart, "Cart created successfully") : ok(cart);
 
@@ -221,13 +221,13 @@ public class CartController extends BaseController {
             }
 
             CartResponseDto cart = cartOpt.get();
-            boolean isValid = cart.getItemCount() > 0 && cart.getTotalAmount().compareTo(BigDecimal.ZERO) > 0;
+            boolean isValid = cart.itemCount() > 0 && cart.totalAmount().compareTo(BigDecimal.ZERO) > 0;
 
             Map<String, Object> validation = Map.of(
                     "cartId", cartId,
                     "isValid", isValid,
-                    "itemCount", cart.getItemCount(),
-                    "totalAmount", cart.getTotalAmount(),
+                    "itemCount", cart.itemCount(),
+                    "totalAmount", cart.totalAmount(),
                     "isCheckoutReady", isValid
             );
 

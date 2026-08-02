@@ -5,54 +5,49 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Size;
-import lombok.*;
+import lombok.Builder;
 
 /**
  * DTO for updating gift options of cart items
  */
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-@ToString
-@EqualsAndHashCode
 @Schema(description = "Request to update gift options for cart item")
-public class GiftOptionsDto {
+public record GiftOptionsDto(
 
     @Schema(description = "Mark item as gift", example = "true")
     @JsonProperty("is_gift")
-    private Boolean isGift;
+    Boolean isGift,
 
     @Schema(description = "Gift message", example = "Happy Birthday! Hope you enjoy this gift.")
     @Size(max = 500, message = "{gift.message.size}")
     @JsonProperty("gift_message")
-    private String giftMessage;
+    String giftMessage,
 
     @Schema(description = "Gift wrap type", example = "premium", allowableValues = {"basic", "premium", "luxury"})
     @Size(max = 50, message = "{gift.wrap.size}")
     @JsonProperty("gift_wrap_type")
-    private String giftWrapType;
+    String giftWrapType,
 
     @Schema(description = "Gift wrap color", example = "red")
     @Size(max = 30, message = "{gift.wrap.color.size}")
     @JsonProperty("gift_wrap_color")
-    private String giftWrapColor;
+    String giftWrapColor,
 
     @Schema(description = "Sender name", example = "John Doe")
     @Size(max = 100, message = "{gift.sender.size}")
     @JsonProperty("sender_name")
-    private String senderName;
+    String senderName,
 
     @Schema(description = "Recipient name", example = "Jane Smith")
     @Size(max = 100, message = "{gift.recipient.size}")
     @JsonProperty("recipient_name")
-    private String recipientName;
+    String recipientName,
 
     @Schema(description = "Special delivery instructions for gift", example = "Please deliver between 9-12 AM")
     @Size(max = 300, message = "{gift.delivery.instructions.size}")
     @JsonProperty("delivery_instructions")
-    private String deliveryInstructions;
+    String deliveryInstructions
+) {
 
     /**
      * Validate gift message when gift status is true

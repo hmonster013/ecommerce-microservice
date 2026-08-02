@@ -62,7 +62,7 @@ public class CartItemController extends BaseController {
             @Valid @RequestBody AddToCartDto request) {
 
         try {
-            log.debug("Adding item {} to cart", request.getProductId());
+            log.debug("Adding item {} to cart", request.productId());
 
             // Get user context from API Gateway headers
             UserContext userContext = UserContextHolder.getCurrentUser();
@@ -73,17 +73,17 @@ public class CartItemController extends BaseController {
                 log.debug("Adding item for authenticated user: {} (ID: {})",
                         userContext.getUsername(), userId);
             } else {
-                log.debug("Adding item for guest session: {}", request.getSessionId());
+                log.debug("Adding item for guest session: {}", request.sessionId());
             }
 
             // Get or create cart first
-            CartResponseDto cart = cartService.getOrCreateCart(userId, request.getSessionId());
+            CartResponseDto cart = cartService.getOrCreateCart(userId, request.sessionId());
 
             // Add item to cart
-            CartItemResponseDto cartItem = cartItemService.addItemToCart(cart.getCartId(), request);
+            CartItemResponseDto cartItem = cartItemService.addItemToCart(cart.cartId(), request);
 
             // Update cart totals
-            cartService.updateCartTotals(cart.getCartId());
+            cartService.updateCartTotals(cart.cartId());
 
             return created(cartItem, "Item added to cart successfully");
 
@@ -125,9 +125,9 @@ public class CartItemController extends BaseController {
             CartItemResponseDto cartItem = cartItemService.updateCartItem(itemId, request);
 
             // Update cart totals if quantity changed
-            if (request.getQuantity() != null) {
+            if (request.quantity() != null) {
                 // Get cart ID from the updated item (would need to be returned from service)
-                // cartService.updateCartTotals(cartItem.getCartId());
+                // cartService.updateCartTotals(cartItem.cartId());
             }
 
             return updated(cartItem, "Cart item updated successfully");

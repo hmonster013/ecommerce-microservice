@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,173 +12,168 @@ import java.time.LocalDateTime;
 /**
  * DTO for cart item response
  */
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-@ToString
-@EqualsAndHashCode
 @Schema(description = "Cart item response")
-public class CartItemResponseDto {
+public record CartItemResponseDto(
 
     @Schema(description = "Cart item ID", example = "456")
     @JsonProperty("item_id")
-    private Long itemId;
+    Long itemId,
 
     @Schema(description = "Product ID", example = "prod-123e4567-e89b-12d3-a456-426614174000")
     @JsonProperty("product_id")
-    private String productId;
+    String productId,
 
     @Schema(description = "Product SKU", example = "SKU-12345")
     @JsonProperty("product_sku")
-    private String productSku;
+    String productSku,
 
     @Schema(description = "Product name", example = "Wireless Bluetooth Headphones")
     @JsonProperty("product_name")
-    private String productName;
+    String productName,
 
     @Schema(description = "Product description", example = "High-quality wireless headphones with noise cancellation")
     @JsonProperty("product_description")
-    private String productDescription;
+    String productDescription,
 
     @Schema(description = "Product image URL", example = "https://example.com/images/headphones.jpg")
     @JsonProperty("product_image_url")
-    private String productImageUrl;
+    String productImageUrl,
 
     @Schema(description = "Category ID", example = "cat-electronics")
     @JsonProperty("category_id")
-    private String categoryId;
+    String categoryId,
 
     @Schema(description = "Category name", example = "Electronics")
     @JsonProperty("category_name")
-    private String categoryName;
+    String categoryName,
 
     @Schema(description = "Quantity", example = "2")
-    private Integer quantity;
+    Integer quantity,
 
     @Schema(description = "Unit price", example = "49.99")
     @JsonProperty("unit_price")
-    private BigDecimal unitPrice;
+    BigDecimal unitPrice,
 
     @Schema(description = "Original price (before discounts)", example = "59.99")
     @JsonProperty("original_price")
-    private BigDecimal originalPrice;
+    BigDecimal originalPrice,
 
     @Schema(description = "Discount amount per unit", example = "10.00")
     @JsonProperty("discount_amount")
-    private BigDecimal discountAmount;
+    BigDecimal discountAmount,
 
     @Schema(description = "Total price for this item", example = "99.98")
     @JsonProperty("total_price")
-    private BigDecimal totalPrice;
+    BigDecimal totalPrice,
 
     @Schema(description = "Currency code", example = "USD")
-    private String currency;
+    String currency,
 
     @Schema(description = "Product weight", example = "0.350")
-    private BigDecimal weight;
+    BigDecimal weight,
 
     @Schema(description = "Product dimensions", example = "20x15x8 cm")
-    private String dimensions;
+    String dimensions,
 
     @Schema(description = "Product variant ID", example = "var-color-black")
     @JsonProperty("variant_id")
-    private String variantId;
+    String variantId,
 
     @Schema(description = "Variant attributes", example = "Color: Black, Size: Medium")
     @JsonProperty("variant_attributes")
-    private String variantAttributes;
+    String variantAttributes,
 
     @Schema(description = "Special instructions", example = "Handle with care")
     @JsonProperty("special_instructions")
-    private String specialInstructions;
+    String specialInstructions,
 
     @Schema(description = "Date when item was added to cart", example = "2024-01-01T10:00:00")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JsonProperty("added_at")
-    private LocalDateTime addedAt;
+    LocalDateTime addedAt,
 
     @Schema(description = "Last price check timestamp", example = "2024-01-01T15:00:00")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JsonProperty("last_price_check_at")
-    private LocalDateTime lastPriceCheckAt;
+    LocalDateTime lastPriceCheckAt,
 
     @Schema(description = "Whether price has changed since adding to cart", example = "false")
     @JsonProperty("price_changed")
-    private Boolean priceChanged;
+    Boolean priceChanged,
 
     @Schema(description = "Availability status", example = "AVAILABLE")
     @JsonProperty("availability_status")
-    private String availabilityStatus;
+    String availabilityStatus,
 
     @Schema(description = "Stock quantity available", example = "25")
     @JsonProperty("stock_quantity")
-    private Integer stockQuantity;
+    Integer stockQuantity,
 
     @Schema(description = "Maximum quantity allowed per order", example = "10")
     @JsonProperty("max_quantity_per_order")
-    private Integer maxQuantityPerOrder;
+    Integer maxQuantityPerOrder,
 
     @Schema(description = "Whether this item is marked as a gift", example = "false")
     @JsonProperty("is_gift")
-    private Boolean isGift;
+    Boolean isGift,
 
     @Schema(description = "Gift message", example = "Happy Birthday!")
     @JsonProperty("gift_message")
-    private String giftMessage;
+    String giftMessage,
 
     @Schema(description = "Gift wrap type", example = "premium")
     @JsonProperty("gift_wrap_type")
-    private String giftWrapType;
+    String giftWrapType,
 
     @Schema(description = "Gift wrap price", example = "5.99")
     @JsonProperty("gift_wrap_price")
-    private BigDecimal giftWrapPrice;
+    BigDecimal giftWrapPrice,
 
     @Schema(description = "Product URL for viewing details", example = "/products/prod-123")
     @JsonProperty("product_url")
-    private String productUrl;
+    String productUrl,
 
     @Schema(description = "Whether item is available for purchase", example = "true")
     @JsonProperty("is_available")
-    private Boolean isAvailable;
+    Boolean isAvailable,
 
     @Schema(description = "Whether requested quantity is available", example = "true")
     @JsonProperty("is_quantity_available")
-    private Boolean isQuantityAvailable;
+    Boolean isQuantityAvailable,
 
     @Schema(description = "Whether quantity exceeds maximum allowed", example = "false")
     @JsonProperty("exceeds_max_quantity")
-    private Boolean exceedsMaxQuantity;
+    Boolean exceedsMaxQuantity,
 
     @Schema(description = "Discount percentage", example = "16.67")
     @JsonProperty("discount_percentage")
-    private BigDecimal discountPercentage;
+    BigDecimal discountPercentage,
 
     @Schema(description = "Total savings for this item", example = "20.00")
     @JsonProperty("total_savings")
-    private BigDecimal totalSavings;
+    BigDecimal totalSavings,
 
     @Schema(description = "Estimated delivery date for this item", example = "2024-01-05T00:00:00")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JsonProperty("estimated_delivery_date")
-    private LocalDateTime estimatedDeliveryDate;
+    LocalDateTime estimatedDeliveryDate,
 
     @Schema(description = "Item validation messages")
     @JsonProperty("validation_messages")
-    private java.util.List<String> validationMessages;
+    java.util.List<String> validationMessages,
 
     @Schema(description = "Related products or accessories")
     @JsonProperty("related_products")
-    private java.util.List<String> relatedProducts;
+    java.util.List<String> relatedProducts,
 
     @Schema(description = "Item tags or labels")
-    private java.util.List<String> tags;
+    java.util.List<String> tags,
 
     @Schema(description = "Product brand", example = "Apple")
     @JsonProperty("product_brand")
-    private String productBrand;
+    String productBrand
+) {
 
     /**
      * Calculate discount percentage

@@ -49,7 +49,7 @@ public class CartItemServiceImpl implements CartItemService {
     @Override
     public CartItemResponseDto addItemToCart(Long cartId, AddToCartDto request) {
         try {
-            log.debug("Adding item {} to cart {}", request.getProductId(), cartId);
+            log.debug("Adding item {} to cart {}", request.productId(), cartId);
 
             // Get cart
             Optional<Cart> cartOpt = cartRepository.findByIdWithItems(cartId);
@@ -68,10 +68,10 @@ public class CartItemServiceImpl implements CartItemService {
 
             // Debug logging
             log.debug("Request details: productId={}, quantity={}, variantId={}",
-                    request.getProductId(), request.getQuantity(), request.getVariantId());
+                    request.productId(), request.quantity(), request.variantId());
 
             // Get product information
-            ProductDetailDto productInfo = productCatalogClient.getProductInfo(request.getProductId());
+            ProductDetailDto productInfo = productCatalogClient.getProductInfo(request.productId());
             if (productInfo == null) {
                 throw new RuntimeException("Product not found");
             }
@@ -81,13 +81,13 @@ public class CartItemServiceImpl implements CartItemService {
 
             // Check if item already exists
             Optional<CartItem> existingItem = cartItemRepository.findByCartIdAndProductIdAndVariantId(
-                    cartId, request.getProductId(), request.getVariantId());
+                    cartId, request.productId(), request.variantId());
 
             CartItem cartItem;
             if (existingItem.isPresent()) {
                 // Update existing item
                 cartItem = existingItem.get();
-                int newQuantity = cartItem.getQuantity() + request.getQuantity();
+                int newQuantity = cartItem.getQuantity() + request.quantity();
                 cartItem.updateQuantity(newQuantity);
             } else {
                 // Create new item
@@ -109,7 +109,7 @@ public class CartItemServiceImpl implements CartItemService {
             // Analytics removed for basic functionality
 
             log.info("Added item {} to cart {}, quantity: {}",
-                    request.getProductId(), cartId, request.getQuantity());
+                    request.productId(), cartId, request.quantity());
 
             return convertToResponseDto(cartItem);
 
@@ -142,8 +142,8 @@ public class CartItemServiceImpl implements CartItemService {
             }
 
             // Update fields
-            if (request.getQuantity() != null) {
-                item.updateQuantity(request.getQuantity());
+            if (request.quantity() != null) {
+                item.updateQuantity(request.quantity());
             }
 
             // Note: Price updates from client are not allowed for security reasons
@@ -154,14 +154,14 @@ public class CartItemServiceImpl implements CartItemService {
                 refreshItemPrice(item);
             }
 
-            if (request.getSpecialInstructions() != null) {
-                item.setSpecialInstructions(request.getSpecialInstructions());
+            if (request.specialInstructions() != null) {
+                item.setSpecialInstructions(request.specialInstructions());
             }
 
-            if (request.getIsGift() != null) {
-                item.setIsGift(request.getIsGift());
-                item.setGiftMessage(request.getGiftMessage());
-                item.setGiftWrapType(request.getGiftWrapType());
+            if (request.isGift() != null) {
+                item.setIsGift(request.isGift());
+                item.setGiftMessage(request.giftMessage());
+                item.setGiftWrapType(request.giftWrapType());
             }
 
             // Basic validation - check required fields
@@ -200,11 +200,11 @@ public class CartItemServiceImpl implements CartItemService {
             CartItem item = itemOpt.get();
 
             // Update gift options
-            if (giftOptions.getIsGift() != null) {
-                item.setIsGift(giftOptions.getIsGift());
+            if (giftOptions.isGift() != null) {
+                item.setIsGift(giftOptions.isGift());
 
                 // If disabling gift, clear all gift-related fields
-                if (Boolean.FALSE.equals(giftOptions.getIsGift())) {
+                if (Boolean.FALSE.equals(giftOptions.isGift())) {
                     item.setGiftMessage(null);
                     item.setGiftWrapType(null);
                     log.debug("Disabled gift mode for item {}, cleared gift fields", itemId);
@@ -212,13 +212,13 @@ public class CartItemServiceImpl implements CartItemService {
             }
 
             // Update gift message (only if gift is enabled)
-            if (giftOptions.getGiftMessage() != null && Boolean.TRUE.equals(item.getIsGift())) {
-                item.setGiftMessage(giftOptions.getGiftMessage());
+            if (giftOptions.giftMessage() != null && Boolean.TRUE.equals(item.getIsGift())) {
+                item.setGiftMessage(giftOptions.giftMessage());
             }
 
             // Update gift wrap type (only if gift is enabled)
-            if (giftOptions.getGiftWrapType() != null && Boolean.TRUE.equals(item.getIsGift())) {
-                item.setGiftWrapType(giftOptions.getGiftWrapType());
+            if (giftOptions.giftWrapType() != null && Boolean.TRUE.equals(item.getIsGift())) {
+                item.setGiftWrapType(giftOptions.giftWrapType());
             }
 
             // Validate gift requirements
@@ -399,7 +399,7 @@ public class CartItemServiceImpl implements CartItemService {
 
         return CartItem.builder()
                 .cart(cart)
-                .productId(request.getProductId())
+                .productId(request.productId())
                 .productSku(productInfo.getSku())
                 .productName(productInfo.getName())
                 .productBrand(productInfo.getBrand())
@@ -407,16 +407,16 @@ public class CartItemServiceImpl implements CartItemService {
                 .productImageUrl(productInfo.getImageUrl())
                 .categoryId(productInfo.getCategoryId())
                 .categoryName(productInfo.getCategoryName())
-                .quantity(request.getQuantity())
+                .quantity(request.quantity())
                 .unitPrice(listUnitPrice)
                 .originalPrice(productInfo.getOriginalPrice())
                 .discountAmount(discountPerUnit)
                 .currency("USD")
-                .variantId(request.getVariantId())
-                .specialInstructions(request.getSpecialInstructions())
-                .isGift(request.getIsGift())
-                .giftMessage(request.getGiftMessage())
-                .giftWrapType(request.getGiftWrapType())
+                .variantId(request.variantId())
+                .specialInstructions(request.specialInstructions())
+                .isGift(request.isGift())
+                .giftMessage(request.giftMessage())
+                .giftWrapType(request.giftWrapType())
                 .addedAt(LocalDateTime.now())
                 .availabilityStatus("AVAILABLE")
                 .stockQuantity(productInfo.getStockQuantity())
