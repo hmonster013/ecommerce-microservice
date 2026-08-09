@@ -23,9 +23,3 @@ CREATE TABLE products (
     created_by VARCHAR(255),
     updated_by VARCHAR(255)
 );
-
--- Create trigger to update updated_at
-CREATE TRIGGER update_products_updated_at 
-    BEFORE UPDATE ON products 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
