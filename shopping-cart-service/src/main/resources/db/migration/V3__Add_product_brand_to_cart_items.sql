@@ -1,4 +1,4 @@
--- Migration V5: Add product_brand column to cart_items table
+-- Migration V3: Add product_brand column to cart_items table
 
 -- Add the product_brand column
 ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS product_brand VARCHAR(100);
