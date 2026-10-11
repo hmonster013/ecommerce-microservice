@@ -36,6 +36,8 @@
         <module>order-service</module>
         <module>payment-service</module>
         <module>notification-service</module>
+        <!-- Keycloak extensions -->
+        <module>keycloak-profile-sync</module>
     </modules>
     
     <dependencyManagement>

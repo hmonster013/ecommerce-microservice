@@ -186,6 +186,29 @@ public class UserExceptionHandler {
     }
 
     /**
+     * Handle profile conflict exceptions
+     */
+    @ExceptionHandler(ProfileConflictException.class)
+    public ResponseEntity<ErrorResponse> handleProfileConflictException(
+            ProfileConflictException ex, HttpServletRequest request) {
+
+        String traceId = generateTraceId();
+        log.warn("Profile conflict [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "PROFILE_CONFLICT",
+                ex.getMessage(),
+                request.getRequestURI(),
+                request.getMethod(),
+                traceId
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    /**
      * Handle authentication exceptions (fallback for other auth exceptions)
      */
     @ExceptionHandler(BadCredentialsException.class)

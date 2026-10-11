@@ -8,17 +8,25 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -47,16 +55,9 @@ public class SecurityConfig {
                             // data, access control is already enforced on the original route.
                             .pathMatchers("/fallback/**").permitAll()
 
-                            // ========== AUTHENTICATION ENDPOINTS ==========
-                            // Admin user management
-                            .pathMatchers("/api/v1/auth/admin/**").hasRole("ADMIN")
-
-                            // Public authentication endpoints (login, register, refresh, logout)
-                            .pathMatchers("/api/v1/auth/**").permitAll()
-
                             // ========== USER SERVICE ==========
-                            // Internal endpoints (service-to-service communication)
-                            .pathMatchers("/api/v1/user-service/users/internal/**").permitAll()
+                            // Deny public access to internal endpoints (service-to-service private communication only)
+                            .pathMatchers("/api/v1/user-service/users/internal/**", "/api/v1/user-service/internal/**").denyAll()
 
                             // Profile endpoints (authenticated users only)
                             .pathMatchers(HttpMethod.GET, "/api/v1/user-service/users/profile").authenticated()
@@ -148,8 +149,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    public ReactiveJwtDecoder jwtDecoder(@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri) {
-        return org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder.withJwkSetUri(jwkSetUri).build();
+    public ReactiveJwtDecoder jwtDecoder(
+            @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri,
+            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:#{null}}") String issuerUri) {
+
+        NimbusReactiveJwtDecoder jwtDecoder = NimbusReactiveJwtDecoder.withJwkSetUri(jwkSetUri).build();
+
+        List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>();
+        validators.add(new JwtTimestampValidator());
+
+        if (StringUtils.hasText(issuerUri)) {
+            validators.add(new JwtIssuerValidator(issuerUri));
+        }
+
+        jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators));
+        return jwtDecoder;
     }
 
     @Bean

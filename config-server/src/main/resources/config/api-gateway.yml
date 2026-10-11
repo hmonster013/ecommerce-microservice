@@ -133,12 +133,3 @@ springdoc:
         name: Payment Service
       - url: /api/v1/notification-service/v1/api-docs
         name: Notification Service
-
-# Keycloak Configuration
-keycloak:
-  server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8090}
-  realm: ${KEYCLOAK_REALM:ecommerce-realm}
-  client-id: ${KEYCLOAK_CLIENT_ID:api-gateway}
-  client-secret: ${KEYCLOAK_CLIENT_SECRET:api-gateway-secret-change-in-production}
-  admin-username: ${KC_BOOTSTRAP_ADMIN_USERNAME:admin}
-  admin-password: ${KC_BOOTSTRAP_ADMIN_PASSWORD:admin}

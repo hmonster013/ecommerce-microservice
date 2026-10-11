@@ -49,11 +49,11 @@ public class SecurityConfig {
                 // CORS Configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Trust internal network - API Gateway handles authorization
+                // Trust internal network - API Gateway handles authorization for client traffic
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v1/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
-                        .requestMatchers("/users/internal/**").permitAll()
+                        .requestMatchers("/internal/keycloak/users").permitAll() // Authenticated via X-Profile-Provisioner-Secret in service
                         .anyRequest().permitAll()
                 )
 

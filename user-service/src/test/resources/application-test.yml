@@ -37,3 +37,7 @@ logging:
     org.de013.userservice: DEBUG
     org.springframework.security: WARN
     org.hibernate.SQL: DEBUG
+
+app:
+  security:
+    profile-provisioner-secret: test-provisioner-secret-123

@@ -32,24 +32,10 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            // Debug logging to see ALL headers received
-            log.debug("=== ALL REQUEST HEADERS ===");
-            java.util.Enumeration<String> headerNames = request.getHeaderNames();
-            while (headerNames.hasMoreElements()) {
-                String headerName = headerNames.nextElement();
-                String headerValue = request.getHeader(headerName);
-                log.debug("Header: {} = {}", headerName, headerValue);
-            }
-            log.debug("=== END HEADERS ===");
-
-            // Read user context from headers
+            // Read user context from headers forwarded by trusted API Gateway
             String userId = request.getHeader(HEADER_USER_ID);
             String username = request.getHeader(HEADER_USERNAME);
             String email = request.getHeader(HEADER_USER_EMAIL);
-
-            // Debug logging to see what headers we receive
-            log.debug("Headers received - UserId: {}, Username: {}, Email: {}",
-                    userId, username, email);
 
             // If user context exists, create Authentication object
             if (StringUtils.hasText(userId) && StringUtils.hasText(username)) {
@@ -60,7 +46,7 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
                     log.debug("Set authentication for user: {}", username);
                 }
             } else {
-                log.debug("No user context found in headers - UserId: {}, Username: {}", userId, username);
+                log.debug("No user context found in headers");
             }
 
         } catch (Exception e) {
@@ -75,10 +61,11 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
 
-        // Skip filter for public endpoints
+        // Skip filter for public endpoints and direct internal endpoints
         return path.contains("/auth/") ||
                 path.contains("/actuator/") ||
                 path.contains("/swagger-ui") ||
-                path.contains("/v1/api-docs");
+                path.contains("/v1/api-docs") ||
+                path.startsWith("/internal/");
     }
 }
