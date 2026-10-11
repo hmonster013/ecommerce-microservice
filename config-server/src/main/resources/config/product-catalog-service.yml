@@ -16,7 +16,7 @@ spring:
       enabled: always
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/product_catalog_db}
+    url: ${PRODUCT_CATALOG_DATASOURCE_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:25432/product_catalog_db}}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
