@@ -1,0 +1,693 @@
+/* Presentation for the inherited Keycloak 26.4.5 login templates. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html.login-pf {
+  height: auto;
+  min-height: 100%;
+  color-scheme: light;
+  font-size: 16px;
+}
+
+html.login-pf body {
+  height: auto;
+  border: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  margin: 0;
+  padding: 80px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-page);
+  color: var(--color-text-main);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+html.login-pf :where(h1, h2, h3, label, input, button, select, textarea) {
+  font-family: inherit;
+}
+
+html.login-pf a {
+  color: var(--color-text-link);
+  font-weight: 600;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+html.login-pf a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+html.login-pf :where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--color-primary-border);
+  outline-offset: 3px;
+}
+
+html.login-pf .login-pf-page {
+  padding: 0;
+  width: 100%;
+  max-width: 448px;
+  margin: auto;
+}
+
+html.login-pf body[data-page-id="login-register"] .login-pf-page {
+  max-width: 560px;
+}
+
+#kc-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+#kc-header-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+}
+
+#kc-header-wrapper strong {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+html.login-pf .card-pf {
+  margin: 0;
+  width: 100%;
+  padding: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+html.login-pf .login-pf-header {
+  margin-bottom: 28px;
+  text-align: left;
+}
+
+#kc-page-title {
+  font-family: inherit;
+  text-align: left;
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.6px;
+  overflow-wrap: anywhere;
+}
+
+/* Required-field text follows the heading, including in inherited grid markup. */
+.login-pf-header > div:not(#kc-locale) {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+}
+
+.subtitle {
+  display: none !important;
+}
+
+html.login-pf .card-pf [class*="col-"] {
+  width: auto;
+  float: none;
+  padding: 0;
+}
+
+.required {
+  color: var(--color-danger-text);
+}
+
+/* Use Keycloak's menu state and keyboard handling, rather than hover-only CSS. */
+#kc-locale {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 20;
+}
+
+#kc-locale-dropdown {
+  position: relative;
+}
+
+#kc-current-locale-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-card);
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+#kc-current-locale-link::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+#kc-current-locale-link:hover {
+  border-color: #94a3b8;
+}
+
+#language-switch1 {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 156px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+#kc-current-locale-link[aria-expanded="true"] + #language-switch1 {
+  display: block;
+}
+
+#language-switch1 a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #334155;
+  font-weight: 500;
+}
+
+#language-switch1 a:hover,
+#language-switch1 a:focus {
+  background: var(--color-primary-light);
+  color: var(--color-primary-hover);
+  text-decoration: none;
+}
+
+html.login-pf .form-group {
+  min-width: 0;
+  margin: 0 0 20px;
+}
+
+/* Bootstrap clearfix pseudo-elements must not become flex/grid items. */
+html.login-pf .form-group::before,
+html.login-pf .form-group::after {
+  content: none;
+}
+
+.form-group > label,
+.form-group > div > label,
+.pf-c-form__group-label {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-weight: 600;
+}
+
+/* Labels and the required marker are emitted as siblings by user-profile.ftl. */
+.form-group > div:has(> label) {
+  color: var(--color-danger-text);
+}
+
+html.login-pf .pf-c-form-control,
+html.login-pf .form-control,
+html.login-pf select,
+html.login-pf textarea {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-control);
+  background: var(--color-bg-card);
+  color: var(--color-text-main);
+  font-size: 16px;
+  line-height: 22px;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+textarea {
+  resize: vertical;
+}
+
+html.login-pf .pf-c-form-control:hover {
+  border-color: #94a3b8;
+}
+
+html.login-pf .pf-c-form-control:focus,
+html.login-pf .form-control:focus,
+html.login-pf select:focus,
+html.login-pf textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+html.login-pf .pf-c-form-control[aria-invalid="true"] {
+  border-color: var(--color-danger-text);
+}
+
+html.login-pf .pf-c-input-group {
+  position: relative;
+  display: block;
+}
+
+html.login-pf .pf-c-input-group > input {
+  padding-right: 52px;
+}
+
+html.login-pf .pf-c-input-group > button {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+html.login-pf .pf-c-input-group > button::before,
+html.login-pf .pf-c-input-group > button::after {
+  content: none;
+}
+
+html.login-pf .pf-c-input-group > button:hover {
+  background: #f1f5f9;
+  color: var(--color-text-main);
+}
+
+.login-pf-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+html.login-pf .checkbox {
+  margin: 0;
+}
+
+html.login-pf .checkbox label {
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+html.login-pf input[type="checkbox"],
+html.login-pf input[type="radio"] {
+  position: static;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+#kc-form-buttons {
+  margin: 24px 0 0;
+}
+
+html.login-pf #kc-passwd-update-form .checkbox {
+  margin-top: 14px;
+  margin-bottom: 24px;
+}
+
+html.login-pf #kc-passwd-update-form #kc-form-buttons {
+  margin-top: 0;
+}
+
+input[type="submit"],
+.pf-c-button.pf-m-primary,
+.btn-primary {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+input[type="submit"]:hover,
+.pf-c-button.pf-m-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+input[type="submit"]:disabled,
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+#kc-info-wrapper {
+  margin-top: 24px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+html.login-pf .login-pf-signup {
+  margin: 0;
+  padding: 0;
+}
+
+body[data-page-id="login-login-reset-password"] #kc-content-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+body[data-page-id="login-login-reset-password"] #kc-info {
+  order: -1;
+}
+
+body[data-page-id="login-login-reset-password"] #kc-info-wrapper {
+  margin: -12px 0 24px;
+  text-align: left;
+}
+
+#kc-registration {
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+#kc-registration a {
+  display: inline-block;
+  margin-left: 4px;
+}
+
+/* Unknown user-profile attributes stay full-width; only known pairs share a row. */
+#kc-register-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
+}
+
+html.login-pf #kc-register-form > .form-group {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+html.login-pf
+  #kc-register-form
+  > .form-group:has(#password, #password-confirm, #firstName, #lastName) {
+  grid-column: auto;
+}
+
+html.login-pf #kc-register-form > .form-group:has(#kc-form-buttons),
+html.login-pf #kc-reset-password-form .login-pf-settings {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 20px;
+  margin: 6px 0 0;
+}
+
+#kc-register-form #kc-form-buttons,
+#kc-reset-password-form #kc-form-buttons {
+  width: 100%;
+  margin: 0;
+}
+
+#kc-register-form #kc-form-options,
+#kc-reset-password-form #kc-form-options {
+  text-align: center;
+}
+
+html.login-pf .pf-c-form__helper-text,
+html.login-pf .kc-feedback-text,
+html.login-pf .help-block {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+html.login-pf .pf-c-form__helper-text.pf-m-error,
+html.login-pf .kc-feedback-text {
+  color: var(--color-danger-text);
+}
+
+html.login-pf .alert .kc-feedback-text,
+html.login-pf .alert-warning .kc-feedback-text,
+html.login-pf .pf-c-alert__title.kc-feedback-text {
+  color: inherit !important;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.alert,
+.alert-warning,
+.pf-c-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-control);
+  background: var(--color-primary-light);
+  color: #1e40af;
+  overflow-wrap: anywhere;
+}
+
+.alert-error,
+.pf-c-alert.pf-m-danger {
+  border-color: var(--color-danger-border) !important;
+  background: var(--color-danger-bg) !important;
+  color: var(--color-danger-text) !important;
+}
+
+.alert-success,
+.pf-c-alert.pf-m-success {
+  border-color: var(--color-success-border) !important;
+  background: var(--color-success-bg) !important;
+  color: var(--color-success-text) !important;
+}
+
+.alert-warning,
+.pf-c-alert.pf-m-warning {
+  border-color: #fde68a !important;
+  background-color: #fefce8 !important;
+  color: #854d0e !important;
+}
+
+.alert-warning .pf-c-alert__icon,
+.alert-warning .pficon,
+.alert-warning .fa-exclamation-triangle {
+  color: #d97706 !important;
+  font-size: 16px;
+}
+
+/* Verify Email Page */
+body[data-page-id="login-verify-email"] .card-pf {
+  text-align: center;
+}
+
+body[data-page-id="login-verify-email"] #kc-page-title {
+  text-align: center;
+}
+
+body[data-page-id="login-verify-email"] .alert,
+body[data-page-id="login-verify-email"] .alert-warning,
+body[data-page-id="login-verify-email"] .pf-c-alert {
+  justify-content: center;
+  text-align: center;
+}
+
+body[data-page-id="login-verify-email"] #kc-info-wrapper {
+  margin-top: 8px;
+}
+
+.kc-verify-email-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.kc-verify-email-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background-color: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  margin: 4px auto 18px;
+  color: var(--color-primary);
+}
+
+.kc-verify-instruction {
+  font-size: 15px;
+  color: #334155;
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.kc-verify-email-target {
+  display: inline-block;
+  padding: 6px 16px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: 14px;
+  word-break: break-all;
+}
+
+.kc-verify-instruction-detail {
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0 0 16px;
+  max-width: 360px;
+}
+
+.kc-verify-resend-row {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border);
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.kc-verify-resend-row .kc-resend-link {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.kc-social-links {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.kc-social-links ul {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.kc-social-links a {
+  display: block;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+#kc-content-wrapper p {
+  color: #475569;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  html.login-pf body {
+    padding: 80px 16px 24px;
+  }
+
+  #kc-locale {
+    top: 16px;
+    right: 16px;
+  }
+
+  html.login-pf .card-pf {
+    padding: 28px 24px;
+  }
+
+  #kc-page-title {
+    font-size: 24px;
+  }
+
+  #kc-register-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  html.login-pf
+    #kc-register-form
+    > .form-group:has(#password, #password-confirm, #firstName, #lastName) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  html.login-pf .card-pf {
+    padding: 24px 20px;
+  }
+
+  .login-pf-settings {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}
