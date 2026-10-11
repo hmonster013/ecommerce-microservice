@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-profile-reconciliation
+  labels:
+    app: profile-reconciliation
+spec:
+  ttlSecondsAfterFinished: 86400 # Clean up after 24 hours
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: profile-reconciliation
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: reconciler
+        image: de013/ecommerce-keycloak-reconciler:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - java
+        - -cp
+        - "/app/keycloak-profile-sync.jar:/app/lib/*"
+        - org.de013.keycloak.profilesync.reconciliation.ProfileReconciliationRunner
+        env:
+        - name: KEYCLOAK_SERVER_URL
+          value: "http://keycloak:8080"
+        - name: KEYCLOAK_REALM
+          value: "ecommerce-realm"
+        - name: KEYCLOAK_CLIENT_ID
+          value: "api-gateway"
+        - name: KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: KEYCLOAK_CLIENT_SECRET
+        - name: USER_SERVICE_PROVISION_URL
+          value: "http://user-service:8081/internal/keycloak/users"
+        - name: USER_PROFILE_PROVISIONER_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: USER_PROFILE_PROVISIONER_SECRET

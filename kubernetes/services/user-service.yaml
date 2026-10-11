@@ -48,6 +48,12 @@ spec:
             secretKeyRef:
               name: ecommerce-secret
               key: SPRING_DATASOURCE_PASSWORD
+        - name: USER_PROFILE_PROVISIONER_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: USER_PROFILE_PROVISIONER_SECRET
+              optional: true
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:

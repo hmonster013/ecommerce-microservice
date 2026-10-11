@@ -16,16 +16,25 @@ spec:
     spec:
       containers:
       - name: keycloak
-        image: quay.io/keycloak/keycloak:26.4.5
+        image: de013/ecommerce-keycloak:26.4.5-profile-sync
         command:
         - /opt/keycloak/bin/kc.sh
         - start-dev
         - --import-realm
+        - --spi-events-listener-profile-sync-user-service-url=http://user-service:8081/internal/keycloak/users
+        - --spi-events-listener-profile-sync-shared-secret=$(USER_PROFILE_PROVISIONER_SECRET)
+        - --spi-events-listener-profile-sync-realm=ecommerce-realm
         volumeMounts:
         - name: realm-config
           mountPath: /opt/keycloak/data/import
           readOnly: true
         env:
+        - name: USER_PROFILE_PROVISIONER_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: USER_PROFILE_PROVISIONER_SECRET
+              optional: true
         - name: KC_BOOTSTRAP_ADMIN_USERNAME
           valueFrom:
             configMapKeyRef:
