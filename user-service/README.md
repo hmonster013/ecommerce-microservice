@@ -145,14 +145,11 @@ user-service/
 - **API Gateway**: http://localhost:8080/api/users
 - **Production**: https://api.de013.org/users
 
-### Authentication Endpoints
+### User Provisioning Endpoint (Internal Only)
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| POST | `/api/v1/auth/register` | Register new user | No |
-| POST | `/api/v1/auth/login` | User login | No |
-| POST | `/api/v1/auth/refresh` | Refresh JWT token | No |
-| POST | `/api/v1/auth/logout` | User logout | Yes |
+| POST | `/internal/keycloak/users` | Idempotent profile provision from Keycloak SPI | `X-Profile-Provisioner-Secret` |
 
 ### User Management Endpoints
 
@@ -215,28 +212,21 @@ Visit http://localhost:8081/swagger-ui.html for interactive API documentation wi
 
 ### API Testing
 ```bash
-# Register user
-curl -X POST http://localhost:8081/api/v1/auth/register \
+# Provision user profile from Keycloak SPI / Admin
+curl -X POST http://localhost:8081/internal/keycloak/users \
   -H "Content-Type: application/json" \
+  -H "X-Profile-Provisioner-Secret: dev-profile-provisioner-secret" \
   -d '{
+    "keycloakId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     "username": "testuser",
     "email": "test@example.com",
-    "password": "TestPass123!",
     "firstName": "Test",
     "lastName": "User"
   }'
 
-# Login
-curl -X POST http://localhost:8081/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "password": "TestPass123!"
-  }'
-
-# Get profile (replace TOKEN with actual JWT)
-curl -X GET http://localhost:8081/api/v1/users/profile \
-  -H "Authorization: Bearer TOKEN"
+# Get profile via API Gateway (with JWT bearer token)
+curl -X GET http://localhost:8080/api/v1/user-service/users/profile \
+  -H "Authorization: Bearer <KEYCLOAK_ACCESS_TOKEN>"
 ```
 
 ## 🚀 Deployment
