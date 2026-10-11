@@ -6,12 +6,15 @@ spring:
     name: user-service
   profiles:
     active: default
+  output:
+    ansi:
+      enabled: ALWAYS
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
 
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([${spring.application.name:}]) %clr([%X{trace_id:-},%X{span_id:-}]){yellow} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
   level:
     org.de013.userservice: DEBUG
@@ -28,3 +31,7 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+app:
+  security:
+    profile-provisioner-secret: ${USER_PROFILE_PROVISIONER_SECRET:dev-profile-provisioner-secret}
