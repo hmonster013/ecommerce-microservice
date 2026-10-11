@@ -110,12 +110,6 @@
             <artifactId>spring-security-oauth2-jose</artifactId>
         </dependency>
 
-        <!-- Caching & Redis Dependencies -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-
         <!-- WebClient for Reactive HTTP calls -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
