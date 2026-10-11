@@ -111,6 +111,7 @@ eureka:
 springdoc:
   api-docs:
     enabled: true
+    path: /v1/api-docs
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
@@ -118,7 +119,7 @@ springdoc:
     disable-swagger-default-url: true
 
     urls:
-      - url: /api/v1/v1/api-docs
+      - url: /v1/api-docs
         name: API Gateway
       # Service APIs - using automatic discovery pattern /api/v1/{service-name}/**
       - url: /api/v1/user-service/v1/api-docs

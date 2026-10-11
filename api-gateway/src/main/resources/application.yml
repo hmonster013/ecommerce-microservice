@@ -38,3 +38,29 @@ management:
 app:
   security:
     permit-all-swagger-paths: ${PERMIT_ALL_SWAGGER_PATHS:true}
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v1/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    config-url: /v1/api-docs/swagger-config
+    disable-swagger-default-url: true
+    urls:
+      - url: /v1/api-docs
+        name: API Gateway
+      - url: /api/v1/user-service/v1/api-docs
+        name: User Service
+      - url: /api/v1/product-catalog-service/v1/api-docs
+        name: Product Catalog Service
+      - url: /api/v1/shopping-cart-service/v1/api-docs
+        name: Shopping Cart Service
+      - url: /api/v1/order-service/v1/api-docs
+        name: Order Service
+      - url: /api/v1/payment-service/v1/api-docs
+        name: Payment Service
+      - url: /api/v1/notification-service/v1/api-docs
+        name: Notification Service
