@@ -1,5 +1,6 @@
 package org.de013.apigateway.config;
 
+import org.de013.common.security.UserRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,7 +47,7 @@ public class SecurityConfig {
                         exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").permitAll();
                     } else {
                         // Require authentication for all other paths
-                        exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").hasRole("ADMIN");
+                        exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").hasRole(UserRole.ADMIN.roleName());
                     }
 
                     exchanges
@@ -64,7 +65,7 @@ public class SecurityConfig {
                             .pathMatchers(HttpMethod.PUT, "/api/v1/user-service/users/profile").authenticated()
 
                             // Admin-only user management endpoints
-                            .pathMatchers("/api/v1/user-service/users/**").hasRole("ADMIN")
+                            .pathMatchers("/api/v1/user-service/users/**").hasRole(UserRole.ADMIN.roleName())
 
                             // ========== PRODUCT CATALOG SERVICE ==========
                             // Public read access to products and categories
@@ -72,52 +73,52 @@ public class SecurityConfig {
                             .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/categories/**").permitAll()
 
                             // Admin-only product management
-                            .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/products/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/products/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/products/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/products/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/products/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/products/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/products/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/products/**").hasRole(UserRole.ADMIN.roleName())
 
                             // Admin-only category management
-                            .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/categories/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/categories/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/categories/**").hasRole("ADMIN")
-                            .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/categories/**").hasRole("ADMIN")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/categories/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/categories/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/categories/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/categories/**").hasRole(UserRole.ADMIN.roleName())
 
                             // Admin/Manager inventory management
-                            .pathMatchers("/api/v1/product-catalog-service/inventory/**").hasAnyRole("ADMIN", "MANAGER")
+                            .pathMatchers("/api/v1/product-catalog-service/inventory/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName())
 
                             // ========== SHOPPING CART SERVICE ==========
                             // Cart access for authenticated users
-                            .pathMatchers("/api/v1/shopping-cart-service/cart/**").hasAnyRole("ADMIN", "CUSTOMER", "MANAGER")
-                            .pathMatchers("/api/v1/shopping-cart-service/carts/**").hasAnyRole("ADMIN", "CUSTOMER", "MANAGER")
+                            .pathMatchers("/api/v1/shopping-cart-service/cart/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName(), UserRole.MANAGER.roleName())
+                            .pathMatchers("/api/v1/shopping-cart-service/carts/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName(), UserRole.MANAGER.roleName())
 
                             // ========== ORDER SERVICE ==========
                             // Customer personal orders
-                            .pathMatchers("/api/v1/order-service/orders/my-orders/**").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers("/api/v1/order-service/orders/my-orders/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 
                             // Create orders (customers and admins)
-                            .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders").hasAnyRole("ADMIN", "CUSTOMER")
-                            .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders/").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
+                            .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders/").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 
                             // Order management and viewing (admin, manager, support)
-                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/number/*").hasAnyRole("ADMIN", "CUSTOMER") // Allow customers to view order by number
-                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/{id:\\d+}").hasAnyRole("ADMIN", "MANAGER", "SUPPORT", "CUSTOMER")
-                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders").hasAnyRole("ADMIN", "MANAGER", "SUPPORT")
-                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/user/**").hasAnyRole("ADMIN", "MANAGER", "SUPPORT")
-                            .pathMatchers(HttpMethod.PUT, "/api/v1/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER")
-                            .pathMatchers(HttpMethod.PATCH, "/api/v1/order-service/orders/**").hasAnyRole("ADMIN", "MANAGER")
-                            .pathMatchers(HttpMethod.DELETE, "/api/v1/order-service/orders/**").hasAnyRole("ADMIN", "CUSTOMER") // Need CUSTOMER to cancel order (DELETE /{orderId})
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/number/*").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName()) // Allow customers to view order by number
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/{id:\\d+}").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName(), UserRole.SUPPORT.roleName(), UserRole.CUSTOMER.roleName())
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName(), UserRole.SUPPORT.roleName())
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/user/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName(), UserRole.SUPPORT.roleName())
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/order-service/orders/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName())
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/order-service/orders/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName())
+                            .pathMatchers(HttpMethod.DELETE, "/api/v1/order-service/orders/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName()) // Need CUSTOMER to cancel order (DELETE /{orderId})
 
                             // ========== PAYMENT SERVICE ==========
                             // Customer personal payments
-                            .pathMatchers("/api/v1/payment-service/payments/my-payments/**").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers("/api/v1/payment-service/payments/my-payments/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 
                             // Process payments (customers and admins)
-                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/process").hasAnyRole("ADMIN", "CUSTOMER")
-                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/confirm").hasAnyRole("ADMIN", "CUSTOMER")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/process").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
+                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/confirm").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 
                             // Payment management (admin, manager)
-                            .pathMatchers("/api/v1/payment-service/payments/**").hasAnyRole("ADMIN", "MANAGER")
+                            .pathMatchers("/api/v1/payment-service/payments/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName())
 
                             // Webhooks (public - but should be validated by service)
                             .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/webhooks/**").permitAll()
@@ -125,7 +126,7 @@ public class SecurityConfig {
 
                             // ========== NOTIFICATION SERVICE ==========
                             // Send notifications (admin, support)
-                            .pathMatchers(HttpMethod.POST, "/api/v1/notification-service/notifications/send/**").hasAnyRole("ADMIN", "SUPPORT")
+                            .pathMatchers(HttpMethod.POST, "/api/v1/notification-service/notifications/send/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.SUPPORT.roleName())
 
                             // View notifications (authenticated users can see their own)
                             .pathMatchers(HttpMethod.GET, "/api/v1/notification-service/notifications/**").authenticated()
