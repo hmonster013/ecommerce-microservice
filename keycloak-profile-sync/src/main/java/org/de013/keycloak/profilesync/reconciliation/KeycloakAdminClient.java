@@ -3,7 +3,8 @@ package org.de013.keycloak.profilesync.reconciliation;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jboss.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -13,13 +14,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class KeycloakAdminClient {
 
-    private static final Logger log = Logger.getLogger(KeycloakAdminClient.class);
+    private static final Logger log = LoggerFactory.getLogger(KeycloakAdminClient.class);
 
     private final String serverUrl;
     private final String realm;
@@ -62,7 +62,7 @@ public class KeycloakAdminClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                log.errorf("Failed to obtain service account token (HTTP %d): %s", response.statusCode(), response.body());
+                log.error("Failed to obtain service account token (HTTP {})", response.statusCode());
                 throw new IllegalStateException("Authentication failed with Keycloak: HTTP " + response.statusCode());
             }
 
@@ -91,17 +91,17 @@ public class KeycloakAdminClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                log.errorf("Failed to query Keycloak users (HTTP %d): %s", response.statusCode(), response.body());
-                return Collections.emptyList();
+                log.error("Failed to query Keycloak users (HTTP {})", response.statusCode());
+                throw new IllegalStateException("Keycloak enumeration failed");
             }
 
             return objectMapper.readValue(response.body(), new TypeReference<List<Map<String, Object>>>() {});
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return Collections.emptyList();
+            throw new IllegalStateException("Keycloak enumeration interrupted", e);
         } catch (IOException e) {
-            log.errorf("I/O error fetching users from Keycloak: %s", e.getMessage());
-            return Collections.emptyList();
+            log.error("I/O error fetching users from Keycloak: {}", e.getMessage(), e);
+            throw new IllegalStateException("Keycloak enumeration unavailable", e);
         }
     }
 }

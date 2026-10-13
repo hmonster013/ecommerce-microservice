@@ -33,5 +33,10 @@ management:
       application: ${spring.application.name}
 
 app:
+  keycloak-profile:
+    base-url: ${KEYCLOAK_PROFILE_BASE_URL:}
+    realm: ${KEYCLOAK_PROFILE_REALM:ecommerce-realm}
+    client-id: ${KEYCLOAK_PROFILE_CLIENT_ID:user-profile-manager}
+    client-secret: ${KEYCLOAK_PROFILE_CLIENT_SECRET:}
   security:
     profile-provisioner-secret: ${USER_PROFILE_PROVISIONER_SECRET:dev-profile-provisioner-secret}

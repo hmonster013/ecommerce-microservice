@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: keycloak-profile-reconciliation
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 240
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: reconciler
+              image: de013/ecommerce-keycloak-reconciler:latest
+              command: ["java", "-cp", "/app/keycloak-profile-sync.jar:/app/lib/*", "org.de013.keycloak.profilesync.reconciliation.ProfileReconciliationRunner"]
+              env:
+                - name: KEYCLOAK_SERVER_URL
+                  value: "http://keycloak:8080"
+                - name: KEYCLOAK_REALM
+                  value: "ecommerce-realm"
+                - name: KEYCLOAK_CLIENT_ID
+                  value: "user-profile-manager"
+                - name: KEYCLOAK_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: ecommerce-secret
+                      key: KEYCLOAK_PROFILE_CLIENT_SECRET
+                - name: USER_SERVICE_PROVISION_URL
+                  value: "http://user-service:8081/internal/keycloak/users"
+                - name: USER_PROFILE_PROVISIONER_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: ecommerce-secret
+                      key: USER_PROFILE_PROVISIONER_SECRET

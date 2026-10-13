@@ -7,11 +7,13 @@ import org.de013.common.dto.ApiResponse;
 import org.de013.userservice.dto.KeycloakProfileProvisionRequest;
 import org.de013.userservice.dto.ProvisionResult;
 import org.de013.userservice.dto.SyncUserRequest;
+import org.de013.userservice.dto.UserIdentitySyncResponse;
 import org.de013.userservice.dto.UserResponse;
 import org.de013.userservice.dto.UserValidationResponse;
 import org.de013.userservice.entity.User;
 import org.de013.userservice.repository.UserRepository;
 import org.de013.userservice.service.UserProfileProvisioningService;
+import org.de013.userservice.service.UserIdentitySyncService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +25,15 @@ public class InternalUserController {
 
     private final UserRepository userRepository;
     private final UserProfileProvisioningService userProfileProvisioningService;
+    private final UserIdentitySyncService userIdentitySyncService;
+
+    @PostMapping("/internal/keycloak/users/{keycloakId}/sync")
+    public ResponseEntity<ApiResponse<UserIdentitySyncResponse>> syncIdentity(
+            @PathVariable String keycloakId,
+            @RequestHeader(value = "X-Profile-Provisioner-Secret", required = false) String secret) {
+        userProfileProvisioningService.verifyProvisionerSecret(secret);
+        return ResponseEntity.ok(ApiResponse.success(userIdentitySyncService.sync(keycloakId)));
+    }
 
     /**
      * Idempotent Keycloak user profile provisioning endpoint.

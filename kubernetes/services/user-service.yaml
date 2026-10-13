@@ -21,6 +21,17 @@ spec:
         ports:
         - containerPort: 8081
         env:
+        - name: KEYCLOAK_PROFILE_BASE_URL
+          value: "http://keycloak:8080"
+        - name: KEYCLOAK_PROFILE_REALM
+          value: "ecommerce-realm"
+        - name: KEYCLOAK_PROFILE_CLIENT_ID
+          value: "user-profile-manager"
+        - name: KEYCLOAK_PROFILE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secret
+              key: KEYCLOAK_PROFILE_CLIENT_SECRET
         - name: SPRING_PROFILES_ACTIVE
           valueFrom:
             configMapKeyRef:

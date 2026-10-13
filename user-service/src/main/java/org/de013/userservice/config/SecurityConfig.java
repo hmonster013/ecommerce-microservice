@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v1/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
-                        .requestMatchers("/internal/keycloak/users").permitAll() // Authenticated via X-Profile-Provisioner-Secret in service
+                        .requestMatchers("/internal/keycloak/users", "/internal/keycloak/users/*/sync").permitAll() // Authenticated via X-Profile-Provisioner-Secret in service
                         .anyRequest().permitAll()
                 )
 

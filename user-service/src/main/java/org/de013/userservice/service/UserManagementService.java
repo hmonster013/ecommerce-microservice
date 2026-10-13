@@ -52,19 +52,19 @@ public interface UserManagementService {
     /**
      * Get user profile
      *
-     * @param username Username
+     * @param subject Trusted Keycloak subject forwarded by API Gateway
      * @return User profile DTO
      */
-    UserProfileDto getUserProfile(String username);
+    UserProfileDto getUserProfile(String subject);
 
     /**
      * Update user profile
      *
-     * @param username Username
+     * @param subject Trusted Keycloak subject forwarded by API Gateway
      * @param request  Profile update details
      * @return Updated user response DTO
      */
-    UserResponse updateUserProfile(String username, UserUpdateDto request);
+    UserResponse updateUserProfile(String subject, UserUpdateDto request);
 
     /**
      * Get all users with pagination

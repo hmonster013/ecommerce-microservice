@@ -97,6 +97,13 @@ info:
 # Application Configuration
 # CORS handled by API Gateway
 app:
+  keycloak-profile:
+    base-url: ${KEYCLOAK_PROFILE_BASE_URL:}
+    realm: ${KEYCLOAK_PROFILE_REALM:ecommerce-realm}
+    client-id: ${KEYCLOAK_PROFILE_CLIENT_ID:user-profile-manager}
+    client-secret: ${KEYCLOAK_PROFILE_CLIENT_SECRET:}
+    connect-timeout: 2s
+    request-timeout: 5s
   security:
     profile-provisioner-secret: ${USER_PROFILE_PROVISIONER_SECRET:change-me-in-production-profile-provisioner-secret}
     password:

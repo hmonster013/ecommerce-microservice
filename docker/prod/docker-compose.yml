@@ -215,6 +215,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:5432/${USER_SERVICE_DB}
       # OpenTelemetry
       OTEL_SERVICE_NAME: user-service
+      KEYCLOAK_PROFILE_BASE_URL: ${KEYCLOAK_PROFILE_BASE_URL:-http://keycloak:8080}
+      KEYCLOAK_PROFILE_REALM: ${KEYCLOAK_PROFILE_REALM:-ecommerce-realm}
+      KEYCLOAK_PROFILE_CLIENT_ID: ${KEYCLOAK_PROFILE_CLIENT_ID:-user-profile-manager}
+      KEYCLOAK_PROFILE_CLIENT_SECRET: ${KEYCLOAK_PROFILE_CLIENT_SECRET}
       OTEL_RESOURCE_ATTRIBUTES: service.name=user-service,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
       # User Service specific configs
       TOKEN_BLACKLIST_PREFIX: ${TOKEN_BLACKLIST_PREFIX}

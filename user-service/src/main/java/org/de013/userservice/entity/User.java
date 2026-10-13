@@ -12,6 +12,8 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User extends BaseEntity {
+    @Version
+    private Long version;
 
     @Column(name = "keycloak_id", unique = true, length = 36)
     private String keycloakId;

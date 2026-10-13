@@ -1,6 +1,7 @@
 package org.de013.keycloak.profilesync;
 
-import org.jboss.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.EventType;
@@ -10,10 +11,11 @@ import org.keycloak.events.admin.ResourceType;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.AbstractKeycloakTransaction;
 
 public class ProfileSyncEventListenerProvider implements EventListenerProvider {
 
-    private static final Logger log = Logger.getLogger(ProfileSyncEventListenerProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(ProfileSyncEventListenerProvider.class);
 
     private final KeycloakSession session;
     private final ProfileSyncConfiguration configuration;
@@ -29,17 +31,22 @@ public class ProfileSyncEventListenerProvider implements EventListenerProvider {
 
     @Override
     public void onEvent(Event event) {
+        if (event != null && event.getError() == null && isTargetRealm(event.getRealmId())
+                && (event.getType() == EventType.UPDATE_PROFILE || event.getType() == EventType.UPDATE_EMAIL)) {
+            notifyAfterCommit(event.getUserId());
+            return;
+        }
         if (event == null || event.getType() != EventType.REGISTER) {
             return;
         }
 
         if (!isTargetRealm(event.getRealmId())) {
-            log.debugf("Ignoring REGISTER event from non-target realm: %s", event.getRealmId());
+            log.debug("Ignoring REGISTER event from non-target realm: {}", event.getRealmId());
             return;
         }
 
         String userId = event.getUserId();
-        log.infof("Processing REGISTER event for user: keycloakId=%s, realm=%s", userId, event.getRealmId());
+        log.info("Processing REGISTER event for user: keycloakId={}, realm={}", userId, event.getRealmId());
         provisionUser(userId);
     }
 
@@ -49,13 +56,20 @@ public class ProfileSyncEventListenerProvider implements EventListenerProvider {
             return;
         }
 
+        if (adminEvent.getError() == null && adminEvent.getOperationType() == OperationType.UPDATE
+                && adminEvent.getResourceType() == ResourceType.USER && isTargetRealm(adminEvent.getRealmId())) {
+            String path = adminEvent.getResourcePath();
+            if (path != null && path.matches("users/[^/]+")) notifyAfterCommit(path.substring("users/".length()));
+            return;
+        }
+
         if (adminEvent.getOperationType() != OperationType.CREATE ||
                 adminEvent.getResourceType() != ResourceType.USER) {
             return;
         }
 
         if (!isTargetRealm(adminEvent.getRealmId())) {
-            log.debugf("Ignoring Admin CREATE USER event from non-target realm: %s", adminEvent.getRealmId());
+            log.debug("Ignoring Admin CREATE USER event from non-target realm: {}", adminEvent.getRealmId());
             return;
         }
 
@@ -70,7 +84,7 @@ public class ProfileSyncEventListenerProvider implements EventListenerProvider {
                 ? resourcePath.substring("users/".length())
                 : resourcePath;
 
-        log.infof("Processing Admin CREATE USER event for user: keycloakId=%s, realm=%s", userId, adminEvent.getRealmId());
+        log.info("Processing Admin CREATE USER event for user: keycloakId={}, realm={}", userId, adminEvent.getRealmId());
         provisionUser(userId);
     }
 
@@ -86,13 +100,13 @@ public class ProfileSyncEventListenerProvider implements EventListenerProvider {
         }
 
         if (realm == null) {
-            log.warnf("Could not resolve realm: %s", configuration.getTargetRealm());
+            log.warn("Could not resolve realm: {}", configuration.getTargetRealm());
             return;
         }
 
         UserModel user = session.users().getUserById(realm, userId);
         if (user == null) {
-            log.warnf("User not found in Keycloak session by id: %s", userId);
+            log.warn("User not found in Keycloak session by id: {}", userId);
             return;
         }
 
@@ -100,7 +114,7 @@ public class ProfileSyncEventListenerProvider implements EventListenerProvider {
         String email = user.getEmail();
 
         if (email == null || email.isBlank()) {
-            log.warnf("User %s (%s) has no email address. Profile provisioning skipped.", userId, username);
+            log.warn("User {} ({}) has no email address. Profile provisioning skipped.", userId, username);
             return;
         }
 
@@ -114,7 +128,7 @@ public class ProfileSyncEventListenerProvider implements EventListenerProvider {
 
         boolean success = provisioningClient.provisionUserProfile(payload);
         if (!success) {
-            log.warnf("Failed to provision profile in user-service for user: %s (%s). Reconciliation will backfill.",
+            log.warn("Failed to provision profile in user-service for user: {} ({}). Reconciliation will backfill.",
                     userId, username);
         }
     }
@@ -129,6 +143,22 @@ public class ProfileSyncEventListenerProvider implements EventListenerProvider {
         }
         RealmModel currentRealm = session.getContext().getRealm();
         return currentRealm != null && (target.equalsIgnoreCase(currentRealm.getName()) || target.equalsIgnoreCase(currentRealm.getId()));
+    }
+
+    private void notifyAfterCommit(String subject) {
+        if (subject == null || subject.isBlank()) return;
+        // Capture immutable identity only. The callback must not access the closed Keycloak session.
+        UserProfileProvisioningClient client = provisioningClient;
+        session.getTransactionManager().enlistAfterCompletion(new AbstractKeycloakTransaction() {
+            @Override
+            protected void commitImpl() {
+                client.syncUserProfile(subject);
+            }
+            @Override
+            protected void rollbackImpl() {
+                // No notification for a rolled-back identity change.
+            }
+        });
     }
 
     @Override

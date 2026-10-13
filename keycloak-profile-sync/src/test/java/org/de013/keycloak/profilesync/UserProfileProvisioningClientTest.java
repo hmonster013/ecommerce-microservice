@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -118,5 +119,18 @@ class UserProfileProvisioningClientTest {
         assertFalse(client.provisionUserProfile(null));
         assertFalse(client.provisionUserProfile(new UserProfilePayload(null, "u", "e", "f", "l")));
         assertFalse(client.provisionUserProfile(new UserProfilePayload("", "u", "e", "f", "l")));
+    }
+
+    @Test
+    void syncUserProfile_EncodesSubjectAsOnePathSegment() throws Exception {
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpResponse.body()).thenReturn("{\"success\":true,\"data\":{\"outcome\":\"updated\"}}");
+        doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
+
+        assertEquals("updated", client.syncUserProfile("Alice /?#"));
+
+        ArgumentCaptor<HttpRequest> request = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(request.capture(), any());
+        assertEquals("/internal/keycloak/users/Alice%20%2F%3F%23/sync", request.getValue().uri().getRawPath());
     }
 }

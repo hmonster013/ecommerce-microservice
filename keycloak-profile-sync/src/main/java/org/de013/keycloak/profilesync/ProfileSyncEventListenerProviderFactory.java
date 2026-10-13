@@ -1,6 +1,7 @@
 package org.de013.keycloak.profilesync;
 
-import org.jboss.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.keycloak.Config;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.EventListenerProviderFactory;
@@ -9,7 +10,7 @@ import org.keycloak.models.KeycloakSessionFactory;
 
 public class ProfileSyncEventListenerProviderFactory implements EventListenerProviderFactory {
 
-    private static final Logger log = Logger.getLogger(ProfileSyncEventListenerProviderFactory.class);
+    private static final Logger log = LoggerFactory.getLogger(ProfileSyncEventListenerProviderFactory.class);
     public static final String PROVIDER_ID = "profile-sync";
 
     private ProfileSyncConfiguration configuration;
@@ -25,7 +26,7 @@ public class ProfileSyncEventListenerProviderFactory implements EventListenerPro
         log.info("Initializing ProfileSyncEventListenerProviderFactory");
         this.configuration = new ProfileSyncConfiguration(config);
         this.provisioningClient = new UserProfileProvisioningClient(configuration);
-        log.infof("ProfileSync initialized for realm '%s' targeting URL '%s'",
+        log.info("ProfileSync initialized for realm '{}' targeting URL '{}'",
                 configuration.getTargetRealm(), configuration.getUserServiceUrl());
     }
 

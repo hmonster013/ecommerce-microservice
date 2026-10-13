@@ -54,7 +54,9 @@
     "profile-sync"
   ],
   "enabledEventTypes": [
-    "REGISTER"
+    "REGISTER",
+    "UPDATE_PROFILE",
+    "UPDATE_EMAIL"
   ],
   "adminEventsEnabled": true,
   "adminEventsDetailsEnabled": false,
@@ -87,7 +89,29 @@
     ]
   },
   "defaultRoles": ["CUSTOMER"],
+  "clientScopeMappings": {
+    "realm-management": [{"client": "user-profile-manager", "roles": ["view-users", "manage-users"]}]
+  },
+  "users": [{
+    "username": "service-account-user-profile-manager",
+    "enabled": true,
+    "serviceAccountClientId": "user-profile-manager",
+    "clientRoles": {"realm-management": ["view-users", "manage-users"]}
+  }],
   "clients": [
+    {
+      "clientId": "user-profile-manager",
+      "name": "User Profile Manager",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false
+    },
     {
       "clientId": "api-gateway",
       "name": "API Gateway Service",

@@ -12,20 +12,6 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/ecommerce-realm}
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8090/realms/ecommerce-realm/protocol/openid-connect/certs}
 
-  # Redis Configuration for token blacklist
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      database: ${REDIS_DATABASE:0}
-      timeout: 2000
-      lettuce:
-        pool:
-          max-active: 20
-          max-idle: 10
-          min-idle: 5
-          max-wait: 2000ms
-
   # Exclude database auto-configuration since API Gateway doesn't need database
   autoconfigure:
     exclude:
@@ -70,11 +56,6 @@ info:
     name: API Gateway
     description: E-commerce Gateway Server Application
     version: 1.0.0
-
-# Token blacklist configuration
-token:
-  blacklist:
-    prefix: ${TOKEN_BLACKLIST_PREFIX:auth}
 
 # Global Rate Limiting Configuration
 rate-limit:

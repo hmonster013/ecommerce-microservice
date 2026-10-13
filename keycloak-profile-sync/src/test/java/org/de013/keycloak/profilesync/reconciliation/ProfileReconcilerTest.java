@@ -42,7 +42,7 @@ class ProfileReconcilerTest {
                 createUserMap("kc-2", "user2", "user2@example.com", "User", "Two")
         );
         when(adminClient.fetchUsers("mock-token", 0, 10)).thenReturn(users);
-        when(provisioningClient.provisionUserProfile(any(UserProfilePayload.class))).thenReturn(true);
+        when(provisioningClient.syncUserProfile(anyString())).thenReturn("updated");
 
         ReconciliationReport report = reconciler.reconcile(false, 10);
 
@@ -51,7 +51,8 @@ class ProfileReconcilerTest {
         assertEquals(0, report.skippedNoEmailCount());
         assertEquals(0, report.failureCount());
         assertFalse(report.hasFailures());
-        verify(provisioningClient, times(2)).provisionUserProfile(any(UserProfilePayload.class));
+        verify(provisioningClient, times(2)).syncUserProfile(anyString());
+        assertEquals(2, report.updatedCount());
     }
 
     @Test
@@ -103,7 +104,7 @@ class ProfileReconcilerTest {
 
         when(adminClient.fetchUsers("mock-token", 0, 2)).thenReturn(page1);
         when(adminClient.fetchUsers("mock-token", 2, 2)).thenReturn(page2);
-        when(provisioningClient.provisionUserProfile(any(UserProfilePayload.class))).thenReturn(true);
+        when(provisioningClient.syncUserProfile(anyString())).thenReturn("unchanged");
 
         ReconciliationReport report = reconciler.reconcile(false, 2);
 
@@ -111,7 +112,7 @@ class ProfileReconcilerTest {
         assertEquals(3, report.successCount());
         verify(adminClient, times(1)).fetchUsers("mock-token", 0, 2);
         verify(adminClient, times(1)).fetchUsers("mock-token", 2, 2);
-        verify(provisioningClient, times(3)).provisionUserProfile(any(UserProfilePayload.class));
+        verify(provisioningClient, times(3)).syncUserProfile(anyString());
     }
 
     @Test
@@ -122,7 +123,7 @@ class ProfileReconcilerTest {
                 createUserMap("kc-1", "user1", "user1@example.com", "User", "One")
         );
         when(adminClient.fetchUsers("mock-token", 0, 10)).thenReturn(users);
-        when(provisioningClient.provisionUserProfile(any(UserProfilePayload.class))).thenReturn(false);
+        when(provisioningClient.syncUserProfile(anyString())).thenReturn("failure");
 
         ReconciliationReport report = reconciler.reconcile(false, 10);
 

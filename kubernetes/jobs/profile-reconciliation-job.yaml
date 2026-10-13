@@ -28,12 +28,12 @@ spec:
         - name: KEYCLOAK_REALM
           value: "ecommerce-realm"
         - name: KEYCLOAK_CLIENT_ID
-          value: "api-gateway"
+          value: "user-profile-manager"
         - name: KEYCLOAK_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
               name: ecommerce-secret
-              key: KEYCLOAK_CLIENT_SECRET
+              key: KEYCLOAK_PROFILE_CLIENT_SECRET
         - name: USER_SERVICE_PROVISION_URL
           value: "http://user-service:8081/internal/keycloak/users"
         - name: USER_PROFILE_PROVISIONER_SECRET

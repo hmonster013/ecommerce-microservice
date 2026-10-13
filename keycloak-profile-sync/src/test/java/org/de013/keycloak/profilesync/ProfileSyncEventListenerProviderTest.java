@@ -49,6 +49,39 @@ class ProfileSyncEventListenerProviderTest {
     private ProfileSyncConfiguration configuration;
     private ProfileSyncEventListenerProvider provider;
 
+    @Test
+    void updateNotifiesOnlyAfterCommit() {
+        KeycloakTransactionManager manager = mock(KeycloakTransactionManager.class);
+        when(session.getTransactionManager()).thenReturn(manager);
+        Event event = new Event();
+        event.setType(EventType.UPDATE_PROFILE);
+        event.setRealmId(TARGET_REALM);
+        event.setUserId("subject");
+        provider.onEvent(event);
+        verifyNoInteractions(provisioningClient);
+        ArgumentCaptor<KeycloakTransaction> callback = ArgumentCaptor.forClass(KeycloakTransaction.class);
+        verify(manager).enlistAfterCompletion(callback.capture());
+        callback.getValue().begin();
+        callback.getValue().commit();
+        verify(provisioningClient).syncUserProfile("subject");
+    }
+
+    @Test
+    void rolledBackUpdateDoesNotNotify() {
+        KeycloakTransactionManager manager = mock(KeycloakTransactionManager.class);
+        when(session.getTransactionManager()).thenReturn(manager);
+        Event event = new Event();
+        event.setType(EventType.UPDATE_EMAIL);
+        event.setRealmId(TARGET_REALM);
+        event.setUserId("subject");
+        provider.onEvent(event);
+        ArgumentCaptor<KeycloakTransaction> callback = ArgumentCaptor.forClass(KeycloakTransaction.class);
+        verify(manager).enlistAfterCompletion(callback.capture());
+        callback.getValue().begin();
+        callback.getValue().rollback();
+        verifyNoInteractions(provisioningClient);
+    }
+
     @BeforeEach
     void setUp() {
         configuration = new ProfileSyncConfiguration(

@@ -13,10 +13,12 @@ import org.de013.common.dto.PageResponse;
 import org.de013.userservice.dto.UserProfileDto;
 import org.de013.userservice.dto.UserResponse;
 import org.de013.userservice.dto.UserUpdateDto;
+import org.de013.userservice.security.HeaderUserDetails;
 import org.de013.userservice.service.UserManagementService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,13 +31,21 @@ public class UserManagementController extends BaseController {
 
     private final UserManagementService userManagementService;
 
+    private String subject(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || !(authentication.getDetails() instanceof HeaderUserDetails details)
+                || details.keycloakId() == null || details.keycloakId().isBlank()) {
+            throw new BadCredentialsException("Missing trusted subject");
+        }
+        return details.keycloakId();
+    }
+
     // ========== Profile Management ==========
 
     @GetMapping("/profile")
     @Operation(summary = "Get user profile", description = "Get current user's profile information")
     public ResponseEntity<ApiResponse<UserProfileDto>> getUserProfile(Authentication authentication) {
-        String username = authentication.getName();
-        UserProfileDto profile = userManagementService.getUserProfile(username);
+        UserProfileDto profile = userManagementService.getUserProfile(subject(authentication));
         return ok(profile);
     }
 
@@ -45,8 +55,7 @@ public class UserManagementController extends BaseController {
             Authentication authentication,
             @Valid @RequestBody UserUpdateDto updateRequest) {
 
-        String username = authentication.getName();
-        UserResponse updatedUser = userManagementService.updateUserProfile(username, updateRequest);
+        UserResponse updatedUser = userManagementService.updateUserProfile(subject(authentication), updateRequest);
         return ok(updatedUser);
     }
 

@@ -2,10 +2,13 @@ package org.de013.keycloak.profilesync.reconciliation;
 
 import org.de013.keycloak.profilesync.ProfileSyncConfiguration;
 import org.de013.keycloak.profilesync.UserProfileProvisioningClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 
 public class ProfileReconciliationRunner {
+    private static final Logger log = LoggerFactory.getLogger(ProfileReconciliationRunner.class);
 
     public static void main(String[] args) {
         boolean dryRun = false;
@@ -23,16 +26,13 @@ public class ProfileReconciliationRunner {
 
         String serverUrl = getEnvOrDefault("KEYCLOAK_SERVER_URL", "http://localhost:8090");
         String realm = getEnvOrDefault("KEYCLOAK_REALM", "ecommerce-realm");
-        String clientId = getEnvOrDefault("KEYCLOAK_CLIENT_ID", "api-gateway");
-        String clientSecret = getEnvOrDefault("KEYCLOAK_CLIENT_SECRET", "api-gateway-secret-change-in-production");
+        String clientId = getEnvOrDefault("KEYCLOAK_CLIENT_ID", "user-profile-manager");
+        String clientSecret = requiredEnv("KEYCLOAK_CLIENT_SECRET");
 
         String userServiceUrl = getEnvOrDefault("USER_SERVICE_PROVISION_URL", "http://localhost:8081/internal/keycloak/users");
-        String provisionSecret = getEnvOrDefault("USER_PROFILE_PROVISIONER_SECRET", "dev-profile-provisioner-secret");
+        String provisionSecret = requiredEnv("USER_PROFILE_PROVISIONER_SECRET");
 
-        System.out.println("Starting profile reconciliation runner...");
-        System.out.println("Target realm: " + realm);
-        System.out.println("User service URL: " + userServiceUrl);
-        System.out.println("Dry-run mode: " + dryRun);
+        log.info("Starting reconciliation for realm={}, dryRun={}", realm, dryRun);
 
         KeycloakAdminClient adminClient = new KeycloakAdminClient(serverUrl, realm, clientId, clientSecret);
         ProfileSyncConfiguration config = new ProfileSyncConfiguration(
@@ -43,15 +43,9 @@ public class ProfileReconciliationRunner {
         ProfileReconciler reconciler = new ProfileReconciler(adminClient, provisioningClient);
         ReconciliationReport report = reconciler.reconcile(dryRun, pageSize);
 
-        System.out.println("=========================================");
-        System.out.println("KEYCLOAK PROFILE RECONCILIATION SUMMARY");
-        System.out.println("Total Keycloak Users Examined: " + report.totalKeycloakUsers());
-        System.out.println("Successfully Reconciled:       " + report.successCount());
-        System.out.println("Skipped (No Email):            " + report.skippedNoEmailCount());
-        System.out.println("Failed:                        " + report.failureCount());
-        System.out.println("Dry Run:                       " + report.dryRun());
-        System.out.println("Status:                        " + (report.hasFailures() ? "FAILED" : "SUCCESS"));
-        System.out.println("=========================================");
+        log.info("Reconciliation: total={}, created={}, updated={}, unchanged={}, conflicts={}, skipped={}, failed={}, dryRun={}",
+                report.totalKeycloakUsers(), report.createdCount(), report.updatedCount(), report.unchangedCount(),
+                report.conflictCount(), report.skippedNoEmailCount(), report.failureCount(), report.dryRun());
 
         if (report.hasFailures()) {
             System.exit(1);
@@ -61,5 +55,11 @@ public class ProfileReconciliationRunner {
     private static String getEnvOrDefault(String name, String defaultValue) {
         String val = System.getenv(name);
         return (val != null && !val.isBlank()) ? val : defaultValue;
+    }
+
+    private static String requiredEnv(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) throw new IllegalStateException("Missing environment variable: " + name);
+        return value;
     }
 }
