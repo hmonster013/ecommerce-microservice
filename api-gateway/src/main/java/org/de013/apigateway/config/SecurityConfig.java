@@ -68,6 +68,11 @@ public class SecurityConfig {
                             .pathMatchers("/api/v1/user-service/users/**").hasRole(UserRole.ADMIN.roleName())
 
                             // ========== PRODUCT CATALOG SERVICE ==========
+                            // Currency display rates are public; rate administration is ADMIN-only.
+                            .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/exchange-rates").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/settings/currency").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/settings/currency").hasRole(UserRole.ADMIN.roleName())
+
                             // Public read access to products and categories
                             .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/products/**").permitAll()
                             .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/categories/**").permitAll()
