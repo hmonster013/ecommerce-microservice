@@ -36,6 +36,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponseDto createCategory(CategoryCreateDto createDto) {
         log.info("Creating category with name: {}", createDto.name());
 
@@ -77,7 +78,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "categories", key = "#id")
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponseDto updateCategory(Long id, CategoryUpdateDto updateDto) {
         log.info("Updating category with ID: {}", id);
 
@@ -101,14 +102,14 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "categories", key = "#id")
+    @CacheEvict(value = "categories", allEntries = true)
     public void deleteCategory(Long id) {
         log.info("Deleting category with ID: {}", id);
 
         Category category = findCategoryById(id);
 
         if (!canBeDeleted(id)) {
-            long childCount = categoryRepository.countByParentIdAndIsActiveTrue(id);
+            long childCount = categoryRepository.countByParentId(id);
             long productCount = productCategoryRepository.countByCategoryId(id);
 
             if (childCount > 0) {
@@ -145,11 +146,14 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Cacheable(value = "categories", key = "'all:' + #pageable.pageNumber + ':' + #pageable.pageSize")
-    public PageResponse<CategoryResponseDto> getAllCategories(Pageable pageable) {
-        log.debug("Getting all categories with pagination: {}", pageable);
+    @Cacheable(value = "categories", key = "'all:' + #activeOnly + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort")
+    public PageResponse<CategoryResponseDto> getAllCategories(Boolean activeOnly, Pageable pageable) {
+        log.debug("Getting all categories with activeOnly: {}, pagination: {}", activeOnly, pageable);
 
-        Page<Category> categories = categoryRepository.findAll(pageable);
+        Page<Category> categories = Boolean.TRUE.equals(activeOnly)
+                ? categoryRepository.findByIsActiveTrue(pageable)
+                : categoryRepository.findAll(pageable);
+
         List<CategoryResponseDto> content = categories.getContent().stream()
                 .map(categoryMapper::toCategoryResponseDto)
                 .collect(Collectors.toList());
@@ -164,6 +168,11 @@ public class CategoryServiceImpl implements CategoryService {
                 .last(categories.isLast())
                 .empty(categories.isEmpty())
                 .build();
+    }
+
+    @Override
+    public PageResponse<CategoryResponseDto> getAllCategories(Pageable pageable) {
+        return getAllCategories(true, pageable);
     }
 
     @Override

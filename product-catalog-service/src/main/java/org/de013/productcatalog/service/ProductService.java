@@ -22,6 +22,8 @@ public interface ProductService {
     ProductDetailDto getProductBySku(String sku);
 
     // Listing Operations
+    PageResponse<ProductSummaryDto> getProducts(ProductStatus status, String brand, Long categoryId, String q, Pageable pageable);
+
     PageResponse<ProductSummaryDto> getAllProducts(Pageable pageable);
 
     PageResponse<ProductSummaryDto> getProductsByStatus(ProductStatus status, Pageable pageable);

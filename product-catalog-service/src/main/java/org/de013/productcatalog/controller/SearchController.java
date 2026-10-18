@@ -14,10 +14,8 @@ import org.de013.common.controller.BaseController;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.ProductSummaryDto;
 import org.de013.productcatalog.dto.search.ProductSearchDto;
+import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.de013.productcatalog.service.SearchService;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -179,21 +177,36 @@ public class SearchController extends BaseController {
         log.info("Advanced search request - query: '{}', category: {}, brand: '{}', price: {}-{}, inStock: {}, featured: {}, sort: {} {}, page: {}, size: {}",
                 query, categoryId, brand, minPrice, maxPrice, inStock, featured, sortBy, sortDir, page, size);
 
-        // Create sort object
-        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Sort sort = Sort.by(direction, sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+        if (page < 0) {
+            throw new IllegalArgumentException("Page index must not be less than zero");
+        }
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException("Page size must be between 1 and 100");
+        }
+        if (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Minimum price cannot be negative");
+        }
+        if (maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Maximum price cannot be negative");
+        }
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            throw new IllegalArgumentException("Minimum price cannot be greater than maximum price");
+        }
 
-        // Create search DTO
+        // Create search DTO with pagination, sort, and public ACTIVE status
         ProductSearchDto searchDto = ProductSearchDto.builder()
                 .query(query)
                 .categoryIds(categoryId != null ? List.of(categoryId) : null)
                 .brands(brand != null ? List.of(brand) : null)
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
-
                 .inStockOnly(inStock)
                 .featuredOnly(featured)
+                .statuses(List.of(ProductStatus.ACTIVE))
+                .sortBy(sortBy)
+                .sortDirection(sortDir)
+                .page(page)
+                .size(size)
                 .build();
 
         // Perform search using existing service
@@ -253,9 +266,10 @@ public class SearchController extends BaseController {
                     example = "10")
             @RequestParam(defaultValue = "10") int limit) {
 
-        log.info("Getting search suggestions for query: '{}', limit: {}", query, limit);
+        int effectiveLimit = Math.max(1, Math.min(limit, 20));
+        log.info("Getting search suggestions for query: '{}', limit: {}", query, effectiveLimit);
 
-        List<String> suggestions = searchService.getSearchSuggestions(query, limit);
+        List<String> suggestions = searchService.getSearchSuggestions(query, effectiveLimit);
 
         log.info("Found {} suggestions for query: '{}'", suggestions.size(), query);
 

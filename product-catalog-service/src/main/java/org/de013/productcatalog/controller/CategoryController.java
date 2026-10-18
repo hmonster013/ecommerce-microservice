@@ -50,7 +50,7 @@ public class CategoryController extends BaseController {
 
         log.info("Getting categories with activeOnly: {}", activeOnly);
 
-        PageResponse<CategoryResponseDto> categories = categoryService.getAllCategories(pageable);
+        PageResponse<CategoryResponseDto> categories = categoryService.getAllCategories(activeOnly, pageable);
         return ok(categories);
     }
 

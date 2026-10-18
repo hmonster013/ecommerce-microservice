@@ -18,6 +18,7 @@ import org.de013.productcatalog.repository.ProductVariantRepository;
 import org.de013.productcatalog.service.ProductImageService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,10 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "images", allEntries = true),
+            @CacheEvict(value = "products", allEntries = true)
+    })
     public ProductImageDto createImage(Long productId, ProductImageCreateDto createDto) {
         log.info("Creating image for product ID: {}, type: {}",
                 productId, createDto.imageType());
@@ -94,7 +99,10 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "images", key = "#imageId")
+    @Caching(evict = {
+            @CacheEvict(value = "images", allEntries = true),
+            @CacheEvict(value = "products", allEntries = true)
+    })
     public ProductImageDto updateImage(Long imageId, ProductImageUpdateDto updateDto) {
         log.info("Updating image with ID: {}", imageId);
 
@@ -170,7 +178,10 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "images", key = "#imageId")
+    @Caching(evict = {
+            @CacheEvict(value = "images", allEntries = true),
+            @CacheEvict(value = "products", allEntries = true)
+    })
     public void deleteImage(Long imageId) {
         log.info("Deleting image with ID: {}", imageId);
 

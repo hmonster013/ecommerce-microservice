@@ -206,6 +206,42 @@ public class ProductSpecification {
                 .and(searchInFields(searchDto.getQuery(), searchDto));
     }
 
+    public static Specification<Product> searchByText(String text) {
+        return (root, query, criteriaBuilder) -> {
+            if (text == null || text.trim().isEmpty()) {
+                return criteriaBuilder.conjunction();
+            }
+            String pattern = "%" + text.trim().toLowerCase() + "%";
+            return criteriaBuilder.or(
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("shortDescription")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("sku")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("brand")), pattern)
+            );
+        };
+    }
+
+    public static Specification<Product> buildProductListSpec(ProductStatus status, String brand, Long categoryId, String q) {
+        Specification<Product> spec = Specification.where(null);
+        if (status != null) {
+            spec = spec.and(hasStatus(status));
+        }
+        if (brand != null && !brand.trim().isEmpty()) {
+            spec = spec.and(hasBrand(brand.trim()));
+        }
+        if (categoryId != null) {
+            spec = spec.and(hasCategories(List.of(categoryId)));
+        }
+        if (q != null && !q.trim().isEmpty()) {
+            spec = spec.and(searchByText(q.trim()));
+        }
+        if (categoryId != null || (q != null && !q.trim().isEmpty())) {
+            spec = spec.and(distinct());
+        }
+        return spec;
+    }
+
     // Helper method for distinct results when joining
     public static Specification<Product> distinct() {
         return (root, query, criteriaBuilder) -> {

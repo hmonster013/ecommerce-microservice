@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,18 +12,34 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResponse;
 import org.de013.common.dto.PageResponse;
-import org.de013.productcatalog.dto.product.*;
+import org.de013.productcatalog.dto.product.ProductCreateDto;
+import org.de013.productcatalog.dto.product.ProductDetailDto;
+import org.de013.productcatalog.dto.product.ProductResponseDto;
+import org.de013.productcatalog.dto.product.ProductSummaryDto;
+import org.de013.productcatalog.dto.product.ProductUpdateDto;
 import org.de013.productcatalog.entity.enums.ProductStatus;
 import org.de013.productcatalog.service.ProductService;
-import org.springframework.validation.annotation.Validated;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -36,13 +51,34 @@ public class ProductController extends BaseController {
 
     private final ProductService productService;
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "name", "price", "createdAt", "updatedAt", "brand", "status", "sku"
+    );
+
+    private Pageable sanitizePageable(Pageable pageable) {
+        Sort sort = Sort.by(Sort.Direction.ASC, "name");
+        if (pageable.getSort().isSorted()) {
+            List<Sort.Order> orders = new ArrayList<>();
+            for (Sort.Order order : pageable.getSort()) {
+                if (ALLOWED_SORT_FIELDS.contains(order.getProperty())) {
+                    orders.add(order);
+                }
+            }
+            if (!orders.isEmpty()) {
+                sort = Sort.by(orders);
+            }
+        }
+        sort = sort.and(Sort.by(Sort.Direction.DESC, "id"));
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    }
+
     @Operation(summary = "Get all products", description = "Retrieve paginated list of products with optional filtering and sorting")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Products retrieved successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid request parameters")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Products retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request parameters")
     })
     @GetMapping
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<ProductSummaryDto>>> getAllProducts(
+    public ResponseEntity<ApiResponse<PageResponse<ProductSummaryDto>>> getAllProducts(
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable,
 
             @Parameter(description = "Filter by product status")
@@ -52,33 +88,27 @@ public class ProductController extends BaseController {
             @RequestParam(required = false) String brand,
 
             @Parameter(description = "Filter by category ID")
-            @RequestParam(required = false) Long categoryId) {
+            @RequestParam(required = false) Long categoryId,
 
-        log.info("Getting products with filters - status: {}, brand: {}, categoryId: {}",
-                status, brand, categoryId);
+            @Parameter(description = "Search query for name, description, SKU, or brand")
+            @RequestParam(required = false) String q) {
 
-        PageResponse<ProductSummaryDto> products;
+        log.info("Getting products with filters - status: {}, brand: {}, categoryId: {}, q: {}",
+                status, brand, categoryId, q);
 
-        if (status != null) {
-            products = productService.getProductsByStatus(status, pageable);
-        } else if (brand != null) {
-            products = productService.getProductsByBrand(brand, pageable);
-        } else if (categoryId != null) {
-            products = productService.getProductsByCategory(categoryId, pageable);
-        } else {
-            products = productService.getAllProducts(pageable);
-        }
+        Pageable sanitized = sanitizePageable(pageable);
+        PageResponse<ProductSummaryDto> products = productService.getProducts(status, brand, categoryId, q, sanitized);
 
         return ok(products);
     }
 
     @Operation(summary = "Get product by ID", description = "Retrieve detailed product information by ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Product found"),
-            @ApiResponse(responseCode = "404", description = "Product not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<ProductDetailDto>> getProductById(
+    public ResponseEntity<ApiResponse<ProductDetailDto>> getProductById(
             @Parameter(description = "Product ID", required = true)
             @PathVariable @Positive(message = "Product ID must be positive") Long id) {
 
@@ -90,11 +120,11 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "Get product by SKU", description = "Retrieve detailed product information by SKU")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Product found"),
-            @ApiResponse(responseCode = "404", description = "Product not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product not found")
     })
     @GetMapping("/sku/{sku}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<ProductDetailDto>> getProductBySku(
+    public ResponseEntity<ApiResponse<ProductDetailDto>> getProductBySku(
             @Parameter(description = "Product SKU", required = true)
             @PathVariable String sku) {
 
@@ -108,7 +138,7 @@ public class ProductController extends BaseController {
             summary = "[ADMIN] Create new product",
             description = "Create a new product in the catalog")
     @ApiResponses(value = {
-            @ApiResponse(
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "201",
                     description = "Product created successfully",
                     content = @Content(
@@ -141,7 +171,7 @@ public class ProductController extends BaseController {
                                               }
                                             }
                                             """))),
-            @ApiResponse(
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "Invalid product data - validation errors",
                     content = @Content(
@@ -164,7 +194,7 @@ public class ProductController extends BaseController {
                                               ]
                                             }
                                             """))),
-            @ApiResponse(
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "403",
                     description = "Access denied - Admin role required",
                     content = @Content(
@@ -180,7 +210,7 @@ public class ProductController extends BaseController {
                                             """)))
     })
     @PostMapping
-    public ResponseEntity<org.de013.common.dto.ApiResponse<ProductResponseDto>> createProduct(
+    public ResponseEntity<ApiResponse<ProductResponseDto>> createProduct(
             @Parameter(
                     description = "Product creation data with all required fields",
                     required = true,
@@ -211,7 +241,7 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "[ADMIN] Update product", description = "Update existing product")
     @PutMapping("/{id}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<ProductResponseDto>> updateProduct(
+    public ResponseEntity<ApiResponse<ProductResponseDto>> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductUpdateDto updateDto) {
 
@@ -222,7 +252,7 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "[ADMIN] Delete product", description = "Delete product")
     @DeleteMapping("/{id}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> deleteProduct(@PathVariable Long id) {
         log.info("Deleting product with ID: {}", id);
         productService.deleteProduct(id);
         return deleted("Product deleted successfully");
@@ -230,7 +260,7 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "Get featured products")
     @GetMapping("/featured")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<ProductSummaryDto>>> getFeaturedProducts(
+    public ResponseEntity<ApiResponse<List<ProductSummaryDto>>> getFeaturedProducts(
             @RequestParam(required = false, defaultValue = "10") Integer limit,
             @RequestParam(required = false) Long categoryId) {
 
@@ -244,7 +274,7 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "Simple product search")
     @GetMapping("/search")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<ProductSummaryDto>>> simpleSearch(
+    public ResponseEntity<ApiResponse<PageResponse<ProductSummaryDto>>> simpleSearch(
             @RequestParam String q,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         log.info("Simple search for query: {}", q);

@@ -17,6 +17,7 @@ import org.de013.productcatalog.repository.ProductVariantRepository;
 import org.de013.productcatalog.service.ProductVariantService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,10 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "variants", allEntries = true),
+            @CacheEvict(value = "products", allEntries = true)
+    })
     public ProductVariantDto createVariant(Long productId, ProductVariantCreateDto createDto) {
         log.info("Creating variant for product ID: {}, type: {}, value: {}",
                 productId, createDto.variantType(), createDto.value());
@@ -83,7 +88,10 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "variants", key = "#variantId")
+    @Caching(evict = {
+            @CacheEvict(value = "variants", allEntries = true),
+            @CacheEvict(value = "products", allEntries = true)
+    })
     public ProductVariantDto updateVariant(Long variantId, ProductVariantUpdateDto updateDto) {
         log.info("Updating variant with ID: {}", variantId);
 
@@ -156,7 +164,10 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "variants", key = "#variantId")
+    @Caching(evict = {
+            @CacheEvict(value = "variants", allEntries = true),
+            @CacheEvict(value = "products", allEntries = true)
+    })
     public void deleteVariant(Long variantId) {
         log.info("Deleting variant with ID: {}", variantId);
 

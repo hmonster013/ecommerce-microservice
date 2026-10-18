@@ -143,6 +143,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     long countByParentIsNullAndIsActiveTrue();
 
+    long countByParentId(Long parentId);
+
     long countByParentIdAndIsActiveTrue(Long parentId);
 
     @Query("SELECT COUNT(c) FROM Category c WHERE c.level = :level AND c.isActive = true")

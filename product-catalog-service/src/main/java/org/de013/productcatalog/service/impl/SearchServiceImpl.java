@@ -39,14 +39,14 @@ public class SearchServiceImpl implements SearchService {
     private final ProductMapper productMapper;
 
     @Override
-    @Cacheable(value = "search_results", key = "#searchDto.hashCode()")
     public SearchResultDto searchProducts(ProductSearchDto searchDto) {
         log.info("Searching products with criteria: {}", searchDto);
 
         long startTime = System.currentTimeMillis();
 
         // Build specification from search criteria
-        Specification<Product> spec = ProductSpecification.buildFromSearchDto(searchDto);
+        Specification<Product> spec = ProductSpecification.buildFromSearchDto(searchDto)
+                .and(ProductSpecification.distinct());
 
         // Create pageable with sorting
         Pageable pageable = createPageable(searchDto);
@@ -306,10 +306,10 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private Sort createSort(String sortBy, String direction) {
-        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction) ?
-                Sort.Direction.DESC : Sort.Direction.ASC;
+        Sort.Direction sortDirection = "ASC".equalsIgnoreCase(direction) ?
+                Sort.Direction.ASC : Sort.Direction.DESC;
 
-        return switch (sortBy.toLowerCase()) {
+        Sort sort = switch (sortBy != null ? sortBy.toLowerCase() : "relevance") {
             case "name" -> Sort.by(sortDirection, "name");
             case "price" -> Sort.by(sortDirection, "price");
             case "created" -> Sort.by(sortDirection, "createdAt");
@@ -318,6 +318,8 @@ public class SearchServiceImpl implements SearchService {
             case "relevance" -> Sort.by(Sort.Direction.DESC, "name"); // Simplified relevance
             default -> Sort.by(sortDirection, "name");
         };
+
+        return sort.and(Sort.by(Sort.Direction.DESC, "id"));
     }
 
     private SearchResultDto.SearchMetadata createSearchMetadata(ProductSearchDto searchDto, Page<Product> products) {

@@ -73,24 +73,57 @@ public class SecurityConfig {
                             .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/settings/currency").hasRole(UserRole.ADMIN.roleName())
                             .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/settings/currency").hasRole(UserRole.ADMIN.roleName())
 
-                            // Public read access to products and categories
+                            // Deny browser access to private order-stock operations (reserve/release/fulfill)
+                            .pathMatchers(
+                                    "/api/v1/product-catalog-service/products/*/inventory/reserve",
+                                    "/api/v1/product-catalog-service/products/*/inventory/release",
+                                    "/api/v1/product-catalog-service/products/*/inventory/fulfill",
+                                    "/api/v1/product-catalog-service/variants/*/inventory/reserve",
+                                    "/api/v1/product-catalog-service/variants/*/inventory/release",
+                                    "/api/v1/product-catalog-service/variants/*/inventory/fulfill"
+                            ).denyAll()
+
+                            // Admin & Manager stock adjustments (add/remove/set) - matched before general wildcards
+                            .pathMatchers(
+                                    HttpMethod.POST,
+                                    "/api/v1/product-catalog-service/products/*/inventory/add",
+                                    "/api/v1/product-catalog-service/products/*/inventory/remove",
+                                    "/api/v1/product-catalog-service/products/*/inventory/set",
+                                    "/api/v1/product-catalog-service/variants/*/inventory/add",
+                                    "/api/v1/product-catalog-service/variants/*/inventory/remove",
+                                    "/api/v1/product-catalog-service/variants/*/inventory/set"
+                            ).hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName())
+
+                            // Public read access to products, categories, search, images, variants, and stock checks
                             .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/products/**").permitAll()
                             .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/categories/**").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/search/**").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/images/**").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/variants/**").permitAll()
 
-                            // Admin-only product management
+                            // Admin-only metadata management
                             .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/products/**").hasRole(UserRole.ADMIN.roleName())
                             .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/products/**").hasRole(UserRole.ADMIN.roleName())
                             .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/products/**").hasRole(UserRole.ADMIN.roleName())
                             .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/products/**").hasRole(UserRole.ADMIN.roleName())
 
-                            // Admin-only category management
                             .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/categories/**").hasRole(UserRole.ADMIN.roleName())
                             .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/categories/**").hasRole(UserRole.ADMIN.roleName())
                             .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/categories/**").hasRole(UserRole.ADMIN.roleName())
                             .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/categories/**").hasRole(UserRole.ADMIN.roleName())
 
-                            // Admin/Manager inventory management
-                            .pathMatchers("/api/v1/product-catalog-service/inventory/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName())
+                            .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/images/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/images/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/images/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/images/**").hasRole(UserRole.ADMIN.roleName())
+
+                            .pathMatchers(HttpMethod.POST, "/api/v1/product-catalog-service/variants/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PUT, "/api/v1/product-catalog-service/variants/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.PATCH, "/api/v1/product-catalog-service/variants/**").hasRole(UserRole.ADMIN.roleName())
+                            .pathMatchers(HttpMethod.DELETE, "/api/v1/product-catalog-service/variants/**").hasRole(UserRole.ADMIN.roleName())
+
+                            // Deny all other unmatched product catalog service requests
+                            .pathMatchers("/api/v1/product-catalog-service/**").denyAll()
 
                             // ========== SHOPPING CART SERVICE ==========
                             // Cart access for authenticated users
