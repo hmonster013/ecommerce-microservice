@@ -114,7 +114,7 @@ public class CartController extends BaseController {
 
     // ==================== CART OPERATIONS ====================
 
-    @Operation(summary = "[ADMIN] Clear cart", description = "Remove all items from the cart while keeping the cart structure intact. This action cannot be undone")
+    @Operation(summary = "Clear cart", description = "Clear the authenticated user's cart using trusted user context, or the existing guest session cart. This action cannot be undone")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cart cleared successfully",
                     content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
@@ -124,12 +124,22 @@ public class CartController extends BaseController {
     @DeleteMapping("/clear")
     @PreAuthorize("#userId == null or @cartSecurity.canAccessCart(#userId)")
     public ResponseEntity<ApiResult<CartResponseDto>> clearCart(
-            @Parameter(description = "User ID for authenticated users")
+            @Parameter(description = "Optional legacy user ID; must match the authenticated user")
             @RequestParam(required = false) String userId,
             @Parameter(description = "Session ID for guest users")
             @RequestParam(required = false) String sessionId) {
 
         try {
+            UserContext userContext = UserContextHolder.getCurrentUser();
+            if (userContext != null) {
+                if (userId != null && !userId.equals(userContext.getUserId())) {
+                    return forbidden("Cannot clear another user's cart");
+                }
+                userId = userContext.getUserId();
+                sessionId = null;
+            } else if (userId != null) {
+                return forbidden("Authentication is required to clear a user cart");
+            }
             log.debug("Clearing cart for user: {}, session: {}", userId, sessionId);
 
             if (userId == null && sessionId == null) {

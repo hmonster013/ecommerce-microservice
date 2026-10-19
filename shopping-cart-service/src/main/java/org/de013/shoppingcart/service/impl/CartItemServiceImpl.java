@@ -10,11 +10,10 @@ import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
 import org.de013.shoppingcart.dto.response.CartItemResponseDto;
 import org.de013.shoppingcart.entity.Cart;
 import org.de013.shoppingcart.entity.CartItem;
-import org.de013.shoppingcart.entity.RedisCart;
 import org.de013.shoppingcart.repository.jpa.CartItemRepository;
 import org.de013.shoppingcart.repository.jpa.CartRepository;
-import org.de013.shoppingcart.repository.redis.RedisCartRepository;
 import org.de013.shoppingcart.service.CartItemService;
+import org.de013.shoppingcart.service.CartTotalsService;
 import org.de013.shoppingcart.service.ProductCatalogClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +36,7 @@ public class CartItemServiceImpl implements CartItemService {
 
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
-    private final RedisCartRepository redisCartRepository;
+    private final CartTotalsService cartTotalsService;
 
     private final ProductCatalogClient productCatalogClient;
 
@@ -103,8 +102,8 @@ public class CartItemServiceImpl implements CartItemService {
             // Save item
             cartItem = cartItemRepository.save(cartItem);
 
-            // Update Redis
-            updateRedisCart(cartId);
+            // Persist cart totals and schedule the committed Redis snapshot
+            cartTotalsService.recalculate(cartId);
 
             // Analytics removed for basic functionality
 
@@ -172,8 +171,8 @@ public class CartItemServiceImpl implements CartItemService {
             // Save item
             item = cartItemRepository.save(item);
 
-            // Update Redis
-            updateRedisCart(item.getCart().getId());
+            // Persist cart totals and schedule the committed Redis snapshot
+            cartTotalsService.recalculate(item.getCart().getId());
 
             log.info("Updated cart item {}", itemId);
             return convertToResponseDto(item);
@@ -231,8 +230,8 @@ public class CartItemServiceImpl implements CartItemService {
             // Save item
             item = cartItemRepository.save(item);
 
-            // Update Redis
-            updateRedisCart(item.getCart().getId());
+            // Persist cart totals and schedule the committed Redis snapshot
+            cartTotalsService.recalculate(item.getCart().getId());
 
             log.info("Updated gift options for cart item {}", itemId);
             return convertToResponseDto(item);
@@ -250,24 +249,18 @@ public class CartItemServiceImpl implements CartItemService {
      */
     @Override
     public boolean removeCartItem(Long itemId) {
-        try {
-            log.debug("Removing cart item: {}", itemId);
-
-            if (!cartItemRepository.existsById(itemId)) {
-                log.warn("Cart item {} not found", itemId);
-                return false;
-            }
-
-            cartItemRepository.deleteById(itemId);
-            log.info("Removed cart item: {}", itemId);
-            return true;
-
-        } catch (Exception e) {
-            log.error("Error removing cart item {}: {}", itemId, e.getMessage(), e);
+        Optional<CartItem> item = cartItemRepository.findById(itemId);
+        if (item.isEmpty()) {
             return false;
         }
+        CartItem cartItem = item.get();
+        Cart cart = cartItem.getCart();
+        cart.getCartItems().remove(cartItem);
+        cartItemRepository.delete(cartItem);
+        cartTotalsService.recalculate(cart.getId());
+        log.info("Removed cart item {} from cart {}", itemId, cart.getId());
+        return true;
     }
-
 
     // ==================== CART CALCULATIONS ====================
 
@@ -422,26 +415,6 @@ public class CartItemServiceImpl implements CartItemService {
                 .stockQuantity(productInfo.getStockQuantity())
                 .build();
     }
-
-    private void updateRedisCart(Long cartId) {
-        try {
-            Optional<RedisCart> redisCartOpt = redisCartRepository.findByCartId(cartId);
-            if (redisCartOpt.isPresent()) {
-                RedisCart redisCart = redisCartOpt.get();
-
-                // Recalculate totals
-                redisCart.setSubtotal(calculateCartSubtotal(cartId));
-                redisCart.setItemCount(getCartItemCount(cartId));
-                redisCart.setTotalQuantity(getCartTotalQuantity(cartId));
-                redisCart.updateCartTotals();
-
-                redisCartRepository.save(redisCart);
-            }
-        } catch (Exception e) {
-            log.error("Error updating Redis cart: {}", e.getMessage(), e);
-        }
-    }
-
 
     private CartItemResponseDto convertToResponseDto(CartItem item) {
         return CartItemResponseDto.builder()

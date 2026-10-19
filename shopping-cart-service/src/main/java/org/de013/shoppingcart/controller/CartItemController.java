@@ -83,9 +83,6 @@ public class CartItemController extends BaseController {
             // Add item to cart
             CartItemResponseDto cartItem = cartItemService.addItemToCart(cart.cartId(), request);
 
-            // Update cart totals
-            cartService.updateCartTotals(cart.cartId());
-
             return created(cartItem, "Item added to cart successfully");
 
         } catch (RuntimeException e) {
@@ -124,12 +121,6 @@ public class CartItemController extends BaseController {
             log.debug("Updating cart item: {}", itemId);
 
             CartItemResponseDto cartItem = cartItemService.updateCartItem(itemId, request);
-
-            // Update cart totals if quantity changed
-            if (request.quantity() != null) {
-                // Get cart ID from the updated item (would need to be returned from service)
-                // cartService.updateCartTotals(cartItem.cartId());
-            }
 
             return updated(cartItem, "Cart item updated successfully");
 
