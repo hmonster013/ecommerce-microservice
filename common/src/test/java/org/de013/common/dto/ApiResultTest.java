@@ -4,12 +4,12 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.*;
 
-class ApiResponseTest {
+class ApiResultTest {
 
     @Test
-    void success_WithData_ShouldCreateSuccessApiResponse() {
+    void success_WithData_ShouldCreateSuccessApiResult() {
         String testData = "Success Data";
-        ApiResponse<String> response = ApiResponse.success(testData);
+        ApiResult<String> response = ApiResult.success(testData);
 
         assertTrue(response.isSuccess());
         assertEquals(testData, response.getData());
@@ -17,10 +17,10 @@ class ApiResponseTest {
     }
 
     @Test
-    void success_WithDataAndMessage_ShouldCreateSuccessApiResponse() {
+    void success_WithDataAndMessage_ShouldCreateSuccessApiResult() {
         String testData = "Success Data";
         String message = "Operation Completed";
-        ApiResponse<String> response = ApiResponse.success(testData, message);
+        ApiResult<String> response = ApiResult.success(testData, message);
 
         assertTrue(response.isSuccess());
         assertEquals(testData, response.getData());
@@ -29,11 +29,11 @@ class ApiResponseTest {
     }
 
     @Test
-    void success_WithAllParams_ShouldCreateSuccessApiResponse() {
+    void success_WithAllParams_ShouldCreateSuccessApiResult() {
         String testData = "Success Data";
         String message = "Operation Completed";
         String code = "SUCCESS_200";
-        ApiResponse<String> response = ApiResponse.success(testData, message, code);
+        ApiResult<String> response = ApiResult.success(testData, message, code);
 
         assertTrue(response.isSuccess());
         assertEquals(testData, response.getData());
@@ -43,9 +43,9 @@ class ApiResponseTest {
     }
 
     @Test
-    void error_WithMessage_ShouldCreateErrorApiResponse() {
+    void error_WithMessage_ShouldCreateErrorApiResult() {
         String errorMessage = "Something went wrong";
-        ApiResponse<Void> response = ApiResponse.error(errorMessage);
+        ApiResult<Void> response = ApiResult.error(errorMessage);
 
         assertFalse(response.isSuccess());
         assertEquals(errorMessage, response.getMessage());
@@ -54,10 +54,10 @@ class ApiResponseTest {
     }
 
     @Test
-    void error_WithMessageAndCode_ShouldCreateErrorApiResponse() {
+    void error_WithMessageAndCode_ShouldCreateErrorApiResult() {
         String errorMessage = "Something went wrong";
         String code = "ERR_500";
-        ApiResponse<Void> response = ApiResponse.error(errorMessage, code);
+        ApiResult<Void> response = ApiResult.error(errorMessage, code);
 
         assertFalse(response.isSuccess());
         assertEquals(errorMessage, response.getMessage());
@@ -67,11 +67,11 @@ class ApiResponseTest {
     }
 
     @Test
-    void error_WithAllParams_ShouldCreateErrorApiResponse() {
+    void error_WithAllParams_ShouldCreateErrorApiResult() {
         String errorMessage = "Something went wrong";
         String code = "ERR_404";
         String path = "/api/v1/test";
-        ApiResponse<Void> response = ApiResponse.error(errorMessage, code, path);
+        ApiResult<Void> response = ApiResult.error(errorMessage, code, path);
 
         assertFalse(response.isSuccess());
         assertEquals(errorMessage, response.getMessage());

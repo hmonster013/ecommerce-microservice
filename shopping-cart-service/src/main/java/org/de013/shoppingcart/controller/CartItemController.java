@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.dto.ApiResult;
 import org.springframework.validation.annotation.Validated;
 import org.de013.common.controller.BaseController;
 import org.de013.common.security.UserContext;
@@ -57,7 +58,7 @@ public class CartItemController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> addItemToCart(
+    public ResponseEntity<ApiResult<CartItemResponseDto>> addItemToCart(
             @Parameter(description = "Add to cart request", required = true)
             @Valid @RequestBody AddToCartDto request) {
 
@@ -113,7 +114,7 @@ public class CartItemController extends BaseController {
     })
     @PutMapping("/{itemId}")
     @PreAuthorize("@cartSecurity.canAccessCartItem(#itemId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateCartItem(
+    public ResponseEntity<ApiResult<CartItemResponseDto>> updateCartItem(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
             @Parameter(description = "Update cart item request", required = true)
@@ -153,7 +154,7 @@ public class CartItemController extends BaseController {
     })
     @PatchMapping("/{itemId}/quantity")
     @PreAuthorize("@cartSecurity.canAccessCartItem(#itemId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateItemQuantity(
+    public ResponseEntity<ApiResult<CartItemResponseDto>> updateItemQuantity(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
             @Parameter(description = "New quantity", required = true)
@@ -192,7 +193,7 @@ public class CartItemController extends BaseController {
     })
     @DeleteMapping("/{itemId}")
     @PreAuthorize("@cartSecurity.canAccessCartItem(#itemId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> removeCartItem(
+    public ResponseEntity<ApiResult<String>> removeCartItem(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId) {
 
@@ -221,7 +222,7 @@ public class CartItemController extends BaseController {
     })
     @GetMapping("/cart/{cartId}")
     @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<CartItemResponseDto>>> getCartItems(
+    public ResponseEntity<ApiResult<List<CartItemResponseDto>>> getCartItems(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable @Positive(message = "Cart ID must be positive") Long cartId) {
 
@@ -245,7 +246,7 @@ public class CartItemController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{itemId}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> getCartItemById(
+    public ResponseEntity<ApiResult<CartItemResponseDto>> getCartItemById(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable @Positive(message = "Cart item ID must be positive") Long itemId) {
 
@@ -276,7 +277,7 @@ public class CartItemController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping("/{itemId}/gift")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartItemResponseDto>> updateGiftOptions(
+    public ResponseEntity<ApiResult<CartItemResponseDto>> updateGiftOptions(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long itemId,
             @Parameter(description = "Gift options", required = true)

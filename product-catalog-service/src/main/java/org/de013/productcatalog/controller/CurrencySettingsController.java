@@ -3,7 +3,7 @@ package org.de013.productcatalog.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.controller.BaseController;
-import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ApiResult;
 import org.de013.productcatalog.dto.currency.CurrencySettingsRequest;
 import org.de013.productcatalog.dto.currency.CurrencySettingsResponse;
 import org.de013.productcatalog.dto.currency.ExchangeRateSnapshot;
@@ -22,17 +22,17 @@ public class CurrencySettingsController extends BaseController {
     private final CurrencySettingsService currencySettingsService;
 
     @GetMapping("/exchange-rates")
-    public ResponseEntity<ApiResponse<ExchangeRateSnapshot>> getPublicRates() {
+    public ResponseEntity<ApiResult<ExchangeRateSnapshot>> getPublicRates() {
         return ok(currencySettingsService.getPublicRates());
     }
 
     @GetMapping("/settings/currency")
-    public ResponseEntity<ApiResponse<CurrencySettingsResponse>> getSettings() {
+    public ResponseEntity<ApiResult<CurrencySettingsResponse>> getSettings() {
         return ok(currencySettingsService.getSettings());
     }
 
     @PutMapping("/settings/currency")
-    public ResponseEntity<ApiResponse<CurrencySettingsResponse>> updateSettings(
+    public ResponseEntity<ApiResult<CurrencySettingsResponse>> updateSettings(
             @Valid @RequestBody CurrencySettingsRequest request) {
         return updated(currencySettingsService.updateSettings(request));
     }

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -12,7 +13,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
-import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ApiResult;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.product.ProductCreateDto;
 import org.de013.productcatalog.dto.product.ProductDetailDto;
@@ -74,11 +75,11 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "Get all products", description = "Retrieve paginated list of products with optional filtering and sorting")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Products retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request parameters")
+            @ApiResponse(responseCode = "200", description = "Products retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request parameters")
     })
     @GetMapping
-    public ResponseEntity<ApiResponse<PageResponse<ProductSummaryDto>>> getAllProducts(
+    public ResponseEntity<ApiResult<PageResponse<ProductSummaryDto>>> getAllProducts(
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable,
 
             @Parameter(description = "Filter by product status")
@@ -104,11 +105,11 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "Get product by ID", description = "Retrieve detailed product information by ID")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product found"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(responseCode = "200", description = "Product found"),
+            @ApiResponse(responseCode = "404", description = "Product not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductDetailDto>> getProductById(
+    public ResponseEntity<ApiResult<ProductDetailDto>> getProductById(
             @Parameter(description = "Product ID", required = true)
             @PathVariable @Positive(message = "Product ID must be positive") Long id) {
 
@@ -120,11 +121,11 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "Get product by SKU", description = "Retrieve detailed product information by SKU")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product found"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(responseCode = "200", description = "Product found"),
+            @ApiResponse(responseCode = "404", description = "Product not found")
     })
     @GetMapping("/sku/{sku}")
-    public ResponseEntity<ApiResponse<ProductDetailDto>> getProductBySku(
+    public ResponseEntity<ApiResult<ProductDetailDto>> getProductBySku(
             @Parameter(description = "Product SKU", required = true)
             @PathVariable String sku) {
 
@@ -138,7 +139,7 @@ public class ProductController extends BaseController {
             summary = "[ADMIN] Create new product",
             description = "Create a new product in the catalog")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            @ApiResponse(
                     responseCode = "201",
                     description = "Product created successfully",
                     content = @Content(
@@ -171,7 +172,7 @@ public class ProductController extends BaseController {
                                               }
                                             }
                                             """))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            @ApiResponse(
                     responseCode = "400",
                     description = "Invalid product data - validation errors",
                     content = @Content(
@@ -194,7 +195,7 @@ public class ProductController extends BaseController {
                                               ]
                                             }
                                             """))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            @ApiResponse(
                     responseCode = "403",
                     description = "Access denied - Admin role required",
                     content = @Content(
@@ -210,7 +211,7 @@ public class ProductController extends BaseController {
                                             """)))
     })
     @PostMapping
-    public ResponseEntity<ApiResponse<ProductResponseDto>> createProduct(
+    public ResponseEntity<ApiResult<ProductResponseDto>> createProduct(
             @Parameter(
                     description = "Product creation data with all required fields",
                     required = true,
@@ -241,7 +242,7 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "[ADMIN] Update product", description = "Update existing product")
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductResponseDto>> updateProduct(
+    public ResponseEntity<ApiResult<ProductResponseDto>> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductUpdateDto updateDto) {
 
@@ -252,7 +253,7 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "[ADMIN] Delete product", description = "Delete product")
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<ApiResult<String>> deleteProduct(@PathVariable Long id) {
         log.info("Deleting product with ID: {}", id);
         productService.deleteProduct(id);
         return deleted("Product deleted successfully");
@@ -260,7 +261,7 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "Get featured products")
     @GetMapping("/featured")
-    public ResponseEntity<ApiResponse<List<ProductSummaryDto>>> getFeaturedProducts(
+    public ResponseEntity<ApiResult<List<ProductSummaryDto>>> getFeaturedProducts(
             @RequestParam(required = false, defaultValue = "10") Integer limit,
             @RequestParam(required = false) Long categoryId) {
 
@@ -274,7 +275,7 @@ public class ProductController extends BaseController {
 
     @Operation(summary = "Simple product search")
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<PageResponse<ProductSummaryDto>>> simpleSearch(
+    public ResponseEntity<ApiResult<PageResponse<ProductSummaryDto>>> simpleSearch(
             @RequestParam String q,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         log.info("Simple search for query: {}", q);

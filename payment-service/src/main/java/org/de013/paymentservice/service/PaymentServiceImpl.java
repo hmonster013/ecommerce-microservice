@@ -2,6 +2,7 @@ package org.de013.paymentservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.dto.ApiResult;
 import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
 import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
@@ -674,7 +675,7 @@ public class PaymentServiceImpl implements PaymentService {
             if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
                 // Fetch email from User Service
                 try {
-                    org.de013.common.dto.ApiResponse<org.de013.paymentservice.dto.external.UserDto> apiResponse = userServiceClient.getUserById(payment.getUserId()).getBody();
+                    ApiResult<org.de013.paymentservice.dto.external.UserDto> apiResponse = userServiceClient.getUserById(payment.getUserId()).getBody();
                     if (apiResponse != null && apiResponse.getData() != null) {
                         org.de013.paymentservice.dto.external.UserDto userDto = apiResponse.getData();
                         if (userDto.getEmail() != null) {

@@ -1,7 +1,7 @@
 package org.de013.shoppingcart.client;
 
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ApiResult;
 import org.de013.common.dto.InventoryDto;
 import org.de013.common.dto.ProductDetailDto;
 import org.springframework.stereotype.Component;
@@ -22,10 +22,10 @@ public class ProductCatalogFallback implements ProductCatalogFeignClient {
     // ==================== PRODUCT INFORMATION ====================
 
     @Override
-    public ApiResponse<ProductDetailDto> getProductById(String productId) {
+    public ApiResult<ProductDetailDto> getProductById(String productId) {
         log.warn("Product Catalog Service unavailable, using fallback for product: {}", productId);
         ProductDetailDto fallbackProduct = createFallbackProductDetail(productId);
-        return ApiResponse.success(fallbackProduct);
+        return ApiResult.success(fallbackProduct);
     }
 
     @Override

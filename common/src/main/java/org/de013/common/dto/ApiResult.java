@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiResponse<T> {
+public class ApiResult<T> {
 
     private boolean success;
     private String code;
@@ -30,16 +30,16 @@ public class ApiResponse<T> {
     private LocalDateTime timestamp;
     private String path;
 
-    public static <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
+    public static <T> ApiResult<T> success(T data) {
+        return ApiResult.<T>builder()
                 .success(true)
                 .data(data)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
 
-    public static <T> ApiResponse<T> success(T data, String message) {
-        return ApiResponse.<T>builder()
+    public static <T> ApiResult<T> success(T data, String message) {
+        return ApiResult.<T>builder()
                 .success(true)
                 .message(message)
                 .data(data)
@@ -47,8 +47,8 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    public static <T> ApiResponse<T> success(T data, String message, String code) {
-        return ApiResponse.<T>builder()
+    public static <T> ApiResult<T> success(T data, String message, String code) {
+        return ApiResult.<T>builder()
                 .success(true)
                 .code(code)
                 .message(message)
@@ -57,16 +57,16 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    public static <T> ApiResponse<T> error(String message) {
-        return ApiResponse.<T>builder()
+    public static <T> ApiResult<T> error(String message) {
+        return ApiResult.<T>builder()
                 .success(false)
                 .message(message)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
 
-    public static <T> ApiResponse<T> error(String message, Object errors) {
-        return ApiResponse.<T>builder()
+    public static <T> ApiResult<T> error(String message, Object errors) {
+        return ApiResult.<T>builder()
                 .success(false)
                 .message(message)
                 .errors(errors)
@@ -74,8 +74,8 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    public static <T> ApiResponse<T> error(String message, String code) {
-        return ApiResponse.<T>builder()
+    public static <T> ApiResult<T> error(String message, String code) {
+        return ApiResult.<T>builder()
                 .success(false)
                 .code(code)
                 .message(message)
@@ -83,8 +83,8 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    public static <T> ApiResponse<T> error(String message, String code, String path) {
-        return ApiResponse.<T>builder()
+    public static <T> ApiResult<T> error(String message, String code, String path) {
+        return ApiResult.<T>builder()
                 .success(false)
                 .code(code)
                 .message(message)

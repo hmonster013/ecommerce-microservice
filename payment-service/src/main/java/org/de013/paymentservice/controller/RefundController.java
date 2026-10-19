@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResult;
 import org.de013.paymentservice.constant.PaymentConstants;
 import org.de013.paymentservice.dto.refund.RefundRequest;
 import org.de013.paymentservice.dto.refund.RefundResponse;
@@ -46,7 +47,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Payment not found"),
             @ApiResponse(responseCode = "500", description = "Refund creation failed")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> createRefund(
+    public ResponseEntity<ApiResult<RefundResponse>> createRefund(
             @Valid @RequestBody RefundRequest request) {
         log.info("Creating refund for payment: {}, amount: {}", request.getPaymentId(), request.getAmount());
 
@@ -61,7 +62,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Refund not found"),
             @ApiResponse(responseCode = "400", description = "Refund cannot be processed")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> processRefund(
+    public ResponseEntity<ApiResult<RefundResponse>> processRefund(
             @Parameter(description = "Refund ID") @PathVariable Long refundId) {
         log.info("Processing refund: {}", refundId);
 
@@ -76,7 +77,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Refund not found"),
             @ApiResponse(responseCode = "400", description = "Refund cannot be canceled")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> cancelRefund(
+    public ResponseEntity<ApiResult<RefundResponse>> cancelRefund(
             @Parameter(description = "Refund ID") @PathVariable Long refundId,
             @Parameter(description = "Cancellation reason") @RequestParam(required = false) String reason) {
         log.info("Canceling refund: {} with reason: {}", refundId, reason);
@@ -94,7 +95,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Refund not found"),
             @ApiResponse(responseCode = "400", description = "Refund cannot be approved")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> approveRefund(
+    public ResponseEntity<ApiResult<RefundResponse>> approveRefund(
             @Parameter(description = "Refund ID") @PathVariable Long refundId,
             @Parameter(description = "Approver") @RequestParam String approvedBy) {
         log.info("Approving refund: {} by: {}", refundId, approvedBy);
@@ -110,7 +111,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Refund not found"),
             @ApiResponse(responseCode = "400", description = "Refund cannot be rejected")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> rejectRefund(
+    public ResponseEntity<ApiResult<RefundResponse>> rejectRefund(
             @Parameter(description = "Refund ID") @PathVariable Long refundId,
             @Parameter(description = "Rejector") @RequestParam String rejectedBy,
             @Parameter(description = "Rejection reason") @RequestParam String reason) {
@@ -125,7 +126,7 @@ public class RefundController extends BaseController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refunds retrieved successfully")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Page<RefundResponse>>> getRefundsRequiringApproval(
+    public ResponseEntity<ApiResult<Page<RefundResponse>>> getRefundsRequiringApproval(
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         log.debug("Getting refunds requiring approval");
 
@@ -143,7 +144,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Refund found"),
             @ApiResponse(responseCode = "404", description = "Refund not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> getRefundById(
+    public ResponseEntity<ApiResult<RefundResponse>> getRefundById(
             @Parameter(description = "Refund ID") @PathVariable Long refundId) {
         log.debug("Getting refund by ID: {}", refundId);
 
@@ -158,7 +159,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Refund found"),
             @ApiResponse(responseCode = "404", description = "Refund not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> getRefundByNumber(
+    public ResponseEntity<ApiResult<RefundResponse>> getRefundByNumber(
             @Parameter(description = "Refund number") @PathVariable String refundNumber) {
         log.debug("Getting refund by number: {}", refundNumber);
 
@@ -172,7 +173,7 @@ public class RefundController extends BaseController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refunds retrieved successfully")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<RefundResponse>>> getRefundsByPaymentId(
+    public ResponseEntity<ApiResult<List<RefundResponse>>> getRefundsByPaymentId(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
         log.debug("Getting refunds for payment: {}", paymentId);
 
@@ -185,7 +186,7 @@ public class RefundController extends BaseController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refunds retrieved successfully")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<RefundResponse>>> getRefundsByOrderId(
+    public ResponseEntity<ApiResult<List<RefundResponse>>> getRefundsByOrderId(
             @Parameter(description = "Order ID") @PathVariable Long orderId) {
         log.debug("Getting refunds for order: {}", orderId);
 
@@ -201,7 +202,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Refund status updated"),
             @ApiResponse(responseCode = "404", description = "Refund not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> updateRefundStatus(
+    public ResponseEntity<ApiResult<RefundResponse>> updateRefundStatus(
             @Parameter(description = "Refund ID") @PathVariable Long refundId,
             @Parameter(description = "New refund status") @RequestParam RefundStatus status,
             @Parameter(description = "Status change reason") @RequestParam(required = false) String reason) {
@@ -217,7 +218,7 @@ public class RefundController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Refund synced successfully"),
             @ApiResponse(responseCode = "404", description = "Refund not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundResponse>> syncRefundStatusWithStripe(
+    public ResponseEntity<ApiResult<RefundResponse>> syncRefundStatusWithStripe(
             @Parameter(description = "Refund ID") @PathVariable Long refundId) {
         log.info("Syncing refund with Stripe: {}", refundId);
 
@@ -232,7 +233,7 @@ public class RefundController extends BaseController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refunds retrieved successfully")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Page<RefundResponse>>> searchRefunds(
+    public ResponseEntity<ApiResult<Page<RefundResponse>>> searchRefunds(
             @Parameter(description = "Refund number") @RequestParam(required = false) String refundNumber,
             @Parameter(description = "Payment ID") @RequestParam(required = false) Long paymentId,
             @Parameter(description = "Order ID") @RequestParam(required = false) Long orderId,
@@ -255,7 +256,7 @@ public class RefundController extends BaseController {
 
     @GetMapping("/payment/{paymentId}/successful")
     @Operation(summary = "Get successful refunds by payment", description = "Get all successful refunds for a payment")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<RefundResponse>>> getSuccessfulRefundsByPaymentId(
+    public ResponseEntity<ApiResult<List<RefundResponse>>> getSuccessfulRefundsByPaymentId(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
         log.debug("Getting successful refunds for payment: {}", paymentId);
 
@@ -266,7 +267,7 @@ public class RefundController extends BaseController {
 
     @GetMapping("/payment/{paymentId}/failed")
     @Operation(summary = "Get failed refunds by payment", description = "Get all failed refunds for a payment")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<RefundResponse>>> getFailedRefundsByPaymentId(
+    public ResponseEntity<ApiResult<List<RefundResponse>>> getFailedRefundsByPaymentId(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
         log.debug("Getting failed refunds for payment: {}", paymentId);
 
@@ -278,7 +279,7 @@ public class RefundController extends BaseController {
 
     @GetMapping("/payment/{paymentId}/statistics")
     @Operation(summary = "Get refund statistics by payment", description = "Get refund statistics for a payment")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundService.RefundStatistics>> getRefundStatisticsByPaymentId(
+    public ResponseEntity<ApiResult<RefundService.RefundStatistics>> getRefundStatisticsByPaymentId(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
         log.debug("Getting refund statistics for payment: {}", paymentId);
 
@@ -288,7 +289,7 @@ public class RefundController extends BaseController {
 
     @GetMapping("/statistics")
     @Operation(summary = "Get refund statistics by date range", description = "Get refund statistics for a date range")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<RefundService.RefundStatistics>> getRefundStatisticsByDateRange(
+    public ResponseEntity<ApiResult<RefundService.RefundStatistics>> getRefundStatisticsByDateRange(
             @Parameter(description = "Start date") @RequestParam LocalDateTime startDate,
             @Parameter(description = "End date") @RequestParam LocalDateTime endDate) {
         log.debug("Getting refund statistics for date range: {} to {}", startDate, endDate);
@@ -299,7 +300,7 @@ public class RefundController extends BaseController {
 
     @GetMapping("/count/status/{status}")
     @Operation(summary = "Get refund count by status", description = "Get count of refunds with specific status")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Long>> getRefundCountByStatus(
+    public ResponseEntity<ApiResult<Long>> getRefundCountByStatus(
             @Parameter(description = "Refund status") @PathVariable RefundStatus status) {
         log.debug("Getting refund count for status: {}", status);
 
@@ -309,7 +310,7 @@ public class RefundController extends BaseController {
 
     @GetMapping("/payment/{paymentId}/total-amount")
     @Operation(summary = "Get total refunded amount", description = "Get total refunded amount for a payment")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<BigDecimal>> getTotalRefundedAmount(
+    public ResponseEntity<ApiResult<BigDecimal>> getTotalRefundedAmount(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
         log.debug("Getting total refunded amount for payment: {}", paymentId);
 
@@ -321,7 +322,7 @@ public class RefundController extends BaseController {
 
     @GetMapping("/payment/{paymentId}/can-refund")
     @Operation(summary = "Check if payment can be refunded", description = "Check if a payment can be refunded")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> canRefundPayment(
+    public ResponseEntity<ApiResult<Boolean>> canRefundPayment(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
         log.debug("Checking if payment can be refunded: {}", paymentId);
 
@@ -331,7 +332,7 @@ public class RefundController extends BaseController {
 
     @GetMapping("/payment/{paymentId}/valid-amount")
     @Operation(summary = "Check if refund amount is valid", description = "Check if refund amount is valid for a payment")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> isValidRefundAmount(
+    public ResponseEntity<ApiResult<Boolean>> isValidRefundAmount(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId,
             @Parameter(description = "Refund amount") @RequestParam BigDecimal amount) {
         log.debug("Checking if refund amount {} is valid for payment: {}", amount, paymentId);

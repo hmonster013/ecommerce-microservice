@@ -1,6 +1,6 @@
 package org.de013.orderservice.client;
 
-import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ApiResult;
 import org.de013.orderservice.config.FeignConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +17,7 @@ public interface ProductCatalogClient {
      * Deduct inventory for a product
      */
     @PostMapping("/products/{id}/inventory/remove")
-    ApiResponse<Object> removeStock(
+    ApiResult<Object> removeStock(
             @PathVariable("id") String id,
             @RequestParam("quantity") Integer quantity
     );

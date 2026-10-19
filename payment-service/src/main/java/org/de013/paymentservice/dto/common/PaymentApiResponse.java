@@ -1,12 +1,12 @@
 package org.de013.paymentservice.dto.common;
 
-import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ApiResult;
 
 /**
- * Payment-specific API response wrapper extending common ApiResponse
+ * Payment-specific API response wrapper extending common ApiResult
  * Provides payment-specific factory methods and constants
  */
-public class PaymentApiResponse<T> extends ApiResponse<T> {
+public class PaymentApiResponse<T> extends ApiResult<T> {
 
     // Payment-specific response codes
     public static final String PAYMENT_SUCCESS = "PAYMENT_SUCCESS";

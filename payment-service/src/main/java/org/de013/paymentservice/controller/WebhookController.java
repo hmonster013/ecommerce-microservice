@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResult;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.de013.paymentservice.dto.payment.StripeWebhookRequest;
 import org.de013.paymentservice.service.WebhookService;
@@ -339,7 +340,7 @@ public class WebhookController extends BaseController {
             String recipientEmail = payment.getReceiptEmail();
             if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
                 try {
-                    org.de013.common.dto.ApiResponse<org.de013.paymentservice.dto.external.UserDto> apiResponse = userServiceClient.getUserById(payment.getUserId()).getBody();
+                    ApiResult<org.de013.paymentservice.dto.external.UserDto> apiResponse = userServiceClient.getUserById(payment.getUserId()).getBody();
                     if (apiResponse != null && apiResponse.getData() != null) {
                         org.de013.paymentservice.dto.external.UserDto userDto = apiResponse.getData();
                         if (userDto.getEmail() != null) {

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResult;
 import org.de013.paymentservice.dto.stripe.StripeCustomerRequest;
 import org.de013.paymentservice.dto.stripe.StripeCustomerResponse;
 import org.de013.paymentservice.dto.stripe.StripePaymentRequest;
@@ -74,7 +75,7 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
             @ApiResponse(responseCode = "500", description = "Stripe API error")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<StripePaymentResponse>> createPaymentIntent(
+    public ResponseEntity<ApiResult<StripePaymentResponse>> createPaymentIntent(
             @Parameter(description = "Payment ID to create intent for", required = true)
             @RequestParam Long paymentId) {
 
@@ -88,7 +89,7 @@ public class StripeController extends BaseController {
 
             if (!isStripeConfigured()) {
                 return ResponseEntity.status(503)
-                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+                        .body(ApiResult.error("Stripe is not configured or enabled", null));
             }
 
             // Get payment details
@@ -126,7 +127,7 @@ public class StripeController extends BaseController {
         } catch (Exception e) {
             log.error("Error creating Stripe Payment Intent for payment: {}", paymentId, e);
             return ResponseEntity.status(500)
-                    .body(org.de013.common.dto.ApiResponse.error("Failed to create Payment Intent", e.getMessage()));
+                    .body(ApiResult.error("Failed to create Payment Intent", e.getMessage()));
         }
     }
 
@@ -155,7 +156,7 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Customer not found"),
             @ApiResponse(responseCode = "500", description = "Stripe API error")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<java.util.List<org.de013.paymentservice.dto.paymentmethod.PaymentMethodResponse>>> getCustomerPaymentMethods(
+    public ResponseEntity<ApiResult<java.util.List<org.de013.paymentservice.dto.paymentmethod.PaymentMethodResponse>>> getCustomerPaymentMethods(
             @Parameter(description = "Stripe customer ID", required = true)
             @PathVariable String customerId,
             @Parameter(description = "Payment method type filter") @RequestParam(required = false) String type) {
@@ -170,7 +171,7 @@ public class StripeController extends BaseController {
 
             if (!isStripeConfigured()) {
                 return ResponseEntity.status(503)
-                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+                        .body(ApiResult.error("Stripe is not configured or enabled", null));
             }
 
             // Get payment methods from Stripe
@@ -189,11 +190,11 @@ public class StripeController extends BaseController {
         } catch (org.de013.paymentservice.exception.PaymentProcessingException e) {
             log.error("Payment processing error for customer: {}", customerId, e);
             return ResponseEntity.status(400)
-                    .body(org.de013.common.dto.ApiResponse.error("Failed to retrieve payment methods", e.getMessage()));
+                    .body(ApiResult.error("Failed to retrieve payment methods", e.getMessage()));
         } catch (Exception e) {
             log.error("Unexpected error retrieving payment methods for customer: {}", customerId, e);
             return ResponseEntity.status(500)
-                    .body(org.de013.common.dto.ApiResponse.error("Internal server error", e.getMessage()));
+                    .body(ApiResult.error("Internal server error", e.getMessage()));
         }
     }
 
@@ -222,7 +223,7 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "409", description = "Customer already exists"),
             @ApiResponse(responseCode = "500", description = "Stripe API error")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<StripeCustomerResponse>> createStripeCustomer(
+    public ResponseEntity<ApiResult<StripeCustomerResponse>> createStripeCustomer(
             @Parameter(description = "User ID to create customer for", required = true)
             @RequestParam String userId,
             @Parameter(description = "Customer email") @RequestParam(required = false) String email,
@@ -239,7 +240,7 @@ public class StripeController extends BaseController {
 
             if (!isStripeConfigured()) {
                 return ResponseEntity.status(503)
-                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+                        .body(ApiResult.error("Stripe is not configured or enabled", null));
             }
 
             // Create Stripe customer request
@@ -265,7 +266,7 @@ public class StripeController extends BaseController {
         } catch (Exception e) {
             log.error("Error creating Stripe customer for user: {}", userId, e);
             return ResponseEntity.status(500)
-                    .body(org.de013.common.dto.ApiResponse.error("Failed to create Stripe customer", e.getMessage()));
+                    .body(ApiResult.error("Failed to create Stripe customer", e.getMessage()));
         }
     }
 
@@ -285,7 +286,7 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Stripe integration is healthy"),
             @ApiResponse(responseCode = "503", description = "Stripe integration issues detected")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Object>> checkStripeHealth() {
+    public ResponseEntity<ApiResult<Object>> checkStripeHealth() {
         log.info("Checking Stripe integration health");
 
         try {
@@ -326,7 +327,7 @@ public class StripeController extends BaseController {
                 return success(healthStatus, "Stripe integration is healthy");
             } else {
                 return ResponseEntity.status(503)
-                        .body(org.de013.common.dto.ApiResponse.error("Stripe integration issues detected", healthStatus));
+                        .body(ApiResult.error("Stripe integration issues detected", healthStatus));
             }
 
         } catch (Exception e) {
@@ -337,7 +338,7 @@ public class StripeController extends BaseController {
                     "timestamp", System.currentTimeMillis()
             );
             return ResponseEntity.status(503)
-                    .body(org.de013.common.dto.ApiResponse.error("Stripe integration unhealthy", errorStatus));
+                    .body(ApiResult.error("Stripe integration unhealthy", errorStatus));
         }
     }
 

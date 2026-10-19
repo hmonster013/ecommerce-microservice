@@ -86,7 +86,7 @@ class SearchValidationAndContractTest {
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        // Verify contract returns raw PageResponse, not an ApiResponse wrapper
+        // Verify contract returns raw PageResponse, not an ApiResult wrapper
         assertInstanceOf(PageResponse.class, response.getBody());
 
         ArgumentCaptor<ProductSearchDto> captor = ArgumentCaptor.forClass(ProductSearchDto.class);

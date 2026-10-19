@@ -2,11 +2,13 @@ package org.de013.productcatalog.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResult;
 import org.de013.common.dto.VariantInventoryDto;
 import org.de013.productcatalog.service.VariantInventoryService;
 import org.springframework.http.ResponseEntity;
@@ -25,11 +27,11 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "Get variant inventory", description = "Retrieve inventory information for a specific variant")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Variant inventory retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Variant or inventory not found")
+            @ApiResponse(responseCode = "200", description = "Variant inventory retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Variant or inventory not found")
     })
     @GetMapping("/variants/{id}/inventory")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<VariantInventoryDto>> getVariantInventory(
+    public ResponseEntity<ApiResult<VariantInventoryDto>> getVariantInventory(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id) {
 
@@ -41,11 +43,11 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "Get all variant inventories for product", description = "Retrieve inventory information for all variants of a product")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Variant inventories retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(responseCode = "200", description = "Variant inventories retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Product not found")
     })
     @GetMapping("/products/{id}/variants/inventory")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<VariantInventoryDto>>> getProductVariantInventories(
+    public ResponseEntity<ApiResult<List<VariantInventoryDto>>> getProductVariantInventories(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id) {
 
@@ -58,7 +60,7 @@ public class VariantInventoryController extends BaseController {
     // Stock Management Operations
     @Operation(summary = "[ADMIN] Add stock to variant", description = "Add stock to a specific variant")
     @PostMapping("/variants/{id}/inventory/add")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<VariantInventoryDto>> addStock(
+    public ResponseEntity<ApiResult<VariantInventoryDto>> addStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Quantity to add", required = true)
@@ -72,7 +74,7 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Remove stock from variant", description = "Remove stock from a specific variant")
     @PostMapping("/variants/{id}/inventory/remove")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<VariantInventoryDto>> removeStock(
+    public ResponseEntity<ApiResult<VariantInventoryDto>> removeStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Quantity to remove", required = true)
@@ -86,7 +88,7 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Set stock level for variant", description = "Set exact stock level for a specific variant")
     @PostMapping("/variants/{id}/inventory/set")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<VariantInventoryDto>> setStock(
+    public ResponseEntity<ApiResult<VariantInventoryDto>> setStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "New stock quantity", required = true)
@@ -101,7 +103,7 @@ public class VariantInventoryController extends BaseController {
     // Stock Reservation Operations
     @Operation(summary = "[ADMIN] Reserve variant stock", description = "Reserve stock for a specific variant")
     @PostMapping("/variants/{id}/inventory/reserve")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> reserveStock(
+    public ResponseEntity<ApiResult<Boolean>> reserveStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Quantity to reserve", required = true)
@@ -119,7 +121,7 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Release reserved variant stock", description = "Release previously reserved stock for a specific variant")
     @PostMapping("/variants/{id}/inventory/release")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> releaseReservedStock(
+    public ResponseEntity<ApiResult<Boolean>> releaseReservedStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Quantity to release", required = true)
@@ -137,7 +139,7 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Fulfill order for variant", description = "Fulfill an order by reducing stock and reserved quantity for a specific variant")
     @PostMapping("/variants/{id}/inventory/fulfill")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> fulfillOrder(
+    public ResponseEntity<ApiResult<Boolean>> fulfillOrder(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Quantity to fulfill", required = true)
@@ -155,7 +157,7 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "Check variant stock availability", description = "Check if sufficient stock is available for a specific variant")
     @GetMapping("/variants/{id}/inventory/check")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> checkStockAvailability(
+    public ResponseEntity<ApiResult<Boolean>> checkStockAvailability(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Quantity to check", required = true)
@@ -173,7 +175,7 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "Get available quantity for variant", description = "Get the available quantity for a specific variant")
     @GetMapping("/variants/{id}/inventory/available")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Integer>> getAvailableQuantity(
+    public ResponseEntity<ApiResult<Integer>> getAvailableQuantity(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id) {
 
@@ -185,7 +187,7 @@ public class VariantInventoryController extends BaseController {
 
     @Operation(summary = "Check if variant is in stock", description = "Check if a specific variant is in stock")
     @GetMapping("/variants/{id}/inventory/in-stock")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Boolean>> isVariantInStock(
+    public ResponseEntity<ApiResult<Boolean>> isVariantInStock(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long id) {
 
