@@ -25,6 +25,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -62,6 +63,9 @@ public class ProductCatalogExceptionHandler {
                 .traceId(traceId)
                 .build();
 
+        if (ex instanceof CurrencySettingsException currencyError && currencyError.getCurrency() != null) {
+            errorResponse.setMetadata(Map.of("currency", currencyError.getCurrency(), "field", "rate"));
+        }
         return ResponseEntity.status(ex.getHttpStatus()).body(errorResponse);
     }
 

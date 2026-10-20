@@ -57,6 +57,15 @@ class CurrencySettingsServiceImplTest {
         return settings;
     }
 
+    @Test
+    void invalidRateCarriesTheAffectedCurrency() {
+        when(repository.findById(1L)).thenReturn(Optional.of(settings(1L)));
+        CurrencySettingsException error = assertThrows(CurrencySettingsException.class,
+                () -> service.updateSettings(new CurrencySettingsRequest(1L,
+                        List.of(new CurrencyRateRequest("USD", "1", true), new CurrencyRateRequest("EUR", "0", true)))));
+        assertEquals("EUR", error.getCurrency());
+    }
+
     private CurrencyExchangeRate rate(String code, String value, boolean enabled) {
         CurrencyExchangeRate rate = new CurrencyExchangeRate();
         rate.setCurrencyCode(code);

@@ -107,11 +107,11 @@ public class CurrencySettingsServiceImpl implements CurrencySettingsService {
 
     private BigDecimal parseRate(String rawRate, String currency) {
         if (rawRate == null || !rawRate.matches("[0-9]{1,14}(\\.[0-9]{1,10})?")) {
-            throw CurrencySettingsException.invalid("Invalid rate for " + currency);
+            throw CurrencySettingsException.invalidRate("Invalid rate for " + currency, currency);
         }
         BigDecimal rate = new BigDecimal(rawRate);
         if (rate.signum() <= 0) {
-            throw CurrencySettingsException.invalid("Rate must be greater than zero for " + currency);
+            throw CurrencySettingsException.invalidRate("Rate must be greater than zero for " + currency, currency);
         }
         return rate;
     }
