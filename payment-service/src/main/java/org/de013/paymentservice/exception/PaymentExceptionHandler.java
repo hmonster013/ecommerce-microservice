@@ -33,6 +33,15 @@ import java.util.UUID;
 @Slf4j
 public class PaymentExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleCheckoutStatus(
+            org.springframework.web.server.ResponseStatusException ex, HttpServletRequest request) {
+        var status = ex.getStatusCode();
+        return ResponseEntity.status(status).body(ErrorResponse.of(status.value(), "Checkout unavailable",
+                "CHECKOUT_UNAVAILABLE", "Unable to verify checkout. Check status before retrying.",
+                request.getRequestURI(), request.getMethod(), generateTraceId()));
+    }
+
     // ========== VALIDATION EXCEPTIONS ==========
 
     /**

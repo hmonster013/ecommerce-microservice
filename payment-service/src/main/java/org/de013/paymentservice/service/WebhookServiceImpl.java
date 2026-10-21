@@ -52,7 +52,7 @@ public class WebhookServiceImpl implements WebhookService {
 
         try {
             // Verify signature
-            if (!"test_signature".equals(signature) && !verifyWebhookSignature(payload, signature, getWebhookSecret())) {
+            if (!verifyWebhookSignature(payload, signature, getWebhookSecret())) {
                 log.warn("Invalid webhook signature");
                 throw new PaymentGatewayException("Invalid webhook signature");
             }
@@ -149,6 +149,12 @@ public class WebhookServiceImpl implements WebhookService {
 
     // ========== PAYMENT INTENT EVENTS ==========
 
+    private boolean isHostedCheckout(Payment payment) {
+        // A failed card attempt is not a failed Checkout Session. The signed hosted webhook/read-back owns this flow.
+        return "STRIPE".equals(payment.getGatewayName()) && payment.getGatewayTxnRef() != null
+                && payment.getGatewayTxnRef().startsWith("cs_");
+    }
+
     @Override
     public void handlePaymentIntentSucceeded(StripeWebhookRequest webhookRequest) {
         String paymentIntentId = webhookRequest.getPaymentIntentId();
@@ -157,6 +163,7 @@ public class WebhookServiceImpl implements WebhookService {
         Optional<Payment> paymentOpt = paymentRepository.findByStripePaymentIntentId(paymentIntentId);
         if (paymentOpt.isPresent()) {
             Payment payment = paymentOpt.get();
+            if (isHostedCheckout(payment)) return;
             payment.setStatus(PaymentStatus.SUCCEEDED);
             paymentRepository.save(payment);
 
@@ -180,6 +187,7 @@ public class WebhookServiceImpl implements WebhookService {
         Optional<Payment> paymentOpt = paymentRepository.findByStripePaymentIntentId(paymentIntentId);
         if (paymentOpt.isPresent()) {
             Payment payment = paymentOpt.get();
+            if (isHostedCheckout(payment)) return;
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason(webhookRequest.getFailureReason() != null ?
                     webhookRequest.getFailureReason() : "Payment failed via webhook");
@@ -202,6 +210,7 @@ public class WebhookServiceImpl implements WebhookService {
         Optional<Payment> paymentOpt = paymentRepository.findByStripePaymentIntentId(paymentIntentId);
         if (paymentOpt.isPresent()) {
             Payment payment = paymentOpt.get();
+            if (isHostedCheckout(payment)) return;
             payment.setStatus(PaymentStatus.REQUIRES_ACTION);
             paymentRepository.save(payment);
 
@@ -219,6 +228,7 @@ public class WebhookServiceImpl implements WebhookService {
         Optional<Payment> paymentOpt = paymentRepository.findByStripePaymentIntentId(paymentIntentId);
         if (paymentOpt.isPresent()) {
             Payment payment = paymentOpt.get();
+            if (isHostedCheckout(payment)) return;
             payment.setStatus(PaymentStatus.CANCELED);
             paymentRepository.save(payment);
 

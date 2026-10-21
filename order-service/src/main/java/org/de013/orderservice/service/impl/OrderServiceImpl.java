@@ -41,6 +41,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
+        return createCheckoutOrder(request, null);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse createCheckoutOrder(CreateOrderRequest request, String checkoutKey) {
         log.info("Creating order for user: {} from cart: {}", request.userId(), request.cartId());
 
         // Get cart items from Shopping Cart Service
@@ -57,6 +63,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Create order from request
         Order order = orderMapper.toEntity(request);
+        order.setCheckoutKey(checkoutKey);
         order.setOrderNumber(orderNumber);
         order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
@@ -188,8 +195,15 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber) {
         log.info("Marking order {} as PAID with paymentId {} and number {}", orderId, paymentId, paymentNumber);
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.lockForPayment(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        var paidStates = java.util.EnumSet.of(OrderStatus.PAID, OrderStatus.PROCESSING, OrderStatus.PREPARING,
+                OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.COMPLETED,
+                OrderStatus.PARTIALLY_SHIPPED, OrderStatus.PARTIALLY_DELIVERED);
+        if (paidStates.contains(order.getStatus())) return;
+        if (!java.util.EnumSet.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PAYMENT_AUTHORIZED).contains(order.getStatus())) {
+            throw new org.de013.common.exception.ConflictException("Order requires payment reconciliation");
+        }
         order.setStatus(OrderStatus.PAID);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);

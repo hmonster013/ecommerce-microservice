@@ -48,6 +48,9 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true, exclude = {"orderItems"})
 public class Order extends BaseEntity {
 
+    @Column(name = "checkout_key", unique = true, length = 36)
+    private String checkoutKey;
+
     /**
      * Unique order number for customer reference
      */

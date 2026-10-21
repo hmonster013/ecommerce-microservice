@@ -135,6 +135,8 @@ public class SecurityConfig {
                             .pathMatchers("/api/v1/order-service/orders/my-orders/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 
                             // Create orders (customers and admins)
+                            .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders/checkout/*").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
+                            .pathMatchers(HttpMethod.GET, "/api/v1/order-service/orders/checkout/*").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
                             .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
                             .pathMatchers(HttpMethod.POST, "/api/v1/order-service/orders/").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 
@@ -152,6 +154,8 @@ public class SecurityConfig {
                             .pathMatchers("/api/v1/payment-service/payments/my-payments/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 
                             // Process payments (customers and admins)
+                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/checkout/*").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
+                            .pathMatchers(HttpMethod.GET, "/api/v1/payment-service/payments/checkout/*").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
                             .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/process").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
                             .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/confirm").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 

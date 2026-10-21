@@ -105,6 +105,7 @@ payment:
       api-version: ${STRIPE_API_VERSION:2023-10-16}
       success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/payment/success}
       cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/payment/cancel}
+      checkout-return-url: ${STRIPE_CHECKOUT_RETURN_URL:}
     vnpay:
       enabled: ${VNPAY_ENABLED:false}
       tmn-code: ${VNPAY_TMN_CODE:}

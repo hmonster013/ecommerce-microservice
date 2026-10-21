@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 public interface OrderService {
     // Create operations
     OrderResponse createOrder(CreateOrderRequest request);
+    OrderResponse createCheckoutOrder(CreateOrderRequest request, String checkoutKey);
 
     // Read operations
     OrderResponse getOrderById(Long id);

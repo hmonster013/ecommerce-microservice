@@ -58,7 +58,12 @@ class WebhookIdempotencyTest {
                 .build();
 
         String payload = objectMapper.writeValueAsString(webhookRequest);
-        String signature = "test_signature"; // Bypasses Stripe verification signature check
+        long timestamp = java.time.Instant.now().getEpochSecond();
+        var mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(webhookService.getWebhookSecret()
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256"));
+        String signature = "t=" + timestamp + ",v1=" + java.util.HexFormat.of().formatHex(
+                mac.doFinal((timestamp + "." + payload).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
 
         // First call
         webhookService.processStripeWebhook(payload, signature);
@@ -72,5 +77,12 @@ class WebhookIdempotencyTest {
 
         // Assert that the count is STILL 1 (Idempotent!)
         assertEquals(1, processedStripeEventRepository.count());
+    }
+
+    @Test
+    void testSignatureMustNotBypassProductionVerification() {
+        assertThrows(org.de013.paymentservice.exception.PaymentGatewayException.class,
+                () -> webhookService.processStripeWebhook("{}", "test_signature"));
+        assertEquals(0, processedStripeEventRepository.count());
     }
 }

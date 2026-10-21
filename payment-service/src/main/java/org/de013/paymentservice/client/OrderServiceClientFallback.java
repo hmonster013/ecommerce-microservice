@@ -64,7 +64,7 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     public ResponseEntity<Void> markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber) {
         log.warn("Order Service unavailable - cannot mark order as paid: order={}, payment={}",
                 orderId, paymentId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(503).build();
     }
 
     @Override

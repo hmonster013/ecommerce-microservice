@@ -5,6 +5,7 @@ import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.dto.external.OrderDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.de013.common.exception.ConflictException;
+import org.de013.paymentservice.entity.enums.Currency;
 import org.de013.paymentservice.exception.PaymentProcessingException;
 import org.de013.paymentservice.service.validation.PaymentRequestValidator;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +51,39 @@ class PaymentValidationTest {
         when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
 
         assertDoesNotThrow(() -> validator.validatePaymentAmount(orderId, amount));
+    }
+
+    @Test
+    void validatePaymentAmount_WhenAmountsAndCurrencyMatch_ShouldSucceed() {
+        Long orderId = 123L;
+        BigDecimal amount = BigDecimal.valueOf(100.00);
+
+        OrderDto orderDto = new OrderDto();
+        OrderDto.MoneyDto money = new OrderDto.MoneyDto();
+        money.setAmount(BigDecimal.valueOf(100.00));
+        money.setCurrency("USD");
+        orderDto.setTotalAmount(money);
+
+        when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
+
+        assertDoesNotThrow(() -> validator.validatePaymentAmount(orderId, amount, Currency.USD));
+    }
+
+    @Test
+    void validatePaymentAmount_WhenCurrencyMismatch_ShouldThrowException() {
+        Long orderId = 123L;
+        BigDecimal amount = BigDecimal.valueOf(100.00);
+
+        OrderDto orderDto = new OrderDto();
+        OrderDto.MoneyDto money = new OrderDto.MoneyDto();
+        money.setAmount(BigDecimal.valueOf(100.00));
+        money.setCurrency("USD");
+        orderDto.setTotalAmount(money);
+
+        when(orderServiceClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(orderDto));
+
+        assertThrows(PaymentProcessingException.class, () ->
+                validator.validatePaymentAmount(orderId, amount, Currency.VND));
     }
 
     @Test
