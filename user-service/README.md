@@ -1,5 +1,29 @@
 # User Service
 
+## Current identity contract and controlled dev acceptance
+
+Keycloak is the source of truth for identity, passwords and roles. User-service
+owns business profiles and phone/address; it does not issue authentication JWTs,
+store password hashes or expose account-role administration through its profile
+form. Historical scaffold authentication/setup examples below are not the current
+contract; use Config Server and environment-driven runtime configuration.
+
+Public profile GET/PUT uses the trusted Keycloak subject from Gateway, not a
+browser-supplied business ID or username claim. A successful name update means a
+canonical Keycloak readback and business DB commit completed; uncertain/pending
+outcomes do not replay the mutation. The secret-protected internal sync endpoint
+is blocked through Gateway and pulls current canonical data, preserving business
+phone/address on existing rows.
+
+Controlled live acceptance is documented in the workspace frontend at
+`scripts/profile-sync-live-acceptance.md`. It temporarily restarts8081 with a test
+Keycloak proxy and uses only owned fixtures, then restores the original runtime
+configuration and Account Console theme. It tests real canonical writes/events,
+token claims, unavailable/unknown/pending UI states and scoped manual reconciler
+recovery. It does not deploy the five-minute CronJob or claim a live DB outage was
+tested. Production rollout and the original account-theme placeholder remain
+separate gates.
+
 ## 📋 Overview
 
 The **User Service** is a core microservice in the e-commerce platform that handles user management, authentication, and authorization. It provides secure user registration, login, profile management, and role-based access control using JWT tokens.

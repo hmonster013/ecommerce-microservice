@@ -19,3 +19,20 @@ docker run --rm --env-file <reconciler-runtime-env-file> de013/ecommerce-keycloa
 ```
 
 Dry run enumerates Keycloak users but does not prove that business profiles exist or that writes converge. Check its exit status and summary before scheduling a real run. A real run may update business profiles; use dedicated test accounts for live acceptance. Build/publish the image and provision runtime secrets before deploying the Job/CronJob. Building the image does not establish a five-minute recovery guarantee or successful rollout.
+
+## Controlled development acceptance
+
+The workspace frontend includes `scripts/run-profile-sync-live.mjs` and its
+`scripts/profile-sync-live-acceptance.md` runbook. After explicit authorization,
+it creates two dedicated fixtures, temporarily uses the built-in Account Console,
+and runs this actual CLI image through a fixture allowlist proxy. Real canonical
+Keycloak data and the private sync endpoint are used; no unrestricted realm write
+is performed. It verifies dry-run0 writes, paged existing-row drift repair and
+missing-profile backfill, plus public-profile failure/refresh behavior.
+
+Use the local image tag `de013/ecommerce-keycloak-reconciler:profile-sync-live`
+for that harness. It does not modify or deploy the existing CronJob. The proxy
+exists only for scoped fault injection and enumeration; it is not production
+infrastructure or a new recovery service. A live post-write read failure is not
+claimed as a live database-commit failure. Check the scoped report before enabling
+the unrestricted production job or asserting a five-minute recovery SLA.
