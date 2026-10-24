@@ -36,3 +36,10 @@ exists only for scoped fault injection and enumeration; it is not production
 infrastructure or a new recovery service. A live post-write read failure is not
 claimed as a live database-commit failure. Check the scoped report before enabling
 the unrestricted production job or asserting a five-minute recovery SLA.
+
+For the separately approved local kind scheduler, use
+[`../kubernetes/jobs/profile-reconciliation-kind.md`](../kubernetes/jobs/profile-reconciliation-kind.md).
+Its dedicated manifest starts suspended, uses host endpoints and an imported local
+image without a registry push. The opt-in `scripts/verify_kind_schedule.py` checks
+existing drift before writes and verifies actual scheduled repair of one owned
+fixture. It is not a production test and does not change SPI/business source code.
