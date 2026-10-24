@@ -124,5 +124,7 @@ No broad Docker prune/reset is needed. Keep the kubeconfig private until cleanup
 A scheduled repair of an intentionally drifted fixture is not a live database
 commit-outage test, and a healthy dev schedule is not production rollout or a
 five-minute SLA. The original `ecommerce` Account Console theme is unchanged.
-See workspace `docs/backend/[PARTIAL] profile-sync-kind-local.md` and
-`docs/backend/[PARTIAL] keycloak-profile-sync-verification.md` for measured results.
+The user accepted the measured dev scope as DONE on2026-10-24 without requiring
+additional live DB-commit-outage acceptance or production rollout. Those remain
+unperformed, not PASS. See workspace `docs/backend/[DONE] profile-sync-kind-local.md`
+and `docs/backend/[DONE] keycloak-profile-sync-verification.md` for measured results.
