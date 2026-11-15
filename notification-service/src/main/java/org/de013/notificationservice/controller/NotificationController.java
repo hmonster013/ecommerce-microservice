@@ -12,19 +12,29 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.notificationservice.dto.*;
+import org.de013.notificationservice.dto.BothNotificationRequest;
+import org.de013.notificationservice.dto.BothNotificationResponse;
+import org.de013.notificationservice.dto.EmailNotificationRequest;
+import org.de013.notificationservice.dto.NotificationResponse;
+import org.de013.notificationservice.dto.SmsNotificationRequest;
 import org.de013.notificationservice.entity.Notification;
+import org.de013.notificationservice.security.HeaderAuthenticationFilter.HeaderUserDetails;
 import org.de013.notificationservice.service.NotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 /**
  * Simple REST Controller for Notification operations
@@ -332,25 +342,94 @@ public class NotificationController {
 
         log.debug("Getting notification with id={}", id);
 
+        if (getCurrentUserDetails() == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "message", "Access denied"));
+        }
         return notificationService.findById(id)
                 .map(notification -> {
+                    if (!isCurrentUserOrAdmin(notification.getUserId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).<Map<String, Object>>body(Map.of("success", false, "message", "Access denied"));
+                    }
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("id", notification.getId());
+                    data.put("userId", notification.getUserId());
+                    data.put("channel", notification.getChannel().toString());
+                    data.put("recipient", notification.getRecipient());
+                    data.put("subject", notification.getSubject() != null ? notification.getSubject() : "");
+                    data.put("content", notification.getContent());
+                    data.put("status", notification.getStatus().toString());
+                    data.put("createdAt", notification.getCreatedAt());
+                    data.put("sentAt", notification.getSentAt());
                     Map<String, Object> response = Map.of(
                             "success", true,
-                            "notification", Map.of(
-                                    "id", notification.getId(),
-                                    "userId", notification.getUserId(),
-                                    "channel", notification.getChannel().toString(),
-                                    "recipient", notification.getRecipient(),
-                                    "subject", notification.getSubject() != null ? notification.getSubject() : "",
-                                    "content", notification.getContent(),
-                                    "status", notification.getStatus().toString(),
-                                    "createdAt", notification.getCreatedAt(),
-                                    "sentAt", notification.getSentAt()
-                            )
+                            "notification", data
                     );
                     return ResponseEntity.ok(response);
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Helper methods for security & context
+     */
+    private HeaderUserDetails getCurrentUserDetails() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getDetails() instanceof HeaderUserDetails details && StringUtils.hasText(details.getKeycloakId())) {
+            return details;
+        }
+        return null;
+    }
+
+    private String getCurrentUserKeycloakId() {
+        HeaderUserDetails details = getCurrentUserDetails();
+        return details != null ? details.getKeycloakId() : null;
+    }
+
+    private boolean isCurrentUserOrAdmin(String targetUserId) {
+        HeaderUserDetails details = getCurrentUserDetails();
+        if (details == null) {
+            return false;
+        }
+        if (details.getKeycloakId().equals(targetUserId)) {
+            return true;
+        }
+        List<String> roles = details.getRoles();
+        return roles != null && (roles.contains("ROLE_ADMIN") || roles.contains("ADMIN") ||
+                roles.contains("ROLE_SUPPORT") || roles.contains("SUPPORT"));
+    }
+
+    /**
+     * Get notifications for currently authenticated user
+     */
+    @GetMapping("/me")
+    @Operation(summary = "Get current user notifications", description = "Retrieve paginated notifications for authenticated user")
+    public ResponseEntity<Map<String, Object>> getMyNotifications(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size) {
+        String currentUserId = getCurrentUserKeycloakId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "success", false,
+                    "message", "User context is missing"
+            ));
+        }
+        return getUserNotifications(currentUserId, page, size);
+    }
+
+    /**
+     * Get unread notification count for currently authenticated user
+     */
+    @GetMapping("/me/unread-count")
+    @Operation(summary = "Get current user unread notification count", description = "Retrieve unread notification count for authenticated user")
+    public ResponseEntity<Map<String, Object>> getMyUnreadCount() {
+        String currentUserId = getCurrentUserKeycloakId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "success", false,
+                    "message", "User context is missing"
+            ));
+        }
+        return getUnreadCount(currentUserId);
     }
 
     /**
@@ -390,6 +469,14 @@ public class NotificationController {
 
         log.debug("Getting notifications for user={}, page={}, size={}", userId, page, size);
 
+        if (!isCurrentUserOrAdmin(userId)) {
+            log.warn("Access denied: user {} attempted to access notifications for user {}", getCurrentUserKeycloakId(), userId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "success", false,
+                    "message", "Access denied"
+            ));
+        }
+
         try {
             // Limit page size to prevent abuse
             int limitedSize = Math.min(size, 100);
@@ -398,7 +485,7 @@ public class NotificationController {
 
             List<Map<String, Object>> notificationList = notifications.getContent().stream()
                     .map(notification -> {
-                        Map<String, Object> map = new java.util.HashMap<>();
+                        Map<String, Object> map = new HashMap<>();
                         map.put("id", notification.getId());
                         map.put("channel", notification.getChannel().toString());
                         map.put("recipient", notification.getRecipient());
@@ -411,14 +498,14 @@ public class NotificationController {
                     })
                     .toList();
 
-            Map<String, Object> response = Map.of(
-                    "success", true,
-                    "notifications", notificationList,
-                    "totalElements", notifications.getTotalElements(),
-                    "totalPages", notifications.getTotalPages(),
-                    "currentPage", page,
-                    "pageSize", limitedSize
-            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("notifications", notificationList);
+            response.put("totalElements", notifications.getTotalElements());
+            response.put("totalItems", notifications.getTotalElements());
+            response.put("totalPages", notifications.getTotalPages());
+            response.put("currentPage", page);
+            response.put("pageSize", limitedSize);
 
             return ResponseEntity.ok(response);
 
@@ -462,9 +549,31 @@ public class NotificationController {
             @Parameter(description = "Notification ID", example = "123", required = true)
             @PathVariable Long id) {
 
+        if (getCurrentUserDetails() == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "message", "Access denied"));
+        }
         log.info("Marking notification as read: id={}", id);
 
         try {
+            Optional<Notification> notificationOpt = notificationService.findById(id);
+            if (notificationOpt.isEmpty()) {
+                log.warn("Notification not found while marking as read: id={}", id);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                        "success", false,
+                        "message", "Notification not found: " + id
+                ));
+            }
+
+            Notification notification = notificationOpt.get();
+            if (!isCurrentUserOrAdmin(notification.getUserId())) {
+                log.warn("Access denied: user {} attempted to mark notification {} (owned by {}) as read",
+                        getCurrentUserKeycloakId(), id, notification.getUserId());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "success", false,
+                        "message", "Access denied"
+                ));
+            }
+
             notificationService.markAsRead(id);
             Map<String, Object> response = Map.of(
                     "success", true,
@@ -532,12 +641,20 @@ public class NotificationController {
 
         log.debug("Getting unread count for user={}", userId);
 
+        if (!isCurrentUserOrAdmin(userId)) {
+            log.warn("Access denied: user {} attempted to access unread count for user {}", getCurrentUserKeycloakId(), userId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "success", false,
+                    "message", "Access denied"
+            ));
+        }
+
         try {
             long unreadCount = notificationService.countUnreadByUserId(userId);
-            Map<String, Object> response = Map.of(
-                    "success", true,
-                    "unreadCount", unreadCount
-            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("unreadCount", unreadCount);
+            response.put("count", unreadCount);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
