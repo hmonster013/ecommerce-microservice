@@ -33,6 +33,11 @@ import java.util.UUID;
 @Slf4j
 public class PaymentExceptionHandler {
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Void> handleUnreadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest().build();
+    }
+
     @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleCheckoutStatus(
             org.springframework.web.server.ResponseStatusException ex, HttpServletRequest request) {

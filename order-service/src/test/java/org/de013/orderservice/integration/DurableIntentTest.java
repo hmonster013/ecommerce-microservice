@@ -322,6 +322,12 @@ class DurableIntentTest {
         when(reservations.lookup(operation)).thenReturn(reserved);
         recovery.process(id);
         assertEquals("READY",checkout.read(key,"owner").state()); assertEquals(true,orderService.getOrderById(id).inventoryReady());
+        var deadline = jdbc.queryForObject("SELECT checkout_deadline FROM orders WHERE id=?", java.sql.Timestamp.class, id);
+        assertNotNull(deadline);
+        var now = java.time.LocalDateTime.now();
+        assertTrue(deadline.toLocalDateTime().isAfter(now.plusMinutes(29)) && deadline.toLocalDateTime().isBefore(now.plusMinutes(31)));
+        recovery.process(id);
+        assertEquals(deadline, jdbc.queryForObject("SELECT checkout_deadline FROM orders WHERE id=?", java.sql.Timestamp.class, id));
         orderService.markOrderAsPaid(id,1L,"p");
         assertEquals("FULFILL_PENDING",jdbc.queryForObject("SELECT allocation_phase FROM orders WHERE id=?",String.class,id));
         when(reservations.fulfill(operation)).thenReturn(fulfilled);

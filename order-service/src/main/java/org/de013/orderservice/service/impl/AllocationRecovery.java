@@ -87,7 +87,7 @@ public class AllocationRecovery {
             Integer total = jdbc.queryForObject("SELECT count(*) FROM inventory_allocation_intents WHERE order_id=?", Integer.class, id);
             Integer incomplete = jdbc.queryForObject("SELECT count(*) FROM inventory_allocation_intents WHERE order_id=? AND NOT (state = ANY(string_to_array(?, ',')))", Integer.class, id, allowed);
             if (total == null || total == 0 || incomplete == null || incomplete != 0) return;
-            if (phase.equals("ALLOCATING")) { order.setAllocationPhase("READY"); order.setStatus(OrderStatus.PENDING); }
+            if (phase.equals("ALLOCATING")) { order.setAllocationPhase("READY"); order.setStatus(OrderStatus.PENDING); order.setCheckoutDeadline(java.time.LocalDateTime.now().plusMinutes(30)); }
             else if (phase.equals("COMPENSATING")) { order.setAllocationPhase("FAILED"); order.setStatus(OrderStatus.FAILED); }
             else order.setAllocationPhase("FULFILLED");
         }));

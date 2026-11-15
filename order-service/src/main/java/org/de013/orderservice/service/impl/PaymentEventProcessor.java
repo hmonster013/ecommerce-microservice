@@ -67,6 +67,13 @@ public class PaymentEventProcessor {
             return;
         }
         Order order = orders.lockForPayment(event.orderId()).orElse(null);
+        if (order != null && order.getAllocationPhase() != null
+                && Set.of("CLOSING", "RELEASE_PENDING", "CLOSED", "CLOSURE_HOLD").contains(order.getAllocationPhase())) {
+            order.setAllocationPhase("CLOSURE_HOLD");
+            order.setCheckoutCloseHoldReason("PAYMENT_SUCCESS_AFTER_CLOSURE");
+            jdbc.update("UPDATE payment_event_inbox SET result='HOLD' WHERE event_id=?", event.id());
+            return;
+        }
         String reason = conflict(order, event);
         if (reason != null) {
             quarantine(payload, topic, partition, offset, reason);

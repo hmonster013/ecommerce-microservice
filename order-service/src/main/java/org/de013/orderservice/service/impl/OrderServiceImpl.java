@@ -203,6 +203,11 @@ public class OrderServiceImpl implements OrderService {
         log.info("Marking order {} as PAID with paymentId {} and number {}", orderId, paymentId, paymentNumber);
         Order order = orderRepository.lockForPayment(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null && java.util.Set.of("CLOSING", "RELEASE_PENDING", "CLOSED", "CLOSURE_HOLD").contains(order.getAllocationPhase())) {
+            order.setAllocationPhase("CLOSURE_HOLD");
+            order.setCheckoutCloseHoldReason("PAYMENT_SUCCESS_AFTER_CLOSURE");
+            return;
+        }
         var paidStates = java.util.EnumSet.of(OrderStatus.PAID, OrderStatus.PROCESSING, OrderStatus.PREPARING,
                 OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.COMPLETED,
                 OrderStatus.PARTIALLY_SHIPPED, OrderStatus.PARTIALLY_DELIVERED);

@@ -195,6 +195,7 @@ public class WebhookServiceImpl implements WebhookService {
             case "payment_intent.succeeded" -> {
                 boolean alreadySucceeded = payment.getStatus() == PaymentStatus.SUCCEEDED;
                 payment.setStatus(PaymentStatus.SUCCEEDED);
+                guard.recordSuccess(orderId);
                 if (payment.isVerifiedRelease()) {
                     guard.hold(orderId);
                 } else if (!held && !alreadySucceeded) {
@@ -432,20 +433,22 @@ public class WebhookServiceImpl implements WebhookService {
     private void updateOrderStatus(Long orderId, String status, Payment payment) {
         try {
             log.info("Updating order {} status to: {}", orderId, status);
+            org.springframework.http.ResponseEntity<Void> response;
             if ("PAID".equals(status)) {
-                orderServiceClient.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber());
+                response = orderServiceClient.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber());
             } else if ("PAYMENT_FAILED".equals(status)) {
-                orderServiceClient.markOrderPaymentFailed(orderId, payment.getFailureReason() != null ? payment.getFailureReason() : "Payment failed");
+                response = orderServiceClient.markOrderPaymentFailed(orderId, payment.getFailureReason() != null ? payment.getFailureReason() : "Payment failed");
             } else {
                 org.de013.paymentservice.dto.external.OrderStatusUpdateRequest request = new org.de013.paymentservice.dto.external.OrderStatusUpdateRequest(
                         status,
                         "Payment status updated to " + status
                 );
-                orderServiceClient.updateOrderStatus(orderId, request);
+                response = orderServiceClient.updateOrderStatus(orderId, request);
             }
-            log.info("Successfully updated order {} status to: {}", orderId, status);
+            if (response.getStatusCode().is2xxSuccessful()) log.info("Successfully updated order {} status to: {}", orderId, status);
+            else log.warn("Failed to update order {} status to {}: HTTP {}", orderId, status, response.getStatusCode().value());
         } catch (Exception e) {
-            log.warn("Failed to update order status for order: {}", orderId, e);
+            log.warn("Failed to update order {} status to {}", orderId, status, e);
         }
     }
 

@@ -55,6 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PaymentReservationFlowTest {
     @Container static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>("postgres:17-alpine");
     @DynamicPropertySource static void database(DynamicPropertyRegistry p) {
+        p.add("payment.internal.issuer-uri", () -> org.de013.paymentservice.security.CheckoutClosureSecurityTest.issuer);
         p.add("spring.datasource.url", DB::getJdbcUrl);
         p.add("spring.datasource.username", DB::getUsername);
         p.add("spring.datasource.password", DB::getPassword);
@@ -67,7 +68,9 @@ class PaymentReservationFlowTest {
     @Autowired VnpayIpnService ipn;
     @Autowired HostedCheckoutService hosted;
     @Autowired PaymentReservation reservation;
-    @Autowired PaymentOrderGuard guard;
+    @SpyBean PaymentOrderGuard guard;
+    @Autowired CheckoutClosureService closures;
+    @Autowired org.springframework.web.context.WebApplicationContext webContext;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired jakarta.persistence.EntityManager jpa;
     @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
@@ -97,6 +100,139 @@ class PaymentReservationFlowTest {
     private ProcessPaymentRequest request(long id, String provider) {
         return ProcessPaymentRequest.builder().orderId(id).userId("owner").amount(new BigDecimal("25.00"))
                 .currency(Currency.USD).paymentMethodType(PaymentMethodType.CARD).provider(provider).build();
+    }
+
+    @Test void closureRacesActualReservationAndHostedProviderCreation() throws Exception {
+        var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var guardTarget = org.springframework.test.util.AopTestUtils.<PaymentOrderGuard>getTargetObject(guard);
+            doAnswer(i -> {
+                Object result = i.callRealMethod();
+                entered.countDown(); assertTrue(release.await(20, TimeUnit.SECONDS));
+                return result;
+            }).when(guardTarget).requirePayable(eq(199301L));
+            var payment = Payment.builder().orderId(199301L).userId("owner").paymentNumber("RACE-199301")
+                    .amount(new BigDecimal("25.00")).currency(Currency.USD).method(PaymentMethodType.CARD)
+                    .status(org.de013.paymentservice.entity.enums.PaymentStatus.PENDING).build();
+            var reserve = pool.submit(() -> reservation.reserve(payment));
+            assertTrue(entered.await(20, TimeUnit.SECONDS));
+            var close = pool.submit(() -> closures.close(199301L, java.util.UUID.randomUUID()));
+            assertThrows(java.util.concurrent.TimeoutException.class, () -> close.get(300, TimeUnit.MILLISECONDS));
+            release.countDown(); reserve.get(20, TimeUnit.SECONDS);
+            assertEquals("HOLD", close.get(20, TimeUnit.SECONDS).status());
+            assertEquals(1, repository.findByOrderId(199301L).size());
+
+            var checkout = hostedStore.reserve(199302L, "owner", new BigDecimal("25.00"), "https://fixture.test/result");
+            var order = new OrderDto(); order.setId(199302L); order.setUserId("owner"); order.setStatus("PENDING");
+            var money = new OrderDto.MoneyDto(); money.setAmount(new BigDecimal("25.00")); money.setCurrency("USD"); order.setTotalAmount(money);
+            when(orders.read(199302L, "owner", "hosted-checkout")).thenReturn(ResponseEntity.ok(order));
+            var providerEntered = new CountDownLatch(1); var providerRelease = new CountDownLatch(1);
+            when(hostedStripe.create(any())).thenAnswer(i -> {
+                providerEntered.countDown(); assertTrue(providerRelease.await(20, TimeUnit.SECONDS));
+                return new StripeHostedGateway.Snapshot("cs_99302", "https://fixture.test", "open", "unpaid", 2500L, "usd", "99302", null);
+            });
+            try {
+                var create = pool.submit(() -> hostedStore.create(checkout));
+                assertTrue(providerEntered.await(20, TimeUnit.SECONDS));
+                var closeHosted = pool.submit(() -> closures.close(199302L, java.util.UUID.randomUUID()));
+                assertThrows(java.util.concurrent.TimeoutException.class, () -> closeHosted.get(300, TimeUnit.MILLISECONDS));
+                providerRelease.countDown(); create.get(20, TimeUnit.SECONDS);
+                assertEquals("HOLD", closeHosted.get(20, TimeUnit.SECONDS).status());
+                assertEquals(409, assertThrows(ResponseStatusException.class, () -> hostedStore.create(checkout)).getStatusCode().value());
+                verify(hostedStripe, times(1)).create(any());
+            } finally { providerRelease.countDown(); }
+        } finally { release.countDown(); pool.shutdownNow(); }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"VNPAY", "HOSTED", "CONFIRM", "CAPTURE"})
+    void closureBlocksActualPaymentEntrypoints(String entry) throws Exception {
+        long id = switch (entry) { case "VNPAY" -> 199310L; case "HOSTED" -> 199311L; case "CONFIRM" -> 199312L; default -> 199313L; };
+        Payment payment = null;
+        org.de013.paymentservice.entity.HostedCheckout checkout = null;
+        if (entry.equals("CONFIRM") || entry.equals("CAPTURE"))
+            payment = intent(id, "pi_" + id, entry.equals("CONFIRM") ? org.de013.paymentservice.entity.enums.PaymentStatus.PENDING : org.de013.paymentservice.entity.enums.PaymentStatus.REQUIRES_CONFIRMATION, null);
+        if (entry.equals("HOSTED")) checkout = hostedStore.reserve(id, "owner", new BigDecimal("25.00"), "https://fixture.test/result");
+        assertEquals(entry.equals("VNPAY") ? "SAFE" : "HOLD", closures.close(id, java.util.UUID.randomUUID()).status());
+        final Payment p = payment; final var c = checkout;
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> {
+            switch (entry) {
+                case "VNPAY" -> vnpay.createCheckout(request(id, "VNPAY"));
+                case "HOSTED" -> hostedStore.create(c);
+                case "CONFIRM" -> payments.confirmPayment(p.getId(), "pm_test");
+                case "CAPTURE" -> payments.capturePayment(p.getId(), null);
+            }
+        }).getStatusCode().value());
+        verify(vnpayGateway, never()).buildPaymentUrl(anyString(), anyLong(), anyString(), anyString(), anyString());
+        verify(hostedStripe, never()).create(any());
+        verify(stripe, never()).confirmPaymentIntent(any(), any());
+        verify(stripe, never()).capturePayment(any(), any());
+    }
+
+    @Test void committedVerifiedLateSuccessDowngradesSafeWithoutDispatch() throws Exception {
+        long id = 199320L; var op = java.util.UUID.randomUUID();
+        assertEquals("SAFE", closures.close(id, op).status());
+        var proof = jdbc.queryForMap("select close_safe_proof, close_safe_at from payment_order_guard where order_id=?", id);
+        // Simulate a legacy writer that committed an unrecorded attempt after the zero-attempt proof.
+        var payment = intent(id, "pi_late_99320", org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+        send("evt_late_99320", "payment_intent.succeeded", "payment_intent", "pi_late_99320", "succeeded");
+        assertEquals("SUCCEEDED", jdbc.queryForObject("select status from payments where id=?", String.class, payment.getId()));
+        assertEquals("HOLD", closures.close(id, op).status());
+        assertEquals(proof, jdbc.queryForMap("select close_safe_proof, close_safe_at from payment_order_guard where order_id=?", id));
+        assertEquals(0, jdbc.queryForObject("select count(*) from payment_outbox where payment_id=?", Integer.class, payment.getId()));
+        verify(orderClient, never()).markOrderAsPaid(eq(id), anyLong(), anyString());
+        verify(notifications, never()).sendEmail(anyMap());
+    }
+
+    @Test void securedEndpointReplaysLateSuccessAndPublicCallbacksRemainAccessible() throws Exception {
+        var mvc = MockMvcBuilders.webAppContextSetup(webContext)
+                .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+        var issuer = org.de013.paymentservice.security.CheckoutClosureSecurityTest.issuer;
+        String token = org.de013.paymentservice.security.CheckoutClosureSecurityTest.token(issuer, "payment-service", "order-service", true, java.time.Instant.now().plusSeconds(300), false);
+        long id = 199340L; var op = java.util.UUID.randomUUID();
+        String body = "{\"operationId\":\"" + op + "\"}";
+        mvc.perform(post("/internal/checkout-closures/" + id).header("Authorization", "Bearer " + token).contentType("application/json").content(body))
+                .andExpect(status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.status").value("SAFE"));
+        var proof = jdbc.queryForMap("select close_safe_proof,close_safe_at from payment_order_guard where order_id=?", id);
+        // Legacy external writer fixture represents an attempt that escaped the current fence.
+        var payment = intent(id, "pi_199340", org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+        String event = payload("evt_199340", "payment_intent.succeeded", "payment_intent", "pi_199340", "succeeded");
+        mvc.perform(post("/webhooks/stripe").header("Stripe-Signature", signature(event)).contentType("application/json").content(event)).andExpect(status().isOk());
+        mvc.perform(post("/internal/checkout-closures/" + id).header("Authorization", "Bearer " + token).contentType("application/json").content(body))
+                .andExpect(status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.status").value("HOLD"));
+        assertEquals("SUCCEEDED", jdbc.queryForObject("select status from payments where id=?", String.class, payment.getId()));
+        assertEquals(proof, jdbc.queryForMap("select close_safe_proof,close_safe_at from payment_order_guard where order_id=?", id));
+        verify(orderClient, never()).markOrderAsPaid(eq(id), anyLong(), anyString());
+        mvc.perform(get("/webhooks/vnpay/ipn")).andExpect(status().isOk());
+    }
+
+    @Test void existingAttemptsRemainHoldWithoutDurableTerminalProof() throws Exception {
+        long canceled = 199330L, failed = 199331L, mixed = 199332L;
+        intent(canceled, "pi_199330", org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+        send("evt_cancel_199330", "payment_intent.canceled", "payment_intent", "pi_199330", "canceled");
+        assertEquals("HOLD", closures.close(canceled, java.util.UUID.randomUUID()).status());
+        send("evt_success_199330", "payment_intent.succeeded", "payment_intent", "pi_199330", "succeeded");
+        assertEquals("HOLD", jdbc.queryForObject("select close_status from payment_order_guard where order_id=?", String.class, canceled));
+        intent(failed, "pi_199331", org.de013.paymentservice.entity.enums.PaymentStatus.FAILED, null);
+        assertEquals("HOLD", closures.close(failed, java.util.UUID.randomUUID()).status());
+        var old = intent(mixed, "pi_199332_old", org.de013.paymentservice.entity.enums.PaymentStatus.CANCELED, null);
+        old.setBlocking(false); old.setVerifiedRelease(true); old.setPaymentNumber("INT-199332-old"); repository.saveAndFlush(old);
+        intent(mixed, "pi_199332_new", org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+        assertEquals("HOLD", closures.close(mixed, java.util.UUID.randomUUID()).status());
+    }
+
+    @Test void manualSuccessAfterSafeCommitsContradictionWithoutErasingProof() {
+        long id = 199350L; var operation = java.util.UUID.randomUUID();
+        assertEquals("SAFE", closures.close(id, operation).status());
+        var proof = jdbc.queryForMap("select close_safe_proof,close_safe_at from payment_order_guard where order_id=?", id);
+        // Legacy writer fixture represents an attempt that escaped the current fence.
+        var payment = intent(id, "pi_199350", org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+        payments.updatePaymentStatus(payment.getId(), org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        assertEquals("SUCCEEDED", jdbc.queryForObject("select status from payments where id=?", String.class, payment.getId()));
+        assertEquals("HOLD", closures.close(id, operation).status());
+        assertEquals(proof, jdbc.queryForMap("select close_safe_proof,close_safe_at from payment_order_guard where order_id=?", id));
+        verify(orderClient, never()).markOrderAsPaid(eq(id), anyLong(), anyString());
     }
 
     @Test void disabledOutboxPreservesVnpayAndHostedDispatchAndHolds() throws Exception {
@@ -351,6 +487,67 @@ class PaymentReservationFlowTest {
     private void send(String event, String type, String object, String id, String status) throws Exception {
         String body = payload(event, type, object, id, status);
         webhook.processStripeWebhook(body, signature(body));
+    }
+
+    @Test void orderOutageDoesNotRollBackProviderTruth() throws Exception {
+        var loggers = java.util.List.of(PaymentServiceImpl.class, WebhookServiceImpl.class, VnpayIpnService.class).stream()
+                .map(c -> (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(c)).toList();
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start(); loggers.forEach(l -> l.addAppender(appender));
+        try {
+            long order = 99300;
+            for (String flow : java.util.List.of("payment", "webhook", "vnpay")) {
+                for (boolean failed : new boolean[]{false, true}) for (boolean transport : new boolean[]{false, true}) {
+                    long id = ++order;
+                    reset(orderClient, notifications);
+                    if (transport) {
+                        when(orderClient.markOrderAsPaid(anyLong(), anyLong(), anyString())).thenThrow(new IllegalStateException("transport"));
+                        when(orderClient.markOrderPaymentFailed(anyLong(), anyString())).thenThrow(new IllegalStateException("transport"));
+                    } else {
+                        when(orderClient.markOrderAsPaid(anyLong(), anyLong(), anyString())).thenReturn(ResponseEntity.status(503).build());
+                        when(orderClient.markOrderPaymentFailed(anyLong(), anyString())).thenReturn(ResponseEntity.status(503).build());
+                    }
+                    appender.list.clear();
+                    Long paymentId;
+                    String event = "evt_outage_" + id;
+                    if (flow.equals("payment")) {
+                        when(stripe.createPaymentIntent(any())).thenReturn(StripePaymentResponse.builder().paymentIntentId("pi_outage_" + id).status(failed ? "failed" : "succeeded").build());
+                        var req = request(id, "STRIPE"); req.setReceiptEmail("fixture@example.test");
+                        payments.processPayment(req);
+                        paymentId = repository.findByOrderId(id).get(0).getId();
+                        assertEquals(1, jdbc.queryForObject("select count(*) from payment_transactions where payment_id=?", Integer.class, paymentId));
+                    } else if (flow.equals("webhook")) {
+                        var payment = intent(id, "pi_outage_" + id, org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+                        paymentId = payment.getId();
+                        String body = payload(event, failed ? "payment_intent.payment_failed" : "payment_intent.succeeded", "payment_intent", "pi_outage_" + id, failed ? "requires_payment_method" : "succeeded");
+                        assertEquals(200, webhookController.handleStripeWebhook(body, signature(body)).getStatusCode().value());
+                        assertTrue(events.existsById(event));
+                        assertEquals(200, webhookController.handleStripeWebhook(body, signature(body)).getStatusCode().value());
+                    } else {
+                        vnpay.createCheckout(request(id, "VNPAY"));
+                        var payment = repository.findByOrderId(id).get(0); paymentId = payment.getId();
+                        payment.setReceiptEmail("fixture@example.test"); repository.saveAndFlush(payment);
+                        var cfg = gatewayConfig.getGateways().getVnpay();
+                        when(vnpayGateway.verifyCallback(anyMap())).thenReturn(true);
+                        var fields = new java.util.HashMap<String, String>();
+                        fields.put("vnp_TmnCode", cfg.getTmnCode()); fields.put("vnp_TxnRef", payment.getPaymentNumber());
+                        fields.put("vnp_Amount", Long.toString(payment.getProviderAmountVnd() * 100));
+                        fields.put("vnp_ResponseCode", failed ? "01" : "00"); fields.put("vnp_TransactionStatus", failed ? "01" : "00");
+                        assertEquals("00", ipn.process(fields).get("RspCode"));
+                        if (!failed) { assertTrue(events.existsById("vnpay_" + payment.getPaymentNumber())); assertEquals("02", ipn.process(fields).get("RspCode")); }
+                    }
+                    assertEquals(failed ? "FAILED" : "SUCCEEDED", jdbc.queryForObject("select status from payments where id=?", String.class, paymentId));
+                    if (failed) verify(orderClient, times(1)).markOrderPaymentFailed(eq(id), anyString());
+                    else {
+                        verify(orderClient, times(1)).markOrderAsPaid(eq(id), anyLong(), anyString());
+                        verify(notifications, times(1)).sendEmail(anyMap());
+                    }
+                    String status = failed ? "PAYMENT_FAILED" : "PAID";
+                    assertTrue(appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("Failed to update") && e.getFormattedMessage().contains(Long.toString(id)) && e.getFormattedMessage().contains(status) && (transport || e.getFormattedMessage().contains("503"))));
+                    assertFalse(appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("Successfully updated order " + id)));
+                }
+            }
+        } finally { loggers.forEach(l -> l.detachAppender(appender)); appender.stop(); }
     }
 
     @Test void verifiedReleaseAndLateSuccessHoldWithNewAttempt() throws Exception {

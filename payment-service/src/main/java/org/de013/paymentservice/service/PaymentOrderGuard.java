@@ -17,8 +17,15 @@ public class PaymentOrderGuard {
     public boolean lock(Long orderId) {
         entityManager.createNativeQuery("INSERT INTO payment_order_guard (order_id) VALUES (:id) ON CONFLICT (order_id) DO NOTHING")
                 .setParameter("id", orderId).executeUpdate();
-        return (Boolean) entityManager.createNativeQuery("SELECT reconciliation_hold FROM payment_order_guard WHERE order_id = :id FOR UPDATE")
+        return (Boolean) entityManager.createNativeQuery("SELECT reconciliation_hold OR close_operation_id IS NOT NULL FROM payment_order_guard WHERE order_id = :id FOR UPDATE")
                 .setParameter("id", orderId).getSingleResult();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void recordSuccess(Long orderId) {
+        entityManager.createNativeQuery("UPDATE payment_order_guard SET close_status = 'HOLD', close_reason = 'LATE_SUCCESS' "
+                + "WHERE order_id = :id AND close_status = 'SAFE'")
+                .setParameter("id", orderId).executeUpdate();
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

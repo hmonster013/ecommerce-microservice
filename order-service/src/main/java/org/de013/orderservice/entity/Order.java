@@ -57,6 +57,18 @@ public class Order extends BaseEntity {
     @Column(name = "allocation_phase", length = 32)
     private String allocationPhase;
 
+    @Column(name = "checkout_deadline")
+    private LocalDateTime checkoutDeadline;
+
+    @Column(name = "checkout_close_operation")
+    private java.util.UUID checkoutCloseOperation;
+
+    @Column(name = "checkout_close_safe_at")
+    private LocalDateTime checkoutCloseSafeAt;
+
+    @Column(name = "checkout_close_hold_reason")
+    private String checkoutCloseHoldReason;
+
     @Column(name = "checkout_key", unique = true, length = 36)
     private String checkoutKey;
 

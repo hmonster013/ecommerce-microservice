@@ -35,7 +35,7 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     @Override
     public ResponseEntity<Void> updateOrderStatus(Long orderId, OrderStatusUpdateRequest request) {
         log.warn("Order Service unavailable - cannot update order status for order: {}", orderId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(503).build();
     }
 
     @Override
@@ -71,7 +71,7 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     public ResponseEntity<Void> markOrderPaymentFailed(Long orderId, String reason) {
         log.warn("Order Service unavailable - cannot mark payment as failed: order={}, reason={}",
                 orderId, reason);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(503).build();
     }
 
     @Override
@@ -83,7 +83,7 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     @Override
     public ResponseEntity<Void> releaseOrderReservation(Long orderId) {
         log.warn("Order Service unavailable - cannot release reservation for order: {}", orderId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(503).build();
     }
 
     /**

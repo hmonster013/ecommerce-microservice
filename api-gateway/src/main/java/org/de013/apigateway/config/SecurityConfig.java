@@ -151,6 +151,7 @@ public class SecurityConfig {
                             .pathMatchers(HttpMethod.DELETE, "/api/v1/order-service/orders/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName()) // Need CUSTOMER to cancel order (DELETE /{orderId})
 
                             // ========== PAYMENT SERVICE ==========
+                            .pathMatchers("/api/v1/payment-service/internal/**").denyAll()
                             // Customer personal payments
                             .pathMatchers("/api/v1/payment-service/payments/my-payments/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
 

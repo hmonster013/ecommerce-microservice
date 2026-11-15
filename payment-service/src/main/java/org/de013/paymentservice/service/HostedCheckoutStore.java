@@ -79,7 +79,9 @@ public class HostedCheckoutStore {
         if ("PAID".equals(state)) {
             boolean alreadySucceeded = payment.getStatus() == PaymentStatus.SUCCEEDED;
             payment.setStatus(PaymentStatus.SUCCEEDED);
-            if (!held && !alreadySucceeded && outbox.enabled()) outbox.enqueue(payment);
+            guard.recordSuccess(orderId);
+            if (payment.isVerifiedRelease()) guard.hold(orderId);
+            if (!held && !payment.isVerifiedRelease() && !alreadySucceeded && outbox.enabled()) outbox.enqueue(payment);
         }
         else if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) payment.setStatus(PaymentStatus.PENDING);
     }

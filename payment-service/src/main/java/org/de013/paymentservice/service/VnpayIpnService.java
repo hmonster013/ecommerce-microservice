@@ -60,14 +60,17 @@ public class VnpayIpnService {
             return Map.of("RspCode", "02", "Message", "Order already confirmed");
         if ("00".equals(params.get("vnp_ResponseCode")) && "00".equals(params.get("vnp_TransactionStatus"))) {
             payment.setStatus(PaymentStatus.SUCCEEDED);
+            guard.recordSuccess(orderId);
             payment.setGatewayResponse(params.toString());
             events.save(ProcessedStripeEvent.builder().eventId(eventId).processedAt(LocalDateTime.now()).build());
             payments.flush();
             events.flush();
             if (!held) {
                 if (outbox.enabled()) outbox.enqueue(payment);
-                else try { orders.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber()); }
-                catch (Exception e) { log.warn("Failed to update VNPay order {}", orderId, e); }
+                else try {
+                    var response = orders.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber());
+                    if (!response.getStatusCode().is2xxSuccessful()) log.warn("Failed to update VNPay order {} status to PAID: HTTP {}", orderId, response.getStatusCode().value());
+                } catch (Exception e) { log.warn("Failed to update VNPay order {} status to PAID", orderId, e); }
                 if (notificationOutbox.enabled()) notificationOutbox.enqueue(payment);
                 else try {
                     String email = payment.getReceiptEmail();
@@ -90,8 +93,10 @@ public class VnpayIpnService {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason("VNPay failed with response code: " + params.get("vnp_ResponseCode"));
             payments.flush();
-            if (!held) try { orders.markOrderPaymentFailed(orderId, payment.getFailureReason()); }
-            catch (Exception e) { log.warn("Failed to update VNPay order {}", orderId, e); }
+            if (!held) try {
+                var response = orders.markOrderPaymentFailed(orderId, payment.getFailureReason());
+                if (!response.getStatusCode().is2xxSuccessful()) log.warn("Failed to update VNPay order {} status to PAYMENT_FAILED: HTTP {}", orderId, response.getStatusCode().value());
+            } catch (Exception e) { log.warn("Failed to update VNPay order {} status to PAYMENT_FAILED", orderId, e); }
         }
         return Map.of("RspCode", "00", "Message", "Confirm Success");
     }

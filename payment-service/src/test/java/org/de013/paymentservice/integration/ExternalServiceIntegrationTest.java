@@ -71,8 +71,9 @@ class ExternalServiceIntegrationTest {
         assertDoesNotThrow(() -> {
             orderValidationService.markOrderPaymentFailed(orderId, reason);
             orderValidationService.releaseOrderReservation(orderId);
-            orderValidationService.updateOrderStatus(orderId, "FAILED", reason);
         });
+        assertThrows(org.de013.paymentservice.exception.ExternalServiceException.class,
+                () -> orderValidationService.updateOrderStatus(orderId, "FAILED", reason));
 
         // These should return false/null for fallback
         assertFalse(orderValidationService.reserveOrderItems(orderId));
