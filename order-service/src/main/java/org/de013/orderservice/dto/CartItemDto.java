@@ -53,6 +53,7 @@ public record CartItemDto(
         String productBrand,
 
         @JsonProperty("discount_amount")
-        BigDecimal discountAmount
+        BigDecimal discountAmount,
+        @JsonProperty("variant_id") String variantId
 ) {
 }

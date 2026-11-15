@@ -17,6 +17,8 @@ public class CheckoutAttempt {
     private String attemptKey;
     @Column(name = "user_id", nullable = false, length = 36)
     private String userId;
+    @Column(name = "request_snapshot")
+    private String requestSnapshot;
 
     public CheckoutAttempt(String attemptKey, String userId) {
         this.attemptKey = attemptKey;

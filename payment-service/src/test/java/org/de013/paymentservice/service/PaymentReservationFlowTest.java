@@ -77,6 +77,7 @@ class PaymentReservationFlowTest {
     @Autowired RefundService refunds;
     @Autowired org.de013.paymentservice.repository.RefundRepository refundRepository;
     @MockBean org.de013.paymentservice.client.OrderServiceClient orderClient;
+    @MockBean org.de013.paymentservice.client.UserServiceClient users;
     @MockBean org.de013.paymentservice.client.NotificationServiceClient notifications;
     @SpyBean PaymentRepository repository;
     @SpyBean HostedCheckoutStore hostedStore;
@@ -96,6 +97,45 @@ class PaymentReservationFlowTest {
     private ProcessPaymentRequest request(long id, String provider) {
         return ProcessPaymentRequest.builder().orderId(id).userId("owner").amount(new BigDecimal("25.00"))
                 .currency(Currency.USD).paymentMethodType(PaymentMethodType.CARD).provider(provider).build();
+    }
+
+    @Test void inventoryNotReadyBlocksActualMutationEntrypoints() throws Exception {
+        var realValidator = new PaymentRequestValidator(orderClient, users);
+        doAnswer(i -> { realValidator.validatePaymentRequest(i.getArgument(0)); return null; }).when(validator).validatePaymentRequest(any());
+        doAnswer(i -> { realValidator.validatePaymentAmount(i.getArgument(0), i.getArgument(1), i.getArgument(2), i.getArgument(3)); return null; })
+                .when(validator).validatePaymentAmount(anyLong(), any(), any(), anyString());
+        when(orderClient.getOrderById(anyLong())).thenAnswer(i -> {
+            var order = new OrderDto(); order.setId(i.getArgument(0)); order.setUserId("owner"); order.setStatus("PENDING"); order.setInventoryReady(false);
+            var money = new OrderDto.MoneyDto(); money.setAmount(new BigDecimal("25.00")); money.setCurrency("USD"); order.setTotalAmount(money);
+            return ResponseEntity.ok(order);
+        });
+        assertThrows(org.de013.common.exception.ConflictException.class, () -> payments.processPayment(request(8301, "STRIPE")));
+        assertThrows(org.de013.common.exception.ConflictException.class, () -> vnpay.createCheckout(request(8302, "VNPAY")));
+        assertTrue(repository.findByOrderId(8301L).isEmpty()); assertTrue(repository.findByOrderId(8302L).isEmpty());
+        var confirm = intent(8303, "pi_confirm_8303", org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+        var capture = intent(8304, "pi_capture_8304", org.de013.paymentservice.entity.enums.PaymentStatus.REQUIRES_CONFIRMATION, null);
+        assertThrows(org.de013.common.exception.ConflictException.class, () -> payments.confirmPayment(confirm.getId(), "pm_test"));
+        assertThrows(org.de013.common.exception.ConflictException.class, () -> payments.capturePayment(capture.getId(), null));
+        verify(stripe, never()).createPaymentIntent(any()); verify(stripe, never()).confirmPaymentIntent(any(), any());
+        verify(stripe, never()).capturePayment(any(), any());
+        verify(vnpayGateway, never()).buildPaymentUrl(anyString(), anyLong(), anyString(), anyString(), anyString());
+        var order = orderClient.getOrderById(8305L).getBody();
+        when(orders.read(8305L, "owner", "hosted-checkout")).thenReturn(ResponseEntity.ok(order));
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> hosted.start(8305L, "owner")).getStatusCode().value());
+        var reserved = hostedStore.reserve(8305L, "owner", new BigDecimal("25.00"), "https://fixture.test/checkout/result");
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> hostedStore.create(reserved)).getStatusCode().value());
+        verify(hostedStripe, never()).create(any());
+    }
+
+    @Test void inventoryNotReadyDoesNotDiscardHostedPaidEvidence() throws Exception {
+        hostedOrder(8306);
+        var checkout = hostedStore.reserve(8306L, "owner", new BigDecimal("25.00"), "https://fixture.test/checkout/result");
+        hostedStore.record(8306L, 0, "cs_8306", "OPEN", null);
+        var order = orders.read(8306L, "owner", "hosted-checkout").getBody();
+        order.setInventoryReady(false); order.setStatus("CANCELLED");
+        when(hostedStripe.retrieve("cs_8306")).thenReturn(new StripeHostedGateway.Snapshot("cs_8306", null, "complete", "paid", 2500L, "usd", "8306", "pi_8306"));
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> hosted.read(8306L, "owner")).getStatusCode().value());
+        assertEquals(org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, repository.findById(checkout.getPaymentId()).orElseThrow().getStatus());
     }
 
     @Test void vnpaySnapshotCommittedBeforeSignedUrlAndSurvivesRateChange() {

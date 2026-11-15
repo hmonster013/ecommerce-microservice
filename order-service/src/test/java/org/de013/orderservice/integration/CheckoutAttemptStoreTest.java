@@ -46,7 +46,7 @@ class CheckoutAttemptStoreTest {
             assertEquals(saved.getId(), checkout.read(key, "owner").order().id());
             var request = new org.de013.orderservice.dto.request.CreateOrderRequest(null, 1L,
                     org.de013.orderservice.entity.enums.OrderType.STANDARD, address, address, "CARD", "USD", null);
-            assertEquals(saved.getId(), checkout.create(key, "owner", request).order().id());
+            assertThrows(org.de013.common.exception.ConflictException.class, () -> checkout.create(key, "owner", request));
         } finally { orders.deleteById(saved.getId()); repository.deleteById(key.toString()); }
     }
 }

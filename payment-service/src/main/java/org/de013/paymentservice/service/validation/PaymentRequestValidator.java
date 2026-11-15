@@ -64,7 +64,7 @@ public class PaymentRequestValidator {
         validatePaymentAmount(orderId, amount, currency, null);
     }
 
-    private void validatePaymentAmount(Long orderId, BigDecimal amount, Currency currency, String userId) {
+    public void validatePaymentAmount(Long orderId, BigDecimal amount, Currency currency, String userId) {
         log.info("Validating payment amount {} (currency: {}) for order {}", amount, currency, orderId);
         try {
             ResponseEntity<OrderDto> response = orderServiceClient.getOrderById(orderId);
@@ -76,6 +76,9 @@ public class PaymentRequestValidator {
                     throw new PaymentProcessingException("Order identity or owner does not match payment request");
                 }
 
+                if (Boolean.FALSE.equals(order.getInventoryReady())) {
+                    throw new ConflictException("Order inventory is not ready: " + orderId);
+                }
                 // Business rule validation: Do not allow payment for an order in a non-payable state
                 if ("PAID".equals(order.getStatus()) || "COMPLETED".equals(order.getStatus())) {
                     log.error("Order {} is already paid or completed. Status: {}", orderId, order.getStatus());

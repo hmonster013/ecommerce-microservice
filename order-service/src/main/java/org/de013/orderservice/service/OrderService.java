@@ -13,6 +13,7 @@ public interface OrderService {
     // Create operations
     OrderResponse createOrder(CreateOrderRequest request);
     OrderResponse createCheckoutOrder(CreateOrderRequest request, String checkoutKey);
+    OrderResponse createIntent(CreateOrderRequest request, String key, String snapshot, java.util.List<org.de013.orderservice.dto.CartItemDto> items);
 
     // Read operations
     OrderResponse getOrderById(Long id);

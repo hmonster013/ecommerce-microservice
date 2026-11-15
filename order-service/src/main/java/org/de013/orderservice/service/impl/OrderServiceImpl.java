@@ -38,23 +38,26 @@ public class OrderServiceImpl implements OrderService {
     private final CartServiceClient cartServiceClient;
     private final ProductCatalogClient productCatalogClient;
 
+    private final jakarta.persistence.EntityManager entityManager;
+
     @Override
-    @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
-        return createCheckoutOrder(request, null);
+        throw new UnsupportedOperationException("Use idempotent checkout");
     }
 
     @Override
-    @Transactional
     public OrderResponse createCheckoutOrder(CreateOrderRequest request, String checkoutKey) {
-        log.info("Creating order for user: {} from cart: {}", request.userId(), request.cartId());
+        throw new UnsupportedOperationException("Use idempotent checkout");
+    }
 
-        // Get cart items from Shopping Cart Service
-        List<org.de013.orderservice.dto.CartItemDto> cartItems = cartServiceClient.getCartItems(request.cartId()).getData();
-        if (cartItems == null || cartItems.isEmpty()) {
-            throw new IllegalArgumentException("Cart is empty or not found");
-        }
-
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public OrderResponse createIntent(CreateOrderRequest request, String checkoutKey, String snapshot,
+                                      List<org.de013.orderservice.dto.CartItemDto> cartItems) {
+        int inserted = entityManager.createNativeQuery("INSERT INTO checkout_attempts (attempt_key,user_id,request_snapshot) VALUES (:key,:owner,:snapshot) ON CONFLICT (attempt_key) DO NOTHING")
+                .setParameter("key", checkoutKey).setParameter("owner", request.userId())
+                .setParameter("snapshot", snapshot).executeUpdate();
+        if (inserted == 0) throw new org.springframework.dao.DuplicateKeyException("Attempt exists");
         // Generate order number
         String orderNumber = "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         while (orderRepository.existsByOrderNumber(orderNumber)) {
@@ -65,7 +68,8 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderMapper.toEntity(request);
         order.setCheckoutKey(checkoutKey);
         order.setOrderNumber(orderNumber);
-        order.setStatus(OrderStatus.PENDING);
+        order.setStatus(OrderStatus.ON_HOLD);
+        order.setAllocationPhase("ALLOCATING");
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
@@ -104,19 +108,19 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setOrder(order);
             order.getOrderItems().add(orderItem);
 
-            // Deduct stock in Product Catalog Service
-            try {
-                log.info("Deducting {} stock for product ID: {}", cartItem.quantity(), cartItem.productId());
-                productCatalogClient.removeStock(cartItem.productId(), cartItem.quantity());
-            } catch (Exception e) {
-                log.error("Failed to deduct stock for product ID: {} - Error: {}", cartItem.productId(), e.getMessage());
-                throw new IllegalStateException("Failed to allocate inventory for product: " + cartItem.productName());
-            }
+
         }
 
         order.recalculateTotals();
 
-        order = orderRepository.save(order);
+        order = orderRepository.saveAndFlush(order);
+        for (var item : cartItems) {
+            entityManager.createNativeQuery("INSERT INTO inventory_allocation_intents (operation_id,order_id,target_kind,target_id,quantity,owner_id,state) VALUES (:id,:orderId,:kind,:target,:quantity,:owner,'PENDING')")
+                    .setParameter("id", UUID.randomUUID()).setParameter("orderId", order.getId())
+                    .setParameter("kind", item.variantId() == null ? "PRODUCT" : "VARIANT")
+                    .setParameter("target", item.variantId() == null ? Long.parseLong(item.productId()) : Long.parseLong(item.variantId()))
+                    .setParameter("quantity", item.quantity()).setParameter("owner", request.userId()).executeUpdate();
+        }
         log.info("Order created successfully: {} with {} items", orderNumber, cartItems.size());
 
         return orderMapper.toResponse(order);
@@ -160,8 +164,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse updateOrder(Long id, UpdateOrderRequest request) {
         log.debug("Updating order: {}", id);
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.lockForPayment(id)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null) throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
 
         // Basic update - can be enhanced later
         if (request.customerNotes() != null) {
@@ -178,8 +183,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void cancelOrder(Long id, String reason) {
         log.debug("Cancelling order: {} with reason: {}", id, reason);
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.lockForPayment(id)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null) throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
 
         // Basic cancellation - can be enhanced later
         order.setStatus(OrderStatus.CANCELLED);
@@ -201,10 +207,14 @@ public class OrderServiceImpl implements OrderService {
                 OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.COMPLETED,
                 OrderStatus.PARTIALLY_SHIPPED, OrderStatus.PARTIALLY_DELIVERED);
         if (paidStates.contains(order.getStatus())) return;
+        if (order.getAllocationPhase() != null && !"READY".equals(order.getAllocationPhase())) {
+            throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
+        }
         if (!java.util.EnumSet.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PAYMENT_AUTHORIZED).contains(order.getStatus())) {
             throw new org.de013.common.exception.ConflictException("Order requires payment reconciliation");
         }
         order.setStatus(OrderStatus.PAID);
+        if (order.getAllocationPhase() != null) order.setAllocationPhase("FULFILL_PENDING");
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
         log.info("Order {} successfully marked as PAID", orderId);
@@ -214,8 +224,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void markOrderPaymentFailed(Long orderId, String reason) {
         log.info("Marking order {} as FAILED due to: {}", orderId, reason);
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.lockForPayment(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null) throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
         order.setStatus(OrderStatus.FAILED);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
@@ -226,8 +237,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void updateOrderStatus(Long orderId, org.de013.orderservice.dto.request.OrderStatusUpdateRequest request) {
         log.info("Updating order {} status to {}", orderId, request.status());
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.lockForPayment(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null) throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
         OrderStatus newStatus = OrderStatus.fromCode(request.status());
         if (newStatus == null) {
             throw new IllegalArgumentException("Invalid order status code: " + request.status());

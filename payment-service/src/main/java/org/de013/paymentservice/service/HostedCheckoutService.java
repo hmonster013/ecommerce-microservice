@@ -40,6 +40,7 @@ public class HostedCheckoutService {
         }
         var checkout = checkouts.findById(orderId).orElse(null);
         if (checkout == null) {
+            if (Boolean.FALSE.equals(order.getInventoryReady())) throw new ResponseStatusException(HttpStatus.CONFLICT, "Order inventory is not ready");
             if (!"PENDING".equals(order.getStatus()) && !"CONFIRMED".equals(order.getStatus())) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is not payable");
             }
@@ -113,10 +114,10 @@ public class HostedCheckoutService {
                 : "expired".equals(snapshot.status()) ? "EXPIRED"
                 : "open".equals(snapshot.status()) ? "OPEN" : "PENDING";
         if ("PAID".equals(state) && (!"complete".equals(snapshot.status()) || snapshot.paymentIntent() == null)) throw unavailable();
+        store.record(order.getId(), checkout.getGeneration(), snapshot.id(), state, snapshot.paymentIntent());
         if ("PAID".equals(state) && !java.util.Set.of("PENDING", "CONFIRMED").contains(order.getStatus()) && !PAID_ORDER_STATES.contains(order.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Paid session requires order reconciliation");
         }
-        store.record(order.getId(), checkout.getGeneration(), snapshot.id(), state, snapshot.paymentIntent());
         if ("PAID".equals(state)) {
             store.markPaid(order.getId());
         }

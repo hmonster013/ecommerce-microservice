@@ -26,6 +26,8 @@ public record OrderResponse(
         // Current order status
         OrderStatus status,
 
+        Boolean inventoryReady,
+
         // Order type
         OrderType orderType,
 

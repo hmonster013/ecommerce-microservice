@@ -88,6 +88,16 @@ public class HostedCheckoutStore {
                 || checkout.getSessionId() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout session changed; read again");
         }
+        var response = orders.read(checkout.getOrderId(), checkout.getUserId(), "hosted-checkout");
+        var order = response.getBody();
+        if (!response.getStatusCode().is2xxSuccessful() || order == null || !checkout.getOrderId().equals(order.getId())
+                || !checkout.getUserId().equals(order.getUserId()) || order.getTotalAmount() == null
+                || !"USD".equals(order.getTotalAmount().getCurrency()) || order.getTotalAmount().getAmount() == null
+                || checkout.getAmount().compareTo(order.getTotalAmount().getAmount()) != 0
+                || !java.util.Set.of("PENDING", "CONFIRMED").contains(order.getStatus())
+                || Boolean.FALSE.equals(order.getInventoryReady())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is not payable");
+        }
         return stripe.create(checkout);
     }
 

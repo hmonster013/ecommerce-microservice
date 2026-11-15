@@ -66,6 +66,7 @@ public class PaymentServiceImpl implements PaymentService {
         Payment reserved = reservation.reserve(createPaymentEntity(request));
         return locked(reserved.getId(), (payment, held) -> {
             requireNotHeld(held);
+            paymentRequestValidator.validatePaymentAmount(payment.getOrderId(), payment.getAmount(), payment.getCurrency(), payment.getUserId());
             try {
                 StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
                 StripePaymentResponse response = gateway.createPaymentIntent(gateway.mapToGatewayPaymentRequest(request));
@@ -83,6 +84,7 @@ public class PaymentServiceImpl implements PaymentService {
             if (payment.isVerifiedRelease() || payment.getStatus() != PaymentStatus.PENDING)
                 throw new PaymentProcessingException("Payment cannot be confirmed. Current status: " + payment.getStatus());
             requireIntent(payment);
+            paymentRequestValidator.validatePaymentAmount(payment.getOrderId(), payment.getAmount(), payment.getCurrency(), payment.getUserId());
             try {
                 StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
                 return applyProviderResponse(payment, gateway.confirmPaymentIntent(payment.getStripePaymentIntentId(), paymentMethodId), TransactionType.CHARGE, held, false);
@@ -113,6 +115,7 @@ public class PaymentServiceImpl implements PaymentService {
             if (payment.isVerifiedRelease() || payment.getStatus() != PaymentStatus.REQUIRES_CONFIRMATION)
                 throw new PaymentProcessingException("Payment cannot be captured. Current status: " + payment.getStatus());
             requireIntent(payment);
+            paymentRequestValidator.validatePaymentAmount(payment.getOrderId(), payment.getAmount(), payment.getCurrency(), payment.getUserId());
             try {
                 StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
                 return applyProviderResponse(payment, gateway.capturePayment(payment.getStripePaymentIntentId(), amount != null ? amount : payment.getAmount()), TransactionType.CAPTURE, held, true);

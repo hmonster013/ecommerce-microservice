@@ -48,6 +48,9 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true, exclude = {"orderItems"})
 public class Order extends BaseEntity {
 
+    @Column(name = "allocation_phase", length = 32)
+    private String allocationPhase;
+
     @Column(name = "checkout_key", unique = true, length = 36)
     private String checkoutKey;
 

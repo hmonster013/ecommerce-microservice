@@ -15,7 +15,7 @@ import static org.mockito.Mockito.*;
 
 class OrderPaidTransitionTest {
     OrderRepository repository = mock(OrderRepository.class);
-    OrderServiceImpl service = new OrderServiceImpl(repository, mock(OrderMapper.class), mock(CartServiceClient.class), mock(ProductCatalogClient.class));
+    OrderServiceImpl service = new OrderServiceImpl(repository, mock(OrderMapper.class), mock(CartServiceClient.class), mock(ProductCatalogClient.class), mock(jakarta.persistence.EntityManager.class));
 
     @Test void duplicatePaymentSyncDoesNotRegressFulfillmentStatus() {
         var order = new Order(); order.setStatus(OrderStatus.SHIPPED);

@@ -36,6 +36,7 @@ public class VnpayService {
     private final PaymentRequestValidator paymentRequestValidator;
     private final HttpServletRequest httpServletRequest;
     private final PaymentReservation reservation;
+    private final org.de013.paymentservice.service.PaymentOrderGuard guard;
 
     /**
      * Creates a VNPay checkout request, saves a PENDING payment, and builds the redirect URL.
@@ -88,6 +89,9 @@ public class VnpayService {
                 .build();
 
         payment = reservation.reserve(payment);
+
+        guard.requirePayable(payment.getOrderId());
+        paymentRequestValidator.validatePaymentAmount(payment.getOrderId(), payment.getAmount(), payment.getCurrency(), payment.getUserId());
 
         String redirectUrl = vnpayPaymentGateway.buildPaymentUrl(
                 paymentNumber, payment.getProviderAmountVnd(), orderInfo, ipAddr, createDate);

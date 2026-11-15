@@ -31,6 +31,16 @@ import java.util.UUID;
 @Slf4j
 public class OrderExceptionHandler {
 
+    @ExceptionHandler(org.de013.common.exception.ConflictException.class)
+    public ResponseEntity<Void> handleConflict() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
+    }
+
+    @ExceptionHandler(org.springframework.web.bind.MissingRequestHeaderException.class)
+    public ResponseEntity<Void> handleMissingHeader() {
+        return ResponseEntity.badRequest().build();
+    }
+
     // ========== VALIDATION EXCEPTIONS ==========
 
     /**

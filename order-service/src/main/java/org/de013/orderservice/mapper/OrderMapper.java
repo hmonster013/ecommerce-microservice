@@ -110,6 +110,7 @@ public class OrderMapper {
                 o.getOrderNumber(),
                 o.getUserId(),
                 o.getStatus(),
+                o.getAllocationPhase() == null ? null : java.util.Set.of("READY", "FULFILL_PENDING", "FULFILLED").contains(o.getAllocationPhase()),
                 o.getOrderType(),
                 o.getTotalAmount(),
                 o.getSubtotalAmount(),

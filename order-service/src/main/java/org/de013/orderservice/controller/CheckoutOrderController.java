@@ -16,12 +16,13 @@ public class CheckoutOrderController {
     private final CheckoutOrderService checkout;
 
     @PostMapping("/{key}")
-    public CheckoutOrderResponse create(@PathVariable UUID key, @Valid @RequestBody CreateOrderRequest request) {
-        return checkout.create(key, UserContextHolder.requireAuthenticated().getUserId(), request);
+    public org.springframework.http.ResponseEntity<CheckoutOrderResponse> create(@PathVariable UUID key, @Valid @RequestBody CreateOrderRequest request) {
+        var result = checkout.create(key, UserContextHolder.requireAuthenticated().getUserId(), request);
+        return org.springframework.http.ResponseEntity.status("UNKNOWN".equals(result.state()) ? 202 : 200).body(result);
     }
 
     @GetMapping("/{key}")
-    public CheckoutOrderResponse read(@PathVariable UUID key) {
+    public CheckoutOrderResponse read(@PathVariable String key) {
         return checkout.read(key, UserContextHolder.requireAuthenticated().getUserId());
     }
 }
