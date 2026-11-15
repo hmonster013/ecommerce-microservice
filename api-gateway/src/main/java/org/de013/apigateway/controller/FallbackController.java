@@ -4,9 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.apigateway.exception.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 
@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
 @Slf4j
 public class FallbackController {
 
-    @GetMapping("/{serviceName}")
+    @RequestMapping(value = "/{serviceName}", method = {RequestMethod.GET, RequestMethod.POST,
+            RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE, RequestMethod.HEAD, RequestMethod.OPTIONS})
     public ResponseEntity<ErrorResponse> serviceFallback(
             @PathVariable String serviceName,
             ServerWebExchange exchange) {
