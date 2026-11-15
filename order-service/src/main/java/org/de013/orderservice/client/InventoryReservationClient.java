@@ -4,7 +4,7 @@ import java.util.UUID;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name = "product-catalog-service", contextId = "inventoryReservation", path = "/internal/inventory-reservations", configuration = org.de013.orderservice.config.FeignConfig.class)
+@FeignClient(name = "product-catalog-service", contextId = "inventoryReservation", path = "/internal/inventory-reservations", configuration = inventoryconfig.InventoryFeignConfig.class)
 public interface InventoryReservationClient {
     record Reservation(UUID operationId, String targetKind, Long targetId, Integer quantity, String owner, String state, String reason) { }
     record Request(UUID operationId, String targetKind, Long targetId, Integer quantity, String owner) { }

@@ -1,7 +1,7 @@
 package org.de013.productcatalog.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.de013.common.security.UserContextHolder;
+import org.de013.productcatalog.security.CatalogIdentity;
 import org.de013.productcatalog.config.CurrencyRegistry;
 import org.de013.productcatalog.dto.currency.CurrencyRateRequest;
 import org.de013.productcatalog.dto.currency.CurrencyRateResponse;
@@ -92,7 +92,7 @@ public class CurrencySettingsServiceImpl implements CurrencySettingsService {
             settings.getRates().add(added);
         }
         settings.setUpdatedAt(LocalDateTime.now());
-        settings.setUpdatedBy(UserContextHolder.getCurrentUserId());
+        settings.setUpdatedBy(CatalogIdentity.subject().orElse(null));
         try {
             return toSettingsResponse(settingsRepository.saveAndFlush(settings));
         } catch (OptimisticLockingFailureException ex) {

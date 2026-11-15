@@ -49,6 +49,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @SpringBootTest(properties = {"spring.jpa.show-sql=false", "logging.level.org.hibernate.SQL=WARN"})
 @AutoConfigureMockMvc
@@ -56,6 +58,13 @@ import static org.mockito.Mockito.when;
 @Testcontainers(disabledWithoutDocker = true)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class InventoryReservationIntegrationTest {
+    private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor adminJwt() {
+        return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+    private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor serviceJwt() {
+        return jwt().jwt(jwt -> jwt.claim("azp", "order-service").claim("resource_access", java.util.Map.of(
+                "product-catalog-service", java.util.Map.of("roles", java.util.List.of("catalog-inventory-reservation")))));
+    }
     @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
     @DynamicPropertySource static void database(DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -181,14 +190,14 @@ class InventoryReservationIntegrationTest {
                 valid.replace("\"owner\":\"attempt\"", "\"owner\":null")
         };
         for (String body : invalid) {
-            mvc.perform(post(base).contentType("application/json").content(body)).andExpect(status().isBadRequest());
+            mvc.perform(post(base).with(serviceJwt()).contentType("application/json").content(body)).andExpect(status().isBadRequest());
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM inventory_reservations", Integer.class));
         }
-        mvc.perform(post(base).contentType("application/json").content(valid)).andExpect(status().isOk())
+        mvc.perform(post(base).with(serviceJwt()).contentType("application/json").content(valid)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("RESERVED")).andExpect(jsonPath("$.operationId").value(id));
-        mvc.perform(post(base).contentType("application/json").content(valid.replace("\"quantity\":3", "\"quantity\":4")))
+        mvc.perform(post(base).with(serviceJwt()).contentType("application/json").content(valid.replace("\"quantity\":3", "\"quantity\":4")))
                 .andExpect(status().isConflict());
-        mvc.perform(get(base + "/" + UUID.randomUUID())).andExpect(status().isNotFound())
+        mvc.perform(get(base + "/" + UUID.randomUUID()).with(serviceJwt())).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("OPERATION_NOT_FOUND"));
     }
 
@@ -354,13 +363,13 @@ class InventoryReservationIntegrationTest {
             jdbc.update("UPDATE inventory SET quantity=10 WHERE product_id=?", id);
             var r = request(TargetKind.PRODUCT, id, 3);
             service.reserve(r);
-            mvc.perform(delete("/products/" + id)).andExpect(status().isConflict())
+            mvc.perform(delete("/products/" + id).with(adminJwt())).andExpect(status().isConflict())
                     .andExpect(jsonPath("$.code").value("RESERVATION_CONFLICT"));
             assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM products WHERE id=?", Integer.class, id));
             assertEquals(3, jdbc.queryForObject("SELECT reserved_quantity FROM inventory WHERE product_id=?", Integer.class, id));
             assertEquals("RESERVED", service.lookup(r.operationId()).state());
             service.terminal(r.operationId(), false);
-            mvc.perform(delete("/products/" + id)).andExpect(status().isOk());
+            mvc.perform(delete("/products/" + id).with(adminJwt())).andExpect(status().isOk());
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM products WHERE id=?", Integer.class, id));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM inventory WHERE product_id=?", Integer.class, id));
             assertEquals("RELEASED", service.lookup(r.operationId()).state());
@@ -369,7 +378,7 @@ class InventoryReservationIntegrationTest {
             jdbc.update("UPDATE variant_inventory SET quantity=10 WHERE variant_id=?", child);
             var variantReservation = request(TargetKind.VARIANT, child, 3);
             service.reserve(variantReservation);
-            mvc.perform(delete("/products/" + parent)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("RESERVATION_CONFLICT"));
+            mvc.perform(delete("/products/" + parent).with(adminJwt())).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("RESERVATION_CONFLICT"));
             assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM products WHERE id=?", Integer.class, parent));
             assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM variant_inventory WHERE variant_id=?", Integer.class, child));
             assertEquals("RESERVED", service.lookup(variantReservation.operationId()).state());
@@ -398,7 +407,7 @@ class InventoryReservationIntegrationTest {
                 var r = request(TargetKind.VARIANT, active, 3);
                 service.reserve(r);
                 if (path == 0) {
-                    mvc.perform(delete("/variants/" + active)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("RESERVATION_CONFLICT"));
+                    mvc.perform(delete("/variants/" + active).with(adminJwt())).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("RESERVATION_CONFLICT"));
                 } else if (path == 1) {
                     assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () -> productVariantService.deleteVariants(java.util.List.of(sibling, active)));
                 } else {
@@ -409,7 +418,7 @@ class InventoryReservationIntegrationTest {
                 assertEquals(3, jdbc.queryForObject("SELECT reserved_quantity FROM variant_inventory WHERE variant_id=?", Integer.class, active));
                 assertEquals("RESERVED", service.lookup(r.operationId()).state());
                 service.terminal(r.operationId(), true);
-                if (path == 0) mvc.perform(delete("/variants/" + active)).andExpect(status().isOk());
+                if (path == 0) mvc.perform(delete("/variants/" + active).with(adminJwt())).andExpect(status().isOk());
                 else if (path == 1) productVariantService.deleteVariants(java.util.List.of(sibling, active));
                 else variantInventoryService.deleteVariantInventory(active);
                 assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM variant_inventory WHERE variant_id=?", Integer.class, active));

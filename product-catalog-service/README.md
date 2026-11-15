@@ -9,7 +9,11 @@ Product Catalog Service là core microservice quản lý sản phẩm, danh mụ
 - **Cache**: Redis
 - **Service Discovery**: Eureka Client
 - **Documentation**: OpenAPI 3 (Swagger)
-- **Security**: Spring Security với CORS support
+- **Security**: JWT resource server; CORS do gateway xử lý.
+
+Catalog yêu cầu cấu hình `spring.security.oauth2.resourceserver.jwt.issuer-uri` từ nguồn tin cậy và audience `product-catalog-service`. Quyền đặt trước inventory nội bộ yêu cầu `azp=order-service` và client role `catalog-inventory-reservation` trong `resource_access.product-catalog-service.roles`. Khi provision identity provider, client `order-service` phải chỉ dùng client credentials; không suy luận grant type từ JWT.
+
+Audit Catalog dùng JWT subject đã xác thực thay cho username hoặc header; tác vụ không có JWT không ghi danh tính người dùng.
 
 ## 🚀 Features
 - Product management (CRUD operations)
