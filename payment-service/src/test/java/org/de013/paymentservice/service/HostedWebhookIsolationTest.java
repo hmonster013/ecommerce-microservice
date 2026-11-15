@@ -17,7 +17,7 @@ class HostedWebhookIsolationTest {
     @Test void individualIntentEventsMustNotDowngradeOrPrematurelyCompleteHostedCheckout() {
         var payments = mock(PaymentRepository.class);
         var orders = mock(OrderServiceClient.class);
-        var service = new WebhookServiceImpl(mock(PaymentOutbox.class), mock(PaymentGatewayFactory.class), mock(StripeWebhookService.class), payments,
+        var service = new WebhookServiceImpl(mock(PaymentOutbox.class), mock(PaymentNotificationOutbox.class), mock(PaymentGatewayFactory.class), mock(StripeWebhookService.class), payments,
                 mock(PaymentMethodRepository.class), mock(RefundRepository.class), orders,
                 mock(ProcessedStripeEventRepository.class), mock(UserServiceClient.class), mock(NotificationServiceClient.class), mock(PaymentOrderGuard.class));
         var payment = Payment.builder().gatewayName("STRIPE").gatewayTxnRef("cs_fixture").status(PaymentStatus.PENDING).build();

@@ -34,6 +34,7 @@ import java.util.Optional;
 @Transactional
 public class WebhookServiceImpl implements WebhookService {
     private final PaymentOutbox outbox;
+    private final PaymentNotificationOutbox notificationOutbox;
 
     private final PaymentGatewayFactory gatewayFactory;
     private final StripeWebhookService stripeWebhookService;
@@ -199,7 +200,8 @@ public class WebhookServiceImpl implements WebhookService {
                 } else if (!held && !alreadySucceeded) {
                     if (outbox.enabled()) outbox.enqueue(payment);
                     else updateOrderStatus(orderId, "PAID", payment);
-                    sendPaymentSuccessNotification(payment);
+                    if (notificationOutbox.enabled()) notificationOutbox.enqueue(payment);
+                    else sendPaymentSuccessNotification(payment);
                 }
             }
             case "payment_intent.payment_failed" -> {

@@ -28,7 +28,7 @@ public class PaymentOutboxRelay {
     private final TransactionTemplate transaction;
     private UUID cursor = new UUID(0, 0);
 
-    public PaymentOutboxRelay(JdbcTemplate jdbc, PaymentOrderGuard guard, KafkaTemplate<String, String> kafka,
+    public PaymentOutboxRelay(JdbcTemplate jdbc, PaymentOrderGuard guard, @org.springframework.beans.factory.annotation.Qualifier("paymentKafkaTemplate") KafkaTemplate<String, String> kafka,
                               PlatformTransactionManager manager) {
         this.jdbc = jdbc;
         this.guard = guard;

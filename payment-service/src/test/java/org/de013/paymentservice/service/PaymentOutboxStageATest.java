@@ -42,6 +42,35 @@ class PaymentOutboxStageATest {
     @org.springframework.beans.factory.annotation.Autowired org.de013.paymentservice.config.PaymentGatewayConfig gatewayConfig;
     @org.springframework.beans.factory.annotation.Autowired PaymentOrderGuard guard;
     @org.springframework.beans.factory.annotation.Autowired org.springframework.transaction.PlatformTransactionManager tx;
+    @org.springframework.beans.factory.annotation.Autowired jakarta.validation.Validator validatorBean;
+
+    @Test void notificationWriterPersistsImmutableSnapshotAndReconciliation() throws Exception {
+        var writer = new PaymentNotificationOutbox(jdbc, new ObjectMapper(), validatorBean, true);
+        var p = payment(99201, "STRIPE", PaymentStatus.PENDING);
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(tx);
+        transaction.executeWithoutResult(s -> writer.enqueue(p));
+        String original = jdbc.queryForObject("select payload from payment_notification_outbox where payment_id=?", String.class, p.getId());
+        var json = new ObjectMapper().readTree(original);
+        assertEquals(12, json.size());
+        java.util.UUID.fromString(json.path("eventId").asText());
+        java.time.Instant.parse(json.path("occurredAt").asText());
+        assertEquals("PaymentEmailRequested", json.path("eventType").asText());
+        assertEquals(1, json.path("schemaVersion").asInt());
+        assertEquals(p.getId().longValue(), json.path("paymentId").asLong());
+        assertEquals(p.getPaymentNumber(), json.path("paymentNumber").asText());
+        assertEquals(p.getOrderId().longValue(), json.path("orderId").asLong());
+        assertEquals("owner", json.path("userId").asText());
+        assertEquals("EMAIL", json.path("channel").asText());
+        assertEquals("fixture@example.test", json.path("recipient").asText());
+        assertTrue(json.path("content").asText().contains("25.00 USD"));
+        p.setReceiptEmail("changed@example.test");
+        transaction.executeWithoutResult(s -> writer.enqueue(p));
+        assertEquals(original, jdbc.queryForObject("select payload from payment_notification_outbox where payment_id=?", String.class, p.getId()));
+        var missing = payment(99202, "VNPAY", PaymentStatus.PENDING);
+        missing.setReceiptEmail(null);
+        transaction.executeWithoutResult(s -> writer.enqueue(missing));
+        assertEquals("RECONCILIATION", jdbc.queryForObject("select state from payment_notification_outbox where payment_id=?", String.class, missing.getId()));
+    }
 
     private org.de013.paymentservice.entity.Payment payment(long order, String provider, PaymentStatus status) {
         return repository.saveAndFlush(org.de013.paymentservice.entity.Payment.builder().orderId(order).userId("owner")

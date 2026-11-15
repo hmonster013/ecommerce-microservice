@@ -43,6 +43,7 @@ import java.util.Optional;
 @Transactional
 public class PaymentServiceImpl implements PaymentService {
     private final PaymentOutbox outbox;
+    private final PaymentNotificationOutbox notificationOutbox;
 
     private final PaymentRepository paymentRepository;
     private final PaymentGatewayFactory gatewayFactory;
@@ -465,7 +466,8 @@ public class PaymentServiceImpl implements PaymentService {
             if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
                 if (outbox.enabled()) outbox.enqueue(payment);
                 else updateOrderStatus(payment.getOrderId(), "PAID", payment);
-                if (notify) sendPaymentSuccessNotification(payment);
+                if (notificationOutbox.enabled()) notificationOutbox.enqueue(payment);
+                else if (notify) sendPaymentSuccessNotification(payment);
             } else if (payment.getStatus() == PaymentStatus.FAILED) {
                 updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
             }
