@@ -168,7 +168,11 @@ public class SecurityConfig {
 
                             // ========== NOTIFICATION SERVICE ==========
                             // Send notifications (admin, support)
-                            .pathMatchers(HttpMethod.POST, "/api/v1/notification-service/notifications/send/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.SUPPORT.roleName())
+                            .pathMatchers(HttpMethod.POST,
+                                    "/api/v1/notification-service/notifications/send-email",
+                                    "/api/v1/notification-service/notifications/send-sms",
+                                    "/api/v1/notification-service/notifications/send-both"
+                            ).hasAnyRole(UserRole.ADMIN.roleName(), UserRole.SUPPORT.roleName())
 
                             // View notifications (authenticated users can see their own)
                             .pathMatchers(HttpMethod.GET, "/api/v1/notification-service/notifications/**").authenticated()
