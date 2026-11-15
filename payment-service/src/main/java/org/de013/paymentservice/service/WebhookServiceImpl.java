@@ -43,6 +43,7 @@ public class WebhookServiceImpl implements WebhookService {
     private final ProcessedStripeEventRepository processedStripeEventRepository;
     private final UserServiceClient userServiceClient;
     private final NotificationServiceClient notificationServiceClient;
+    private final PaymentOrderGuard guard;
 
     // ========== WEBHOOK PROCESSING ==========
 
@@ -77,7 +78,11 @@ public class WebhookServiceImpl implements WebhookService {
             }
 
             // Process event
-            processWebhookEvent(webhookRequest);
+            if (webhookRequest.getEventType().startsWith("payment_intent.")) {
+                if (!processVerifiedIntent(webhookRequest)) return;
+            } else {
+                processWebhookEvent(webhookRequest);
+            }
 
             // Mark event as processed in the database
             if (eventId != null) {
@@ -125,10 +130,8 @@ public class WebhookServiceImpl implements WebhookService {
 
         try {
             switch (eventType) {
-                case "payment_intent.succeeded" -> handlePaymentIntentSucceeded(webhookRequest);
-                case "payment_intent.payment_failed" -> handlePaymentIntentFailed(webhookRequest);
-                case "payment_intent.requires_action" -> handlePaymentIntentRequiresAction(webhookRequest);
-                case "payment_intent.canceled" -> handlePaymentIntentCanceled(webhookRequest);
+                case "payment_intent.succeeded", "payment_intent.payment_failed", "payment_intent.requires_action", "payment_intent.canceled" ->
+                        throw new SecurityException("Intent events require a verified webhook");
                 case "payment_method.attached" -> handlePaymentMethodAttached(webhookRequest);
                 case "payment_method.detached" -> handlePaymentMethodDetached(webhookRequest);
                 case "customer.created" -> handleCustomerCreated(webhookRequest);
@@ -155,91 +158,73 @@ public class WebhookServiceImpl implements WebhookService {
                 && payment.getGatewayTxnRef().startsWith("cs_");
     }
 
-    @Override
-    public void handlePaymentIntentSucceeded(StripeWebhookRequest webhookRequest) {
-        String paymentIntentId = webhookRequest.getPaymentIntentId();
-        log.info("Handling payment intent succeeded: {}", paymentIntentId);
-
-        Optional<Payment> paymentOpt = paymentRepository.findByStripePaymentIntentId(paymentIntentId);
-        if (paymentOpt.isPresent()) {
-            Payment payment = paymentOpt.get();
-            if (isHostedCheckout(payment)) return;
-            payment.setStatus(PaymentStatus.SUCCEEDED);
-            paymentRepository.save(payment);
-
-            // Update order status
-            updateOrderStatus(payment.getOrderId(), "PAID", payment);
-
-            // Send email notification
-            sendPaymentSuccessNotification(payment);
-
-            log.info("Payment status updated to SUCCEEDED: {}", payment.getPaymentNumber());
-        } else {
-            log.warn("Payment not found for payment intent: {}", paymentIntentId);
+    // This method is reachable only after verification of the original payload.
+    private boolean processVerifiedIntent(StripeWebhookRequest event) {
+        String id = event.getObjectId();
+        if (!"payment_intent".equals(event.getObjectType()) || id == null || id.isBlank()
+                || event.getEventId() == null || event.getEventId().isBlank()) {
+            throw new PaymentGatewayException("Invalid payment intent event");
         }
+        if ("payment_intent.canceled".equals(event.getEventType()) && !"canceled".equals(event.getStatus())) {
+            throw new PaymentGatewayException("Invalid canceled payment intent status");
+        }
+        if ("payment_intent.succeeded".equals(event.getEventType()) && !"succeeded".equals(event.getStatus())) {
+            throw new PaymentGatewayException("Invalid succeeded payment intent status");
+        }
+        Long orderId = paymentRepository.findOrderIdByStripeIntent(id)
+                .orElseThrow(() -> new PaymentGatewayException("Payment intent is not correlated"));
+        boolean held = guard.lock(orderId);
+        if (processedStripeEventRepository.existsById(event.getEventId())) return false;
+        Payment payment = paymentRepository.findByStripePaymentIntentId(id)
+                .filter(p -> orderId.equals(p.getOrderId()) && id.equals(p.getStripePaymentIntentId()))
+                .orElseThrow(() -> new PaymentGatewayException("Payment intent correlation changed"));
+        if (isHostedCheckout(payment)) return true;
+        if (!"STRIPE".equals(payment.getGatewayName())) {
+            throw new PaymentGatewayException("Payment intent provider is not correlated");
+        }
+        switch (event.getEventType()) {
+            case "payment_intent.canceled" -> {
+                if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) {
+                    payment.setStatus(PaymentStatus.CANCELED);
+                    payment.setBlocking(false);
+                    payment.setVerifiedRelease(true);
+                }
+            }
+            case "payment_intent.succeeded" -> {
+                boolean alreadySucceeded = payment.getStatus() == PaymentStatus.SUCCEEDED;
+                payment.setStatus(PaymentStatus.SUCCEEDED);
+                if (payment.isVerifiedRelease()) {
+                    guard.hold(orderId);
+                } else if (!held && !alreadySucceeded) {
+                    updateOrderStatus(orderId, "PAID", payment);
+                    sendPaymentSuccessNotification(payment);
+                }
+            }
+            case "payment_intent.payment_failed" -> {
+                if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
+                    payment.setStatus(PaymentStatus.FAILED);
+                    payment.setFailureReason(event.getFailureReason() != null ? event.getFailureReason() : "Payment failed via webhook");
+                    if (!held) updateOrderStatus(orderId, "PAYMENT_FAILED", payment);
+                }
+            }
+            case "payment_intent.requires_action" -> {
+                if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
+                    payment.setStatus(PaymentStatus.REQUIRES_ACTION);
+                }
+            }
+            default -> log.debug("Unhandled webhook event type: {}", event.getEventType());
+        }
+        return true;
     }
 
     @Override
-    public void handlePaymentIntentFailed(StripeWebhookRequest webhookRequest) {
-        String paymentIntentId = webhookRequest.getPaymentIntentId();
-        log.info("Handling payment intent failed: {}", paymentIntentId);
-
-        Optional<Payment> paymentOpt = paymentRepository.findByStripePaymentIntentId(paymentIntentId);
-        if (paymentOpt.isPresent()) {
-            Payment payment = paymentOpt.get();
-            if (isHostedCheckout(payment)) return;
-            payment.setStatus(PaymentStatus.FAILED);
-            payment.setFailureReason(webhookRequest.getFailureReason() != null ?
-                    webhookRequest.getFailureReason() : "Payment failed via webhook");
-            paymentRepository.save(payment);
-
-            // Update order status
-            updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
-
-            log.info("Payment status updated to FAILED: {}", payment.getPaymentNumber());
-        } else {
-            log.warn("Payment not found for payment intent: {}", paymentIntentId);
-        }
-    }
-
+    public void handlePaymentIntentSucceeded(StripeWebhookRequest event) { throw new SecurityException("Verified webhook required"); }
     @Override
-    public void handlePaymentIntentRequiresAction(StripeWebhookRequest webhookRequest) {
-        String paymentIntentId = webhookRequest.getPaymentIntentId();
-        log.info("Handling payment intent requires action: {}", paymentIntentId);
-
-        Optional<Payment> paymentOpt = paymentRepository.findByStripePaymentIntentId(paymentIntentId);
-        if (paymentOpt.isPresent()) {
-            Payment payment = paymentOpt.get();
-            if (isHostedCheckout(payment)) return;
-            payment.setStatus(PaymentStatus.REQUIRES_ACTION);
-            paymentRepository.save(payment);
-
-            log.info("Payment status updated to REQUIRES_ACTION: {}", payment.getPaymentNumber());
-        } else {
-            log.warn("Payment not found for payment intent: {}", paymentIntentId);
-        }
-    }
-
+    public void handlePaymentIntentFailed(StripeWebhookRequest event) { throw new SecurityException("Verified webhook required"); }
     @Override
-    public void handlePaymentIntentCanceled(StripeWebhookRequest webhookRequest) {
-        String paymentIntentId = webhookRequest.getPaymentIntentId();
-        log.info("Handling payment intent canceled: {}", paymentIntentId);
-
-        Optional<Payment> paymentOpt = paymentRepository.findByStripePaymentIntentId(paymentIntentId);
-        if (paymentOpt.isPresent()) {
-            Payment payment = paymentOpt.get();
-            if (isHostedCheckout(payment)) return;
-            payment.setStatus(PaymentStatus.CANCELED);
-            paymentRepository.save(payment);
-
-            // Update order status
-            updateOrderStatus(payment.getOrderId(), "PAYMENT_CANCELED", payment);
-
-            log.info("Payment status updated to CANCELED: {}", payment.getPaymentNumber());
-        } else {
-            log.warn("Payment not found for payment intent: {}", paymentIntentId);
-        }
-    }
+    public void handlePaymentIntentRequiresAction(StripeWebhookRequest event) { throw new SecurityException("Verified webhook required"); }
+    @Override
+    public void handlePaymentIntentCanceled(StripeWebhookRequest event) { throw new SecurityException("Verified webhook required"); }
 
     // ========== PAYMENT METHOD EVENTS ==========
 
@@ -328,6 +313,7 @@ public class WebhookServiceImpl implements WebhookService {
         String refundId = webhookRequest.getRefundId();
         log.info("Handling refund created: {}", refundId);
 
+        lockRefundWebhook(refundId);
         Optional<Refund> refundOpt = refundRepository.findByStripeRefundId(refundId);
         if (refundOpt.isPresent()) {
             Refund refund = refundOpt.get();
@@ -336,7 +322,7 @@ public class WebhookServiceImpl implements WebhookService {
 
             log.info("Refund status updated to SUCCEEDED: {}", refund.getRefundNumber());
         } else {
-            log.warn("Refund not found for Stripe refund: {}", refundId);
+            throw new PaymentGatewayException("Refund is not correlated");
         }
     }
 
@@ -345,11 +331,14 @@ public class WebhookServiceImpl implements WebhookService {
         String refundId = webhookRequest.getRefundId();
         log.info("Handling refund updated: {}", refundId);
 
+        lockRefundWebhook(refundId);
         Optional<Refund> refundOpt = refundRepository.findByStripeRefundId(refundId);
         if (refundOpt.isPresent()) {
             Refund refund = refundOpt.get();
             // Update refund status based on webhook data
-            if (webhookRequest.getFailureReason() != null) {
+            if (refund.getStatus() == RefundStatus.SUCCEEDED) {
+                return;
+            } else if (webhookRequest.getFailureReason() != null) {
                 refund.setStatus(RefundStatus.FAILED);
             } else {
                 refund.setStatus(RefundStatus.SUCCEEDED);
@@ -358,8 +347,19 @@ public class WebhookServiceImpl implements WebhookService {
 
             log.info("Refund updated: {}", refund.getRefundNumber());
         } else {
-            log.warn("Refund not found for Stripe refund: {}", refundId);
+            throw new PaymentGatewayException("Refund is not correlated");
         }
+    }
+
+    private void lockRefundWebhook(String refundId) {
+        if (refundId == null || refundId.isBlank()) throw new PaymentGatewayException("Invalid refund event");
+        Long paymentId = refundRepository.findPaymentIdByStripeRefundId(refundId)
+                .orElseThrow(() -> new PaymentGatewayException("Refund is not correlated"));
+        Long orderId = paymentRepository.findOrderIdByPaymentId(paymentId)
+                .orElseThrow(() -> new PaymentGatewayException("Refund payment is not correlated"));
+        guard.lock(orderId);
+        paymentRepository.findById(paymentId).filter(p -> orderId.equals(p.getOrderId()))
+                .orElseThrow(() -> new PaymentGatewayException("Refund payment correlation changed"));
     }
 
     // ========== WEBHOOK VALIDATION ==========

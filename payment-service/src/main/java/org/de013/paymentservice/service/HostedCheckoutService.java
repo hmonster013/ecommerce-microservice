@@ -46,7 +46,9 @@ public class HostedCheckoutService {
             try {
                 checkout = store.reserve(orderId, userId, order.getTotalAmount().getAmount(), returnUrl());
             } catch (DataIntegrityViolationException concurrent) {
-                checkout = checkouts.findById(orderId).orElseThrow(() -> unavailable());
+                if (!PaymentReservation.isOrderConflict(concurrent) && !PaymentReservation.isHostedNumberConflict(concurrent)) throw concurrent;
+                checkout = checkouts.findById(orderId).orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.CONFLICT, "Order already has a blocking payment"));
             }
         }
         checkOwnerAndAmount(checkout, order, userId);
@@ -54,13 +56,14 @@ public class HostedCheckoutService {
             if (checkout.getSessionId() != null) {
                 var result = refresh(checkout, order);
                 if (!"EXPIRED".equals(result.state())) return result;
-                checkout = store.renew(orderId, checkout.getGeneration());
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Expired session requires reconciliation");
             }
             // Stripe only guarantees idempotency retention for at least 24 hours.
             if (checkout.getReservedAt().isBefore(Instant.now().minus(Duration.ofHours(23)))) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Unknown session requires reconciliation; do not create another payment");
             }
-            return apply(checkout, order, stripe.create(checkout));
+            var created = store.create(checkout);
+            return apply(checkout, order, created);
         } catch (StripeException exception) {
             log.warn("Stripe hosted session outcome unknown for order {}", orderId);
             throw unavailable();
@@ -115,8 +118,7 @@ public class HostedCheckoutService {
         }
         store.record(order.getId(), checkout.getGeneration(), snapshot.id(), state, snapshot.paymentIntent());
         if ("PAID".equals(state)) {
-            var marked = orders.markPaid(order.getId(), checkout.getPaymentId(), "HOSTED-" + order.getId(), checkout.getUserId(), "hosted-checkout");
-            if (!marked.getStatusCode().is2xxSuccessful()) throw unavailable();
+            store.markPaid(order.getId());
         }
         String url = "OPEN".equals(state) ? trustedStripeUrl(snapshot.url()) : null;
         return response(order, state, url, "HOSTED-" + order.getId());
@@ -173,4 +175,5 @@ public class HostedCheckoutService {
     private ResponseStatusException unavailable() {
         return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Unable to verify checkout; read status before trying again");
     }
+
 }

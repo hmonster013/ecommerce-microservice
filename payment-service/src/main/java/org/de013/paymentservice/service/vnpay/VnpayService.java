@@ -13,6 +13,7 @@ import org.de013.paymentservice.gateway.vnpay.VnpayPaymentGateway;
 import org.de013.paymentservice.mapper.PaymentMapper;
 import org.de013.paymentservice.repository.PaymentRepository;
 import org.de013.paymentservice.service.validation.PaymentRequestValidator;
+import org.de013.paymentservice.service.PaymentReservation;
 import org.de013.paymentservice.util.PaymentNumberGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ public class VnpayService {
     private final PaymentGatewayConfig config;
     private final PaymentRequestValidator paymentRequestValidator;
     private final HttpServletRequest httpServletRequest;
+    private final PaymentReservation reservation;
 
     /**
      * Creates a VNPay checkout request, saves a PENDING payment, and builds the redirect URL.
@@ -49,7 +51,12 @@ public class VnpayService {
 
         // Convert USD to VND using config rate
         long vndRate = config.getGateways().getVnpay().getVndRate();
-        long amountVnd = Math.round(req.getAmount().doubleValue() * vndRate);
+        double converted = req.getAmount().doubleValue() * vndRate;
+        if (vndRate <= 0 || !Double.isFinite(converted) || converted <= 0)
+            throw new IllegalArgumentException("Invalid VNPay conversion amount or rate");
+        long amountVnd = Math.round(converted);
+        if (amountVnd <= 0 || amountVnd > Long.MAX_VALUE / 100)
+            throw new IllegalArgumentException("Invalid VNPay wire amount");
 
         // Build createDate in GMT+7 format yyyyMMddHHmmss
         LocalDateTime nowGmt7 = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -61,21 +68,14 @@ public class VnpayService {
         // Create Order Info
         String orderInfo = "Thanh toan don hang #" + req.getOrderId();
 
-        // Build Payment URL
-        String redirectUrl = vnpayPaymentGateway.buildPaymentUrl(
-                paymentNumber,
-                amountVnd,
-                orderInfo,
-                ipAddr,
-                createDate
-        );
-
         // Build & Save Payment entity
         Payment payment = Payment.builder()
                 .paymentNumber(paymentNumber)
                 .orderId(req.getOrderId())
                 .userId(req.getUserId())
                 .amount(req.getAmount()) // Store original USD amount
+                .providerAmountVnd(amountVnd)
+                .providerCurrency("VND")
                 .currency(Currency.USD)  // Keep original USD currency to match Order Service
                 .status(PaymentStatus.PENDING)
                 .method(PaymentMethodType.WALLET)
@@ -87,7 +87,10 @@ public class VnpayService {
                 .updatedBy("SYSTEM")
                 .build();
 
-        payment = paymentRepository.save(payment);
+        payment = reservation.reserve(payment);
+
+        String redirectUrl = vnpayPaymentGateway.buildPaymentUrl(
+                paymentNumber, payment.getProviderAmountVnd(), orderInfo, ipAddr, createDate);
 
         // Map and set redirect URL
         PaymentResponse resp = paymentMapper.toPaymentResponse(payment);

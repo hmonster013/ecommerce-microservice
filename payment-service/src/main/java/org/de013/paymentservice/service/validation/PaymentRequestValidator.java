@@ -50,7 +50,7 @@ public class PaymentRequestValidator {
         }
 
         // Validate with Order Service (amount-tampering protection + non-payable state)
-        validatePaymentAmount(request.getOrderId(), request.getAmount(), request.getCurrency());
+        validatePaymentAmount(request.getOrderId(), request.getAmount(), request.getCurrency(), request.getUserId());
 
         // Validate with User Service (fail-closed: blocked / high-risk user)
         validateUserCanMakePayment(request.getUserId());
@@ -61,11 +61,20 @@ public class PaymentRequestValidator {
     }
 
     public void validatePaymentAmount(Long orderId, BigDecimal amount, Currency currency) {
+        validatePaymentAmount(orderId, amount, currency, null);
+    }
+
+    private void validatePaymentAmount(Long orderId, BigDecimal amount, Currency currency, String userId) {
         log.info("Validating payment amount {} (currency: {}) for order {}", amount, currency, orderId);
         try {
             ResponseEntity<OrderDto> response = orderServiceClient.getOrderById(orderId);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 OrderDto order = response.getBody();
+
+                if (userId != null && (!orderId.equals(order.getId()) || order.getUserId() == null
+                        || order.getUserId().isBlank() || !order.getUserId().equals(userId))) {
+                    throw new PaymentProcessingException("Order identity or owner does not match payment request");
+                }
 
                 // Business rule validation: Do not allow payment for an order in a non-payable state
                 if ("PAID".equals(order.getStatus()) || "COMPLETED".equals(order.getStatus())) {

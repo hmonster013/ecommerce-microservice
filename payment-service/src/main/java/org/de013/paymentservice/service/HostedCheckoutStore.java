@@ -12,6 +12,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
+import org.de013.paymentservice.client.HostedOrderClient;
+import org.de013.paymentservice.gateway.stripe.StripeHostedGateway;
+import com.stripe.exception.StripeException;
 
 @Repository
 @RequiredArgsConstructor
@@ -19,9 +22,13 @@ public class HostedCheckoutStore {
     private final EntityManager entityManager;
     private final HostedCheckoutRepository checkouts;
     private final PaymentRepository payments;
+    private final PaymentOrderGuard guard;
+    private final HostedOrderClient orders;
+    private final StripeHostedGateway stripe;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public HostedCheckout reserve(Long orderId, String userId, BigDecimal amount, String returnUrl) {
+        guard.requirePayable(orderId);
         if (!payments.findByOrderId(orderId).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Order already has a payment; reconcile it first");
         }
@@ -44,19 +51,10 @@ public class HostedCheckoutStore {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public HostedCheckout renew(Long orderId, int expectedGeneration) {
-        var checkout = checkouts.lockByOrderId(orderId).orElseThrow();
-        if (checkout.getGeneration() == expectedGeneration && "EXPIRED".equals(checkout.getSessionState())) {
-            checkout.setGeneration(expectedGeneration + 1);
-            checkout.setSessionId(null);
-            checkout.setSessionState("UNKNOWN");
-            checkout.setReservedAt(Instant.now());
-        }
-        return checkout;
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(Long orderId, int generation, String sessionId, String state, String intent) {
+        guard.lock(orderId);
+        var existing = checkouts.findById(orderId).orElseThrow();
+        var payment = payments.findById(existing.getPaymentId()).orElseThrow();
         var checkout = checkouts.lockByOrderId(orderId).orElseThrow();
         if (checkout.getGeneration() != generation) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout session changed; read again");
@@ -64,14 +62,45 @@ public class HostedCheckoutStore {
         if (checkout.getSessionId() != null && !checkout.getSessionId().equals(sessionId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout session mismatch");
         }
+        if (intent != null && payment.getStripePaymentIntentId() != null && !intent.equals(payment.getStripePaymentIntentId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout payment intent mismatch");
+        }
+        if (payment.getGatewayTxnRef() != null && !payment.getGatewayTxnRef().equals(sessionId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout payment session mismatch");
+        }
         checkout.setSessionId(sessionId);
         if ("PAID".equals(checkout.getSessionState()) && !"PAID".equals(state)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "A stale response cannot downgrade a paid checkout");
         }
         checkout.setSessionState(state);
-        var payment = payments.findById(checkout.getPaymentId()).orElseThrow();
-        payment.setStripePaymentIntentId(intent);
+        if (intent != null) payment.setStripePaymentIntentId(intent);
         payment.setGatewayTxnRef(sessionId);
-        payment.setStatus("PAID".equals(state) ? PaymentStatus.SUCCEEDED : PaymentStatus.PENDING);
+        if ("PAID".equals(state)) payment.setStatus(PaymentStatus.SUCCEEDED);
+        else if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) payment.setStatus(PaymentStatus.PENDING);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public StripeHostedGateway.Snapshot create(HostedCheckout reserved) throws StripeException {
+        guard.requirePayable(reserved.getOrderId());
+        var payment = payments.findById(reserved.getPaymentId()).orElseThrow();
+        var checkout = checkouts.lockByOrderId(reserved.getOrderId()).orElseThrow();
+        if (!payment.getId().equals(checkout.getPaymentId()) || checkout.getGeneration() != reserved.getGeneration()
+                || checkout.getSessionId() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout session changed; read again");
+        }
+        return stripe.create(checkout);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markPaid(Long orderId) {
+        if (guard.lock(orderId)) return;
+        var existing = checkouts.findById(orderId).orElseThrow();
+        var payment = payments.findById(existing.getPaymentId()).orElseThrow();
+        var checkout = checkouts.lockByOrderId(orderId).orElseThrow();
+        if (!"PAID".equals(checkout.getSessionState()) || payment.getStatus() != PaymentStatus.SUCCEEDED)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout is not paid");
+        var marked = orders.markPaid(orderId, checkout.getPaymentId(), "HOSTED-" + orderId, checkout.getUserId(), "hosted-checkout");
+        if (!marked.getStatusCode().is2xxSuccessful())
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Unable to verify checkout; read status before trying again");
     }
 }

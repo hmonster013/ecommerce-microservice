@@ -51,14 +51,14 @@ class HostedCheckoutServiceTest {
 
     @Test void verifiesPaidAndMarksOrderBeforeReturningPaid() throws Exception {
         when(stripe.retrieve("cs_fixture")).thenReturn(snapshot("complete", "paid", null));
-        when(orders.markPaid(1L, 9L, "HOSTED-1", "owner", "hosted-checkout")).thenReturn(ResponseEntity.ok().build());
         assertEquals("PAID", service.read(1L, "owner").state());
         verify(store).record(1L, 0, "cs_fixture", "PAID", "pi_fixture");
+        verify(store).markPaid(1L);
     }
 
     @Test void orderSyncFailureDoesNotReturnSuccess() throws Exception {
         when(stripe.retrieve("cs_fixture")).thenReturn(snapshot("complete", "paid", null));
-        when(orders.markPaid(any(), any(), any(), any(), any())).thenReturn(ResponseEntity.status(503).build());
+        doThrow(new ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE)).when(store).markPaid(1L);
         assertThrows(ResponseStatusException.class, () -> service.read(1L, "owner"));
     }
 
@@ -97,9 +97,9 @@ class HostedCheckoutServiceTest {
 
     @Test void unknownPostUsesSameDurableReservation() throws Exception {
         checkout.setSessionId(null);
-        when(stripe.create(checkout)).thenReturn(snapshot("open", "unpaid", "https://checkout.stripe.com/c/pay/cs_fixture"));
+        when(store.create(checkout)).thenReturn(snapshot("open", "unpaid", "https://checkout.stripe.com/c/pay/cs_fixture"));
         assertEquals("OPEN", service.start(1L, "owner").state());
-        verify(store, never()).reserve(any(), any(), any(), any()); verify(stripe).create(checkout);
+        verify(store, never()).reserve(any(), any(), any(), any()); verify(store).create(checkout);
     }
 
     @Test void unknownOutsideStripeIdempotencyWindowDoesNotReplayCreate() {
@@ -107,12 +107,11 @@ class HostedCheckoutServiceTest {
         assertThrows(ResponseStatusException.class, () -> service.start(1L, "owner")); verifyNoInteractions(stripe);
     }
 
-    @Test void renewsOnlyAfterProviderConfirmsExpired() throws Exception {
+    @Test void expiredSessionRemainsHeld() throws Exception {
         when(stripe.retrieve("cs_fixture")).thenReturn(snapshot("expired", "unpaid", null));
-        var next = new HostedCheckout(); next.setOrderId(1L); next.setAmount(checkout.getAmount()); next.setGeneration(1); next.setReservedAt(Instant.now());
-        when(store.renew(1L, 0)).thenReturn(next);
-        when(stripe.create(next)).thenReturn(snapshot("open", "unpaid", "https://checkout.stripe.com/c/pay/cs_fixture"));
-        assertEquals("OPEN", service.start(1L, "owner").state()); verify(store).renew(1L, 0);
+        assertThrows(ResponseStatusException.class, () -> service.start(1L, "owner"));
+        verify(stripe, never()).create(any());
+        assertEquals("cs_fixture", checkout.getSessionId());
     }
 
     @Test void rejectsUntrustedRedirect() throws Exception {
@@ -128,7 +127,7 @@ class HostedCheckoutServiceTest {
     @Test void createsUsingCanonicalServerAmountAndConfiguredReturnUrl() throws Exception {
         when(repository.findById(1L)).thenReturn(Optional.empty()); checkout.setSessionId(null);
         when(store.reserve(1L, "owner", new BigDecimal("25.00"), "http://localhost:4200/checkout/result")).thenReturn(checkout);
-        when(stripe.create(checkout)).thenReturn(snapshot("open", "unpaid", "https://checkout.stripe.com/c/pay/cs_fixture"));
+        when(store.create(checkout)).thenReturn(snapshot("open", "unpaid", "https://checkout.stripe.com/c/pay/cs_fixture"));
         assertEquals("OPEN", service.start(1L, "owner").state());
         verify(store).reserve(1L, "owner", new BigDecimal("25.00"), "http://localhost:4200/checkout/result");
     }

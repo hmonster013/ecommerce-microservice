@@ -4,6 +4,7 @@ import org.de013.paymentservice.client.OrderServiceClient;
 import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.dto.external.OrderDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
+import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.common.exception.ConflictException;
 import org.de013.paymentservice.entity.enums.Currency;
 import org.de013.paymentservice.exception.PaymentProcessingException;
@@ -36,6 +37,38 @@ class PaymentValidationTest {
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void validatePaymentRequest_ChecksOrderIdentityAndOwnerBeforeUserEligibility() {
+        ProcessPaymentRequest request = ProcessPaymentRequest.builder()
+                .orderId(123L).userId("user-abc").amount(BigDecimal.TEN).currency(Currency.USD).build();
+        OrderDto order = new OrderDto();
+        order.setId(123L);
+        order.setUserId("user-abc");
+        OrderDto.MoneyDto money = new OrderDto.MoneyDto();
+        money.setAmount(BigDecimal.TEN);
+        money.setCurrency("USD");
+        order.setTotalAmount(money);
+        when(orderServiceClient.getOrderById(123L)).thenReturn(ResponseEntity.ok(order));
+        when(userServiceClient.validateUserForPayment("user-abc")).thenReturn(ResponseEntity.ok(
+                UserValidationResponse.builder().valid(true).canMakePayments(true).build()));
+
+        assertDoesNotThrow(() -> validator.validatePaymentRequest(request));
+        verify(orderServiceClient, times(1)).getOrderById(123L);
+        verify(userServiceClient, times(1)).validateUserForPayment("user-abc");
+        clearInvocations(userServiceClient);
+
+        for (String owner : new String[]{"other-user", null, "", "  "}) {
+            order.setUserId(owner);
+            assertThrows(PaymentProcessingException.class, () -> validator.validatePaymentRequest(request));
+        }
+        order.setUserId("user-abc");
+        for (Long id : new Long[]{456L, null}) {
+            order.setId(id);
+            assertThrows(PaymentProcessingException.class, () -> validator.validatePaymentRequest(request));
+        }
+        verifyNoInteractions(userServiceClient);
     }
 
     @Test

@@ -21,6 +21,15 @@ import java.util.Optional;
 @Repository
 public interface RefundRepository extends JpaRepository<Refund, Long>, JpaSpecificationExecutor<Refund> {
 
+    @Query("select r.paymentId from Refund r where r.id = :id")
+    Optional<Long> findPaymentIdByRefundId(@Param("id") Long id);
+
+    @Query("select r.paymentId from Refund r where r.stripeRefundId = :stripeId")
+    Optional<Long> findPaymentIdByStripeRefundId(@Param("stripeId") String stripeId);
+
+    @Query("select r.id from Refund r where r.status = :status and r.createdAt < :cutoff")
+    List<Long> findOldIds(@Param("status") RefundStatus status, @Param("cutoff") LocalDateTime cutoff);
+
     // ========== BASIC QUERIES ==========
 
     /**

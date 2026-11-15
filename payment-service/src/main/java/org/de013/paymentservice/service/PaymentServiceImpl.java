@@ -51,185 +51,74 @@ public class PaymentServiceImpl implements PaymentService {
     private final NotificationServiceClient notificationServiceClient;
     private final PaymentRequestValidator paymentRequestValidator;
     private final VnpayService vnpayService;
+    private final PaymentReservation reservation;
+    private final PaymentOrderGuard guard;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     // ========== PAYMENT PROCESSING ==========
 
     @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse processPayment(ProcessPaymentRequest request) {
-        log.info("Processing payment for order: {}, user: {}, amount: {}",
-                request.getOrderId(), request.getUserId(), request.getAmount());
-
-        // Dynamic gateway provider routing (Early-return for VNPay checkout)
         String provider = request.getProvider() != null ? request.getProvider() : "STRIPE";
-        if ("VNPAY".equalsIgnoreCase(provider)) {
-            return vnpayService.createCheckout(request);
-        }
-
-        try {
-            validatePaymentRequest(request);
-
-            Payment payment = createPaymentEntity(request);
-            payment = paymentRepository.save(payment);
-
-            // Get Stripe gateway
-            PaymentGateway gateway = gatewayFactory.getGateway("STRIPE");
-            StripePaymentGateway stripeGateway = (StripePaymentGateway) gateway;
-
-            // Map and process payment
-            org.de013.paymentservice.dto.stripe.StripePaymentRequest stripeRequest = stripeGateway.mapToGatewayPaymentRequest(request);
-            org.de013.paymentservice.dto.stripe.StripePaymentResponse stripeResponse = stripeGateway.createPaymentIntent(stripeRequest);
-            stripeGateway.mapGatewayResponseToPayment(stripeResponse, payment);
-
-            // Create transaction record
-            createPaymentTransaction(payment, stripeResponse, TransactionType.CHARGE);
-
-            // Save updated payment with stripe details
-            payment = paymentRepository.save(payment);
-
-            // If confirmPayment was true and status is succeeded, update order status and send notification
-            if (payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED) {
-                updateOrderStatus(payment.getOrderId(), "PAID", payment);
-                sendPaymentSuccessNotification(payment);
-            } else if (payment.getStatus() == org.de013.paymentservice.entity.enums.PaymentStatus.FAILED) {
-                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
-            }
-
-            log.info("Payment processed successfully: {}", payment.getPaymentNumber());
-            return paymentMapper.toPaymentResponse(payment);
-
-        } catch (Exception e) {
-            log.error("Failed to process payment for order: {}", request.getOrderId(), e);
-            throw new PaymentProcessingException("Failed to process payment: " + e.getMessage(), e);
-        }
+        if ("VNPAY".equalsIgnoreCase(provider)) return vnpayService.createCheckout(request);
+        validatePaymentRequest(request);
+        Payment reserved = reservation.reserve(createPaymentEntity(request));
+        return locked(reserved.getId(), (payment, held) -> {
+            requireNotHeld(held);
+            try {
+                StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
+                StripePaymentResponse response = gateway.createPaymentIntent(gateway.mapToGatewayPaymentRequest(request));
+                return applyProviderResponse(payment, response, TransactionType.CHARGE, held, true);
+            } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
+            catch (Exception e) { throw new PaymentProcessingException("Failed to process payment", e); }
+        });
     }
 
     @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse confirmPayment(Long paymentId, String paymentMethodId) {
-        log.info("Confirming payment: {} with payment method: {}", paymentId, paymentMethodId);
-
-        Payment payment = getPaymentEntityById(paymentId)
-                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-
-        try {
-            // Validate payment can be confirmed
-            if (payment.getStatus() != PaymentStatus.PENDING) {
+        return locked(paymentId, (payment, held) -> {
+            requireNotHeld(held);
+            if (payment.isVerifiedRelease() || payment.getStatus() != PaymentStatus.PENDING)
                 throw new PaymentProcessingException("Payment cannot be confirmed. Current status: " + payment.getStatus());
-            }
-
-            if (payment.getStripePaymentIntentId() == null) {
-                throw new PaymentProcessingException("Payment Intent ID is missing");
-            }
-
-            // Get Stripe gateway
-            PaymentGateway gateway = gatewayFactory.getGateway("STRIPE");
-            StripePaymentGateway stripeGateway = (StripePaymentGateway) gateway;
-
-            // Confirm payment intent with Stripe
-            StripePaymentResponse stripeResponse = stripeGateway.confirmPaymentIntent(
-                    payment.getStripePaymentIntentId(),
-                    paymentMethodId
-            );
-
-            // Update payment based on Stripe response
-            updatePaymentFromStripeResponse(payment, stripeResponse);
-
-            // Create transaction record
-            createPaymentTransaction(payment, stripeResponse, TransactionType.CHARGE);
-
-            // Save updated payment
-            payment = paymentRepository.save(payment);
-
-            // Update order status if payment is successful
-            if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
-                updateOrderStatus(payment.getOrderId(), "PAID", payment);
-                log.info("Payment confirmed successfully: {}", payment.getPaymentNumber());
-            } else if (payment.getStatus() == PaymentStatus.FAILED) {
-                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
-                log.warn("Payment confirmation failed: {}", payment.getPaymentNumber());
-            }
-
-            return paymentMapper.toPaymentResponse(payment);
-
-        } catch (Exception e) {
-            log.error("Failed to confirm payment: {}", paymentId, e);
-
-            // Update payment status to failed
-            payment.setStatus(PaymentStatus.FAILED);
-            payment.setFailureReason(e.getMessage());
-            payment = paymentRepository.save(payment);
-
-            throw new PaymentProcessingException("Failed to confirm payment: " + e.getMessage(), e);
-        }
+            requireIntent(payment);
+            try {
+                StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
+                return applyProviderResponse(payment, gateway.confirmPaymentIntent(payment.getStripePaymentIntentId(), paymentMethodId), TransactionType.CHARGE, held, false);
+            } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
+            catch (Exception e) { throw new PaymentProcessingException("Failed to confirm payment", e); }
+        });
     }
 
     @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse cancelPayment(Long paymentId, String reason) {
-        Payment payment = getPaymentEntityById(paymentId)
-                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-
-        payment.setStatus(PaymentStatus.CANCELED);
-        payment.setFailureReason(reason);
-
-        // Create transaction record
-        createPaymentTransaction(payment, null, TransactionType.CANCELLATION);
-
-        payment = paymentRepository.save(payment);
-
-        return paymentMapper.toPaymentResponse(payment);
+        return locked(paymentId, (payment, held) -> {
+            if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
+                payment.setStatus(PaymentStatus.CANCELED);
+                payment.setFailureReason(reason);
+                createPaymentTransaction(payment, null, TransactionType.CANCELLATION);
+                paymentRepository.save(payment);
+            }
+            return paymentMapper.toPaymentResponse(payment);
+        });
     }
 
     @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse capturePayment(Long paymentId, BigDecimal amount) {
-        log.info("Capturing payment: {} with amount: {}", paymentId, amount);
-
-        Payment payment = getPaymentEntityById(paymentId)
-                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-
-        try {
-            if (!canCapturePayment(paymentId)) {
+        return locked(paymentId, (payment, held) -> {
+            requireNotHeld(held);
+            if (payment.isVerifiedRelease() || payment.getStatus() != PaymentStatus.REQUIRES_CONFIRMATION)
                 throw new PaymentProcessingException("Payment cannot be captured. Current status: " + payment.getStatus());
-            }
-
-            if (payment.getStripePaymentIntentId() == null) {
-                throw new PaymentProcessingException("Payment Intent ID is missing");
-            }
-
-            // Get Stripe gateway
-            PaymentGateway gateway = gatewayFactory.getGateway("STRIPE");
-            StripePaymentGateway stripeGateway = (StripePaymentGateway) gateway;
-
-            // Capture payment with Stripe
-            BigDecimal captureAmount = amount != null ? amount : payment.getAmount();
-            StripePaymentResponse stripeResponse = stripeGateway.capturePayment(
-                    payment.getStripePaymentIntentId(),
-                    captureAmount
-            );
-
-            // Update payment based on Stripe response
-            updatePaymentFromStripeResponse(payment, stripeResponse);
-
-            // Create transaction record
-            createPaymentTransaction(payment, stripeResponse, TransactionType.CAPTURE);
-
-            // Save updated payment
-            payment = paymentRepository.save(payment);
-
-            // Update order status if payment is successful
-            if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
-                updateOrderStatus(payment.getOrderId(), "PAID", payment);
-                sendPaymentSuccessNotification(payment);
-                log.info("Payment captured successfully: {}", payment.getPaymentNumber());
-            } else if (payment.getStatus() == PaymentStatus.FAILED) {
-                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
-                log.warn("Payment capture failed: {}", payment.getPaymentNumber());
-            }
-
-            return paymentMapper.toPaymentResponse(payment);
-
-        } catch (Exception e) {
-            log.error("Failed to capture payment: {}", paymentId, e);
-            throw new PaymentProcessingException("Failed to capture payment: " + e.getMessage(), e);
-        }
+            requireIntent(payment);
+            try {
+                StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
+                return applyProviderResponse(payment, gateway.capturePayment(payment.getStripePaymentIntentId(), amount != null ? amount : payment.getAmount()), TransactionType.CAPTURE, held, true);
+            } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
+            catch (Exception e) { throw new PaymentProcessingException("Failed to capture payment", e); }
+        });
     }
 
     // ========== PAYMENT RETRIEVAL ==========
@@ -297,63 +186,29 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse updatePaymentStatus(Long paymentId, PaymentStatus status, String reason) {
-        Payment payment = getPaymentEntityById(paymentId)
-                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-
-        payment.setStatus(status);
-        if (reason != null) {
-            payment.setFailureReason(reason);
-        }
-        payment = paymentRepository.save(payment);
-
-        return paymentMapper.toPaymentResponse(payment);
+        return locked(paymentId, (payment, held) -> {
+            if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
+                payment.setStatus(status);
+                if (reason != null) payment.setFailureReason(reason);
+                paymentRepository.save(payment);
+            }
+            return paymentMapper.toPaymentResponse(payment);
+        });
     }
 
     @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse syncPaymentStatusWithStripe(Long paymentId) {
-        log.info("Syncing payment status with Stripe: {}", paymentId);
-
-        Payment payment = getPaymentEntityById(paymentId)
-                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
-
-        if (payment.getStripePaymentIntentId() == null) {
-            log.warn("Stripe Payment Intent ID is missing for payment: {}", paymentId);
-            return paymentMapper.toPaymentResponse(payment);
-        }
-
-        try {
-            // Get Stripe gateway
-            PaymentGateway gateway = gatewayFactory.getGateway("STRIPE");
-            StripePaymentGateway stripeGateway = (StripePaymentGateway) gateway;
-
-            // Retrieve payment intent from Stripe
-            StripePaymentResponse stripeResponse = stripeGateway.getPaymentIntent(payment.getStripePaymentIntentId());
-
-            // Update payment based on Stripe response
-            updatePaymentFromStripeResponse(payment, stripeResponse);
-
-            // Create transaction record
-            createPaymentTransaction(payment, stripeResponse, TransactionType.CHARGE);
-
-            // Save updated payment
-            payment = paymentRepository.save(payment);
-
-            // Update order status if status changed to SUCCEEDED or FAILED
-            if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
-                updateOrderStatus(payment.getOrderId(), "PAID", payment);
-                sendPaymentSuccessNotification(payment);
-            } else if (payment.getStatus() == PaymentStatus.FAILED) {
-                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
-            }
-
-            log.info("Payment sync complete for payment {}. Status: {}", payment.getPaymentNumber(), payment.getStatus());
-            return paymentMapper.toPaymentResponse(payment);
-
-        } catch (Exception e) {
-            log.error("Failed to sync payment status with Stripe: {}", paymentId, e);
-            throw new PaymentProcessingException("Failed to sync payment status: " + e.getMessage(), e);
-        }
+        return locked(paymentId, (payment, held) -> {
+            if (payment.getStripePaymentIntentId() == null) return paymentMapper.toPaymentResponse(payment);
+            try {
+                StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
+                return applyProviderResponse(payment, gateway.getPaymentIntent(payment.getStripePaymentIntentId()), TransactionType.CHARGE, held, true);
+            } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
+            catch (Exception e) { throw new PaymentProcessingException("Failed to sync payment status", e); }
+        });
     }
 
     // ========== PAYMENT VALIDATION ==========
@@ -560,7 +415,57 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Payment savePaymentEntity(Payment payment) {
-        return paymentRepository.save(payment);
+        throw new UnsupportedOperationException("Unrestricted payment entity saves are not supported");
+    }
+
+    private PaymentResponse locked(Long paymentId, java.util.function.BiFunction<Payment, Boolean, PaymentResponse> action) {
+        return new org.springframework.transaction.support.TransactionTemplate(transactionManager).execute(status -> {
+            Long orderId = paymentRepository.findOrderIdByPaymentId(paymentId)
+                    .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
+            boolean held = guard.lock(orderId);
+            Payment payment = paymentRepository.findById(paymentId)
+                    .filter(p -> orderId.equals(p.getOrderId()))
+                    .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
+            return action.apply(payment, held);
+        });
+    }
+
+    private void requireNotHeld(boolean held) {
+        if (held) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Order requires payment reconciliation");
+    }
+
+    private void requireIntent(Payment payment) {
+        if (payment.getStripePaymentIntentId() == null || payment.getStripePaymentIntentId().isBlank())
+            throw new PaymentProcessingException("Payment Intent ID is missing");
+    }
+
+    private PaymentResponse applyProviderResponse(Payment payment, StripePaymentResponse response, TransactionType type, boolean held, boolean notify) {
+        String intent = response.getPaymentIntentId();
+        if (intent != null && payment.getStripePaymentIntentId() != null && !intent.equals(payment.getStripePaymentIntentId()))
+            throw new PaymentProcessingException("Payment intent mismatch");
+        if (intent != null && payment.getStripePaymentIntentId() == null) payment.setStripePaymentIntentId(intent);
+        if (response.getCustomerId() != null) payment.setStripeCustomerId(response.getCustomerId());
+        if (response.getPaymentMethodId() != null) payment.setStripePaymentMethodId(response.getPaymentMethodId());
+        PaymentStatus previous = payment.getStatus();
+        PaymentStatus next = mapStripeStatusToPaymentStatus(response.getStatus());
+        if (next == PaymentStatus.SUCCEEDED) {
+            payment.setStatus(next);
+            if (payment.isVerifiedRelease()) guard.hold(payment.getOrderId());
+        } else if (!payment.isVerifiedRelease() && previous != PaymentStatus.SUCCEEDED) {
+            payment.setStatus(next);
+            if (response.getFailureMessage() != null) payment.setFailureReason(response.getFailureMessage());
+        }
+        createPaymentTransaction(payment, response, type);
+        paymentRepository.save(payment);
+        if (!held && !payment.isVerifiedRelease() && previous != payment.getStatus()) {
+            if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
+                updateOrderStatus(payment.getOrderId(), "PAID", payment);
+                if (notify) sendPaymentSuccessNotification(payment);
+            } else if (payment.getStatus() == PaymentStatus.FAILED) {
+                updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);
+            }
+        }
+        return paymentMapper.toPaymentResponse(payment);
     }
 
     // ========== HELPER METHODS ==========
@@ -573,6 +478,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .amount(request.getAmount())
                 .currency(request.getCurrency())
                 .status(PaymentStatus.PENDING)
+                .gatewayName("STRIPE")
                 .method(request.getPaymentMethodType())
                 .description(request.getDescription())
                 .receiptEmail(request.getReceiptEmail())
@@ -599,28 +505,6 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (Exception e) {
             log.warn("Failed to update order status for order: {}", orderId, e);
         }
-    }
-
-    private void updatePaymentFromStripeResponse(Payment payment, StripePaymentResponse stripeResponse) {
-        log.debug("Updating payment {} from Stripe response", payment.getId());
-
-        // Map Stripe status to our PaymentStatus
-        PaymentStatus newStatus = mapStripeStatusToPaymentStatus(stripeResponse.getStatus());
-        payment.setStatus(newStatus);
-
-        // Update other fields from Stripe response
-        if (stripeResponse.getClientSecret() != null) {
-            // Note: We don't store client secret for security reasons
-        }
-
-        if (stripeResponse.getFailureMessage() != null) {
-            payment.setFailureReason(stripeResponse.getFailureMessage());
-        }
-
-        // Update timestamps
-        payment.setUpdatedAt(LocalDateTime.now());
-
-        log.info("Payment {} status updated to: {}", payment.getPaymentNumber(), newStatus);
     }
 
     private PaymentStatus mapStripeStatusToPaymentStatus(String stripeStatus) {
@@ -659,7 +543,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         if (stripeResponse != null) {
             transaction.setStripePaymentIntentId(stripeResponse.getPaymentIntentId());
-            transaction.setStripeResponse(stripeResponse.toString());
+            // Do not persist response objects that can contain client secrets.
             transaction.setGatewayTransactionId(stripeResponse.getPaymentIntentId());
             if (stripeResponse.getFailureMessage() != null) {
                 transaction.setFailureReason(stripeResponse.getFailureMessage());

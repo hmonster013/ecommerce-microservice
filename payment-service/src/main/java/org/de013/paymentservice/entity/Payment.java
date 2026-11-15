@@ -39,11 +39,24 @@ public class Payment extends BaseEntity {
     @Column(name = "order_id", nullable = false)
     private Long orderId;
 
+    @Builder.Default
+    @Column(name = "blocking", nullable = false)
+    private boolean blocking = true;
+
+    @Column(name = "verified_release", nullable = false)
+    private boolean verifiedRelease;
+
     @Column(name = "user_id", nullable = false, length = 36)
     private String userId;
 
     @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
+
+    @Column(name = "provider_amount_vnd")
+    private Long providerAmountVnd;
+
+    @Column(name = "provider_currency", length = 3)
+    private String providerCurrency;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "currency", nullable = false, length = 3)
