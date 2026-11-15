@@ -37,4 +37,12 @@ class OrderPaidTransitionTest {
         service.markOrderAsPaid(1L, 2L, "HOSTED-1");
         assertEquals(OrderStatus.PAID, order.getStatus()); verify(repository).save(order);
     }
+
+    @Test void knownDifferentPaymentRequiresReconciliation() {
+        var order = new Order(); order.setStatus(OrderStatus.PAID);
+        order.setAcceptedPaymentId(2L); order.setAcceptedPaymentNumber("HOSTED-1");
+        when(repository.lockForPayment(1L)).thenReturn(Optional.of(order));
+        assertThrows(ConflictException.class, () -> service.markOrderAsPaid(1L, 3L, "HOSTED-2"));
+        verify(repository, never()).save(any());
+    }
 }

@@ -206,7 +206,13 @@ public class OrderServiceImpl implements OrderService {
         var paidStates = java.util.EnumSet.of(OrderStatus.PAID, OrderStatus.PROCESSING, OrderStatus.PREPARING,
                 OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.COMPLETED,
                 OrderStatus.PARTIALLY_SHIPPED, OrderStatus.PARTIALLY_DELIVERED);
-        if (paidStates.contains(order.getStatus())) return;
+        if (paidStates.contains(order.getStatus())) {
+            if (order.getAcceptedPaymentId() != null && (!order.getAcceptedPaymentId().equals(paymentId)
+                    || !java.util.Objects.equals(order.getAcceptedPaymentNumber(), paymentNumber))) {
+                throw new org.de013.common.exception.ConflictException("Order requires payment reconciliation");
+            }
+            return;
+        }
         if (order.getAllocationPhase() != null && !"READY".equals(order.getAllocationPhase())) {
             throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
         }
@@ -214,6 +220,8 @@ public class OrderServiceImpl implements OrderService {
             throw new org.de013.common.exception.ConflictException("Order requires payment reconciliation");
         }
         order.setStatus(OrderStatus.PAID);
+        order.setAcceptedPaymentId(paymentId);
+        order.setAcceptedPaymentNumber(paymentNumber);
         if (order.getAllocationPhase() != null) order.setAllocationPhase("FULFILL_PENDING");
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);

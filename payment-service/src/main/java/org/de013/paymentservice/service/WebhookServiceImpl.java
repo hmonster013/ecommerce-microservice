@@ -33,6 +33,7 @@ import java.util.Optional;
 @Slf4j
 @Transactional
 public class WebhookServiceImpl implements WebhookService {
+    private final PaymentOutbox outbox;
 
     private final PaymentGatewayFactory gatewayFactory;
     private final StripeWebhookService stripeWebhookService;
@@ -196,7 +197,8 @@ public class WebhookServiceImpl implements WebhookService {
                 if (payment.isVerifiedRelease()) {
                     guard.hold(orderId);
                 } else if (!held && !alreadySucceeded) {
-                    updateOrderStatus(orderId, "PAID", payment);
+                    if (outbox.enabled()) outbox.enqueue(payment);
+                    else updateOrderStatus(orderId, "PAID", payment);
                     sendPaymentSuccessNotification(payment);
                 }
             }

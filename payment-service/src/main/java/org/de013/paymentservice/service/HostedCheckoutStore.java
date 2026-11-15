@@ -19,6 +19,7 @@ import com.stripe.exception.StripeException;
 @Repository
 @RequiredArgsConstructor
 public class HostedCheckoutStore {
+    private final PaymentOutbox outbox;
     private final EntityManager entityManager;
     private final HostedCheckoutRepository checkouts;
     private final PaymentRepository payments;
@@ -52,7 +53,7 @@ public class HostedCheckoutStore {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(Long orderId, int generation, String sessionId, String state, String intent) {
-        guard.lock(orderId);
+        boolean held = guard.lock(orderId);
         var existing = checkouts.findById(orderId).orElseThrow();
         var payment = payments.findById(existing.getPaymentId()).orElseThrow();
         var checkout = checkouts.lockByOrderId(orderId).orElseThrow();
@@ -75,7 +76,11 @@ public class HostedCheckoutStore {
         checkout.setSessionState(state);
         if (intent != null) payment.setStripePaymentIntentId(intent);
         payment.setGatewayTxnRef(sessionId);
-        if ("PAID".equals(state)) payment.setStatus(PaymentStatus.SUCCEEDED);
+        if ("PAID".equals(state)) {
+            boolean alreadySucceeded = payment.getStatus() == PaymentStatus.SUCCEEDED;
+            payment.setStatus(PaymentStatus.SUCCEEDED);
+            if (!held && !alreadySucceeded && outbox.enabled()) outbox.enqueue(payment);
+        }
         else if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) payment.setStatus(PaymentStatus.PENDING);
     }
 
@@ -103,6 +108,7 @@ public class HostedCheckoutStore {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markPaid(Long orderId) {
+        if (outbox.enabled()) return;
         if (guard.lock(orderId)) return;
         var existing = checkouts.findById(orderId).orElseThrow();
         var payment = payments.findById(existing.getPaymentId()).orElseThrow();

@@ -99,6 +99,36 @@ class PaymentReservationFlowTest {
                 .currency(Currency.USD).paymentMethodType(PaymentMethodType.CARD).provider(provider).build();
     }
 
+    @Test void disabledOutboxPreservesVnpayAndHostedDispatchAndHolds() throws Exception {
+        var cfg = gatewayConfig.getGateways().getVnpay();
+        var real = new VnpayPaymentGateway(gatewayConfig);
+        when(vnpayGateway.verifyCallback(anyMap())).thenAnswer(i -> real.verifyCallback(i.getArgument(0)));
+        for (long id : new long[]{99201, 99202}) {
+            vnpay.createCheckout(request(id, "VNPAY"));
+            var payment = repository.findByOrderId(id).get(0);
+            payment.setReceiptEmail("fixture@example.test"); repository.saveAndFlush(payment);
+            if (id == 99202) new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> guard.hold(id));
+            var fields = new java.util.TreeMap<String, String>();
+            fields.put("vnp_TmnCode", cfg.getTmnCode()); fields.put("vnp_TxnRef", payment.getPaymentNumber());
+            fields.put("vnp_Amount", Long.toString(payment.getProviderAmountVnd() * 100));
+            fields.put("vnp_ResponseCode", "00"); fields.put("vnp_TransactionStatus", "00");
+            fields.put("vnp_SecureHash", org.de013.paymentservice.gateway.vnpay.VnpayUtils.hmacSHA512(cfg.getHashSecret(), org.de013.paymentservice.gateway.vnpay.VnpayUtils.buildHashData(fields)));
+            assertEquals("00", ipn.process(fields).get("RspCode"));
+            verify(orderClient, id == 99201 ? times(1) : never()).markOrderAsPaid(eq(id), anyLong(), anyString());
+            verify(notifications, id == 99201 ? times(1) : never()).sendEmail(argThat(m -> ("Thanh toán thành công cho Đơn hàng #" + id).equals(m.get("subject"))));
+            assertEquals(0, jdbc.queryForObject("select count(*) from payment_outbox where payment_id=?", Integer.class, payment.getId()));
+        }
+        for (long id : new long[]{99203, 99204}) {
+            var checkout = hostedStore.reserve(id, "owner", new BigDecimal("25.00"), "https://fixture.test/checkout/result");
+            if (id == 99204) new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> guard.hold(id));
+            hostedStore.record(id, 0, "cs_" + id, "PAID", "pi_" + id);
+            when(orders.markPaid(eq(id), anyLong(), anyString(), anyString(), anyString())).thenReturn(ResponseEntity.ok().build());
+            hostedStore.markPaid(id);
+            verify(orders, id == 99203 ? times(1) : never()).markPaid(eq(id), anyLong(), anyString(), anyString(), anyString());
+            assertEquals(0, jdbc.queryForObject("select count(*) from payment_outbox where payment_id=?", Integer.class, checkout.getPaymentId()));
+        }
+    }
+
     @Test void inventoryNotReadyBlocksActualMutationEntrypoints() throws Exception {
         var realValidator = new PaymentRequestValidator(orderClient, users);
         doAnswer(i -> { realValidator.validatePaymentRequest(i.getArgument(0)); return null; }).when(validator).validatePaymentRequest(any());

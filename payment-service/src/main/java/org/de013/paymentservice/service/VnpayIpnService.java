@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @lombok.extern.slf4j.Slf4j
 public class VnpayIpnService {
+    private final PaymentOutbox outbox;
     private final PaymentRepository payments;
     private final ProcessedStripeEventRepository events;
     private final PaymentOrderGuard guard;
@@ -63,7 +64,8 @@ public class VnpayIpnService {
             payments.flush();
             events.flush();
             if (!held) {
-                try { orders.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber()); }
+                if (outbox.enabled()) outbox.enqueue(payment);
+                else try { orders.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber()); }
                 catch (Exception e) { log.warn("Failed to update VNPay order {}", orderId, e); }
                 try {
                     String email = payment.getReceiptEmail();

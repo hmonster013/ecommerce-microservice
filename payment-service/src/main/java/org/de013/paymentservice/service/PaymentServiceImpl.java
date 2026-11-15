@@ -42,6 +42,7 @@ import java.util.Optional;
 @Slf4j
 @Transactional
 public class PaymentServiceImpl implements PaymentService {
+    private final PaymentOutbox outbox;
 
     private final PaymentRepository paymentRepository;
     private final PaymentGatewayFactory gatewayFactory;
@@ -462,7 +463,8 @@ public class PaymentServiceImpl implements PaymentService {
         paymentRepository.save(payment);
         if (!held && !payment.isVerifiedRelease() && previous != payment.getStatus()) {
             if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
-                updateOrderStatus(payment.getOrderId(), "PAID", payment);
+                if (outbox.enabled()) outbox.enqueue(payment);
+                else updateOrderStatus(payment.getOrderId(), "PAID", payment);
                 if (notify) sendPaymentSuccessNotification(payment);
             } else if (payment.getStatus() == PaymentStatus.FAILED) {
                 updateOrderStatus(payment.getOrderId(), "PAYMENT_FAILED", payment);

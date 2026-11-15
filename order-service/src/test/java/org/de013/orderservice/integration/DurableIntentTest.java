@@ -44,6 +44,136 @@ class DurableIntentTest {
     @MockBean CartClient carts;
     @MockBean org.de013.orderservice.client.InventoryReservationClient reservations;
     @Autowired org.de013.orderservice.service.impl.AllocationRecovery recovery;
+    @Autowired org.de013.orderservice.service.impl.PaymentEventProcessor paymentEvents;
+
+    private long paymentOrder(String status, String phase) {
+        return jdbc.queryForObject("INSERT INTO orders(order_number,user_id,status,order_type,created_at,updated_at,total_amount,currency,allocation_phase,shipping_first_name,shipping_last_name,shipping_street_address,shipping_city,shipping_state,shipping_postal_code,shipping_country) VALUES (?, 'owner', ?, 'STANDARD', CURRENT_TIMESTAMP,CURRENT_TIMESTAMP, 12.50, 'USD', ?, 'Test','Owner','Street','City','State','12345','US') RETURNING id", Long.class, UUID.randomUUID().toString(), status, phase);
+    }
+
+    private String paymentEvent(UUID event, long order, long payment) {
+        return "{\"eventId\":\"" + event + "\",\"eventType\":\"PaymentSucceeded\",\"schemaVersion\":1,\"occurredAt\":\"2026-01-01T00:00:00Z\",\"paymentId\":" + payment + ",\"paymentNumber\":\"P-" + payment + "\",\"orderId\":" + order + ",\"provider\":\"STRIPE\",\"amount\":12.50,\"currency\":\"USD\"}";
+    }
+
+    @Test void paymentInboxConcurrentDuplicateAndConflictingPayload() throws Exception {
+        long id = paymentOrder("PENDING", "READY"); var event = UUID.randomUUID(); var raw = paymentEvent(event, id, 101);
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var a = pool.submit(() -> paymentEvents.process(raw, Long.toString(id), "test-a", 0, 1));
+            var b = pool.submit(() -> paymentEvents.process(raw, Long.toString(id), "test-a", 0, 2));
+            a.get(); b.get();
+        } finally { pool.shutdownNow(); }
+        assertEquals("PAID", jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id));
+        assertEquals("FULFILL_PENDING", jdbc.queryForObject("SELECT allocation_phase FROM orders WHERE id=?", String.class, id));
+        assertEquals("ACCEPTED", jdbc.queryForObject("SELECT result FROM payment_event_inbox WHERE event_id=?", String.class, event));
+        paymentEvents.process(paymentEvent(event, id, 102), Long.toString(id), "test-a", 0, 3);
+        assertEquals("EVENT_ID_CONFLICT", jdbc.queryForObject("SELECT reason FROM payment_event_quarantine WHERE topic='test-a' AND record_offset=3", String.class));
+        assertEquals("ACCEPTED", jdbc.queryForObject("SELECT result FROM payment_event_inbox WHERE event_id=?", String.class, event));
+        paymentEvents.process(paymentEvent(UUID.randomUUID(), id, 102), Long.toString(id), "test-a", 0, 4);
+        assertEquals("PAYMENT_RECONCILIATION", jdbc.queryForObject("SELECT reason FROM payment_event_quarantine WHERE topic='test-a' AND record_offset=4", String.class));
+        jdbc.update("UPDATE orders SET status='SHIPPED',allocation_phase='FULFILLED' WHERE id=?", id);
+        paymentEvents.process(paymentEvent(UUID.randomUUID(), id, 101), Long.toString(id), "test-a", 0, 5);
+        assertEquals("FULFILLED", jdbc.queryForObject("SELECT allocation_phase FROM orders WHERE id=?", String.class, id));
+    }
+
+    @Test void paymentInboxQuarantinesInvalidAndLegacyEvents() {
+        long legacy = paymentOrder("PAID", null), pending = paymentOrder("PENDING", "READY");
+        String raw = paymentEvent(UUID.randomUUID(), pending, 1);
+        String[] values = {"{", raw.replace("\"schemaVersion\":1", "\"schemaVersion\":2"), raw, raw.replace("12.50", "13.00"), paymentEvent(UUID.randomUUID(), 999999999, 1), paymentEvent(UUID.randomUUID(), legacy, 1)};
+        String[] reasons = {"INVALID_EVENT", "INVALID_EVENT", "KEY_MISMATCH", "AMOUNT_CURRENCY_MISMATCH", "UNKNOWN_ORDER", "PAYMENT_RECONCILIATION"};
+        for (int i = 0; i < values.length; i++) {
+            String key = i == 2 ? "wrong" : i == 4 ? "999999999" : i == 5 ? Long.toString(legacy) : Long.toString(pending);
+            paymentEvents.process(values[i], key, "test-b", 0, i);
+            assertEquals(reasons[i], jdbc.queryForObject("SELECT reason FROM payment_event_quarantine WHERE topic='test-b' AND record_offset=?", String.class, i));
+        }
+    }
+
+    @Test void paymentInboxRollsBackPaidWhenInboxUpdateFails() {
+        long id = paymentOrder("PENDING", "READY"); var event = UUID.randomUUID(); var raw = paymentEvent(event, id, 5);
+        jdbc.execute("CREATE FUNCTION fail_payment_inbox_test() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected failure'; END $$");
+        jdbc.execute("CREATE TRIGGER fail_payment_inbox_test BEFORE UPDATE ON payment_event_inbox FOR EACH ROW EXECUTE FUNCTION fail_payment_inbox_test()");
+        try { assertThrows(Exception.class, () -> paymentEvents.process(raw, Long.toString(id), "test-c", 0, 1)); }
+        finally { jdbc.execute("DROP TRIGGER fail_payment_inbox_test ON payment_event_inbox"); jdbc.execute("DROP FUNCTION fail_payment_inbox_test()"); }
+        assertEquals("PENDING", jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id));
+        assertEquals("READY", jdbc.queryForObject("SELECT allocation_phase FROM orders WHERE id=?", String.class, id));
+        assertNull(jdbc.queryForObject("SELECT accepted_payment_id FROM orders WHERE id=?", Long.class, id));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM payment_event_inbox WHERE event_id=?", Integer.class, event));
+        paymentEvents.process(raw, Long.toString(id), "test-c", 0, 1);
+        assertEquals("PAID", jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id));
+    }
+
+    @Test void paymentInboxQuarantinesAllocationPhasesAndCorruptFinancials() {
+        int offset = 0;
+        for (String phase : new String[]{"ALLOCATING", "COMPENSATING", "FAILED", "RECONCILIATION"}) {
+            long id = paymentOrder("PENDING", phase);
+            paymentEvents.process(paymentEvent(UUID.randomUUID(), id, 11), Long.toString(id), "test-phases", 2, offset);
+            assertEquals("ALLOCATION_RECONCILIATION", jdbc.queryForObject("SELECT reason FROM payment_event_quarantine WHERE topic='test-phases' AND record_offset=?", String.class, offset++));
+            assertEquals("PENDING", jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id));
+            assertEquals(phase, jdbc.queryForObject("SELECT allocation_phase FROM orders WHERE id=?", String.class, id));
+        }
+        for (String column : new String[]{"total_amount", "currency"}) {
+            long id = paymentOrder("PENDING", "READY");
+            jdbc.update("UPDATE orders SET " + column + "=NULL WHERE id=?", id);
+            paymentEvents.process(paymentEvent(UUID.randomUUID(), id, 11), Long.toString(id), "test-phases", 2, offset);
+            assertEquals("AMOUNT_CURRENCY_MISMATCH", jdbc.queryForObject("SELECT reason FROM payment_event_quarantine WHERE topic='test-phases' AND record_offset=?", String.class, offset++));
+        }
+    }
+
+    @Test void paymentInboxInvalidPayloadsAreDurableAndBounded() throws Exception {
+        long id = paymentOrder("PENDING", "READY"); String raw = paymentEvent(UUID.randomUUID(), id, 7);
+        String[] values = {"{", null, raw.replace("\"paymentNumber\":\"P-7\",", ""), raw.replace("\"paymentId\":7", "\"paymentId\":\"7\""),
+                raw.replace("\"schemaVersion\":1", "\"schemaVersion\":2"), raw.replace("\"paymentId\":7", "\"paymentId\":9223372036854775808"),
+                raw.replace("12.50", "0"), raw.replace("12.50", "-1"), raw.replace("\"USD\"", "\"EUR\""), paymentEvent(UUID.randomUUID(), id, 7).replace("12.50", "13"), raw};
+        for (int i = 0; i < values.length; i++) {
+            paymentEvents.process(values[i], i == 10 ? "wrong" : Long.toString(id), "test-invalid", 3, i);
+            var row = jdbc.queryForMap("SELECT reason,raw_payload,payload_length,partition_id,record_offset FROM payment_event_quarantine WHERE topic='test-invalid' AND record_offset=?", i);
+            assertEquals(i >= 8 && i <= 9 ? "AMOUNT_CURRENCY_MISMATCH" : i == 10 ? "KEY_MISMATCH" : "INVALID_EVENT", row.get("reason"));
+            assertEquals(values[i] == null ? "" : values[i], row.get("raw_payload"));
+            assertEquals(values[i] == null ? 0 : values[i].length(), row.get("payload_length"));
+            assertEquals(3, row.get("partition_id")); assertEquals((long) i, row.get("record_offset"));
+        }
+        String large = "x".repeat(4095) + "😀" + "x".repeat(100);
+        paymentEvents.process(large, "1", "test-invalid", 3, 11);
+        var row = jdbc.queryForMap("SELECT raw_payload,payload_length,payload_hash,truncated FROM payment_event_quarantine WHERE topic='test-invalid' AND record_offset=11");
+        assertEquals("x".repeat(4095), row.get("raw_payload")); assertEquals(large.length(), row.get("payload_length"));
+        assertEquals(java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(large.getBytes(java.nio.charset.StandardCharsets.UTF_8))), row.get("payload_hash"));
+        assertEquals(true, row.get("truncated"));
+    }
+
+    @Test void paymentInboxQuarantineDatabaseFailurePropagatesAndCanRetry() {
+        jdbc.execute("CREATE FUNCTION fail_payment_quarantine_test() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected failure'; END $$");
+        jdbc.execute("CREATE TRIGGER fail_payment_quarantine_test BEFORE INSERT ON payment_event_quarantine FOR EACH ROW EXECUTE FUNCTION fail_payment_quarantine_test()");
+        try { assertThrows(org.springframework.dao.DataAccessException.class, () -> paymentEvents.process("{", "1", "test-db-failure", 1, 1)); }
+        finally { jdbc.execute("DROP TRIGGER fail_payment_quarantine_test ON payment_event_quarantine"); jdbc.execute("DROP FUNCTION fail_payment_quarantine_test()"); }
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM payment_event_quarantine WHERE topic='test-db-failure'", Integer.class));
+        paymentEvents.process("{", "1", "test-db-failure", 1, 1);
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM payment_event_quarantine WHERE topic='test-db-failure'", Integer.class));
+    }
+
+    @Test void paymentInboxQuarantinesNulInRawAndPaymentNumber() {
+        long id = paymentOrder("PENDING", "READY");
+        String[] values = {"bad\0record", paymentEvent(UUID.randomUUID(), id, 11).replace("P-11", "P-\\u000011")};
+        for (int i = 0; i < values.length; i++) {
+            paymentEvents.process(values[i], Long.toString(id), "test-nul", 0, i);
+            var row = jdbc.queryForMap("SELECT reason,raw_payload,payload_length,payload_hash,truncated FROM payment_event_quarantine WHERE topic='test-nul' AND record_offset=?", i);
+            assertEquals("INVALID_EVENT", row.get("reason"));
+            assertEquals(values[i].replace("\0", "\\u0000"), row.get("raw_payload"));
+            assertEquals(values[i].length(), row.get("payload_length"));
+            assertEquals(false, row.get("truncated"));
+        }
+        assertEquals("PENDING", jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id));
+    }
+
+    @Test void paymentInboxCompletedReplayAndMigrationV5() {
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version='5' AND success", Integer.class));
+        long id = paymentOrder("PENDING", "READY");
+        paymentEvents.process(paymentEvent(UUID.randomUUID(), id, 45), Long.toString(id), "test-completed", 0, 1);
+        jdbc.update("UPDATE orders SET status='COMPLETED', allocation_phase='FULFILLED' WHERE id=?", id);
+        UUID replay = UUID.randomUUID();
+        paymentEvents.process(paymentEvent(replay, id, 45), Long.toString(id), "test-completed", 0, 2);
+        assertEquals("ACCEPTED", jdbc.queryForObject("SELECT result FROM payment_event_inbox WHERE event_id=?", String.class, replay));
+        assertEquals("FULFILLED", jdbc.queryForObject("SELECT allocation_phase FROM orders WHERE id=?", String.class, id));
+        assertEquals("COMPLETED", jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id));
+    }
 
     @Test void persistsSnapshotAndVariantIntentAndReplaysWithoutCartRead() throws Exception {
         var cart = mapper.readValue("""

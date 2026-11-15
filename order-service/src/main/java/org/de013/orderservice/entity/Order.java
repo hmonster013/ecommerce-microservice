@@ -48,6 +48,12 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true, exclude = {"orderItems"})
 public class Order extends BaseEntity {
 
+    @Column(name = "accepted_payment_id")
+    private Long acceptedPaymentId;
+
+    @Column(name = "accepted_payment_number")
+    private String acceptedPaymentNumber;
+
     @Column(name = "allocation_phase", length = 32)
     private String allocationPhase;
 
