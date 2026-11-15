@@ -202,6 +202,10 @@ public class ProductCatalogExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
             DataIntegrityViolationException ex, HttpServletRequest request) {
 
+        if (isActiveReservationConstraint(ex)) {
+            return handleBusinessException(new ReservationException("RESERVATION_CONFLICT", HttpStatus.CONFLICT), request);
+        }
+
         String traceId = generateTraceId();
         log.error("Data integrity violation [{}]: {}", traceId, ex.getMessage(), ex);
 
@@ -421,6 +425,10 @@ public class ProductCatalogExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception ex, HttpServletRequest request) {
 
+        if (isActiveReservationConstraint(ex)) {
+            return handleBusinessException(new ReservationException("RESERVATION_CONFLICT", HttpStatus.CONFLICT), request);
+        }
+
         String traceId = generateTraceId();
         log.error("Unexpected error [{}]: {}", traceId, ex.getMessage(), ex);
 
@@ -445,5 +453,23 @@ public class ProductCatalogExceptionHandler {
      */
     private String generateTraceId() {
         return UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private boolean isActiveReservationConstraint(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof org.hibernate.exception.ConstraintViolationException constraint
+                    && "active_inventory_reservation".equals(constraint.getConstraintName())) return true;
+            if (cause instanceof java.sql.SQLException sql && "23514".equals(sql.getSQLState())
+                    && sql.getClass().getName().equals("org.postgresql.util.PSQLException")) {
+                try {
+                    Object serverError = sql.getClass().getMethod("getServerErrorMessage").invoke(sql);
+                    if (serverError != null && "active_inventory_reservation".equals(
+                            serverError.getClass().getMethod("getConstraint").invoke(serverError))) return true;
+                } catch (ReflectiveOperationException ignored) {
+                    // Leave unrelated or uninspectable database errors on the existing path.
+                }
+            }
+        }
+        return false;
     }
 }

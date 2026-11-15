@@ -18,6 +18,7 @@ import org.de013.productcatalog.repository.ProductVariantRepository;
 import org.de013.productcatalog.repository.VariantInventoryRepository;
 import org.de013.productcatalog.service.VariantInventoryService;
 import org.de013.productcatalog.service.support.InventoryCacheInvalidator;
+import org.de013.productcatalog.service.support.DurableReservationGuard;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
     private final ProductRepository productRepository;
     private final VariantInventoryMapper variantInventoryMapper;
     private final InventoryCacheInvalidator cacheInvalidator;
+    private final DurableReservationGuard durableReservationGuard;
 
     @Override
     @Transactional
@@ -393,6 +395,7 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
         log.info("Releasing {} reserved stock for variant ID: {}", quantity, variantId);
 
         requirePositiveQuantity(quantity);
+        durableReservationGuard.rejectLegacyMutation(true, variantId);
         try {
             int updated = variantInventoryRepository.releaseReservedStock(variantId, quantity);
             boolean success = updated > 0;
@@ -417,6 +420,7 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
         log.info("Fulfilling order of {} for variant ID: {}", quantity, variantId);
 
         requirePositiveQuantity(quantity);
+        durableReservationGuard.rejectLegacyMutation(true, variantId);
         try {
             int updated = variantInventoryRepository.fulfillOrder(variantId, quantity);
             boolean success = updated > 0;

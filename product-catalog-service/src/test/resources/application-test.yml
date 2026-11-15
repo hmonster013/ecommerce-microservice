@@ -18,6 +18,8 @@ spring:
   cloud:
     config:
       enabled: false
+    bus:
+      enabled: false
   eureka:
     client:
       enabled: false

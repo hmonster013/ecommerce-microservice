@@ -11,6 +11,7 @@ import org.de013.productcatalog.mapper.InventoryMapper;
 import org.de013.productcatalog.repository.InventoryRepository;
 import org.de013.productcatalog.service.InventoryService;
 import org.de013.productcatalog.service.support.InventoryCacheInvalidator;
+import org.de013.productcatalog.service.support.DurableReservationGuard;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryRepository inventoryRepository;
     private final InventoryMapper inventoryMapper;
     private final InventoryCacheInvalidator cacheInvalidator;
+    private final DurableReservationGuard durableReservationGuard;
 
     @Override
     @Cacheable(value = "inventory", key = "#productId")
@@ -131,6 +133,7 @@ public class InventoryServiceImpl implements InventoryService {
         log.info("Releasing {} reserved stock for product ID: {}", quantity, productId);
 
         requirePositiveQuantity(quantity);
+        durableReservationGuard.rejectLegacyMutation(false, productId);
         try {
             int updated = inventoryRepository.releaseReservedStock(productId, quantity);
             boolean success = updated > 0;
@@ -155,6 +158,7 @@ public class InventoryServiceImpl implements InventoryService {
         log.info("Fulfilling order of {} for product ID: {}", quantity, productId);
 
         requirePositiveQuantity(quantity);
+        durableReservationGuard.rejectLegacyMutation(false, productId);
         try {
             int updated = inventoryRepository.fulfillOrder(productId, quantity);
             boolean success = updated > 0;

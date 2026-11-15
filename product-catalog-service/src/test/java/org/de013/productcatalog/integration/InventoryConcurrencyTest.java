@@ -21,11 +21,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.cache.transaction.TransactionAwareCacheManagerProxy;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.core.io.ClassPathResource;
+import javax.sql.DataSource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -59,6 +63,7 @@ import static org.mockito.Mockito.when;
 })
 @ActiveProfiles("test")
 @Testcontainers(disabledWithoutDocker = true)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class InventoryConcurrencyTest {
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -79,6 +84,7 @@ class InventoryConcurrencyTest {
     @Autowired private VariantInventoryRepository variantRepository;
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private DataSource dataSource;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockBean(name = "cacheManager") private CacheManager cacheManager;
 
@@ -89,6 +95,8 @@ class InventoryConcurrencyTest {
 
     @BeforeEach
     void createIsolatedInventory() {
+        jdbc.execute("DROP TABLE IF EXISTS inventory_reservations");
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration/V11__Create_inventory_reservations.sql")).execute(dataSource);
         CacheManager localCaches = new TransactionAwareCacheManagerProxy(new ConcurrentMapCacheManager());
         when(cacheManager.getCache(anyString())).thenAnswer(call -> localCaches.getCache(call.getArgument(0)));
         transaction = new TransactionTemplate(transactionManager);
