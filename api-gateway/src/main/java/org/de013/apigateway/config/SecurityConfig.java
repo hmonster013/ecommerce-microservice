@@ -68,6 +68,7 @@ public class SecurityConfig {
                             .pathMatchers("/api/v1/user-service/users/**").hasRole(UserRole.ADMIN.roleName())
 
                             // ========== PRODUCT CATALOG SERVICE ==========
+                            .pathMatchers("/api/v1/product-catalog-service/internal/**").denyAll()
                             // Currency display rates are public; rate administration is ADMIN-only.
                             .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/exchange-rates").permitAll()
                             .pathMatchers(HttpMethod.GET, "/api/v1/product-catalog-service/settings/currency").hasRole(UserRole.ADMIN.roleName())
@@ -162,9 +163,10 @@ public class SecurityConfig {
                             // Payment management (admin, manager)
                             .pathMatchers("/api/v1/payment-service/payments/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName())
 
-                            // Webhooks (public - but should be validated by service)
-                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/webhooks/**").permitAll()
-                            .pathMatchers(HttpMethod.GET, "/api/v1/payment-service/webhooks/vnpay/**").permitAll()
+                            // Public provider callbacks; all other webhook requests are denied.
+                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/webhooks/stripe", "/api/v1/payment-service/webhooks/stripe/hosted").permitAll()
+                            .pathMatchers(HttpMethod.GET, "/api/v1/payment-service/webhooks/vnpay/ipn", "/api/v1/payment-service/webhooks/vnpay/return").permitAll()
+                            .pathMatchers("/api/v1/payment-service/webhooks/**").denyAll()
 
                             // ========== NOTIFICATION SERVICE ==========
                             // Send notifications (admin, support)
