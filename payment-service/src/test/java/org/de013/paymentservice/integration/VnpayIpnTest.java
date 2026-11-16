@@ -57,7 +57,7 @@ class VnpayIpnTest {
     private WebhookController webhookController;
     @Autowired
     private PaymentRepository paymentRepository;
-    @Autowired
+    @org.springframework.boot.test.mock.mockito.SpyBean
     private ProcessedStripeEventRepository processedStripeEventRepository;
     @Autowired
     private PaymentGatewayConfig config;
@@ -88,6 +88,9 @@ class VnpayIpnTest {
     void ipn_validSignatureAndSuccessCode_marksPaymentSucceededAndOrderPaid() {
         String txnRef = "PMT-IPN-001";
         seedPendingPayment(txnRef, new BigDecimal("10.00"));
+        var legacy = paymentRepository.findByPaymentNumber(txnRef).orElseThrow();
+        assertNull(legacy.getProviderExchangeRate());
+        assertNull(legacy.getProviderQuotedAt());
         Map<String, String> params = signedIpn(txnRef, toVnpAmount(new BigDecimal("10.00")), "00");
 
         ResponseEntity<Map<String, String>> resp = webhookController.handleVnpayIpn(params);
@@ -141,6 +144,23 @@ class VnpayIpnTest {
         assertEquals(PaymentStatus.PENDING,
                 paymentRepository.findByPaymentNumber(txnRef).orElseThrow().getStatus());
         verify(orderServiceClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
+    }
+
+    @Test void eventFlushFailureRollsBackPaymentAndAllowsReplay() {
+        String ref = "PMT-IPN-ROLLBACK";
+        seedPendingPayment(ref, new BigDecimal("10.00"));
+        var callback = signedIpn(ref, toVnpAmount(new BigDecimal("10.00")), "00");
+        doThrow(new IllegalStateException("simulated event flush failure"))
+                .when(processedStripeEventRepository).flush();
+        var failure = assertThrows(org.springframework.dao.InvalidDataAccessApiUsageException.class, () -> ipnService.process(callback));
+        assertInstanceOf(IllegalStateException.class, failure.getCause());
+        assertEquals(PaymentStatus.PENDING, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+        assertFalse(processedStripeEventRepository.existsById("vnpay_" + ref));
+        verify(orderServiceClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
+        reset(processedStripeEventRepository);
+        assertEquals("00", ipnService.process(callback).get("RspCode"));
+        assertEquals(PaymentStatus.SUCCEEDED, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+        assertTrue(processedStripeEventRepository.existsById("vnpay_" + ref));
     }
 
     @Test void signedSuccessUnderHoldPreservesEvidenceAndSuppressesDispatch() {

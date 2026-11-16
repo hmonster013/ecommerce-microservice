@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -52,12 +54,12 @@ public class VnpayService {
 
         // Convert USD to VND using config rate
         long vndRate = config.getGateways().getVnpay().getVndRate();
-        double converted = req.getAmount().doubleValue() * vndRate;
-        if (vndRate <= 0 || !Double.isFinite(converted) || converted <= 0)
+        if (vndRate <= 0)
             throw new IllegalArgumentException("Invalid VNPay conversion amount or rate");
-        long amountVnd = Math.round(converted);
-        if (amountVnd <= 0 || amountVnd > Long.MAX_VALUE / 100)
+        BigDecimal converted = req.getAmount().multiply(BigDecimal.valueOf(vndRate)).setScale(0, RoundingMode.HALF_UP);
+        if (converted.signum() <= 0 || converted.compareTo(BigDecimal.valueOf(Long.MAX_VALUE / 100)) > 0)
             throw new IllegalArgumentException("Invalid VNPay wire amount");
+        long amountVnd = converted.longValueExact();
 
         // Build createDate in GMT+7 format yyyyMMddHHmmss
         LocalDateTime nowGmt7 = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -77,6 +79,8 @@ public class VnpayService {
                 .amount(req.getAmount()) // Store original USD amount
                 .providerAmountVnd(amountVnd)
                 .providerCurrency("VND")
+                .providerExchangeRate(vndRate)
+                .providerQuotedAt(nowGmt7)
                 .currency(Currency.USD)  // Keep original USD currency to match Order Service
                 .status(PaymentStatus.PENDING)
                 .method(PaymentMethodType.WALLET)

@@ -25,7 +25,7 @@ public class EmailService {
      */
     public void sendEmail(String to, String subject, String message) {
         try {
-            log.info("Sending email to: {}, subject: {}", to, subject);
+            log.debug("Submitting email to provider");
 
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             mailMessage.setFrom(fromEmail);
@@ -35,11 +35,11 @@ public class EmailService {
 
             mailSender.send(mailMessage);
 
-            log.info("Email sent successfully to: {}", to);
+            log.debug("Email submitted to provider");
 
         } catch (Exception e) {
-            log.error("Failed to send email to: {}, error: {}", to, e.getMessage(), e);
-            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
+            log.warn("Email provider submission failed");
+            throw new RuntimeException("Email provider submission failed", e);
         }
     }
 

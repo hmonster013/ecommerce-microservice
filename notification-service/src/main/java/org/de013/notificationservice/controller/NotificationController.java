@@ -18,6 +18,8 @@ import org.de013.notificationservice.dto.EmailNotificationRequest;
 import org.de013.notificationservice.dto.NotificationResponse;
 import org.de013.notificationservice.dto.SmsNotificationRequest;
 import org.de013.notificationservice.entity.Notification;
+import org.de013.notificationservice.entity.enums.NotificationStatus;
+import java.time.LocalDateTime;
 import org.de013.notificationservice.security.HeaderAuthenticationFilter.HeaderUserDetails;
 import org.de013.notificationservice.service.NotificationService;
 import org.springframework.data.domain.Page;
@@ -90,7 +92,7 @@ public class NotificationController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Email sent successfully",
+                    description = "Email submitted to provider",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = NotificationResponse.class)
@@ -103,7 +105,7 @@ public class NotificationController {
             @Valid @RequestBody EmailNotificationRequest request) {
 
         try {
-            log.info("Sending email to: {}, subject: {}", request.to(), request.subject());
+
 
             Notification notification = notificationService.sendEmail(
                     request.userId(),
@@ -112,18 +114,16 @@ public class NotificationController {
                     request.message()
             );
 
-            NotificationResponse response = NotificationResponse.success(
-                    "Email sent successfully",
-                    notification.getId(),
-                    notification.getStatus().toString()
-            );
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            boolean submitted = notification.getStatus() == NotificationStatus.SENT;
+            NotificationResponse response = new NotificationResponse(submitted,
+                    submitted ? "Email submitted to provider" : "Email submission failed",
+                    notification.getId(), notification.getStatus().toString(), LocalDateTime.now());
+            return ResponseEntity.status(submitted ? HttpStatus.CREATED : HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 
         } catch (Exception e) {
-            log.error("Error sending email: {}", e.getMessage(), e);
+            log.error("Error processing email notification");
             NotificationResponse response = NotificationResponse.error(
-                    "Failed to send email: " + e.getMessage()
+                    "Failed to process email notification"
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
@@ -137,7 +137,7 @@ public class NotificationController {
             summary = "Send SMS notification",
             description = """
                     Send an SMS notification to a user. This endpoint accepts SMS details and sends
-                    the notification via Twilio (or mock mode for development). The notification status is tracked in the database.
+                    the notification via a configured provider. The notification status is tracked in the database.
                     
                     **Required fields:**
                     - phoneNumber: Valid phone number (E.164 format recommended)
@@ -168,7 +168,7 @@ public class NotificationController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "SMS sent successfully",
+                    description = "SMS submitted to provider",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = NotificationResponse.class)
@@ -181,7 +181,7 @@ public class NotificationController {
             @Valid @RequestBody SmsNotificationRequest request) {
 
         try {
-            log.info("Sending SMS to: {}", request.phoneNumber());
+
 
             Notification notification = notificationService.sendSms(
                     request.userId(),
@@ -189,18 +189,16 @@ public class NotificationController {
                     request.message()
             );
 
-            NotificationResponse response = NotificationResponse.success(
-                    "SMS sent successfully",
-                    notification.getId(),
-                    notification.getStatus().toString()
-            );
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            boolean submitted = notification.getStatus() == NotificationStatus.SENT;
+            NotificationResponse response = new NotificationResponse(submitted,
+                    submitted ? "SMS submitted to provider" : "SMS submission failed",
+                    notification.getId(), notification.getStatus().toString(), LocalDateTime.now());
+            return ResponseEntity.status(submitted ? HttpStatus.CREATED : HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 
         } catch (Exception e) {
-            log.error("Error sending SMS: {}", e.getMessage(), e);
+            log.error("Error processing SMS notification");
             NotificationResponse response = NotificationResponse.error(
-                    "Failed to send SMS: " + e.getMessage()
+                    "Failed to process SMS notification"
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
@@ -249,7 +247,7 @@ public class NotificationController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Both notifications sent successfully",
+                    description = "Both notifications submitted to providers",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = BothNotificationResponse.class)
@@ -262,7 +260,7 @@ public class NotificationController {
             @Valid @RequestBody BothNotificationRequest request) {
 
         try {
-            log.info("Sending both email and SMS to user: {}", request.userId());
+
 
             List<Notification> notifications = notificationService.sendBoth(
                     request.userId(),
@@ -272,18 +270,18 @@ public class NotificationController {
                     request.message()
             );
 
-            BothNotificationResponse response = BothNotificationResponse.success(
-                    "Both notifications sent successfully",
-                    notifications.get(0).getId(), notifications.get(0).getStatus().toString(),
-                    notifications.get(1).getId(), notifications.get(1).getStatus().toString()
-            );
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            Notification email = notifications.get(0);
+            Notification sms = notifications.get(1);
+            boolean submitted = email.getStatus() == NotificationStatus.SENT && sms.getStatus() == NotificationStatus.SENT;
+            BothNotificationResponse response = new BothNotificationResponse(submitted,
+                    submitted ? "Both notifications submitted to providers" : "Notification submission failed",
+                    email.getId(), sms.getId(), email.getStatus().toString(), sms.getStatus().toString(), LocalDateTime.now());
+            return ResponseEntity.status(submitted ? HttpStatus.CREATED : HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 
         } catch (Exception e) {
-            log.error("Error sending both notifications: {}", e.getMessage(), e);
+            log.error("Error processing both notifications notification");
             BothNotificationResponse response = BothNotificationResponse.error(
-                    "Failed to send notifications: " + e.getMessage()
+                    "Failed to process notifications"
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }

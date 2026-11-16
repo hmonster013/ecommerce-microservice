@@ -373,20 +373,28 @@ class PaymentReservationFlowTest {
                 String ref = i.getArgument(0);
                 long amount = i.getArgument(1);
                 try (var c = java.sql.DriverManager.getConnection(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword());
-                     var s = c.prepareStatement("select provider_amount_vnd, provider_currency from payments where payment_number = ?")) {
+                     var s = c.prepareStatement("select provider_amount_vnd, provider_currency, provider_exchange_rate, provider_quoted_at from payments where payment_number = ?")) {
                     s.setString(1, ref);
                     try (var rows = s.executeQuery()) {
                         assertTrue(rows.next()); assertEquals(amount, rows.getLong(1)); assertEquals("VND", rows.getString(2));
+                        assertEquals(originalRate, rows.getLong(3)); assertNotNull(rows.getTimestamp(4));
                     }
                 }
                 return realGateway.buildPaymentUrl(ref, amount, i.getArgument(2), i.getArgument(3), i.getArgument(4));
             });
+            var before = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
             var result = vnpay.createCheckout(request(8991, "VNPAY"));
+            var after = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
             var payment = repository.findByOrderId(8991L).get(0);
             long wire = Math.round(25.0 * originalRate) * 100;
             assertTrue(result.getRedirectUrl().contains("vnp_Amount=" + wire + "&"));
             assertThrows(IllegalArgumentException.class, () -> realGateway.buildPaymentUrl("ref", Long.MAX_VALUE / 100 + 1, "order", "127.0.0.1", "20260101000000"));
             cfg.setVndRate(originalRate + 1);
+            var snapshot = repository.findByOrderId(8991L).get(0);
+            assertEquals(originalRate, snapshot.getProviderExchangeRate());
+            assertNotNull(snapshot.getProviderQuotedAt());
+            assertFalse(snapshot.getProviderQuotedAt().isBefore(before));
+            assertFalse(snapshot.getProviderQuotedAt().isAfter(after));
             var fields = new java.util.TreeMap<String, String>();
             fields.put("vnp_TmnCode", cfg.getTmnCode()); fields.put("vnp_TxnRef", payment.getPaymentNumber());
             fields.put("vnp_Amount", Long.toString(wire)); fields.put("vnp_ResponseCode", "00"); fields.put("vnp_TransactionStatus", "00");
@@ -394,6 +402,20 @@ class PaymentReservationFlowTest {
             assertEquals("00", ipn.process(fields).get("RspCode"));
             assertEquals(org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, repository.findByPaymentNumber(payment.getPaymentNumber()).orElseThrow().getStatus());
         } finally { cfg.setVndRate(originalRate); }
+    }
+
+    @Test void vnpayRoundsHalfUpAndAcceptsWireMaximum() {
+        var cfg = gatewayConfig.getGateways().getVnpay();
+        long rate = cfg.getVndRate();
+        try {
+            cfg.setVndRate(1);
+            var half = request(8988, "VNPAY"); half.setAmount(new BigDecimal("0.50"));
+            vnpay.createCheckout(half);
+            assertEquals(1L, repository.findByOrderId(8988L).get(0).getProviderAmountVnd());
+            var max = request(8989, "VNPAY"); max.setAmount(new BigDecimal("92233720368547758"));
+            vnpay.createCheckout(max);
+            assertEquals(Long.MAX_VALUE / 100, repository.findByOrderId(8989L).get(0).getProviderAmountVnd());
+        } finally { cfg.setVndRate(rate); }
     }
 
     @Test void invalidVnpayConversionNeverReservesOrCallsGateway() {

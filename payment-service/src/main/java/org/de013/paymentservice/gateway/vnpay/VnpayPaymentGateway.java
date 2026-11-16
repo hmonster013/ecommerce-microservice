@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.springframework.stereotype.Component;
 
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -81,6 +83,13 @@ public class VnpayPaymentGateway {
             log.warn("Missing vnp_SecureHash parameter in VNPay callback");
             return false;
         }
+        if (secureHash.length() != 128) return false;
+        byte[] suppliedHash;
+        try {
+            suppliedHash = HexFormat.of().parseHex(secureHash);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
 
         SortedMap<String, String> fields = new TreeMap<>();
         params.forEach((k, v) -> {
@@ -95,7 +104,7 @@ public class VnpayPaymentGateway {
         // Calculate signature
         String computedHash = VnpayUtils.hmacSHA512(config.getGateways().getVnpay().getHashSecret(), hashData);
         
-        boolean isValid = secureHash.equalsIgnoreCase(computedHash);
+        boolean isValid = MessageDigest.isEqual(suppliedHash, HexFormat.of().parseHex(computedHash));
         if (!isValid) {
             log.error("VNPay signature verification failed");
         } else {
