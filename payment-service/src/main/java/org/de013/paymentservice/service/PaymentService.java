@@ -29,6 +29,7 @@ public interface PaymentService {
      * Confirm a payment that requires action
      */
     PaymentResponse confirmPayment(Long paymentId, String paymentMethodId);
+    PaymentResponse confirmPaymentForOwner(Long paymentId, String paymentMethodId, String actor, String idempotencyKey);
 
     /**
      * Cancel a payment

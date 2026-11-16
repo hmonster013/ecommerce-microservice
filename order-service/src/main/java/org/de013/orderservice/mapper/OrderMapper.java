@@ -134,7 +134,13 @@ public class OrderMapper {
                 o.getCreatedAt(),
                 o.getUpdatedAt(),
                 itemResponses,
-                stats
+                stats,
+                paymentRetryEligible(o, java.time.LocalDateTime.now())
         );
+    }
+
+    static boolean paymentRetryEligible(Order order, java.time.LocalDateTime now) {
+        return "READY".equals(order.getAllocationPhase()) && order.getStatus() == OrderStatus.PENDING
+                && order.getCheckoutDeadline() != null && order.getCheckoutDeadline().isAfter(now);
     }
 }

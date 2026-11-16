@@ -1,5 +1,9 @@
 package org.de013.paymentservice.controller;
 
+import org.de013.paymentservice.gateway.stripe.StripeRetryVerifier;
+
+import org.de013.paymentservice.service.PaymentRetryAttempts;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.de013.paymentservice.client.*;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
@@ -42,7 +46,7 @@ class StripeWebhookHttpTest {
     @BeforeEach void setup() {
         config.getGateways().getStripe().setWebhookSecret(SECRET);
         stripe = spy(new StripeWebhookService(config, new ObjectMapper()));
-        var service = new WebhookServiceImpl(mock(PaymentOutbox.class), mock(PaymentNotificationOutbox.class),
+        var service = new WebhookServiceImpl(mock(PaymentRetryAttempts.class), mock(StripeRetryVerifier.class), mock(PaymentOutbox.class), mock(PaymentNotificationOutbox.class),
                 mock(PaymentGatewayFactory.class), stripe, payments, methods,
                 refunds, orders, events, users, notifications, mock(PaymentOrderGuard.class));
         mvc = MockMvcBuilders.standaloneSetup(new WebhookController(service, config, mock(VnpayPaymentGateway.class),

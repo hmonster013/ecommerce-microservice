@@ -1,5 +1,9 @@
 package org.de013.paymentservice.controller;
 
+import org.springframework.http.HttpStatus;
+
+import org.springframework.web.server.ResponseStatusException;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -119,10 +123,18 @@ public class PaymentController extends BaseController {
     })
     public ResponseEntity<ApiResult<PaymentResponse>> confirmPayment(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId,
-            @Parameter(description = "Payment method ID") @RequestParam String paymentMethodId) {
-        log.info("Confirming payment: {} with payment method: {}", paymentId, paymentMethodId);
+            @Parameter(description = "Payment method ID") @RequestParam String paymentMethodId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        var context = UserContextHolder.getCurrentUser();
+        if (context == null || context.getUserId() == null || context.getUserId().isBlank())
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        String actor = context.getUserId();
+        if (paymentMethodId == null || !paymentMethodId.matches("[A-Za-z0-9_]{1,255}")
+                || idempotencyKey != null && !idempotencyKey.matches("[A-Za-z0-9._:-]{1,128}"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid confirmation request");
+        log.info("Confirming payment: {}", paymentId);
 
-        PaymentResponse response = paymentService.confirmPayment(paymentId, paymentMethodId);
+        PaymentResponse response = paymentService.confirmPaymentForOwner(paymentId, paymentMethodId, actor, idempotencyKey);
         return success(response, PaymentConstants.PAYMENT_CONFIRMED);
     }
 

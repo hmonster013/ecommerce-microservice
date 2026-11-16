@@ -59,13 +59,13 @@ public class Payment extends BaseEntity {
     @Column(name = "provider_currency", length = 3)
     private String providerCurrency;
 
-
     @Column(name = "provider_exchange_rate")
     private Long providerExchangeRate;
 
     /** VNPay quote time in Asia/Ho_Chi_Minh (UTC+07:00). */
     @Column(name = "provider_quoted_at")
     private LocalDateTime providerQuotedAt;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "currency", nullable = false, length = 3)
     private Currency currency;

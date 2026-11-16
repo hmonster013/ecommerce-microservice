@@ -1,7 +1,16 @@
 package org.de013.paymentservice.service;
 
 import jakarta.persistence.EntityManager;
+
 import jakarta.persistence.PersistenceContext;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.de013.paymentservice.gateway.stripe.StripeRetryVerifier;
+
+import org.springframework.http.HttpStatus;
+
+import org.springframework.web.server.ResponseStatusException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +54,8 @@ import java.util.Optional;
 @Slf4j
 @Transactional
 public class PaymentServiceImpl implements PaymentService {
+    private final PaymentRetryAttempts retryAttempts;
+    private final StripeRetryVerifier retryVerifier;
     private final PaymentOutbox outbox;
     private final PaymentNotificationOutbox notificationOutbox;
 
@@ -83,7 +94,7 @@ public class PaymentServiceImpl implements PaymentService {
                     payment.setStripeIntentLivemode(response.getLivemode());
                 }
                 return applyProviderResponse(payment, response, TransactionType.CHARGE, held, true);
-            } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
+            } catch (ResponseStatusException e) { throw e; }
             catch (Exception e) { throw new PaymentProcessingException("Failed to process payment", e); }
         });
     }
@@ -91,8 +102,70 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse confirmPayment(Long paymentId, String paymentMethodId) {
+        return confirmPaymentInternal(paymentId, paymentMethodId, null);
+    }
+
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    public PaymentResponse confirmPaymentForOwner(Long paymentId, String paymentMethodId, String actor, String idempotencyKey) {
+        if (actor == null || actor.isBlank()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        if (paymentMethodId == null || !paymentMethodId.matches("[A-Za-z0-9_]{1,255}")
+                || idempotencyKey != null && !idempotencyKey.matches("[A-Za-z0-9._:-]{1,128}"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid confirmation request");
+        var retry = new AtomicBoolean();
+        var replay = new AtomicBoolean();
+        PaymentResponse snapshot = locked(paymentId, (payment, held) -> {
+            requireOwner(payment, actor);
+            if (idempotencyKey != null && retryAttempts.existing(paymentId, idempotencyKey, paymentMethodId,
+                    payment.getAmount(), payment.getCurrency().name()) != null) {
+                replay.set(true);
+            } else if (payment.getStatus() == PaymentStatus.FAILED) {
+                if (idempotencyKey == null)
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Idempotency-Key is required for retry");
+                requireRetryAdmission(payment, held);
+                retry.set(true);
+            }
+            return paymentMapper.toPaymentResponse(payment);
+        });
+        if (replay.get()) return retryReadBack(paymentId, actor);
+        if (!retry.get()) return confirmPaymentInternal(paymentId, paymentMethodId, actor);
+        var attempt = retryAttempts.claim(paymentId, idempotencyKey, paymentMethodId, snapshot.getAmount(), snapshot.getCurrency().name());
+        if (!attempt.created()) return retryReadBack(paymentId, actor);
+        var mutationStarted = new AtomicBoolean();
+        try {
+            return locked(paymentId, (payment, held) -> {
+                requireOwner(payment, actor);
+                requireRetryAdmission(payment, held);
+                if (payment.getAmount().compareTo(snapshot.getAmount()) != 0 || payment.getCurrency() != snapshot.getCurrency())
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Retry payment changed");
+                try {
+                    if (!retryVerifier.eligible(payment))
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Provider does not permit retry");
+                    requireRetryAdmission(payment, held);
+                    mutationStarted.set(true);
+                    var gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
+                    var intent = gateway.confirmPaymentIntent(payment.getStripePaymentIntentId(), paymentMethodId, attempt.providerKey().toString());
+                    if (!retryVerifier.matches(payment, intent)) throw new PaymentProcessingException("Retry provider identity cannot be verified");
+                    PaymentResponse result = applyProviderResponse(payment, gateway.retryReadBack(intent), TransactionType.CHARGE, held, false);
+                    if (payment.getStatus() == PaymentStatus.SUCCEEDED || payment.getStatus() == PaymentStatus.CANCELED)
+                        retryAttempts.completed(attempt.id());
+                    return result;
+                } catch (ResponseStatusException e) { throw e; }
+                catch (Exception e) { throw new PaymentProcessingException("Retry outcome requires reconciliation", e); }
+            });
+        } catch (RuntimeException e) {
+            if (!mutationStarted.get()) retryAttempts.rejected(attempt.id());
+            throw e;
+        }
+    }
+
+    private PaymentResponse confirmPaymentInternal(Long paymentId, String paymentMethodId, String actor) {
         return locked(paymentId, (payment, held) -> {
+            if (actor != null && !actor.equals(payment.getUserId()))
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Payment owner required");
             requireNotHeld(held);
+            if (retryAttempts.active(paymentId))
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Retry outcome requires reconciliation");
             if (payment.isVerifiedRelease() || payment.getStatus() != PaymentStatus.PENDING)
                 throw new PaymentProcessingException("Payment cannot be confirmed. Current status: " + payment.getStatus());
             requireIntent(payment);
@@ -100,7 +173,7 @@ public class PaymentServiceImpl implements PaymentService {
             try {
                 StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
                 return applyProviderResponse(payment, gateway.confirmPaymentIntent(payment.getStripePaymentIntentId(), paymentMethodId), TransactionType.CHARGE, held, false);
-            } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
+            } catch (ResponseStatusException e) { throw e; }
             catch (Exception e) { throw new PaymentProcessingException("Failed to confirm payment", e); }
         });
     }
@@ -131,7 +204,7 @@ public class PaymentServiceImpl implements PaymentService {
             try {
                 StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
                 return applyProviderResponse(payment, gateway.capturePayment(payment.getStripePaymentIntentId(), amount != null ? amount : payment.getAmount()), TransactionType.CAPTURE, held, true);
-            } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
+            } catch (ResponseStatusException e) { throw e; }
             catch (Exception e) { throw new PaymentProcessingException("Failed to capture payment", e); }
         });
     }
@@ -221,8 +294,16 @@ public class PaymentServiceImpl implements PaymentService {
             if (payment.getStripePaymentIntentId() == null) return paymentMapper.toPaymentResponse(payment);
             try {
                 StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
-                return applyProviderResponse(payment, gateway.getPaymentIntent(payment.getStripePaymentIntentId()), TransactionType.CHARGE, held, true);
-            } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
+                StripePaymentResponse response;
+                if (retryAttempts.exists(paymentId)) {
+                    var intent = retryVerifier.current(payment);
+                    if (intent == null) throw new PaymentProcessingException("Retry provider identity cannot be verified");
+                    response = gateway.retryReadBack(intent);
+                } else {
+                    response = gateway.getPaymentIntent(payment.getStripePaymentIntentId());
+                }
+                return applyProviderResponse(payment, response, TransactionType.CHARGE, held, true);
+            } catch (ResponseStatusException e) { throw e; }
             catch (Exception e) { throw new PaymentProcessingException("Failed to sync payment status", e); }
         });
     }
@@ -448,8 +529,51 @@ public class PaymentServiceImpl implements PaymentService {
         });
     }
 
+    private PaymentResponse retryReadBack(Long paymentId, String actor) {
+        return locked(paymentId, (payment, held) -> {
+            requireOwner(payment, actor);
+            if (payment.getStatus() == PaymentStatus.SUCCEEDED) return paymentMapper.toPaymentResponse(payment);
+            if (retryAttempts.hosted(paymentId)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment cannot be reconciled as a retry");
+            try {
+                var current = retryVerifier.current(payment);
+                if (current == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "Provider identity cannot be verified");
+                // A failed/action/processing read does not prove which attempt completed; keep its durable fence.
+                if (!"succeeded".equals(current.getStatus()))
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Retry outcome requires reconciliation");
+                var gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
+                PaymentResponse response = applyProviderResponse(payment, gateway.retryReadBack(current), TransactionType.CHARGE, held, false);
+                return response;
+            } catch (ResponseStatusException e) { throw e; }
+            catch (Exception e) { throw new PaymentProcessingException("Retry outcome requires reconciliation", e); }
+        });
+    }
+
+    private void requireOwner(Payment payment, String actor) {
+        if (!actor.equals(payment.getUserId()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Payment owner required");
+    }
+
+    private void requireRetryAdmission(Payment payment, boolean held) {
+        requireNotHeld(held);
+        if (payment.getStatus() != PaymentStatus.FAILED || !payment.isBlocking() || payment.isVerifiedRelease()
+                || !"STRIPE".equals(payment.getGatewayName()) || retryAttempts.hosted(payment.getId()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment cannot be retried");
+        requireIntent(payment);
+        var response = orderServiceClient.getOrderById(payment.getOrderId());
+        var order = response == null ? null : response.getBody();
+        String currency = order == null || order.getTotalAmount() == null ? null : order.getTotalAmount().getCurrency();
+        if (currency == null && order != null) currency = order.getCurrency();
+        if (response == null || !response.getStatusCode().is2xxSuccessful() || order == null
+                || !Boolean.TRUE.equals(order.getPaymentRetryEligible()) || !Boolean.TRUE.equals(order.getInventoryReady())
+                || !"PENDING".equals(order.getStatus()) || !payment.getOrderId().equals(order.getId())
+                || !payment.getUserId().equals(order.getUserId()) || order.getTotalAmount() == null
+                || order.getTotalAmount().getAmount() == null || payment.getAmount().compareTo(order.getTotalAmount().getAmount()) != 0
+                || payment.getCurrency() == null || !payment.getCurrency().name().equals(currency))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Order does not permit retry");
+    }
+
     private void requireNotHeld(boolean held) {
-        if (held) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Order requires payment reconciliation");
+        if (held) throw new ResponseStatusException(HttpStatus.CONFLICT, "Order requires payment reconciliation");
     }
 
     private void requireIntent(Payment payment) {

@@ -160,6 +160,7 @@ public class SecurityConfig {
                             .pathMatchers(HttpMethod.GET, "/api/v1/payment-service/payments/checkout/*").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
                             .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/process").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
                             .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/confirm").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName())
+                            .pathMatchers(HttpMethod.POST, "/api/v1/payment-service/payments/*/confirm").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.CUSTOMER.roleName(), UserRole.MANAGER.roleName())
 
                             // Payment management (admin, manager)
                             .pathMatchers("/api/v1/payment-service/payments/**").hasAnyRole(UserRole.ADMIN.roleName(), UserRole.MANAGER.roleName())

@@ -4,6 +4,8 @@ import jakarta.persistence.EntityManager;
 
 import jakarta.persistence.PersistenceContext;
 
+import org.de013.paymentservice.gateway.stripe.StripeRetryVerifier;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ApiResult;
@@ -38,6 +40,8 @@ import java.util.Optional;
 @Slf4j
 @Transactional
 public class WebhookServiceImpl implements WebhookService {
+    private final PaymentRetryAttempts retryAttempts;
+    private final StripeRetryVerifier retryVerifier;
     private final PaymentOutbox outbox;
     private final PaymentNotificationOutbox notificationOutbox;
 
@@ -198,6 +202,27 @@ public class WebhookServiceImpl implements WebhookService {
         if (isHostedCheckout(payment)) return true;
         if (!"STRIPE".equals(payment.getGatewayName())) {
             throw new PaymentGatewayException("Payment intent provider is not correlated");
+        }
+        if (retryAttempts.exists(payment.getId()) && ("payment_intent.payment_failed".equals(event.getEventType())
+                || "payment_intent.requires_action".equals(event.getEventType())
+                || "payment_intent.succeeded".equals(event.getEventType()))) {
+            try {
+                if (retryAttempts.hosted(payment.getId())) throw new PaymentGatewayException("Retry payment correlation changed");
+                var current = retryVerifier.current(payment);
+                if (current == null) throw new PaymentGatewayException("Retry provider identity cannot be verified");
+                String expected = switch (event.getEventType()) {
+                    case "payment_intent.payment_failed" -> "requires_payment_method";
+                    case "payment_intent.requires_action" -> "requires_action";
+                    default -> "succeeded";
+                };
+                if (!expected.equals(current.getStatus())) {
+                    if ("payment_intent.succeeded".equals(event.getEventType()))
+                        throw new PaymentGatewayException("Retry provider success cannot be verified");
+                    return true;
+                }
+            } catch (com.stripe.exception.StripeException e) {
+                throw new PaymentGatewayException("Retry provider state is unavailable", e);
+            }
         }
         switch (event.getEventType()) {
             case "payment_intent.canceled" -> {

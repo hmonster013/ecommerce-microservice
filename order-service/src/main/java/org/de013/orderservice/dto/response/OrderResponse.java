@@ -98,7 +98,8 @@ public record OrderResponse(
         List<OrderItemResponse> orderItems,
 
         // Order summary statistics
-        OrderSummaryStats summaryStats
+        OrderSummaryStats summaryStats,
+        boolean paymentRetryEligible
 ) {
 
     /**

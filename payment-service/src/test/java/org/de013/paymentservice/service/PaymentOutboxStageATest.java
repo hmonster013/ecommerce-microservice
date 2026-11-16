@@ -1,15 +1,35 @@
 package org.de013.paymentservice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stripe.Stripe;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import org.de013.paymentservice.dto.external.OrderDto;
+import org.de013.paymentservice.entity.Payment;
+import org.de013.paymentservice.controller.PaymentController;
+import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
+import org.de013.paymentservice.exception.PaymentExceptionHandler;
+import org.de013.paymentservice.exception.PaymentProcessingException;
+import org.de013.paymentservice.gateway.stripe.StripePaymentGateway;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {"spring.cloud.bus.enabled=false", "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect", "spring.flyway.enabled=true",
@@ -43,6 +63,186 @@ class PaymentOutboxStageATest {
     @org.springframework.beans.factory.annotation.Autowired PaymentOrderGuard guard;
     @org.springframework.beans.factory.annotation.Autowired org.springframework.transaction.PlatformTransactionManager tx;
     @org.springframework.beans.factory.annotation.Autowired jakarta.validation.Validator validatorBean;
+    @org.springframework.beans.factory.annotation.Autowired PaymentRetryAttempts retryAttempts;
+    @org.springframework.beans.factory.annotation.Autowired CheckoutClosureService closures;
+
+    @Test void failedOwnerRetryConfirmsSameIntentOnceWithDurableKey() throws Exception {
+        var p = payment(99373, "STRIPE", PaymentStatus.FAILED);
+        p.setStripeIntentCreatedByService(true);
+        p.setStripeIntentLivemode(false);
+        repository.saveAndFlush(p);
+        var order = new OrderDto();
+        order.setId(p.getOrderId()); order.setUserId("owner"); order.setStatus("PENDING");
+        order.setInventoryReady(true); order.setPaymentRetryEligible(true); order.setCurrency("USD");
+        var total = new OrderDto.MoneyDto(); total.setAmount(p.getAmount()); total.setCurrency("USD"); order.setTotalAmount(total);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(order));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+
+        var posts = new AtomicInteger();
+        var providerKey = new AtomicReference<String>();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99373", exchange -> {
+            boolean confirm = "POST".equals(exchange.getRequestMethod()) && exchange.getRequestURI().getPath().endsWith("/confirm");
+            if (confirm) { posts.incrementAndGet(); providerKey.set(exchange.getRequestHeaders().getFirst("Idempotency-Key")); }
+            String status = confirm ? "succeeded" : "requires_payment_method";
+            byte[] body = ("{\"id\":\"pi_99373\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"" + status + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            var response = payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "retry-key");
+            assertEquals(p.getId(), response.getId());
+            assertEquals("pi_99373", response.getStripePaymentIntentId());
+            assertEquals(PaymentStatus.SUCCEEDED, response.getStatus());
+            assertEquals(1, repository.findByOrderId(p.getOrderId()).size());
+            assertEquals(1, posts.get());
+            assertNotNull(providerKey.get());
+            assertEquals(jdbc.queryForObject("select provider_key::text from payment_retry_attempt where payment_id=? and idempotency_key=?", String.class, p.getId(), "retry-key"), providerKey.get());
+            order.setPaymentRetryEligible(false);
+            var replay = payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "retry-key");
+            assertEquals(p.getId(), replay.getId());
+            assertEquals("pi_99373", replay.getStripePaymentIntentId());
+            assertEquals(PaymentStatus.SUCCEEDED, replay.getStatus());
+            assertEquals(1, posts.get());
+            var mismatch = assertThrows(ResponseStatusException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_other", "owner", "retry-key"));
+            assertEquals(HttpStatus.CONFLICT, mismatch.getStatusCode());
+            assertEquals(1, posts.get());
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void failedRetryRequiresOwnerAndKeyBeforeProvider() {
+        var p = retryPayment(99374);
+        assertEquals(HttpStatus.FORBIDDEN, assertThrows(ResponseStatusException.class,
+                () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "other", "key")).getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, assertThrows(ResponseStatusException.class,
+                () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", " ", "key")).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
+                () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", null)).getStatusCode());
+        assertNoRetryOrProvider(p.getId());
+    }
+
+    @Test void failedRetryRejectsIneligibleOrUnavailableOrderBeforeProvider() {
+        var p = retryPayment(99375);
+        var order = retryOrder(p);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(order));
+        for (Boolean eligible : new Boolean[]{false, null}) {
+            order.setPaymentRetryEligible(eligible);
+            assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key")).getStatusCode());
+            assertNoRetryOrProvider(p.getId());
+        }
+        when(orderClient.getOrderById(p.getOrderId())).thenThrow(new IllegalStateException("order unavailable"));
+        assertThrows(RuntimeException.class, () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key"));
+        assertNoRetryOrProvider(p.getId());
+    }
+
+    @Test void hostedRelationRejectsRetryBeforeProvider() {
+        var checkout = hostedStore.reserve(99376L, "owner", new BigDecimal("25.00"), "https://fixture.test/checkout/result");
+        var p = repository.findById(checkout.getPaymentId()).orElseThrow();
+        p.setStatus(PaymentStatus.FAILED); p.setStripePaymentIntentId("pi_99376");
+        p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); repository.saveAndFlush(p);
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key")).getStatusCode());
+        assertNoRetryOrProvider(p.getId());
+        verify(orderClient, never()).getOrderById(p.getOrderId());
+    }
+
+    @Test void ambiguousProviderResponseLeavesDurableClaimAndNeverResends() throws Exception {
+        var p = retryPayment(99377);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var posts = new AtomicInteger();
+        var providerKey = new AtomicReference<String>();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99377", exchange -> {
+            boolean confirm = "POST".equals(exchange.getRequestMethod()) && exchange.getRequestURI().getPath().endsWith("/confirm");
+            if (confirm) { posts.incrementAndGet(); providerKey.set(exchange.getRequestHeaders().getFirst("Idempotency-Key")); }
+            String json = confirm ? "{\"error\":{\"type\":\"api_error\",\"message\":\"ambiguous\"}}"
+                    : "{\"id\":\"pi_99377\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"requires_payment_method\"}";
+            byte[] body = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(confirm ? 500 : 200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            new TransactionTemplate(tx).executeWithoutResult(status -> {
+                assertThrows(PaymentProcessingException.class,
+                        () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key"));
+                status.setRollbackOnly();
+            });
+            assertEquals(1, posts.get());
+            assertNotNull(providerKey.get());
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            assertEquals(providerKey.get(), jdbc.queryForObject("select provider_key::text from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "other-key")).getStatusCode());
+            assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key")).getStatusCode());
+            assertEquals(1, posts.get());
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    private Payment retryPayment(long orderId) {
+        var p = payment(orderId, "STRIPE", PaymentStatus.FAILED);
+        p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false);
+        return repository.saveAndFlush(p);
+    }
+
+    private OrderDto retryOrder(Payment p) {
+        var order = new OrderDto();
+        order.setId(p.getOrderId()); order.setUserId(p.getUserId()); order.setStatus("PENDING");
+        order.setInventoryReady(true); order.setPaymentRetryEligible(true); order.setCurrency("USD");
+        var total = new OrderDto.MoneyDto(); total.setAmount(p.getAmount()); total.setCurrency("USD"); order.setTotalAmount(total);
+        return order;
+    }
+
+    private void assertNoRetryOrProvider(long paymentId) {
+        assertEquals(0, jdbc.queryForObject("select count(*) from payment_retry_attempt where payment_id=?", Integer.class, paymentId));
+        verifyNoInteractions(stripe, factory);
+    }
+
+    @Test void retryAttemptClaimIsDurableBoundAndExclusive() throws Exception {
+        var p = payment(99370, "STRIPE", PaymentStatus.FAILED);
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(tx);
+        var first = transaction.execute(s -> { var attempt = retryAttempts.claim(p.getId(), "key-a", "pm_a", p.getAmount(), "USD"); s.setRollbackOnly(); return attempt; });
+        assertTrue(first.created());
+        var replay = retryAttempts.claim(p.getId(), "key-a", "pm_a", p.getAmount(), "USD");
+        assertFalse(replay.created()); assertEquals(first.providerKey(), replay.providerKey());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> retryAttempts.claim(p.getId(), "key-a", "pm_b", p.getAmount(), "USD"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> retryAttempts.claim(p.getId(), "key-a", "pm_a", new BigDecimal("26.00"), "USD"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> retryAttempts.claim(p.getId(), "key-a", "pm_a", p.getAmount(), "EUR"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> retryAttempts.claim(p.getId(), "key-b", "pm_a", p.getAmount(), "USD"));
+        jdbc.update("update payment_retry_attempt set state='UNCERTAIN' where id=?", first.id());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> retryAttempts.claim(p.getId(), "key-b", "pm_a", p.getAmount(), "USD"));
+        jdbc.update("update payment_retry_attempt set state='COMPLETED' where id=?", first.id());
+        assertFalse(retryAttempts.claim(p.getId(), "key-a", "pm_a", p.getAmount(), "USD").created());
+        var other = payment(99371, "STRIPE", PaymentStatus.FAILED);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Callable<Boolean> a = () -> { start.await(); try { retryAttempts.claim(other.getId(), "key-1", "pm_a", other.getAmount(), "USD"); return true; } catch (org.springframework.web.server.ResponseStatusException e) { return false; } };
+            java.util.concurrent.Callable<Boolean> b = () -> { start.await(); try { retryAttempts.claim(other.getId(), "key-2", "pm_a", other.getAmount(), "USD"); return true; } catch (org.springframework.web.server.ResponseStatusException e) { return false; } };
+            var x = executor.submit(a); var y = executor.submit(b); start.countDown(); assertNotEquals(x.get(), y.get());
+        } finally { executor.shutdownNow(); }
+        var same = payment(99372, "STRIPE", PaymentStatus.FAILED);
+        var gate = new java.util.concurrent.CountDownLatch(1);
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Callable<PaymentRetryAttempts.Attempt> call = () -> { gate.await(); return retryAttempts.claim(same.getId(), "same-key", "pm_a", same.getAmount(), "USD"); };
+            var x = pool.submit(call); var y = pool.submit(call); gate.countDown();
+            var one = x.get(); var two = y.get(); assertEquals(one.providerKey(), two.providerKey()); assertNotEquals(one.created(), two.created());
+        } finally { pool.shutdownNow(); }
+    }
+
     @Test void directUpdatesAndCancelRecordTransitions() {
         var p = payment(99302, "STRIPE", PaymentStatus.PENDING);
         payments.updatePaymentStatus(p.getId(), PaymentStatus.FAILED, "failed");
@@ -321,4 +521,474 @@ class PaymentOutboxStageATest {
         }
     }
 
+    @Test void staleRetryWebhooksDoNotDowngradeVerifiedProviderProgress() throws Exception {
+        var currentStatus = new AtomicReference<>("processing");
+        var gets = new AtomicInteger();
+        var mutations = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/", exchange -> {
+            if ("GET".equals(exchange.getRequestMethod())) gets.incrementAndGet(); else mutations.incrementAndGet();
+            String intent = exchange.getRequestURI().getPath().substring("/v1/payment_intents/".length());
+            byte[] body = ("{\"id\":\"" + intent + "\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"" + currentStatus.get() + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            var processing = retryPayment(99378); processing.setStatus(PaymentStatus.PROCESSING); repository.saveAndFlush(processing);
+            retryAttempts.claim(processing.getId(), "key", "pm_retry", processing.getAmount(), "USD");
+            send(99378, "payment_failed");
+            assertEquals(PaymentStatus.PROCESSING, repository.findById(processing.getId()).orElseThrow().getStatus());
+            revision(processing.getId(), 0, 0);
+            assertEquals(1, jdbc.queryForObject("select count(*) from processed_stripe_events where event_id=?", Integer.class, "evt_payment_failed99378"));
+
+            currentStatus.set("succeeded");
+            var action = retryPayment(99379); action.setStatus(PaymentStatus.REQUIRES_ACTION); repository.saveAndFlush(action);
+            retryAttempts.claim(action.getId(), "key", "pm_retry", action.getAmount(), "USD");
+            send(99379, "payment_failed");
+            assertEquals(PaymentStatus.REQUIRES_ACTION, repository.findById(action.getId()).orElseThrow().getStatus());
+            revision(action.getId(), 0, 0);
+            assertEquals(1, jdbc.queryForObject("select count(*) from processed_stripe_events where event_id=?", Integer.class, "evt_payment_failed99379"));
+
+            var progress = retryPayment(99380); progress.setStatus(PaymentStatus.PROCESSING); repository.saveAndFlush(progress);
+            retryAttempts.claim(progress.getId(), "key", "pm_retry", progress.getAmount(), "USD");
+            send(99380, "requires_action");
+            assertEquals(PaymentStatus.PROCESSING, repository.findById(progress.getId()).orElseThrow().getStatus());
+            revision(progress.getId(), 0, 0);
+            assertEquals(1, jdbc.queryForObject("select count(*) from processed_stripe_events where event_id=?", Integer.class, "evt_requires_action99380"));
+            assertEquals(3, gets.get()); assertEquals(0, mutations.get());
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void staleRetryWebhookProviderFailureRollsBackDedupe() throws Exception {
+        var p = retryPayment(99381); p.setStatus(PaymentStatus.PROCESSING); repository.saveAndFlush(p);
+        retryAttempts.claim(p.getId(), "key", "pm_retry", p.getAmount(), "USD");
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        var gets = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99381", exchange -> {
+            if ("GET".equals(exchange.getRequestMethod())) gets.incrementAndGet();
+            byte[] body = "{\"error\":{\"type\":\"api_error\",\"message\":\"unavailable\"}}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(503, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            assertThrows(RuntimeException.class, () -> send(99381, "payment_failed"));
+            assertEquals(1, gets.get());
+            assertEquals(PaymentStatus.PROCESSING, repository.findById(p.getId()).orElseThrow().getStatus());
+            revision(p.getId(), 0, 0);
+            assertEquals(0, jdbc.queryForObject("select count(*) from processed_stripe_events where event_id=?", Integer.class, "evt_payment_failed99381"));
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void retryPostConnectionCloseDoesNotResend() throws Exception {
+        var p = retryPayment(99382);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var posts = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99382", exchange -> {
+            if ("POST".equals(exchange.getRequestMethod())) { posts.incrementAndGet(); exchange.close(); return; }
+            byte[] body = "{\"id\":\"pi_99382\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"requires_payment_method\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            assertThrows(PaymentProcessingException.class, () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key"));
+            assertEquals(1, posts.get());
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "other-key")).getStatusCode());
+            assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key")).getStatusCode());
+            assertEquals(1, posts.get());
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void providerSuccessThenDatabaseRollbackRecoversByReadOnlyReplayUnderHold() throws Exception {
+        var p = retryPayment(99385);
+        var order = retryOrder(p);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(order));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var providerStatus = new AtomicReference<>("requires_payment_method");
+        var providerKey = new AtomicReference<String>();
+        var posts = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99385", exchange -> {
+            if ("POST".equals(exchange.getRequestMethod())) {
+                posts.incrementAndGet(); providerKey.set(exchange.getRequestHeaders().getFirst("Idempotency-Key"));
+                providerStatus.set("succeeded");
+            }
+            byte[] body = ("{\"id\":\"pi_99385\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"" + providerStatus.get() + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            jdbc.execute("create function reject_retry_success_outbox() returns trigger language plpgsql as $$ begin raise exception 'retry outbox failure'; end $$");
+            try {
+                jdbc.execute("create trigger reject_retry_success_outbox before insert on payment_outbox for each row execute function reject_retry_success_outbox()");
+                assertThrows(RuntimeException.class, () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key"));
+            } finally {
+                jdbc.execute("drop trigger if exists reject_retry_success_outbox on payment_outbox");
+                jdbc.execute("drop function if exists reject_retry_success_outbox()");
+            }
+            assertEquals(1, posts.get());
+            assertNotNull(providerKey.get());
+            assertEquals(providerKey.get(), jdbc.queryForObject("select provider_key::text from payment_retry_attempt where payment_id=? and idempotency_key=?", String.class, p.getId(), "key"));
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            assertEquals(PaymentStatus.FAILED, repository.findById(p.getId()).orElseThrow().getStatus());
+            revision(p.getId(), 0, 0);
+
+            new TransactionTemplate(tx).executeWithoutResult(status -> guard.hold(p.getOrderId()));
+            order.setPaymentRetryEligible(false);
+            clearInvocations(orderClient);
+            var replay = payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key");
+            assertEquals(p.getId(), replay.getId());
+            assertEquals("pi_99385", replay.getStripePaymentIntentId());
+            assertEquals(PaymentStatus.SUCCEEDED, replay.getStatus());
+            assertEquals(PaymentStatus.SUCCEEDED, repository.findById(p.getId()).orElseThrow().getStatus());
+            assertEquals(1, posts.get());
+            assertEquals("RECONCILIATION", jdbc.queryForObject("select state from payment_outbox where payment_id=?", String.class, p.getId()));
+            verifyNoInteractions(orderClient);
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void retryRechecksDeadlineAfterProviderReadBeforeMutation() throws Exception {
+        var p = retryPayment(99386);
+        var eligible = new java.util.concurrent.atomic.AtomicBoolean(true);
+        when(orderClient.getOrderById(p.getOrderId())).thenAnswer(invocation -> {
+            var order = retryOrder(p); order.setPaymentRetryEligible(eligible.get()); return ResponseEntity.ok(order);
+        });
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        var posts = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99386", exchange -> {
+            if ("POST".equals(exchange.getRequestMethod())) posts.incrementAndGet(); else eligible.set(false);
+            byte[] body = "{\"id\":\"pi_99386\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"requires_payment_method\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key")).getStatusCode());
+            assertEquals(0, posts.get());
+            assertEquals("REJECTED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            assertFalse(retryAttempts.active(p.getId()));
+            assertEquals(PaymentStatus.FAILED, repository.findById(p.getId()).orElseThrow().getStatus());
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void concurrentSameKeyRetrySendsOneProviderConfirm() throws Exception {
+        concurrentRetries(99387, true);
+    }
+
+    @Test void concurrentDifferentKeyRetrySendsOneProviderConfirm() throws Exception {
+        concurrentRetries(99388, false);
+    }
+
+    private void concurrentRetries(long orderId, boolean sameKey) throws Exception {
+        var p = retryPayment(orderId);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var posts = new AtomicInteger();
+        var providerKey = new AtomicReference<String>();
+        var providerStatus = new AtomicReference<>("requires_payment_method");
+        var postEntered = new java.util.concurrent.CountDownLatch(1);
+        var releasePost = new java.util.concurrent.CountDownLatch(1);
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_" + orderId, exchange -> {
+            if ("POST".equals(exchange.getRequestMethod())) {
+                posts.incrementAndGet(); providerKey.set(exchange.getRequestHeaders().getFirst("Idempotency-Key"));
+                postEntered.countDown();
+                try { if (!releasePost.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new java.io.IOException("POST release timeout"); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new java.io.IOException(e); }
+                providerStatus.set("succeeded");
+            }
+            byte[] body = ("{\"id\":\"pi_" + orderId + "\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"" + providerStatus.get() + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            java.util.concurrent.Callable<Object> first = () -> { start.await(); try { return payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key-a"); } catch (RuntimeException e) { return e; } };
+            java.util.concurrent.Callable<Object> second = () -> { start.await(); try { return payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", sameKey ? "key-a" : "key-b"); } catch (RuntimeException e) { return e; } };
+            var one = pool.submit(first); var two = pool.submit(second); start.countDown();
+            assertTrue(postEntered.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            releasePost.countDown();
+            Object a = one.get(15, java.util.concurrent.TimeUnit.SECONDS), b = two.get(15, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(1, posts.get());
+            assertNotNull(providerKey.get());
+            assertEquals(providerKey.get(), jdbc.queryForObject("select provider_key::text from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            assertTrue(a instanceof org.de013.paymentservice.dto.payment.PaymentResponse || b instanceof org.de013.paymentservice.dto.payment.PaymentResponse);
+            Object other = a instanceof RuntimeException ? a : b instanceof RuntimeException ? b : null;
+            if (!sameKey) assertEquals(HttpStatus.CONFLICT, assertInstanceOf(ResponseStatusException.class, other).getStatusCode());
+            else if (other != null) assertEquals(HttpStatus.CONFLICT, assertInstanceOf(ResponseStatusException.class, other).getStatusCode());
+            String winningKey = jdbc.queryForObject("select idempotency_key from payment_retry_attempt where payment_id=?", String.class, p.getId());
+            assertEquals(p.getId(), payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", winningKey).getId());
+            assertEquals(1, posts.get());
+        } finally { releasePost.countDown(); pool.shutdownNow(); Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void retryReadTimeoutAfterPostDoesNotResend() throws Exception {
+        var p = retryPayment(99389);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var posts = new AtomicInteger();
+        var postEntered = new java.util.concurrent.CountDownLatch(1);
+        var releasePost = new java.util.concurrent.CountDownLatch(1);
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
+        server.createContext("/v1/payment_intents/pi_99389", exchange -> {
+            if ("POST".equals(exchange.getRequestMethod())) {
+                posts.incrementAndGet(); postEntered.countDown();
+                try { releasePost.await(10, java.util.concurrent.TimeUnit.SECONDS); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                exchange.close(); return;
+            }
+            byte[] body = "{\"id\":\"pi_99389\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"requires_payment_method\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        var pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        int readTimeout = Stripe.getReadTimeout();
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture"; Stripe.setReadTimeout(200);
+            var result = pool.submit(() -> assertThrows(PaymentProcessingException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key")));
+            assertTrue(postEntered.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            var error = result.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            assertTrue(java.util.stream.Stream.iterate((Throwable) error, java.util.Objects::nonNull, Throwable::getCause)
+                    .anyMatch(cause -> cause instanceof java.net.SocketTimeoutException));
+            assertEquals(1, posts.get());
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                    () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key")).getStatusCode());
+            assertEquals(1, posts.get());
+        } finally {
+            releasePost.countDown(); pool.shutdownNow(); Stripe.setReadTimeout(readTimeout);
+            Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0);
+            ((java.util.concurrent.ExecutorService) server.getExecutor()).shutdownNow();
+        }
+    }
+
+    @Test void closureWaitsForInFlightRetryAndHoldsAfterSuccess() throws Exception {
+        var p = retryPayment(99390);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var postEntered = new java.util.concurrent.CountDownLatch(1);
+        var releasePost = new java.util.concurrent.CountDownLatch(1);
+        var closureStarted = new java.util.concurrent.CountDownLatch(1);
+        var confirms = new AtomicInteger();
+        var cancels = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99390", exchange -> {
+            boolean post = "POST".equals(exchange.getRequestMethod());
+            if (post && exchange.getRequestURI().getPath().endsWith("/confirm")) {
+                confirms.incrementAndGet(); postEntered.countDown();
+                try { if (!releasePost.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new java.io.IOException("POST release timeout"); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new java.io.IOException(e); }
+            } else if (post) cancels.incrementAndGet();
+            String status = post ? "succeeded" : "requires_payment_method";
+            byte[] body = ("{\"id\":\"pi_99390\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"" + status + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            var retry = pool.submit(() -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key"));
+            assertTrue(postEntered.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            var closure = pool.submit(() -> { closureStarted.countDown(); return closures.close(p.getOrderId(), java.util.UUID.randomUUID()); });
+            assertTrue(closureStarted.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            assertThrows(java.util.concurrent.TimeoutException.class, () -> closure.get(300, java.util.concurrent.TimeUnit.MILLISECONDS));
+            releasePost.countDown();
+            assertEquals(PaymentStatus.SUCCEEDED, retry.get(10, java.util.concurrent.TimeUnit.SECONDS).getStatus());
+            assertEquals("HOLD", closure.get(10, java.util.concurrent.TimeUnit.SECONDS).status());
+            var stored = repository.findById(p.getId()).orElseThrow();
+            assertEquals(PaymentStatus.SUCCEEDED, stored.getStatus());
+            assertFalse(stored.isVerifiedRelease());
+            assertEquals(1, confirms.get()); assertEquals(0, cancels.get());
+        } finally { releasePost.countDown(); pool.shutdownNow(); Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void retryRejectsMismatchedSuccessfulProviderResponseAndRetainsFence() throws Exception {
+        var posts = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/", exchange -> {
+            String[] path = exchange.getRequestURI().getPath().split("/");
+            String id = path[3];
+            boolean post = "POST".equals(exchange.getRequestMethod());
+            if (post) posts.incrementAndGet();
+            String mode = post && id.endsWith("99392") ? "true" : "false";
+            String currency = post && id.endsWith("99393") ? "eur" : "usd";
+            int amount = post && id.endsWith("99391") ? 2501 : 2500;
+            byte[] body = ("{\"id\":\"" + id + "\",\"object\":\"payment_intent\",\"livemode\":" + mode + ",\"currency\":\"" + currency + "\",\"amount\":" + amount + ",\"status\":\"" + (post ? "succeeded" : "requires_payment_method") + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            for (long orderId = 99391; orderId <= 99393; orderId++) {
+                var p = retryPayment(orderId);
+                when(orderClient.getOrderById(orderId)).thenReturn(ResponseEntity.ok(retryOrder(p)));
+                int before = posts.get();
+                assertThrows(PaymentProcessingException.class, () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key"));
+                assertEquals(before + 1, posts.get());
+                assertEquals(PaymentStatus.FAILED, repository.findById(p.getId()).orElseThrow().getStatus());
+                revision(p.getId(), 0, 0);
+                assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+                assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                        () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "another-key")).getStatusCode());
+                assertEquals(before + 1, posts.get());
+            }
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void retrySuccessWebhookRequiresCurrentVerifiedFinancialIdentity() throws Exception {
+        var p = retryPayment(99394);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var amount = new AtomicInteger(2500);
+        var providerStatus = new AtomicReference<>("requires_payment_method");
+        var posts = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99394", exchange -> {
+            boolean post = "POST".equals(exchange.getRequestMethod());
+            if (post) { posts.incrementAndGet(); amount.set(2501); providerStatus.set("succeeded"); }
+            byte[] body = ("{\"id\":\"pi_99394\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":" + amount.get() + ",\"status\":\"" + providerStatus.get() + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            assertThrows(PaymentProcessingException.class, () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key"));
+            assertEquals(1, posts.get());
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            new TransactionTemplate(tx).executeWithoutResult(status -> guard.hold(p.getOrderId()));
+            clearInvocations(orderClient);
+            assertThrows(RuntimeException.class, () -> send(99394, "succeeded"));
+            assertEquals(PaymentStatus.FAILED, repository.findById(p.getId()).orElseThrow().getStatus());
+            revision(p.getId(), 0, 0);
+            assertEquals(0, jdbc.queryForObject("select count(*) from processed_stripe_events where event_id=?", Integer.class, "evt_succeeded99394"));
+            verify(orderClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
+            amount.set(2500); providerStatus.set("processing");
+            assertThrows(RuntimeException.class, () -> send(99394, "succeeded"));
+            assertEquals(PaymentStatus.FAILED, repository.findById(p.getId()).orElseThrow().getStatus());
+            revision(p.getId(), 0, 0);
+            assertEquals(0, jdbc.queryForObject("select count(*) from processed_stripe_events where event_id=?", Integer.class, "evt_succeeded99394"));
+            providerStatus.set("succeeded");
+            send(99394, "succeeded"); send(99394, "succeeded");
+            assertEquals(PaymentStatus.SUCCEEDED, repository.findById(p.getId()).orElseThrow().getStatus());
+            revision(p.getId(), 1, 1);
+            assertEquals("RECONCILIATION", jdbc.queryForObject("select state from payment_outbox where payment_id=?", String.class, p.getId()));
+            assertEquals(1, jdbc.queryForObject("select count(*) from processed_stripe_events where event_id=?", Integer.class, "evt_succeeded99394"));
+            assertEquals(1, posts.get());
+            verify(orderClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void retrySyncRequiresVerifiedCurrentFinancialIdentity() throws Exception {
+        var p = retryPayment(99395);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var amount = new AtomicInteger(2500);
+        var providerStatus = new AtomicReference<>("requires_payment_method");
+        var posts = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_99395", exchange -> {
+            if ("POST".equals(exchange.getRequestMethod())) {
+                posts.incrementAndGet(); amount.set(2501); providerStatus.set("succeeded");
+            }
+            byte[] body = ("{\"id\":\"pi_99395\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":" + amount.get() + ",\"status\":\"" + providerStatus.get() + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            assertThrows(PaymentProcessingException.class, () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key"));
+            clearInvocations(orderClient);
+            assertThrows(PaymentProcessingException.class, () -> payments.syncPaymentStatusWithStripe(p.getId()));
+            assertEquals(PaymentStatus.FAILED, repository.findById(p.getId()).orElseThrow().getStatus());
+            revision(p.getId(), 0, 0);
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            verify(orderClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
+            amount.set(2500);
+            var response = payments.syncPaymentStatusWithStripe(p.getId());
+            assertEquals(p.getId(), response.getId());
+            assertEquals(PaymentStatus.SUCCEEDED, response.getStatus());
+            revision(p.getId(), 1, 1);
+            assertEquals(1, posts.get());
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void publicConfirmUsesRealOwnerCheckAndConfirmsOwnersPayment() throws Exception {
+        var p = payment(99383, "STRIPE", PaymentStatus.PENDING);
+        when(factory.getGateway("STRIPE")).thenReturn(stripe);
+        when(stripe.confirmPaymentIntent("pi_99383", "pm_retry"))
+                .thenReturn(StripePaymentResponse.builder().paymentIntentId("pi_99383").status("succeeded").build());
+        var mvc = MockMvcBuilders.standaloneSetup(new PaymentController(payments))
+                .setControllerAdvice(new PaymentExceptionHandler()).build();
+        mvc.perform(post("/payments/{paymentId}/confirm", p.getId()).param("paymentMethodId", "pm_retry")
+                        .header("X-User-Id", "other").header("X-User-Username", "other"))
+                .andExpect(status().isForbidden());
+        verify(stripe, never()).confirmPaymentIntent(anyString(), anyString());
+        var result = mvc.perform(post("/payments/{paymentId}/confirm", p.getId()).param("paymentMethodId", "pm_retry")
+                        .header("X-User-Id", "owner").header("X-User-Username", "owner"))
+                .andExpect(status().isOk()).andReturn();
+        var data = new ObjectMapper().readTree(result.getResponse().getContentAsString()).path("data");
+        assertEquals(p.getId().longValue(), data.path("id").asLong());
+        assertEquals("pi_99383", data.path("stripePaymentIntentId").asText());
+        assertEquals("SUCCEEDED", data.path("status").asText());
+        assertEquals(1, repository.findByOrderId(p.getOrderId()).size());
+        verify(stripe, times(1)).confirmPaymentIntent("pi_99383", "pm_retry");
+    }
+
+    @Test void publicConfirmWithoutTrustedUserContextReturnsUnauthorized() throws Exception {
+        var p = payment(99384, "STRIPE", PaymentStatus.PENDING);
+        var mvc = MockMvcBuilders.standaloneSetup(new PaymentController(payments))
+                .setControllerAdvice(new PaymentExceptionHandler()).build();
+        mvc.perform(post("/payments/{paymentId}/confirm", p.getId()).param("paymentMethodId", "pm_retry"))
+                .andExpect(status().isUnauthorized());
+        assertEquals(PaymentStatus.PENDING, repository.findById(p.getId()).orElseThrow().getStatus());
+        verifyNoInteractions(stripe, factory);
+    }
 }
