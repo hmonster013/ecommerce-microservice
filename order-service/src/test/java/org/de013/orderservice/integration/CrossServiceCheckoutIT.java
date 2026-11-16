@@ -89,9 +89,11 @@ class CrossServiceCheckoutIT {
                          "--payment.internal.issuer-uri=" + issuer, "--payment.gateways.stripe.api-key=sk_test_cross_service_fixture",
                          "stripe-base=http://127.0.0.1:" + stripe.getAddress().getPort());
                  var order = new App(temp, isolated, "order-service", "org.de013.orderservice.OrderServiceApplication", orderDb,
-                         "--order.checkout-expiry.enabled=false", "--order.allocation.recovery-delay-ms=3600000",
+                          "--order.checkout-expiry.enabled=false", "--order.allocation.recovery-delay-ms=3600000",
+                          "--order.reconciliation.enabled=true", "--order.reconciliation.delay-ms=3600000",
                          "--spring.cloud.openfeign.client.config.inventoryReservation.url=http://127.0.0.1:" + catalog.port,
-                         "--spring.cloud.openfeign.client.config.paymentClosure.url=http://127.0.0.1:" + payment.port,
+                          "--spring.cloud.openfeign.client.config.paymentClosure.url=http://127.0.0.1:" + payment.port,
+                          "--spring.cloud.openfeign.client.config.paymentReconciliation.url=http://127.0.0.1:" + payment.port,
                          "--spring.security.oauth2.client.registration.catalog-inventory.client-id=order-service",
                          "--spring.security.oauth2.client.registration.catalog-inventory.client-secret=" + secret,
                          "--spring.security.oauth2.client.registration.catalog-inventory.authorization-grant-type=client_credentials",
@@ -99,7 +101,11 @@ class CrossServiceCheckoutIT {
                          "--spring.security.oauth2.client.registration.payment-checkout-close.client-id=order-service",
                          "--spring.security.oauth2.client.registration.payment-checkout-close.client-secret=" + secret,
                          "--spring.security.oauth2.client.registration.payment-checkout-close.authorization-grant-type=client_credentials",
-                         "--spring.security.oauth2.client.provider.payment-checkout-close.token-uri=" + tokenUri)) {
+                          "--spring.security.oauth2.client.provider.payment-checkout-close.token-uri=" + tokenUri,
+                          "--spring.security.oauth2.client.registration.payment-reconciliation.client-id=order-service",
+                          "--spring.security.oauth2.client.registration.payment-reconciliation.client-secret=" + secret,
+                          "--spring.security.oauth2.client.registration.payment-reconciliation.authorization-grant-type=client_credentials",
+                          "--spring.security.oauth2.client.provider.payment-reconciliation.token-uri=" + tokenUri)) {
                 catalog.check(catalogDb, "catalog_smoke");
                 payment.check(paymentDb, "payment_smoke");
                 order.check(orderDb, "order_smoke");
@@ -140,6 +146,69 @@ class CrossServiceCheckoutIT {
                     assertEquals(operation + "/SAFE/NO_PAYMENT_ATTEMPTS", text(paymentConnection, "SELECT close_operation_id::text || '/' || close_status || '/' || close_safe_proof FROM payment_order_guard WHERE order_id=" + id));
                     assertEquals("RELEASED", text(catalogConnection, "SELECT state FROM inventory_reservations WHERE operation_id='" + line + "'"));
                     assertEquals("10/0", text(catalogConnection, "SELECT quantity::text || '/' || reserved_quantity::text FROM inventory WHERE product_id=" + product));
+                    String readOnly = kc.paymentRoleToken(secret, "payment-checkout-close");
+                    String closeOnly = kc.paymentRoleToken(secret, "payment-reconciliation-read");
+                    JsonNode readClaims = new ObjectMapper().readTree(java.util.Base64.getUrlDecoder().decode(readOnly.split("\\.")[1]));
+                    JsonNode closeClaims = new ObjectMapper().readTree(java.util.Base64.getUrlDecoder().decode(closeOnly.split("\\.")[1]));
+                    assertEquals("order-service", readClaims.path("azp").asText());
+                    assertTrue(readClaims.path("resource_access").path("payment-service").path("roles").toString().contains("payment-reconciliation-read"));
+                    assertFalse(readClaims.path("resource_access").path("payment-service").path("roles").toString().contains("payment-checkout-close"));
+                    assertTrue(closeClaims.path("resource_access").path("payment-service").path("roles").toString().contains("payment-checkout-close"));
+                    assertFalse(closeClaims.path("resource_access").path("payment-service").path("roles").toString().contains("payment-reconciliation-read"));
+                    String readUrl = "http://127.0.0.1:" + payment.port + "/internal/reconciliation/orders/" + id;
+                    var read = request("GET", readUrl, readOnly, null);
+                    assertEquals(200, read.statusCode());
+                    assertNotNull(java.time.Instant.parse(new ObjectMapper().readTree(read.body()).path("observedAt").asText()));
+                    assertEquals(403, request("POST", payUrl, readOnly, invalidClose).statusCode());
+                    assertEquals(403, request("GET", readUrl, closeOnly, null).statusCode());
+                    String wrongAudience = kc.wrongPaymentAudienceToken(secret);
+                    JsonNode wrongClaims = new ObjectMapper().readTree(java.util.Base64.getUrlDecoder().decode(wrongAudience.split("\\.")[1]));
+                    assertEquals("order-service", wrongClaims.path("azp").asText());
+                    assertTrue(wrongClaims.path("resource_access").path("payment-service").path("roles").toString().contains("payment-reconciliation-read"));
+                    assertFalse(wrongClaims.path("aud").toString().contains("payment-service"));
+                    assertEquals(401, request("GET", readUrl, wrongAudience, null).statusCode());
+                    var fakeHeaders = HttpRequest.newBuilder(URI.create(readUrl)).header("X-User-Id", "order-service").header("X-User-Roles", "payment-reconciliation-read").GET().build();
+                    assertEquals(401, HttpClient.newHttpClient().send(fakeHeaders, HttpResponse.BodyHandlers.ofString()).statusCode());
+                    execute(orderConnection, "UPDATE orders SET allocation_phase='CLOSURE_HOLD' WHERE id=" + id);
+                    String beforeReconciliation = text(orderConnection, "SELECT row_to_json(o)::text FROM orders o WHERE id=" + id)
+                            + text(orderConnection, "SELECT row_to_json(i)::text FROM inventory_allocation_intents i WHERE order_id=" + id)
+                            + text(paymentConnection, "SELECT row_to_json(g)::text FROM payment_order_guard g WHERE order_id=" + id)
+                            + text(catalogConnection, "SELECT row_to_json(r)::text FROM inventory_reservations r WHERE operation_id='" + line + "'");
+                    order.reconcile();
+                    var evidence = new ObjectMapper().readTree(text(orderConnection, "SELECT evidence::text FROM reconciliation_revision WHERE order_id=" + id + " ORDER BY revision DESC LIMIT 1"));
+                    assertEquals(id, evidence.path("payment").path("orderId").asLong());
+                    assertTrue(evidence.path("payment").path("guardPresent").asBoolean());
+                    assertFalse(evidence.path("payment").path("observedAt").isMissingNode());
+                    assertTrue(text(orderConnection, "SELECT reasons::text FROM reconciliation_revision WHERE order_id=" + id + " ORDER BY revision DESC LIMIT 1").contains("HOLD_WITH_INVENTORY"));
+                    assertEquals(beforeReconciliation, text(orderConnection, "SELECT row_to_json(o)::text FROM orders o WHERE id=" + id)
+                            + text(orderConnection, "SELECT row_to_json(i)::text FROM inventory_allocation_intents i WHERE order_id=" + id)
+                            + text(paymentConnection, "SELECT row_to_json(g)::text FROM payment_order_guard g WHERE order_id=" + id)
+                            + text(catalogConnection, "SELECT row_to_json(r)::text FROM inventory_reservations r WHERE operation_id='" + line + "'"));
+                    execute(orderConnection, "UPDATE orders SET allocation_phase='CLOSED' WHERE id=" + id);
+                    // Directly seed historical financial truth after closure; this does not exercise a callback.
+                    long success = number(paymentConnection, "INSERT INTO payments(payment_number,order_id,user_id,amount,currency,status,method,gateway_name) VALUES ('" + UUID.randomUUID() + "'," + id + ",'owner',12.50,'USD','SUCCEEDED','CREDIT_CARD','STRIPE') RETURNING id");
+                    execute(paymentConnection, "INSERT INTO payment_transactions(payment_id,type,amount,status,currency) VALUES (" + success + ",'CHARGE',12.50,'SUCCEEDED','USD')");
+                    execute(paymentConnection, "UPDATE payment_order_guard SET reconciliation_hold=true WHERE order_id=" + id);
+                    String financialBefore = text(orderConnection, "SELECT row_to_json(o)::text FROM orders o WHERE id=" + id)
+                            + text(orderConnection, "SELECT row_to_json(i)::text FROM inventory_allocation_intents i WHERE order_id=" + id)
+                            + text(paymentConnection, "SELECT row_to_json(p)::text FROM payments p WHERE id=" + success)
+                            + text(paymentConnection, "SELECT row_to_json(g)::text FROM payment_order_guard g WHERE order_id=" + id)
+                            + text(catalogConnection, "SELECT row_to_json(r)::text FROM inventory_reservations r WHERE operation_id='" + line + "'");
+                    execute(orderConnection, "UPDATE reconciliation_finding SET next_check_at=clock_timestamp()-interval '1 second' WHERE order_id=" + id);
+                    order.reconcile();
+                    JsonNode financialEvidence = new ObjectMapper().readTree(text(orderConnection, "SELECT evidence::text FROM reconciliation_revision WHERE order_id=" + id + " ORDER BY revision DESC LIMIT 1"));
+                    JsonNode attempt = financialEvidence.path("payment").path("attempts").get(0);
+                    assertEquals(success, attempt.path("paymentId").asLong());
+                    assertTrue(attempt.path("successfulChargeOrCapture").asBoolean());
+                    assertEquals(0, new java.math.BigDecimal("12.50").compareTo(attempt.path("amount").decimalValue()));
+                    String financialReasons = text(orderConnection, "SELECT reasons::text FROM reconciliation_revision WHERE order_id=" + id + " ORDER BY revision DESC LIMIT 1");
+                    assertTrue(financialReasons.contains(org.de013.orderservice.entity.enums.ReconciliationReason.SUCCESS_WITH_CLOSED_OR_RELEASED.name()));
+                    assertTrue(financialReasons.contains(org.de013.orderservice.entity.enums.ReconciliationReason.PAYMENT_ORDER_MISMATCH.name()));
+                    assertEquals(financialBefore, text(orderConnection, "SELECT row_to_json(o)::text FROM orders o WHERE id=" + id)
+                            + text(orderConnection, "SELECT row_to_json(i)::text FROM inventory_allocation_intents i WHERE order_id=" + id)
+                            + text(paymentConnection, "SELECT row_to_json(p)::text FROM payments p WHERE id=" + success)
+                            + text(paymentConnection, "SELECT row_to_json(g)::text FROM payment_order_guard g WHERE order_id=" + id)
+                            + text(catalogConnection, "SELECT row_to_json(r)::text FROM inventory_reservations r WHERE operation_id='" + line + "'"));
                     for (String kind : List.of("hosted", "vnpay", "stripe")) {
                         UUID allocation = UUID.randomUUID();
                         String reserve = "{\"operationId\":\"" + allocation + "\",\"targetKind\":\"PRODUCT\",\"targetId\":" + product + ",\"quantity\":1,\"owner\":\"owner\"}";
@@ -273,6 +342,12 @@ class CrossServiceCheckoutIT {
             recover(id, false);
         }
         void recoverError(long id) throws Exception { recover(id, true); }
+        void reconcile() throws Exception {
+            String correlation = UUID.randomUUID().toString();
+            process.getOutputStream().write((correlation + " RECONCILE\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            process.getOutputStream().flush();
+            assertEquals("TEST_RESULT " + correlation + " OK", results.poll(90, TimeUnit.SECONDS), "Reconciliation failed; log: " + log);
+        }
         void recover(long id, boolean error) throws Exception {
             String correlation = UUID.randomUUID().toString();
             process.getOutputStream().write((correlation + " " + id + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -361,8 +436,46 @@ class CrossServiceCheckoutIT {
                 api("POST", root + "/users/" + user + "/role-mappings/clients/" + client, "[" + role + "]");
                 api("POST", root + "/clients/" + order + "/protocol-mappers/models", "{\"name\":\"" + pair[0] + "-audience\",\"protocol\":\"openid-connect\",\"protocolMapper\":\"oidc-audience-mapper\",\"config\":{\"included.client.audience\":\"" + pair[0] + "\",\"access.token.claim\":\"true\",\"id.token.claim\":\"false\"}}");
             }
+            String payment = api("GET", root + "/clients?clientId=payment-service", null).get(0).path("id").asText();
+            api("POST", root + "/clients/" + payment + "/roles", "{\"name\":\"payment-reconciliation-read\"}");
+            JsonNode readRole = api("GET", root + "/clients/" + payment + "/roles/payment-reconciliation-read", null);
+            api("POST", root + "/users/" + user + "/role-mappings/clients/" + payment, "[" + readRole + "]");
         }
         String token(String secret) throws Exception { return form("/realms/checkout-test/protocol/openid-connect/token", "grant_type=client_credentials&client_id=order-service&client_secret=" + secret).path("access_token").asText(); }
+        String paymentRoleToken(String secret, String removed) throws Exception {
+            String root = "/admin/realms/checkout-test";
+            String order = api("GET", root + "/clients?clientId=order-service", null).get(0).path("id").asText();
+            String user = api("GET", root + "/clients/" + order + "/service-account-user", null).path("id").asText();
+            String payment = api("GET", root + "/clients?clientId=payment-service", null).get(0).path("id").asText();
+            JsonNode role = api("GET", root + "/clients/" + payment + "/roles/" + removed, null);
+            api("DELETE", root + "/users/" + user + "/role-mappings/clients/" + payment, "[" + role + "]");
+            try { return token(secret); }
+            finally { api("POST", root + "/users/" + user + "/role-mappings/clients/" + payment, "[" + role + "]"); }
+        }
+        String wrongPaymentAudienceToken(String secret) throws Exception {
+            String root = "/admin/realms/checkout-test";
+            String order = api("GET", root + "/clients?clientId=order-service", null).get(0).path("id").asText();
+            JsonNode mappers = api("GET", root + "/clients/" + order + "/protocol-mappers/models", null);
+            JsonNode mapper = null;
+            for (JsonNode candidate : mappers) if ("payment-service-audience".equals(candidate.path("name").asText())) mapper = candidate;
+            assertNotNull(mapper);
+            String mapperId = mapper.path("id").asText();
+            JsonNode scopes = api("GET", root + "/client-scopes", null);
+            String rolesId = null;
+            for (JsonNode scope : scopes) if ("roles".equals(scope.path("name").asText())) rolesId = scope.path("id").asText();
+            assertNotNull(rolesId);
+            api("DELETE", root + "/clients/" + order + "/protocol-mappers/models/" + mapperId, null);
+            JsonNode roleMappers = api("GET", root + "/client-scopes/" + rolesId + "/protocol-mappers/models", null);
+            JsonNode audienceMapper = null;
+            for (JsonNode candidate : roleMappers) if ("oidc-audience-resolve-mapper".equals(candidate.path("protocolMapper").asText())) audienceMapper = candidate;
+            assertNotNull(audienceMapper);
+            api("DELETE", root + "/client-scopes/" + rolesId + "/protocol-mappers/models/" + audienceMapper.path("id").asText(), null);
+            try { return token(secret); }
+            finally {
+                api("POST", root + "/client-scopes/" + rolesId + "/protocol-mappers/models", audienceMapper.toString());
+                api("POST", root + "/clients/" + order + "/protocol-mappers/models", mapper.toString());
+            }
+        }
         String wrongRoleToken(String secret) throws Exception {
             admin = form("/realms/master/protocol/openid-connect/token", "grant_type=password&client_id=admin-cli&username=admin&password=" + password).path("access_token").asText();
             String root = "/admin/realms/checkout-test";

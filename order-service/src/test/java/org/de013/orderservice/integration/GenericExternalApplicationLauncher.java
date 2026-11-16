@@ -28,10 +28,18 @@ public final class GenericExternalApplicationLauncher {
             while ((line = input.readLine()) != null) {
                 String[] command = line.split(" ", 2);
                 try {
-                    long id = Long.parseLong(command[1]);
-                    Class<?> recovery = loader.loadClass("org.de013.orderservice.service.impl.CheckoutExpiryRecovery");
-                    Object bean = context.getClass().getMethod("getBean", Class.class).invoke(context, recovery);
-                    recovery.getMethod("process", long.class).invoke(bean, id);
+                    if ("RECONCILE".equals(command[1])) {
+                        Class<?> job = loader.loadClass("org.de013.orderservice.service.impl.ReconciliationJob");
+                        Object bean = context.getClass().getMethod("getBean", Class.class).invoke(context, job);
+                        var run = job.getDeclaredMethod("run");
+                        run.setAccessible(true);
+                        run.invoke(bean);
+                    } else {
+                        long id = Long.parseLong(command[1]);
+                        Class<?> recovery = loader.loadClass("org.de013.orderservice.service.impl.CheckoutExpiryRecovery");
+                        Object bean = context.getClass().getMethod("getBean", Class.class).invoke(context, recovery);
+                        recovery.getMethod("process", long.class).invoke(bean, id);
+                    }
                     System.out.println("TEST_RESULT " + command[0] + " OK");
                 } catch (Exception e) {
                     Throwable cause = e instanceof InvocationTargetException ? e.getCause() : e;

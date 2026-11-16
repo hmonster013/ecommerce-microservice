@@ -72,6 +72,7 @@ class PaymentReservationFlowTest {
     @Autowired CheckoutClosureService closures;
     @Autowired org.springframework.web.context.WebApplicationContext webContext;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired org.de013.paymentservice.controller.ReconciliationController reconciliation;
     @Autowired jakarta.persistence.EntityManager jpa;
     @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
     @Autowired WebhookService webhook;
@@ -100,6 +101,27 @@ class PaymentReservationFlowTest {
     private ProcessPaymentRequest request(long id, String provider) {
         return ProcessPaymentRequest.builder().orderId(id).userId("owner").amount(new BigDecimal("25.00"))
                 .currency(Currency.USD).paymentMethodType(PaymentMethodType.CARD).provider(provider).build();
+    }
+
+    @Test void reconciliationReadsHistoryAndDoesNotCreateOrMutateGuard() {
+        long id = 299001L;
+        var absent = reconciliation.get(id);
+        assertFalse(absent.guardPresent());
+        assertTrue(absent.attempts().isEmpty());
+        assertEquals(0, jdbc.queryForObject("select count(*) from payment_order_guard where order_id=?", Integer.class, id));
+        jdbc.update("insert into payment_order_guard(order_id, reconciliation_hold, close_operation_id, close_status, close_reason) values (?, true, ?, 'HOLD', 'RECONCILIATION_HOLD')", id, java.util.UUID.randomUUID());
+        Long first = jdbc.queryForObject("insert into payments(payment_number, order_id, user_id, amount, currency, status, method, gateway_name, blocking) values ('recon-1', ?, 'owner', 25.00, 'USD', 'REFUNDED', 'CARD', 'STRIPE', false) returning id", Long.class, id);
+        jdbc.update("insert into payments(payment_number, order_id, user_id, amount, currency, status, method, gateway_name, blocking) values ('recon-2', ?, 'owner', 26.00, 'USD', 'PENDING', 'CARD', 'STRIPE', false)", id);
+        jdbc.update("insert into payment_transactions(payment_id, type, amount, status) values (?, 'CAPTURE', 25.00, 'SUCCEEDED')", first);
+        var snapshot = reconciliation.get(id);
+        assertTrue(snapshot.guardPresent());
+        assertTrue(snapshot.reconciliationHold());
+        assertEquals("HOLD", snapshot.closeStatus());
+        assertEquals(2, snapshot.attempts().size());
+        assertEquals("REFUNDED", snapshot.attempts().get(0).status());
+        assertTrue(snapshot.attempts().get(0).successfulChargeOrCapture());
+        assertFalse(snapshot.attempts().get(1).successfulChargeOrCapture());
+        assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id=?", Boolean.class, id));
     }
 
     @Test void stripeCreationProvenanceRequiresRealCreateIdAndModeAndRollsBackAtomically() throws Exception {

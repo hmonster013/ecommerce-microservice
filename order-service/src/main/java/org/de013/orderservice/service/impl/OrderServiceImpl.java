@@ -208,10 +208,7 @@ public class OrderServiceImpl implements OrderService {
             order.setCheckoutCloseHoldReason("PAYMENT_SUCCESS_AFTER_CLOSURE");
             return;
         }
-        var paidStates = java.util.EnumSet.of(OrderStatus.PAID, OrderStatus.PROCESSING, OrderStatus.PREPARING,
-                OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.COMPLETED,
-                OrderStatus.PARTIALLY_SHIPPED, OrderStatus.PARTIALLY_DELIVERED);
-        if (paidStates.contains(order.getStatus())) {
+        if (order.getStatus() != null && order.getStatus().isPaidState()) {
             if (order.getAcceptedPaymentId() != null && (!order.getAcceptedPaymentId().equals(paymentId)
                     || !java.util.Objects.equals(order.getAcceptedPaymentNumber(), paymentNumber))) {
                 throw new org.de013.common.exception.ConflictException("Order requires payment reconciliation");

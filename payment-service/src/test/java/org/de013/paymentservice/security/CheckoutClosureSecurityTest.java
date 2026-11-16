@@ -27,8 +27,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(CheckoutClosureController.class)
-@org.springframework.test.context.ContextConfiguration(classes = {CheckoutClosureController.class, SecurityConfig.class, HeaderAuthenticationFilter.class})
+@WebMvcTest({CheckoutClosureController.class, org.de013.paymentservice.controller.ReconciliationController.class})
+@org.springframework.test.context.ContextConfiguration(classes = {CheckoutClosureController.class, org.de013.paymentservice.controller.ReconciliationController.class, SecurityConfig.class, HeaderAuthenticationFilter.class})
 @Import({SecurityConfig.class, HeaderAuthenticationFilter.class})
 public class CheckoutClosureSecurityTest {
     static final HttpServer server;
@@ -56,11 +56,15 @@ public class CheckoutClosureSecurityTest {
     @DynamicPropertySource static void issuer(DynamicPropertyRegistry p) { p.add("payment.internal.issuer-uri", () -> issuer); }
     @Autowired MockMvc mvc;
     @MockBean CheckoutClosureService closures;
+    @MockBean org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     public static String token(String iss, String audience, String azp, boolean role, Instant expiration, boolean wrongKey) throws Exception {
+        return tokenWithRole(iss, audience, azp, role ? "payment-checkout-close" : "", expiration, wrongKey);
+    }
+    public static String tokenWithRole(String iss, String audience, String azp, String role, Instant expiration, boolean wrongKey) throws Exception {
         var claims = new JWTClaimsSet.Builder().issuer(iss).subject("service-account-order-service")
                 .issueTime(Date.from(Instant.now())).audience(audience).claim("azp", azp)
-                .claim("resource_access", Map.of("payment-service", Map.of("roles", role ? List.of("payment-checkout-close") : List.of())))
+                .claim("resource_access", Map.of("payment-service", Map.of("roles", List.of(role))))
                 .claim("realm_access", Map.of("roles", List.of("ADMIN")));
         if (expiration != null) claims.expirationTime(Date.from(expiration));
         var signingKey = key;
@@ -70,6 +74,17 @@ public class CheckoutClosureSecurityTest {
         }
         var jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID("test-key").build(), claims.build());
         jwt.sign(new RSASSASigner(signingKey)); return jwt.serialize();
+    }
+
+    @Test void reconciliationRoleIsIndependent() throws Exception {
+        String read = tokenWithRole(issuer, "payment-service", "order-service", "payment-reconciliation-read", Instant.now().plusSeconds(300), false);
+        String close = token(issuer, "payment-service", "order-service", true, Instant.now().plusSeconds(300), false);
+        String wrongAudience = tokenWithRole(issuer, "other", "order-service", "payment-reconciliation-read", Instant.now().plusSeconds(300), false);
+        mvc.perform(get("/internal/reconciliation/orders/42").header("Authorization", "Bearer " + read)).andExpect(status().isOk());
+        mvc.perform(get("/internal/reconciliation/orders/42").header("Authorization", "Bearer " + close)).andExpect(status().isForbidden());
+        mvc.perform(get("/internal/reconciliation/orders/42").header("Authorization", "Bearer " + wrongAudience)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/internal/reconciliation/orders/42").header("X-User-Id", "fake")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/internal/checkout-closures/42").header("Authorization", "Bearer " + read)).andExpect(status().isForbidden());
     }
 
     @Test void validatesRealSignaturesClaimsAndRoutes() throws Exception {

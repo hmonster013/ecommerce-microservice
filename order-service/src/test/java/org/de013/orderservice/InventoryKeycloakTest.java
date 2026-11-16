@@ -67,6 +67,7 @@ class InventoryKeycloakTest {
                 app.setWebApplicationType(WebApplicationType.SERVLET);
                 try (var context = app.run(
                         "--server.port=0",
+                        "--spring.flyway.enabled=false",
                         "--spring.cloud.openfeign.client.config.inventoryReservation.url=http://127.0.0.1:" + stub.getAddress().getPort(),
                         "--spring.cloud.openfeign.client.config.orderCart.url=http://127.0.0.1:" + stub.getAddress().getPort(),
                         "--spring.security.oauth2.client.registration.catalog-inventory.client-id=order-service",

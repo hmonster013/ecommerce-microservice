@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(classes = OrderSecurityOAuthRegressionTest.App.class, properties = {
+        "spring.flyway.enabled=false",
         "spring.security.oauth2.client.registration.catalog-inventory.client-id=order-service",
         "spring.security.oauth2.client.registration.catalog-inventory.client-secret=fixture-only",
         "spring.security.oauth2.client.registration.catalog-inventory.authorization-grant-type=client_credentials",

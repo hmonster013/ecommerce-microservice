@@ -31,7 +31,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(classes = InventoryFeignSecurityTest.App.class, webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(classes = InventoryFeignSecurityTest.App.class, webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = "spring.flyway.enabled=false")
 class InventoryFeignSecurityTest {
     @Configuration
     @EnableAutoConfiguration

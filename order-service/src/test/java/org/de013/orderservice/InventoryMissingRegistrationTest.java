@@ -21,7 +21,7 @@ class InventoryMissingRegistrationTest {
             SpringApplication app = new SpringApplication(InventoryFeignSecurityTest.App.class);
             app.setWebApplicationType(WebApplicationType.SERVLET);
             String url = "http://127.0.0.1:" + server.getAddress().getPort();
-            try (var context = app.run("--server.port=0", "--spring.cloud.openfeign.client.config.inventoryReservation.url=" + url,
+            try (var context = app.run("--server.port=0", "--spring.flyway.enabled=false", "--spring.cloud.openfeign.client.config.inventoryReservation.url=" + url,
                     "--spring.cloud.openfeign.client.config.orderCart.url=" + url)) {
                 assertThrows(Exception.class, () -> context.getBean(InventoryReservationClient.class).lookup(UUID.randomUUID()));
                 assertEquals(0, calls.get());

@@ -17,6 +17,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.authorization.AuthorizationDecision;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -72,14 +73,22 @@ public class SecurityConfig {
         http.securityMatcher("/internal/**")
                 .csrf(AbstractHttpConfigurer::disable).cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a.requestMatchers(HttpMethod.POST, "/internal/checkout-closures/{orderId}")
+                .authorizeHttpRequests(a -> a.requestMatchers(HttpMethod.GET, "/internal/reconciliation/orders/{orderId}")
                         .access((authentication, context) -> {
                             var auth = authentication.get();
-                            if (!(auth instanceof JwtAuthenticationToken jwt)) return new org.springframework.security.authorization.AuthorizationDecision(false);
+                            if (!(auth instanceof JwtAuthenticationToken jwt)) return new AuthorizationDecision(false);
+                            Object resource = jwt.getToken().getClaims().get("resource_access");
+                            boolean allowed = resource instanceof Map<?, ?> m && m.get("payment-service") instanceof Map<?, ?> client
+                                    && client.get("roles") instanceof List<?> roles && roles.contains("payment-reconciliation-read");
+                            return new AuthorizationDecision(allowed);
+                        }).requestMatchers(HttpMethod.POST, "/internal/checkout-closures/{orderId}")
+                        .access((authentication, context) -> {
+                            var auth = authentication.get();
+                            if (!(auth instanceof JwtAuthenticationToken jwt)) return new AuthorizationDecision(false);
                             Object resource = jwt.getToken().getClaims().get("resource_access");
                             boolean allowed = resource instanceof Map<?, ?> m && m.get("payment-service") instanceof Map<?, ?> client
                                     && client.get("roles") instanceof List<?> roles && roles.contains("payment-checkout-close");
-                            return new org.springframework.security.authorization.AuthorizationDecision(allowed);
+                            return new AuthorizationDecision(allowed);
                         }).anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o.jwt(j -> j.decoder(internalJwtDecoder)));
         return http.build();
