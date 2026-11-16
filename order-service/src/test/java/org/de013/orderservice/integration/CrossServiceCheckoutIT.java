@@ -181,6 +181,38 @@ class CrossServiceCheckoutIT {
                     order.recover(id);
                     assertEquals(proof, text(paymentConnection, "SELECT close_safe_proof || '/' || close_safe_at::text FROM payment_order_guard WHERE order_id=" + id));
                     assertEquals("10/2", text(catalogConnection, "SELECT quantity::text || '/' || reserved_quantity::text FROM inventory WHERE product_id=" + product));
+                    for (boolean future : List.of(true, false)) {
+                        UUID allocation = UUID.randomUUID(), foreign = UUID.randomUUID(), op = UUID.randomUUID();
+                        String reserve = "{\"operationId\":\"" + allocation + "\",\"targetKind\":\"PRODUCT\",\"targetId\":" + product + ",\"quantity\":1,\"owner\":\"owner\"}";
+                        assertEquals(200, request("POST", catUrl, token, reserve).statusCode());
+                        long claimOrder = number(orderConnection, "INSERT INTO orders(order_number,user_id,status,order_type,created_at,updated_at,total_amount,currency,allocation_phase,checkout_deadline,shipping_first_name,shipping_last_name,shipping_street_address,shipping_city,shipping_state,shipping_postal_code,shipping_country) VALUES ('" + UUID.randomUUID() + "','owner','PENDING','STANDARD',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,12.50,'USD','READY',CURRENT_TIMESTAMP + interval '" + (future ? "1 hour" : "-1 minute") + "','Test','Owner','Street','City','State','12345','US') RETURNING id");
+                        execute(orderConnection, "INSERT INTO inventory_allocation_intents(operation_id,order_id,target_kind,target_id,quantity,owner_id,state) VALUES ('" + allocation + "'," + claimOrder + ",'PRODUCT'," + product + ",1,'owner','RESERVED')");
+                        if (!future) execute(orderConnection, "UPDATE orders SET allocation_phase='CLOSING',checkout_close_operation='" + op + "',checkout_close_claim='" + foreign + "',checkout_close_claim_until=CURRENT_TIMESTAMP + interval '1 hour' WHERE id=" + claimOrder);
+                        int calls = stripeCalls.get();
+                        order.recover(claimOrder);
+                        assertEquals((future ? "READY" : "CLOSING") + "/PENDING", text(orderConnection, "SELECT allocation_phase || '/' || status FROM orders WHERE id=" + claimOrder));
+                        assertEquals("RESERVED", text(orderConnection, "SELECT state FROM inventory_allocation_intents WHERE operation_id='" + allocation + "'"));
+                        assertEquals("RESERVED", text(catalogConnection, "SELECT state FROM inventory_reservations WHERE operation_id='" + allocation + "'"));
+                        assertEquals(future ? "10/3" : "10/4", text(catalogConnection, "SELECT quantity::text || '/' || reserved_quantity::text FROM inventory WHERE product_id=" + product));
+                        assertEquals(0, number(paymentConnection, "SELECT count(*) FROM payment_order_guard WHERE order_id=" + claimOrder));
+                        assertEquals(calls, stripeCalls.get());
+                        if (!future) {
+                            assertEquals(foreign.toString(), text(orderConnection, "SELECT checkout_close_claim::text FROM orders WHERE id=" + claimOrder));
+                            execute(orderConnection, "UPDATE orders SET checkout_close_claim_until=CURRENT_TIMESTAMP - interval '1 second' WHERE id=" + claimOrder);
+                            order.recover(claimOrder);
+                            assertEquals("CLOSED/CANCELLED", text(orderConnection, "SELECT allocation_phase || '/' || status FROM orders WHERE id=" + claimOrder));
+                            assertEquals(op.toString(), text(orderConnection, "SELECT checkout_close_operation::text FROM orders WHERE id=" + claimOrder));
+                            assertEquals(op + "/SAFE/NO_PAYMENT_ATTEMPTS", text(paymentConnection, "SELECT close_operation_id::text || '/' || close_status || '/' || close_safe_proof FROM payment_order_guard WHERE order_id=" + claimOrder));
+                            assertEquals("RELEASED", text(orderConnection, "SELECT state FROM inventory_allocation_intents WHERE operation_id='" + allocation + "'"));
+                            assertEquals("RELEASED", text(catalogConnection, "SELECT state FROM inventory_reservations WHERE operation_id='" + allocation + "'"));
+                            assertEquals("10/3", text(catalogConnection, "SELECT quantity::text || '/' || reserved_quantity::text FROM inventory WHERE product_id=" + product));
+                            String stableProof = text(paymentConnection, "SELECT close_safe_proof || '/' || close_safe_at::text FROM payment_order_guard WHERE order_id=" + claimOrder);
+                            order.recover(claimOrder);
+                            assertEquals(stableProof, text(paymentConnection, "SELECT close_safe_proof || '/' || close_safe_at::text FROM payment_order_guard WHERE order_id=" + claimOrder));
+                            assertEquals("10/3", text(catalogConnection, "SELECT quantity::text || '/' || reserved_quantity::text FROM inventory WHERE product_id=" + product));
+                            assertEquals(calls, stripeCalls.get());
+                        }
+                    }
                 }
             } finally { stripe.stop(0); }
         }
