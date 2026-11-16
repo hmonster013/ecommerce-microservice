@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "payment-service", contextId = "paymentClosure", path = "/internal/checkout-closures", configuration = paymentclosureconfig.PaymentClosureFeignConfig.class)
+@FeignClient(name = "payment-service", contextId = "paymentClosure", path = "/internal/checkout-closures", configuration = paymentclosureconfig.PaymentClosureFeignConfig.class, fallbackFactory = org.de013.orderservice.config.FeignResilienceConfig.RethrowFallbackFactory.class)
 public interface PaymentClosureClient {
     record Request(UUID operationId) { }
     record Result(Long orderId, UUID operationId, String status, String reason) { }

@@ -4,7 +4,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "payment-service", contextId = "paymentReconciliation", configuration = paymentreconciliationconfig.PaymentReconciliationFeignConfig.class)
+@FeignClient(name = "payment-service", contextId = "paymentReconciliation", configuration = paymentreconciliationconfig.PaymentReconciliationFeignConfig.class, fallbackFactory = org.de013.orderservice.config.FeignResilienceConfig.RethrowFallbackFactory.class)
 interface PaymentReconciliationClient {
     @GetMapping("/internal/reconciliation/orders/{orderId}")
     ReconciliationClassifier.PaymentSnapshot read(@PathVariable("orderId") long orderId);

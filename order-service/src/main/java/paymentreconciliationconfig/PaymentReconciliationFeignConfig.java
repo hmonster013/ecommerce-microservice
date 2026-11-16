@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 
+@org.springframework.context.annotation.Import(org.de013.orderservice.config.FeignResilienceConfig.RethrowFallbackFactory.class)
 public class PaymentReconciliationFeignConfig {
     @Bean FeignClientConfigurer reconciliationConfigurer() {
         return new FeignClientConfigurer() {

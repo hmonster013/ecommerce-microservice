@@ -12,6 +12,19 @@ spring:
       enabled: ALWAYS
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+      client:
+        config:
+          default:
+            connectTimeout: 5000
+            readTimeout: 5000
+    circuitbreaker:
+      resilience4j:
+        disable-thread-pool: true
+        disable-time-limiter: true
 
 logging:
   pattern:

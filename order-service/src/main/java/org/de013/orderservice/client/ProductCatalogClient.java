@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 /**
  * Feign client for Product Catalog Service integration
  */
-@FeignClient(name = "product-catalog-service", configuration = FeignConfig.class)
+@FeignClient(name = "product-catalog-service", configuration = FeignConfig.class, fallbackFactory = org.de013.orderservice.config.FeignResilienceConfig.RethrowFallbackFactory.class)
 public interface ProductCatalogClient {
 
     /**
