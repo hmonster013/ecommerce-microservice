@@ -102,6 +102,43 @@ class PaymentReservationFlowTest {
                 .currency(Currency.USD).paymentMethodType(PaymentMethodType.CARD).provider(provider).build();
     }
 
+    @Test void stripeCreationProvenanceRequiresRealCreateIdAndModeAndRollsBackAtomically() throws Exception {
+        long id = 210001L;
+        for (Boolean mode : new Boolean[]{true, false}) {
+            long current = id++;
+            when(stripe.createPaymentIntent(any())).thenReturn(StripePaymentResponse.builder().paymentIntentId("pi_prov_" + current)
+                    .status("processing").livemode(mode).createdByStripe(true).build());
+            payments.processPayment(request(current, "STRIPE"));
+            var persisted = repository.findByOrderId(current).get(0);
+            assertTrue(persisted.isStripeIntentCreatedByService());
+            assertEquals(mode, persisted.getStripeIntentLivemode());
+            assertEquals("pi_prov_" + current, persisted.getStripePaymentIntentId());
+        }
+        for (int scenario = 0; scenario < 3; scenario++) {
+            long current = id++;
+            var response = StripePaymentResponse.builder().paymentIntentId(scenario == 1 ? null : "pi_untrusted_" + current)
+                    .status("processing").livemode(scenario == 2 ? null : false).createdByStripe(scenario != 0).build();
+            when(stripe.createPaymentIntent(any())).thenReturn(response);
+            payments.processPayment(request(current, "STRIPE"));
+            var persisted = repository.findByOrderId(current).get(0);
+            assertFalse(persisted.isStripeIntentCreatedByService()); assertNull(persisted.getStripeIntentLivemode());
+        }
+        long syncId = id++;
+        var legacy = intent(syncId, "pi_provenance_sync", org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+        when(stripe.getPaymentIntent("pi_provenance_sync")).thenReturn(StripePaymentResponse.builder()
+                .paymentIntentId("pi_provenance_sync").status("processing").livemode(false).createdByStripe(true).build());
+        payments.syncPaymentStatusWithStripe(legacy.getId());
+        assertFalse(repository.findById(legacy.getId()).orElseThrow().isStripeIntentCreatedByService());
+        long rollbackId = id;
+        when(stripe.createPaymentIntent(any())).thenReturn(StripePaymentResponse.builder().paymentIntentId("pi_provenance_rollback")
+                .status("processing").livemode(false).createdByStripe(true).build());
+        doThrow(new IllegalStateException("simulated save failure")).when(repository).save(any(Payment.class));
+        assertThrows(RuntimeException.class, () -> payments.processPayment(request(rollbackId, "STRIPE")));
+        var rolledBack = repository.findByOrderId(rollbackId).get(0);
+        assertFalse(rolledBack.isStripeIntentCreatedByService()); assertNull(rolledBack.getStripeIntentLivemode());
+        assertNull(rolledBack.getStripePaymentIntentId());
+    }
+
     @Test void closureRacesActualReservationAndHostedProviderCreation() throws Exception {
         var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
         var pool = Executors.newFixedThreadPool(2);

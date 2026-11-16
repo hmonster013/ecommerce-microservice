@@ -74,6 +74,12 @@ public class Payment extends BaseEntity {
     @Column(name = "stripe_payment_intent_id", unique = true, length = 100)
     private String stripePaymentIntentId;
 
+    @Column(name = "stripe_intent_livemode")
+    private Boolean stripeIntentLivemode;
+
+    @Column(name = "stripe_intent_created_by_service", nullable = false)
+    private boolean stripeIntentCreatedByService;
+
     @Column(name = "stripe_customer_id", length = 100)
     private String stripeCustomerId;
 

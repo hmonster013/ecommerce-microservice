@@ -72,6 +72,11 @@ public class PaymentServiceImpl implements PaymentService {
             try {
                 StripePaymentGateway gateway = (StripePaymentGateway) gatewayFactory.getGateway("STRIPE");
                 StripePaymentResponse response = gateway.createPaymentIntent(gateway.mapToGatewayPaymentRequest(request));
+                if (response.isCreatedByStripe() && response.getPaymentIntentId() != null
+                        && !response.getPaymentIntentId().isBlank() && response.getLivemode() != null) {
+                    payment.setStripeIntentCreatedByService(true);
+                    payment.setStripeIntentLivemode(response.getLivemode());
+                }
                 return applyProviderResponse(payment, response, TransactionType.CHARGE, held, true);
             } catch (org.springframework.web.server.ResponseStatusException e) { throw e; }
             catch (Exception e) { throw new PaymentProcessingException("Failed to process payment", e); }

@@ -277,7 +277,9 @@ public class StripePaymentGateway implements PaymentGateway {
             }
 
             PaymentIntent paymentIntent = PaymentIntent.create(paramsBuilder.build());
-            return mapPaymentIntentToResponse(paymentIntent);
+            StripePaymentResponse response = mapPaymentIntentToResponse(paymentIntent);
+            response.setCreatedByStripe(true);
+            return response;
 
         } catch (StripeException e) {
             log.error("Failed to create Stripe payment intent", e);
