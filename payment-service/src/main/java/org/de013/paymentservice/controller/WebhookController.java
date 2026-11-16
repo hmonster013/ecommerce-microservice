@@ -11,6 +11,7 @@ import org.de013.common.controller.BaseController;
 import org.de013.common.dto.ApiResult;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.de013.paymentservice.service.WebhookService;
+import org.de013.paymentservice.exception.InvalidStripeWebhookException;
 import org.de013.paymentservice.gateway.vnpay.VnpayPaymentGateway;
 import org.de013.paymentservice.repository.PaymentRepository;
 import org.de013.paymentservice.repository.ProcessedStripeEventRepository;
@@ -62,17 +63,20 @@ public class WebhookController extends BaseController {
     public ResponseEntity<String> handleStripeWebhook(
             @RequestBody String payload,
             @Parameter(description = "Stripe signature header")
-            @RequestHeader("Stripe-Signature") String signature) {
+            @RequestHeader(value = "Stripe-Signature", required = false) String signature) {
 
         log.info("Received Stripe webhook");
 
         try {
+            if (signature == null || signature.isBlank()) return ResponseEntity.badRequest().body("Invalid webhook signature or payload");
             // Process webhook directly (signature verification is done inside)
             webhookService.processStripeWebhook(payload, signature);
 
             log.info("Stripe webhook processed successfully");
             return ResponseEntity.ok("Webhook processed successfully");
 
+        } catch (InvalidStripeWebhookException e) {
+            return ResponseEntity.badRequest().body("Invalid webhook signature or payload");
         } catch (Exception e) {
             log.error("Failed to process Stripe webhook", e);
             webhookService.handleWebhookError(payload, signature, e);

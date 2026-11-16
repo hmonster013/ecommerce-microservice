@@ -13,6 +13,7 @@ import org.de013.paymentservice.entity.Refund;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.de013.paymentservice.entity.enums.RefundStatus;
 import org.de013.paymentservice.exception.PaymentGatewayException;
+import org.de013.paymentservice.exception.InvalidStripeWebhookException;
 import org.de013.paymentservice.gateway.PaymentGatewayFactory;
 import org.de013.paymentservice.gateway.stripe.StripeWebhookService;
 import org.de013.paymentservice.repository.PaymentMethodRepository;
@@ -57,7 +58,7 @@ public class WebhookServiceImpl implements WebhookService {
             // Verify signature
             if (!verifyWebhookSignature(payload, signature, getWebhookSecret())) {
                 log.warn("Invalid webhook signature");
-                throw new PaymentGatewayException("Invalid webhook signature");
+                throw new InvalidStripeWebhookException(null);
             }
 
             // Parse payload
@@ -98,6 +99,8 @@ public class WebhookServiceImpl implements WebhookService {
 
             log.info("Webhook processed successfully: {}", webhookRequest.getEventType());
 
+        } catch (InvalidStripeWebhookException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to process webhook", e);
             handleWebhookError(payload, signature, e);
@@ -109,9 +112,10 @@ public class WebhookServiceImpl implements WebhookService {
     public boolean verifyWebhookSignature(String payload, String signature, String secret) {
         try {
             return stripeWebhookService.verifyWebhookSignature(payload, signature, secret);
+        } catch (InvalidStripeWebhookException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Failed to verify webhook signature", e);
-            return false;
+            throw new PaymentGatewayException("Failed to verify webhook signature", e);
         }
     }
 
@@ -119,6 +123,8 @@ public class WebhookServiceImpl implements WebhookService {
     public StripeWebhookRequest parseWebhookPayload(String payload) {
         try {
             return stripeWebhookService.parseWebhookPayload(payload);
+        } catch (InvalidStripeWebhookException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to parse webhook payload", e);
             throw new PaymentGatewayException("Failed to parse webhook payload: " + e.getMessage(), e);
