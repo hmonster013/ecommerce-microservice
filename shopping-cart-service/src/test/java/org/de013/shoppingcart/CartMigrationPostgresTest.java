@@ -2,7 +2,9 @@ package org.de013.shoppingcart;
 
 import org.de013.shoppingcart.entity.Cart;
 import org.de013.shoppingcart.entity.CartItem;
+import org.de013.shoppingcart.config.CouponMigrationGuard;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.FlywayException;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -18,6 +20,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,7 +31,7 @@ class CartMigrationPostgresTest {
 
     private Flyway flyway(String schema, String target) {
         var config = Flyway.configure().dataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
-                .schemas(schema).defaultSchema(schema);
+                .schemas(schema).defaultSchema(schema).callbacks(new CouponMigrationGuard());
         if (target != null) config.target(target);
         return config.load();
     }
@@ -37,6 +40,105 @@ class CartMigrationPostgresTest {
         Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
         connection.setSchema(schema);
         return connection;
+    }
+
+    private String fingerprint(String schema) throws Exception {
+        String script;
+        try (var input = getClass().getResourceAsStream("/db/cart-preflight.sql")) {
+            script = new String(input.readAllBytes(), StandardCharsets.UTF_8).replace("\\set ON_ERROR_STOP on", "");
+        }
+        int end = script.indexOf("END $$;") + "END $$;".length();
+        try (Connection c = connect(schema); Statement s = c.createStatement()) {
+            s.execute(script.substring(0, end));
+            try (ResultSet r = s.executeQuery(script.substring(end))) {
+                assertTrue(r.next()); return r.getString(1);
+            }
+        }
+    }
+
+    @Test
+    void preflightDetectsUnvalidatedForeignKeyAndInvalidIndex() throws Exception {
+        flyway("reference_flags", "3").migrate();
+        flyway("legacy_flags", "3").migrate();
+        try (Connection c = connect("legacy_flags"); Statement s = c.createStatement()) {
+            s.execute("alter table cart_items drop constraint fk_cart_item_cart");
+            s.execute("alter table cart_items add constraint fk_cart_item_cart foreign key (cart_id) references carts(id) on delete cascade not valid");
+            assertNotEquals(fingerprint("reference_flags"), fingerprint("legacy_flags"));
+            s.execute("alter table cart_items validate constraint fk_cart_item_cart");
+            assertEquals(fingerprint("reference_flags"), fingerprint("legacy_flags"));
+            s.execute("create table index_fixture (value integer)");
+            s.execute("insert into index_fixture values (1), (1)");
+            assertThrows(java.sql.SQLException.class, () -> s.execute("create unique index concurrently fixture_idx on index_fixture(value)"));
+            try (ResultSet r = s.executeQuery("select indisvalid from pg_index where indexrelid='fixture_idx'::regclass")) {
+                assertTrue(r.next()); assertFalse(r.getBoolean(1));
+            }
+            try (Connection reference = connect("reference_flags"); Statement rs = reference.createStatement()) {
+                rs.execute("create table index_fixture (value integer)");
+                rs.execute("create unique index fixture_idx on index_fixture(value)");
+            }
+            assertNotEquals(fingerprint("reference_flags"), fingerprint("legacy_flags"));
+        }
+    }
+
+    @Test
+    void nativeFlywayValidationDetectsChangedHistoryChecksum() throws Exception {
+        Flyway reference = flyway("reference_checksum", "3");
+        reference.migrate();
+        reference.validate();
+        try (Connection c = connect("reference_checksum"); Statement s = c.createStatement()) {
+            s.execute("update flyway_schema_history set checksum=checksum+1 where version='1'");
+        }
+        assertThrows(FlywayException.class, reference::validate);
+    }
+
+    @Test
+    void preflightChecksLegacyShapesDriftAndCoupon() throws Exception {
+        flyway("reference_v1", "1").migrate();
+        flyway("legacy_v1", "1").migrate();
+        try (Connection c = connect("legacy_v1"); Statement s = c.createStatement()) {
+            s.execute("drop table flyway_schema_history");
+        }
+        assertEquals(fingerprint("reference_v1"), fingerprint("legacy_v1"));
+        try (Connection c = connect("legacy_v1"); Statement s = c.createStatement()) {
+            s.execute("insert into carts(coupon_code) values ('keep')");
+            assertThrows(java.sql.SQLException.class, () -> fingerprint("legacy_v1"));
+            try (ResultSet r = s.executeQuery("select coupon_code from carts")) {
+                assertTrue(r.next()); assertEquals("keep", r.getString(1));
+            }
+            s.execute("update carts set coupon_code=null");
+            s.execute("alter table carts alter column status drop default");
+        }
+        assertNotEquals(fingerprint("reference_v1"), fingerprint("legacy_v1"));
+
+        flyway("reference_v3", "3").migrate();
+        flyway("legacy_v3", "3").migrate();
+        try (Connection c = connect("legacy_v3"); Statement s = c.createStatement()) {
+            s.execute("drop table flyway_schema_history");
+        }
+        assertEquals(fingerprint("reference_v3"), fingerprint("legacy_v3"));
+        try (Connection c = connect("legacy_v3"); Statement s = c.createStatement()) {
+            s.execute("drop index idx_cart_status");
+        }
+        assertNotEquals(fingerprint("reference_v3"), fingerprint("legacy_v3"));
+    }
+
+    @Test
+    void preflightRejectsForeignKeyAndSequenceDriftEvenWithBaselineHistory() throws Exception {
+        flyway("reference_constraints", "3").migrate();
+        flyway("legacy_constraints", "3").migrate();
+        try (Connection c = connect("legacy_constraints"); Statement s = c.createStatement()) {
+            s.execute("delete from flyway_schema_history where version is not null");
+            s.execute("insert into flyway_schema_history(installed_rank,version,description,type,script,installed_by,execution_time,success) values (1,'3','baseline','BASELINE','baseline',current_user,0,true)");
+            s.execute("alter table cart_items drop constraint fk_cart_item_cart");
+            s.execute("alter table cart_items add constraint fk_cart_item_cart foreign key (cart_id) references carts(id)");
+        }
+        assertNotEquals(fingerprint("reference_constraints"), fingerprint("legacy_constraints"));
+        try (Connection c = connect("legacy_constraints"); Statement s = c.createStatement()) {
+            s.execute("alter table cart_items drop constraint fk_cart_item_cart");
+            s.execute("alter table cart_items add constraint fk_cart_item_cart foreign key (cart_id) references carts(id) on delete cascade");
+            s.execute("alter sequence carts_id_seq owned by none");
+        }
+        assertNotEquals(fingerprint("reference_constraints"), fingerprint("legacy_constraints"));
     }
 
     private void history(Connection c) throws Exception {
@@ -108,11 +210,21 @@ class CartMigrationPostgresTest {
     }
 
     @Test
-    void v1SeedSurvivesUpgradeExceptRemovedCoupon() throws Exception {
+    void v1SeedSurvivesUpgradeAfterCouponGuard() throws Exception {
         flyway("upgrade_cart", "1").migrate();
         try (Connection c = connect("upgrade_cart"); Statement s = c.createStatement()) {
             s.executeUpdate("insert into carts(id,user_id,currency,subtotal,total_amount,item_count,total_quantity,notes,coupon_code) values (101,'legacy-user','EUR',24.68,24.68,1,2,'keep note','OLD')");
             s.executeUpdate("insert into cart_items(id,cart_id,product_id,product_name,quantity,unit_price,total_price,currency,product_sku,weight) values (201,101,'legacy-product','Legacy',2,12.34,24.68,'EUR','SKU',1.234)");
+        }
+        assertThrows(FlywayException.class, () -> flyway("upgrade_cart", null).migrate());
+        try (Connection c = connect("upgrade_cart"); Statement s = c.createStatement()) {
+            try (ResultSet r = s.executeQuery("select coupon_code from carts where id=101")) {
+                assertTrue(r.next()); assertEquals("OLD", r.getString(1));
+            }
+            try (ResultSet r = s.executeQuery("select count(*) from flyway_schema_history where version is not null")) {
+                assertTrue(r.next()); assertEquals(1, r.getInt(1));
+            }
+            s.executeUpdate("update carts set coupon_code=null where id=101");
         }
         flyway("upgrade_cart", null).migrate();
         try (Connection c = connect("upgrade_cart"); Statement s = c.createStatement()) {

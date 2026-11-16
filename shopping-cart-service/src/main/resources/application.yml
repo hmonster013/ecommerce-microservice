@@ -11,6 +11,12 @@ spring:
       enabled: ALWAYS
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+  jpa:
+    hibernate:
+      ddl-auto: validate
 
 logging:
   pattern:
