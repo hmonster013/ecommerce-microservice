@@ -165,8 +165,10 @@ class PaymentNotificationStageATest {
             var financialWriter = new PaymentOutbox(jdbc, new ObjectMapper(), financial);
             var notificationWriter = new PaymentNotificationOutbox(jdbc, new ObjectMapper(), validatorBean, notification);
             new org.springframework.transaction.support.TransactionTemplate(tx).executeWithoutResult(s -> {
-                financialWriter.enqueue(p);
-                notificationWriter.enqueue(p);
+                guard.lock(p.getOrderId());
+                var managed = repository.findById(p.getId()).orElseThrow();
+                financialWriter.transition(managed, PaymentStatus.SUCCEEDED, false);
+                notificationWriter.enqueue(managed);
             });
             assertEquals(financial ? 1 : 0, jdbc.queryForObject("select count(*) from payment_outbox where payment_id=?", Integer.class, p.getId()));
             assertEquals(notification ? 1 : 0, count(p.getId()));

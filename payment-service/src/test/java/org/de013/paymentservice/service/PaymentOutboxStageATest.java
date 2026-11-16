@@ -43,6 +43,71 @@ class PaymentOutboxStageATest {
     @org.springframework.beans.factory.annotation.Autowired PaymentOrderGuard guard;
     @org.springframework.beans.factory.annotation.Autowired org.springframework.transaction.PlatformTransactionManager tx;
     @org.springframework.beans.factory.annotation.Autowired jakarta.validation.Validator validatorBean;
+    @Test void directUpdatesAndCancelRecordTransitions() {
+        var p = payment(99302, "STRIPE", PaymentStatus.PENDING);
+        payments.updatePaymentStatus(p.getId(), PaymentStatus.FAILED, "failed");
+        payments.updatePaymentStatus(p.getId(), PaymentStatus.FAILED, "failed");
+        payments.updatePaymentStatus(p.getId(), PaymentStatus.PENDING, null);
+        payments.updatePaymentStatus(p.getId(), PaymentStatus.FAILED, "failed again");
+        payments.cancelPayment(p.getId(), "cancelled");
+        assertEquals(4, repository.findById(p.getId()).orElseThrow().getRevision());
+        assertEquals(java.util.List.of("PaymentFailed", "PaymentFailed", "PaymentCanceled"),
+                jdbc.queryForList("select event_type from payment_outbox where payment_id=? order by revision", String.class, p.getId()));
+    }
+
+    @Test void heldTransitionsAndOffOnDoNotBackfill() {
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(tx);
+        var on = new PaymentOutbox(jdbc, new ObjectMapper(), true);
+        var off = new PaymentOutbox(jdbc, new ObjectMapper(), false);
+        for (var next : new PaymentStatus[]{PaymentStatus.SUCCEEDED, PaymentStatus.FAILED, PaymentStatus.CANCELED}) {
+            var p = payment(99310 + next.ordinal(), "STRIPE", PaymentStatus.PENDING);
+            transaction.executeWithoutResult(s -> {
+                guard.hold(p.getOrderId());
+                var managed = repository.findById(p.getId()).orElseThrow();
+                on.transition(managed, next, true);
+            });
+            assertEquals("RECONCILIATION", jdbc.queryForObject("select state from payment_outbox where payment_id=?", String.class, p.getId()));
+        }
+        var p = payment(99350, "STRIPE", PaymentStatus.PENDING);
+        transaction.executeWithoutResult(s -> {
+            guard.lock(p.getOrderId());
+            var managed = repository.findById(p.getId()).orElseThrow();
+            off.transition(managed, PaymentStatus.FAILED, false);
+            assertFalse(on.transition(managed, PaymentStatus.FAILED, false));
+        });
+        assertEquals(1, repository.findById(p.getId()).orElseThrow().getRevision());
+        assertEquals(0, count(p.getId()));
+    }
+
+    @Test void transitionFoundationPersistsRevisionsAndRollsBack() throws Exception {
+        var p = payment(99301, "STRIPE", PaymentStatus.PENDING);
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(tx);
+        var on = new PaymentOutbox(jdbc, new ObjectMapper(), true);
+        var off = new PaymentOutbox(jdbc, new ObjectMapper(), false);
+        transaction.executeWithoutResult(s -> {
+            guard.lock(p.getOrderId());
+            var managed = repository.findById(p.getId()).orElseThrow();
+            assertTrue(on.transition(managed, PaymentStatus.FAILED, false));
+            assertFalse(on.transition(managed, PaymentStatus.FAILED, false));
+            assertTrue(off.transition(managed, PaymentStatus.PENDING, false));
+            assertTrue(on.transition(managed, PaymentStatus.FAILED, true));
+        });
+        assertEquals(3, repository.findById(p.getId()).orElseThrow().getRevision());
+        var rows = jdbc.queryForList("select revision,state,payload from payment_outbox where payment_id=? order by revision", p.getId());
+        assertEquals(2, rows.size());
+        assertEquals(1L, ((Number) rows.get(0).get("revision")).longValue());
+        assertEquals(3L, ((Number) rows.get(1).get("revision")).longValue());
+        assertEquals("RECONCILIATION", rows.get(1).get("state"));
+        assertEquals("PENDING", new ObjectMapper().readTree((String) rows.get(1).get("payload")).path("previousStatus").asText());
+        assertThrows(IllegalStateException.class, () -> transaction.executeWithoutResult(s -> {
+            guard.lock(p.getOrderId());
+            on.transition(repository.findById(p.getId()).orElseThrow(), PaymentStatus.CANCELED, false);
+            throw new IllegalStateException("rollback");
+        }));
+        assertEquals(3, repository.findById(p.getId()).orElseThrow().getRevision());
+        assertEquals(PaymentStatus.FAILED, repository.findById(p.getId()).orElseThrow().getStatus());
+        assertEquals(2, count(p.getId()));
+    }
 
     @Test void notificationWriterPersistsImmutableSnapshotAndReconciliation() throws Exception {
         var writer = new PaymentNotificationOutbox(jdbc, new ObjectMapper(), validatorBean, true);
@@ -97,6 +162,55 @@ class PaymentOutboxStageATest {
     private int count(long paymentId) {
         return jdbc.queryForObject("select count(*) from payment_outbox where payment_id=?", Integer.class, paymentId);
     }
+    private void revision(long id, long value, int events) {
+        assertEquals(value, repository.findById(id).orElseThrow().getRevision());
+        assertEquals(events, count(id));
+    }
+
+    @Test void providerEntryPointsPersistTransitions() throws Exception {
+        when(factory.getGateway("STRIPE")).thenReturn(stripe);
+        when(stripe.mapToGatewayPaymentRequest(any())).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentRequest.builder().build());
+        when(stripe.createPaymentIntent(any())).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentResponse.builder().paymentIntentId("pi_99410").status("requires_action").build());
+        payments.processPayment(org.de013.paymentservice.dto.payment.ProcessPaymentRequest.builder().orderId(99410L).userId("owner").amount(new BigDecimal("25.00"))
+                .currency(org.de013.paymentservice.entity.enums.Currency.USD).paymentMethodType(org.de013.paymentservice.entity.enums.PaymentMethodType.CARD).provider("STRIPE").build());
+        var created = repository.findByOrderId(99410L).get(0);
+        revision(created.getId(), 1, 0);
+        var confirm = payment(99411, "STRIPE", PaymentStatus.PENDING);
+        when(stripe.confirmPaymentIntent("pi_99411", "pm_test")).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentResponse.builder().paymentIntentId("pi_99411").status("succeeded").build());
+        payments.confirmPayment(confirm.getId(), "pm_test");
+        revision(confirm.getId(), 1, 1); contract(event(confirm.getId()), confirm);
+        var capture = payment(99412, "STRIPE", PaymentStatus.REQUIRES_CONFIRMATION);
+        when(stripe.capturePayment(eq("pi_99412"), any())).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentResponse.builder().paymentIntentId("pi_99412").status("succeeded").build());
+        payments.capturePayment(capture.getId(), null);
+        revision(capture.getId(), 1, 1); contract(event(capture.getId()), capture);
+        var sync = payment(99413, "STRIPE", PaymentStatus.PENDING);
+        when(stripe.getPaymentIntent("pi_99413")).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentResponse.builder().paymentIntentId("pi_99413").status("succeeded").build());
+        payments.syncPaymentStatusWithStripe(sync.getId()); payments.syncPaymentStatusWithStripe(sync.getId());
+        revision(sync.getId(), 1, 1); contract(event(sync.getId()), sync);
+    }
+
+    @Test void webhookAndVnpayFailureTransitions() throws Exception {
+        var p = payment(99420, "STRIPE", PaymentStatus.PENDING);
+        send(99420, "requires_action"); revision(p.getId(), 1, 0);
+        send(99420, "payment_failed"); revision(p.getId(), 2, 1);
+        var failure = new ObjectMapper().readTree(event(p.getId()));
+        assertEquals("PaymentFailed", failure.path("eventType").asText());
+        assertEquals("REQUIRES_ACTION", failure.path("previousStatus").asText());
+        assertEquals(2, failure.path("revision").asLong());
+        var cfg = gatewayConfig.getGateways().getVnpay();
+        var realGateway = new org.de013.paymentservice.gateway.vnpay.VnpayPaymentGateway(gatewayConfig);
+        when(vnpayGateway.verifyCallback(anyMap())).thenAnswer(i -> realGateway.verifyCallback(i.getArgument(0)));
+        var vn = payment(99421, "VNPAY", PaymentStatus.PENDING);
+        var fields = new java.util.TreeMap<String, String>();
+        fields.put("vnp_TmnCode", cfg.getTmnCode()); fields.put("vnp_TxnRef", vn.getPaymentNumber()); fields.put("vnp_Amount", "62500000");
+        fields.put("vnp_ResponseCode", "01"); fields.put("vnp_TransactionStatus", "01");
+        fields.put("vnp_SecureHash", org.de013.paymentservice.gateway.vnpay.VnpayUtils.hmacSHA512(cfg.getHashSecret(), org.de013.paymentservice.gateway.vnpay.VnpayUtils.buildHashData(fields)));
+        assertEquals("00", ipn.process(fields).get("RspCode"));
+        assertEquals("00", ipn.process(fields).get("RspCode"));
+        revision(vn.getId(), 1, 1);
+        var vne = new ObjectMapper().readTree(event(vn.getId()));
+        assertEquals("PaymentFailed", vne.path("eventType").asText()); assertEquals("PENDING", vne.path("previousStatus").asText());
+    }
     private void contract(String payload, org.de013.paymentservice.entity.Payment p) throws Exception {
         var e = new ObjectMapper().readTree(payload);
         assertEquals(10, e.size()); java.util.UUID.fromString(e.path("eventId").asText()); java.time.Instant.parse(e.path("occurredAt").asText());
@@ -112,6 +226,7 @@ class PaymentOutboxStageATest {
         var current = payment(99101, "STRIPE", PaymentStatus.PENDING);
         when(stripe.getPaymentIntent("pi_99101")).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentResponse.builder().paymentIntentId("pi_99101").status("succeeded").build());
         payments.syncPaymentStatusWithStripe(current.getId());
+        revision(current.getId(), 1, 1);
         String payload = event(current.getId());
         contract(payload, current);
         var json = new ObjectMapper().readTree(payload);
@@ -127,6 +242,7 @@ class PaymentOutboxStageATest {
         assertEquals(0, count(historical.getId()));
         var webhookOnly = payment(99107, "STRIPE", PaymentStatus.PENDING);
         send(99107, "succeeded"); contract(event(webhookOnly.getId()), webhookOnly);
+        revision(webhookOnly.getId(), 1, 1);
         verify(orderClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
     }
 
@@ -140,6 +256,7 @@ class PaymentOutboxStageATest {
         fields.put("vnp_Amount", "62500000"); fields.put("vnp_ResponseCode", "00"); fields.put("vnp_TransactionStatus", "00");
         fields.put("vnp_SecureHash", org.de013.paymentservice.gateway.vnpay.VnpayUtils.hmacSHA512(cfg.getHashSecret(), org.de013.paymentservice.gateway.vnpay.VnpayUtils.buildHashData(fields)));
         assertEquals("00", ipn.process(fields).get("RspCode")); String original = event(p.getId()); contract(original, p);
+        revision(p.getId(), 1, 1);
         assertEquals("VNPAY", new ObjectMapper().readTree(original).path("provider").asText());
         assertEquals("02", ipn.process(fields).get("RspCode")); assertEquals(original, event(p.getId()));
         var heldVnpay = payment(99106, "VNPAY", PaymentStatus.PENDING);
@@ -147,22 +264,28 @@ class PaymentOutboxStageATest {
         fields.put("vnp_TxnRef", heldVnpay.getPaymentNumber()); fields.remove("vnp_SecureHash");
         fields.put("vnp_SecureHash", org.de013.paymentservice.gateway.vnpay.VnpayUtils.hmacSHA512(cfg.getHashSecret(), org.de013.paymentservice.gateway.vnpay.VnpayUtils.buildHashData(fields)));
         assertEquals("00", ipn.process(fields).get("RspCode"));
-        assertEquals(PaymentStatus.SUCCEEDED, repository.findById(heldVnpay.getId()).orElseThrow().getStatus()); assertEquals(0, count(heldVnpay.getId()));
+        assertEquals(PaymentStatus.SUCCEEDED, repository.findById(heldVnpay.getId()).orElseThrow().getStatus()); assertEquals(1, count(heldVnpay.getId()));
+        assertEquals("RECONCILIATION", jdbc.queryForObject("select state from payment_outbox where payment_id=?", String.class, heldVnpay.getId()));
         var released = payment(99104, "STRIPE", PaymentStatus.PENDING);
         send(99104, "canceled"); send(99104, "succeeded");
+        revision(released.getId(), 2, 2);
         assertEquals(PaymentStatus.SUCCEEDED, repository.findById(released.getId()).orElseThrow().getStatus());
         assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id=?", Boolean.class, 99104L));
-        assertEquals(0, count(released.getId()));
+        assertEquals(2, count(released.getId()));
         var held = hostedStore.reserve(99105L, "owner", new BigDecimal("25.00"), "https://fixture.test/checkout/result");
         new org.springframework.transaction.support.TransactionTemplate(tx).executeWithoutResult(s -> guard.hold(99105L));
         hostedStore.record(99105L, 0, "cs_99105", "PAID", "pi_99105");
         assertEquals(PaymentStatus.SUCCEEDED, repository.findById(held.getPaymentId()).orElseThrow().getStatus());
-        assertEquals(0, count(held.getPaymentId()));
+        assertEquals(1, count(held.getPaymentId()));
+        assertEquals("RECONCILIATION", jdbc.queryForObject("select state from payment_outbox where payment_id=?", String.class, held.getPaymentId()));
         verify(orderClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
     }
     @Test void hostedRecordPersistsExactEventAndRepeatedReadKeepsItStable() throws Exception {
         var checkout = hostedStore.reserve(99001L, "owner", new BigDecimal("25.00"), "https://fixture.test/checkout/result");
+        hostedStore.record(99001L, 0, "cs_99001", "OPEN", "pi_99001");
+        revision(checkout.getPaymentId(), 0, 0);
         hostedStore.record(99001L, 0, "cs_99001", "PAID", "pi_99001");
+        revision(checkout.getPaymentId(), 1, 1);
         String payload = jdbc.queryForObject("select payload from payment_outbox where payment_id=?", String.class, checkout.getPaymentId());
         contract(payload, repository.findById(checkout.getPaymentId()).orElseThrow());
         var event = new ObjectMapper().readTree(payload);
@@ -178,6 +301,7 @@ class PaymentOutboxStageATest {
         assertEquals(0, new BigDecimal("25.00").compareTo(event.path("amount").decimalValue()));
         assertEquals("USD", event.path("currency").asText());
         hostedStore.record(99001L, 0, "cs_99001", "PAID", "pi_99001");
+        revision(checkout.getPaymentId(), 1, 1);
         hostedStore.markPaid(99001L);
         assertEquals(payload, jdbc.queryForObject("select payload from payment_outbox where payment_id=?", String.class, checkout.getPaymentId()));
         verify(orders, never()).markPaid(anyLong(), anyLong(), anyString(), anyString(), anyString());
@@ -196,4 +320,5 @@ class PaymentOutboxStageATest {
             jdbc.execute("drop function reject_outbox_stage_a()");
         }
     }
+
 }

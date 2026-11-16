@@ -24,6 +24,8 @@ public class VnpayIpnService {
     private final PaymentRepository payments;
     private final ProcessedStripeEventRepository events;
     private final PaymentOrderGuard guard;
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
     private final PaymentGatewayConfig config;
     private final OrderServiceClient orders;
     private final NotificationServiceClient notifications;
@@ -41,6 +43,8 @@ public class VnpayIpnService {
         if (orderId == null) return Map.of("RspCode", "01", "Message", "Order not found");
         boolean held = guard.lock(orderId);
         var payment = payments.findByPaymentNumber(ref).filter(p -> orderId.equals(p.getOrderId())).orElseThrow();
+        entityManager.refresh(payment);
+        if (!orderId.equals(payment.getOrderId()) || !ref.equals(payment.getPaymentNumber())) throw new IllegalStateException("Payment correlation changed");
         Long snapshot = payment.getProviderAmountVnd();
         if (snapshot == null || !"VND".equals(payment.getProviderCurrency()) || snapshot <= 0 || snapshot > Long.MAX_VALUE / 100) {
             guard.hold(orderId);
@@ -59,15 +63,14 @@ public class VnpayIpnService {
         if (events.existsById(eventId) || payment.getStatus() == PaymentStatus.SUCCEEDED)
             return Map.of("RspCode", "02", "Message", "Order already confirmed");
         if ("00".equals(params.get("vnp_ResponseCode")) && "00".equals(params.get("vnp_TransactionStatus"))) {
-            payment.setStatus(PaymentStatus.SUCCEEDED);
+            outbox.transition(payment, PaymentStatus.SUCCEEDED, held);
             guard.recordSuccess(orderId);
             payment.setGatewayResponse(params.toString());
             events.save(ProcessedStripeEvent.builder().eventId(eventId).processedAt(LocalDateTime.now()).build());
             payments.flush();
             events.flush();
             if (!held) {
-                if (outbox.enabled()) outbox.enqueue(payment);
-                else try {
+                if (!outbox.enabled()) try {
                     var response = orders.markOrderAsPaid(orderId, payment.getId(), payment.getPaymentNumber());
                     if (!response.getStatusCode().is2xxSuccessful()) log.warn("Failed to update VNPay order {} status to PAID: HTTP {}", orderId, response.getStatusCode().value());
                 } catch (Exception e) { log.warn("Failed to update VNPay order {} status to PAID", orderId, e); }
@@ -90,7 +93,7 @@ public class VnpayIpnService {
                 } catch (Exception e) { log.warn("Failed to send VNPay notification for payment {}", payment.getId(), e); }
             }
         } else {
-            payment.setStatus(PaymentStatus.FAILED);
+            outbox.transition(payment, PaymentStatus.FAILED, held);
             payment.setFailureReason("VNPay failed with response code: " + params.get("vnp_ResponseCode"));
             payments.flush();
             if (!held) try {

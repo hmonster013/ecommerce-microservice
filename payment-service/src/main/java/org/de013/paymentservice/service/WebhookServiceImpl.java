@@ -1,5 +1,9 @@
 package org.de013.paymentservice.service;
 
+import jakarta.persistence.EntityManager;
+
+import jakarta.persistence.PersistenceContext;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ApiResult;
@@ -47,6 +51,8 @@ public class WebhookServiceImpl implements WebhookService {
     private final UserServiceClient userServiceClient;
     private final NotificationServiceClient notificationServiceClient;
     private final PaymentOrderGuard guard;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // ========== WEBHOOK PROCESSING ==========
 
@@ -186,6 +192,9 @@ public class WebhookServiceImpl implements WebhookService {
         Payment payment = paymentRepository.findByStripePaymentIntentId(id)
                 .filter(p -> orderId.equals(p.getOrderId()) && id.equals(p.getStripePaymentIntentId()))
                 .orElseThrow(() -> new PaymentGatewayException("Payment intent correlation changed"));
+        entityManager.refresh(payment);
+        if (!orderId.equals(payment.getOrderId()) || !id.equals(payment.getStripePaymentIntentId()))
+            throw new PaymentGatewayException("Payment intent correlation changed");
         if (isHostedCheckout(payment)) return true;
         if (!"STRIPE".equals(payment.getGatewayName())) {
             throw new PaymentGatewayException("Payment intent provider is not correlated");
@@ -193,34 +202,33 @@ public class WebhookServiceImpl implements WebhookService {
         switch (event.getEventType()) {
             case "payment_intent.canceled" -> {
                 if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) {
-                    payment.setStatus(PaymentStatus.CANCELED);
+                    outbox.transition(payment, PaymentStatus.CANCELED, held);
                     payment.setBlocking(false);
                     payment.setVerifiedRelease(true);
                 }
             }
             case "payment_intent.succeeded" -> {
                 boolean alreadySucceeded = payment.getStatus() == PaymentStatus.SUCCEEDED;
-                payment.setStatus(PaymentStatus.SUCCEEDED);
+                outbox.transition(payment, PaymentStatus.SUCCEEDED, held || payment.isVerifiedRelease());
                 guard.recordSuccess(orderId);
                 if (payment.isVerifiedRelease()) {
                     guard.hold(orderId);
                 } else if (!held && !alreadySucceeded) {
-                    if (outbox.enabled()) outbox.enqueue(payment);
-                    else updateOrderStatus(orderId, "PAID", payment);
+                    if (!outbox.enabled()) updateOrderStatus(orderId, "PAID", payment);
                     if (notificationOutbox.enabled()) notificationOutbox.enqueue(payment);
                     else sendPaymentSuccessNotification(payment);
                 }
             }
             case "payment_intent.payment_failed" -> {
                 if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
-                    payment.setStatus(PaymentStatus.FAILED);
+                    outbox.transition(payment, PaymentStatus.FAILED, held);
                     payment.setFailureReason(event.getFailureReason() != null ? event.getFailureReason() : "Payment failed via webhook");
                     if (!held) updateOrderStatus(orderId, "PAYMENT_FAILED", payment);
                 }
             }
             case "payment_intent.requires_action" -> {
                 if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
-                    payment.setStatus(PaymentStatus.REQUIRES_ACTION);
+                    outbox.transition(payment, PaymentStatus.REQUIRES_ACTION, held);
                 }
             }
             default -> log.debug("Unhandled webhook event type: {}", event.getEventType());

@@ -25,6 +25,24 @@ class PaymentReservationMigrationTest {
         return config.load();
     }
 
+    @Test void v19PreservesLegacyAndEnforcesRevisionAndSuccessUniqueness() throws Exception {
+        flyway("outbox_legacy", "18").migrate();
+        try (var c = DriverManager.getConnection(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword()); var s = c.createStatement()) {
+            s.execute("SET search_path TO outbox_legacy");
+            s.execute("INSERT INTO payments(payment_number,order_id,user_id,amount,currency,status,method) VALUES ('legacy-success',70001,'u',1,'USD','SUCCEEDED','CARD'),('legacy-empty',70002,'u',1,'USD','PENDING','CARD')");
+            s.execute("INSERT INTO payment_outbox(event_id,payment_id,event_type,payload,created_at) SELECT '00000000-0000-0000-0000-000000000001',id,'PaymentSucceeded','{\"legacy\":true}',now() FROM payments WHERE payment_number='legacy-success'");
+            flyway("outbox_legacy", null).migrate();
+            try (var rows = s.executeQuery("SELECT o.event_id::text,o.payload,o.revision,p.revision FROM payment_outbox o JOIN payments p ON p.id=o.payment_id")) {
+                assertTrue(rows.next()); assertEquals("00000000-0000-0000-0000-000000000001", rows.getString(1));
+                assertEquals("{\"legacy\":true}", rows.getString(2)); assertEquals(1, rows.getLong(3)); assertEquals(1, rows.getLong(4));
+            }
+            try (var rows = s.executeQuery("SELECT revision FROM payments WHERE payment_number='legacy-empty'")) { assertTrue(rows.next()); assertEquals(0, rows.getLong(1)); }
+            assertEquals("23505", assertThrows(SQLException.class, () -> s.execute("INSERT INTO payment_outbox(event_id,payment_id,event_type,payload,created_at,revision) SELECT gen_random_uuid(),id,'PaymentFailed','{}',now(),1 FROM payments WHERE payment_number='legacy-success'")).getSQLState());
+            assertEquals("23505", assertThrows(SQLException.class, () -> s.execute("INSERT INTO payment_outbox(event_id,payment_id,event_type,payload,created_at,revision) SELECT gen_random_uuid(),id,'PaymentSucceeded','{}',now(),2 FROM payments WHERE payment_number='legacy-success'")).getSQLState());
+            assertEquals(1, s.executeUpdate("INSERT INTO payment_outbox(event_id,payment_id,event_type,payload,created_at,revision) SELECT gen_random_uuid(),id,'PaymentFailed','{}',now(),2 FROM payments WHERE payment_number='legacy-success'"));
+        }
+    }
+
     @Test void duplicatesAbortMigrationWithoutRewritingFinancialStates() throws Exception {
         flyway("duplicate_test", "10").migrate();
         try (var c = DriverManager.getConnection(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword()); var s = c.createStatement()) {

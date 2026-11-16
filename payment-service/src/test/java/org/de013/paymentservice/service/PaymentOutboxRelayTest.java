@@ -109,18 +109,21 @@ class PaymentOutboxRelayTest {
     }
 
     @Test void acknowledgedRecordIsRedeliveredWithIdenticalEventAfterDatabaseFailure() {
+        jdbc.update("update payment_outbox set state='RECONCILIATION' where state='PENDING'");
         long id = create(99304);
+        var isolatedRelay = new PaymentOutboxRelay(jdbc, guard, kafka, tx);
         jdbc.execute("create function fail_publish_99304() returns trigger language plpgsql as $$ begin if new.payment_id = " + id + " and new.state = 'PUBLISHED' then raise exception 'injected'; end if; return new; end $$");
         jdbc.execute("create trigger fail_publish_99304 before update on payment_outbox for each row execute function fail_publish_99304()");
-        try { relay.relay(); assertEquals("PENDING", state(id)); }
+        try { assertThrows(org.springframework.dao.DataAccessException.class, isolatedRelay::relay); assertEquals("PENDING", state(id)); }
         finally { jdbc.execute("drop trigger fail_publish_99304 on payment_outbox"); jdbc.execute("drop function fail_publish_99304()"); }
-        relay.relay(); relay.relay();
+        isolatedRelay.relay(); isolatedRelay.relay();
         assertEquals("PUBLISHED", state(id));
         var records = records("99304", 2);
         assertEquals(2, records.size()); assertEquals(records.get(0), records.get(1));
     }
 
     @Test void unavailableBrokerRetainsPendingAndRecoveryPublishes() {
+        jdbc.update("update payment_outbox set state='RECONCILIATION' where state='PENDING'");
         long id = create(99401);
         String payload = jdbc.queryForObject("select payload from payment_outbox where payment_id=?", String.class, id);
         var props = new java.util.HashMap<String, Object>();
@@ -129,13 +132,44 @@ class PaymentOutboxRelayTest {
         props.put("value.serializer", org.apache.kafka.common.serialization.StringSerializer.class);
         props.put("max.block.ms", 1000);
         var factory = new org.springframework.kafka.core.DefaultKafkaProducerFactory<String, String>(props);
+        var before = jdbc.queryForObject("select clock_timestamp()", java.time.OffsetDateTime.class);
         try {
             new PaymentOutboxRelay(jdbc, guard, new org.springframework.kafka.core.KafkaTemplate<>(factory), tx).relay();
             assertEquals("PENDING", state(id));
             assertEquals(payload, jdbc.queryForObject("select payload from payment_outbox where payment_id=?", String.class, id));
+            assertEquals(1L, jdbc.queryForObject("select attempts from payment_outbox where payment_id=?", Long.class, id));
+            assertEquals("BROKER_FAILURE", jdbc.queryForObject("select last_error from payment_outbox where payment_id=?", String.class, id));
+            var after = jdbc.queryForObject("select clock_timestamp()", java.time.OffsetDateTime.class);
+            var due = jdbc.queryForObject("select next_attempt_at from payment_outbox where payment_id=?", java.time.OffsetDateTime.class, id);
+            assertFalse(due.isBefore(before.plusSeconds(1)));
+            assertFalse(due.isAfter(after.plusSeconds(1)));
+            new PaymentOutboxRelay(jdbc, guard, kafka, tx).relay();
+            assertEquals("PENDING", state(id));
         } finally { factory.destroy(); }
+        jdbc.update("update payment_outbox set next_attempt_at=current_timestamp where payment_id=?", id);
         new PaymentOutboxRelay(jdbc, guard, kafka, tx).relay();
         assertEquals("PUBLISHED", state(id)); assertEquals(payload, records("99401", 1).get(0));
+    }
+
+    @Test void repeatedBrokerFailuresPersistCappedBackoff() {
+        jdbc.update("update payment_outbox set state='RECONCILIATION' where state='PENDING'");
+        long id = create(99430);
+        jdbc.update("update payment_outbox set attempts=5 where payment_id=?", id);
+        @SuppressWarnings("unchecked") var failing = org.mockito.Mockito.mock(org.springframework.kafka.core.KafkaTemplate.class);
+        org.mockito.Mockito.when(failing.send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(new IllegalStateException("fixture")));
+        for (long previous : new long[]{5, 6, 7}) {
+            jdbc.update("update payment_outbox set next_attempt_at=clock_timestamp() - interval '1 second' where payment_id=?", id);
+            var before = jdbc.queryForObject("select clock_timestamp()", java.time.OffsetDateTime.class);
+            new PaymentOutboxRelay(jdbc, guard, failing, tx).relay();
+            var after = jdbc.queryForObject("select clock_timestamp()", java.time.OffsetDateTime.class);
+            var due = jdbc.queryForObject("select next_attempt_at from payment_outbox where payment_id=?", java.time.OffsetDateTime.class, id);
+            long delay = previous == 5 ? 32 : 60;
+            assertFalse(due.isBefore(before.plusSeconds(delay))); assertFalse(due.isAfter(after.plusSeconds(delay)));
+            assertEquals(previous + 1, jdbc.queryForObject("select attempts from payment_outbox where payment_id=?", Long.class, id));
+            assertEquals("BROKER_FAILURE", jdbc.queryForObject("select last_error from payment_outbox where payment_id=?", String.class, id));
+            assertEquals("PENDING", state(id));
+        }
     }
 
     @Test void publishedAckHoldsGuardUntilCommitAndCannotBeRecalled() throws Exception {
@@ -180,9 +214,11 @@ class PaymentOutboxRelayTest {
         jdbc.execute("create trigger fail_first_batch before update on payment_outbox for each row execute function fail_first_batch()");
         var instance = new PaymentOutboxRelay(jdbc, guard, kafka, tx);
         try {
-            instance.relay(); assertEquals("PENDING", state(last));
+            assertThrows(org.springframework.dao.DataAccessException.class, instance::relay); assertEquals("PENDING", state(last));
+            jdbc.update("update payment_outbox set next_attempt_at=current_timestamp + interval '1 minute' where payment_id in (select id from payments where order_id between 99500 and 99550) and payment_id<>?", last);
             instance.relay(); assertEquals("PUBLISHED", state(last));
         } finally { jdbc.execute("drop trigger fail_first_batch on payment_outbox"); jdbc.execute("drop function fail_first_batch()"); }
+        jdbc.update("update payment_outbox set next_attempt_at=current_timestamp where payment_id in (select id from payments where order_id between 99500 and 99550)");
         instance.relay(); instance.relay();
         for (long id : ids) assertEquals("PUBLISHED", state(id));
     }

@@ -2,6 +2,7 @@ package org.de013.paymentservice.service;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import org.de013.common.event.PaymentEventType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
@@ -38,40 +39,45 @@ public class PaymentOutboxRelay {
 
     @Scheduled(fixedDelayString = "${payment.events.relay-delay-ms:5000}")
     public synchronized void relay() {
-        var candidates = jdbc.query("select o.event_id,p.order_id from payment_outbox o join payments p on p.id=o.payment_id where o.state='PENDING' and o.event_id > ? order by o.event_id limit 50",
+        var candidates = jdbc.query("select o.event_id,p.order_id from payment_outbox o join payments p on p.id=o.payment_id where o.state='PENDING' and o.next_attempt_at <= current_timestamp and o.event_id > ? order by o.event_id limit 50",
                 (rs, row) -> new Candidate(rs.getObject(1, UUID.class), rs.getLong(2)), cursor);
         if (candidates.isEmpty()) { cursor = new UUID(0, 0); return; }
         for (var candidate : candidates) {
             cursor = candidate.id();
-            try {
-                transaction.executeWithoutResult(status -> dispatch(candidate));
-            } catch (RuntimeException e) {
-                log.warn("Payment event {} dispatch failed; retained for retry", candidate.id(), e);
-            }
+            transaction.executeWithoutResult(status -> dispatch(candidate));
+            if (Thread.currentThread().isInterrupted()) return;
         }
     }
 
     private void dispatch(Candidate candidate) {
         boolean held = guard.lock(candidate.orderId());
-        var payloads = jdbc.query("select payload from payment_outbox where event_id=? and state='PENDING' for update skip locked",
-                (rs, row) -> rs.getString(1), candidate.id());
+        var payloads = jdbc.query("select payload,event_type from payment_outbox where event_id=? and state='PENDING' and next_attempt_at <= current_timestamp for update skip locked",
+                (rs, row) -> new Event(rs.getString(1), PaymentEventType.valueOf(rs.getString(2))), candidate.id());
         if (payloads.isEmpty()) return;
         if (held) {
             jdbc.update("update payment_outbox set state='RECONCILIATION' where event_id=?", candidate.id());
             return;
         }
         try {
-            kafka.send("payment.succeeded.v1", Long.toString(candidate.orderId()), payloads.get(0)).get(15, TimeUnit.SECONDS);
+            var event = payloads.get(0);
+            kafka.send(event.type().topic(), Long.toString(candidate.orderId()), event.payload()).get(15, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Payment event dispatch interrupted", e);
+            failed(candidate, "INTERRUPTED");
+            return;
         } catch (Exception e) {
-            throw new IllegalStateException("Payment event broker acknowledgement failed", e);
+            failed(candidate, "BROKER_FAILURE");
+            return;
         }
-        jdbc.update("update payment_outbox set state='PUBLISHED' where event_id=?", candidate.id());
+        jdbc.update("update payment_outbox set state='PUBLISHED',published_at=clock_timestamp(),last_error=null where event_id=?", candidate.id());
+    }
+
+    private void failed(Candidate candidate, String code) {
+        jdbc.update("update payment_outbox set attempts=attempts+1,last_error=?,next_attempt_at=clock_timestamp() + (least(60, power(2, least(attempts, 6))) * interval '1 second') where event_id=?", code, candidate.id());
     }
 
     private record Candidate(UUID id, long orderId) { }
+    private record Event(String payload, PaymentEventType type) { }
 
     @Configuration
     @EnableScheduling

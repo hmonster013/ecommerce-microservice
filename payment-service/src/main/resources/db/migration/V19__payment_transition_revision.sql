@@ -1,0 +1,13 @@
+ALTER TABLE payments ADD COLUMN revision BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE payment_outbox ADD COLUMN revision BIGINT;
+UPDATE payment_outbox SET revision = 1;
+UPDATE payments SET revision = 1 WHERE id IN (SELECT payment_id FROM payment_outbox);
+ALTER TABLE payment_outbox ALTER COLUMN revision SET NOT NULL;
+ALTER TABLE payment_outbox DROP CONSTRAINT payment_outbox_payment_id_event_type_key;
+ALTER TABLE payment_outbox ADD CONSTRAINT payment_outbox_payment_revision_key UNIQUE (payment_id, revision);
+CREATE UNIQUE INDEX payment_outbox_one_success ON payment_outbox (payment_id) WHERE event_type = 'PaymentSucceeded';
+ALTER TABLE payment_outbox ADD COLUMN attempts BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE payment_outbox ADD COLUMN next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE payment_outbox ADD COLUMN last_error VARCHAR(32);
+ALTER TABLE payment_outbox ADD COLUMN published_at TIMESTAMPTZ;
+CREATE INDEX payment_outbox_due_idx ON payment_outbox (next_attempt_at, event_id) WHERE state = 'PENDING';

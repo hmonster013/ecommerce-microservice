@@ -1,10 +1,13 @@
 package org.de013.paymentservice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import org.de013.common.event.PaymentEventType;
+import org.de013.common.event.PaymentSucceeded;
+import org.de013.common.event.PaymentTransitionEvent;
 import org.de013.paymentservice.entity.Payment;
+import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -24,9 +27,27 @@ public class PaymentOutbox {
 
     public boolean enabled() { return enabled; }
 
+    /** Caller must hold the order guard and supply a freshly loaded managed payment. */
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
-    public void enqueue(Payment payment) {
-        if (!enabled) return;
+    public boolean transition(Payment payment, PaymentStatus next, boolean held) {
+        if (next == null || payment.getStatus() == null) throw new IllegalArgumentException("Payment status is required");
+        PaymentStatus previous = payment.getStatus();
+        if (previous == next) return false;
+        payment.setStatus(next);
+        payment.setRevision(Math.addExact(payment.getRevision(), 1));
+        if (enabled) {
+            PaymentEventType type = switch (next) {
+                case SUCCEEDED -> PaymentEventType.PaymentSucceeded;
+                case FAILED -> PaymentEventType.PaymentFailed;
+                case CANCELED -> PaymentEventType.PaymentCanceled;
+                default -> null;
+            };
+            if (type != null) write(payment, previous, type, held);
+        }
+        return true;
+    }
+
+    private void write(Payment payment, PaymentStatus previous, PaymentEventType type, boolean held) {
         String provider = payment.getGatewayName();
         String currency = payment.getCurrency() == null ? null : payment.getCurrency().name();
         if (payment.getId() == null || payment.getId() <= 0 || payment.getOrderId() == null || payment.getOrderId() <= 0
@@ -37,11 +58,14 @@ public class PaymentOutbox {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
         try {
-            String payload = mapper.writeValueAsString(new Event(id.toString(), "PaymentSucceeded", 1, now.toString(),
-                    payment.getId(), payment.getPaymentNumber(), payment.getOrderId(), provider, payment.getAmount(), currency));
-            int inserted = jdbc.update("INSERT INTO payment_outbox(event_id,payment_id,event_type,payload,created_at) VALUES (?,?,?,?,?) ON CONFLICT (payment_id,event_type) DO NOTHING",
-                    id, payment.getId(), "PaymentSucceeded", payload, java.sql.Timestamp.from(now));
+            Object event = type == PaymentEventType.PaymentSucceeded
+                    ? new PaymentSucceeded(id.toString(), type, 1, now.toString(), payment.getId(), payment.getPaymentNumber(), payment.getOrderId(), provider, payment.getAmount(), currency)
+                    : new PaymentTransitionEvent(id.toString(), type, 1, now.toString(), payment.getId(), payment.getPaymentNumber(), payment.getOrderId(), provider, payment.getAmount(), currency, payment.getRevision(), previous.name(), payment.getStatus().name());
+            String payload = mapper.writeValueAsString(event);
+            int inserted = jdbc.update("INSERT INTO payment_outbox(event_id,payment_id,event_type,payload,created_at,revision,state) VALUES (?,?,?,?,?,?,?) ON CONFLICT DO NOTHING",
+                    id, payment.getId(), type.name(), payload, java.sql.Timestamp.from(now), payment.getRevision(), held ? "RECONCILIATION" : "PENDING");
             if (inserted == 0) {
+                if (type != PaymentEventType.PaymentSucceeded) throw new IllegalStateException("Conflicting payment event revision");
                 var existing = mapper.readTree(jdbc.queryForObject("SELECT payload FROM payment_outbox WHERE payment_id=? AND event_type=?", String.class, payment.getId(), "PaymentSucceeded"));
                 if (existing.path("paymentId").asLong() != payment.getId() || existing.path("orderId").asLong() != payment.getOrderId()
                         || !payment.getPaymentNumber().equals(existing.path("paymentNumber").asText())
@@ -54,6 +78,4 @@ public class PaymentOutbox {
         }
     }
 
-    private record Event(String eventId, String eventType, int schemaVersion, String occurredAt, Long paymentId,
-                         String paymentNumber, Long orderId, String provider, BigDecimal amount, String currency) { }
 }

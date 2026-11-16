@@ -1,5 +1,8 @@
 package org.de013.paymentservice.service;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.ApiResult;
@@ -55,6 +58,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final VnpayService vnpayService;
     private final PaymentReservation reservation;
     private final PaymentOrderGuard guard;
+    @PersistenceContext
+    private EntityManager entityManager;
     private final org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     // ========== PAYMENT PROCESSING ==========
@@ -105,7 +110,7 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse cancelPayment(Long paymentId, String reason) {
         return locked(paymentId, (payment, held) -> {
             if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
-                payment.setStatus(PaymentStatus.CANCELED);
+                outbox.transition(payment, PaymentStatus.CANCELED, held);
                 payment.setFailureReason(reason);
                 createPaymentTransaction(payment, null, TransactionType.CANCELLATION);
                 paymentRepository.save(payment);
@@ -200,7 +205,7 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse updatePaymentStatus(Long paymentId, PaymentStatus status, String reason) {
         return locked(paymentId, (payment, held) -> {
             if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
-                payment.setStatus(status);
+                outbox.transition(payment, status, held);
                 if (status == PaymentStatus.SUCCEEDED) guard.recordSuccess(payment.getOrderId());
                 if (reason != null) payment.setFailureReason(reason);
                 paymentRepository.save(payment);
@@ -437,6 +442,8 @@ public class PaymentServiceImpl implements PaymentService {
             Payment payment = paymentRepository.findById(paymentId)
                     .filter(p -> orderId.equals(p.getOrderId()))
                     .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
+            entityManager.refresh(payment);
+            if (!orderId.equals(payment.getOrderId())) throw new PaymentNotFoundException("Payment correlation changed: " + paymentId);
             return action.apply(payment, held);
         });
     }
@@ -460,19 +467,18 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentStatus previous = payment.getStatus();
         PaymentStatus next = mapStripeStatusToPaymentStatus(response.getStatus());
         if (next == PaymentStatus.SUCCEEDED) {
-            payment.setStatus(next);
+            outbox.transition(payment, next, held || payment.isVerifiedRelease());
             guard.recordSuccess(payment.getOrderId());
             if (payment.isVerifiedRelease()) guard.hold(payment.getOrderId());
         } else if (!payment.isVerifiedRelease() && previous != PaymentStatus.SUCCEEDED) {
-            payment.setStatus(next);
+            outbox.transition(payment, next, held);
             if (response.getFailureMessage() != null) payment.setFailureReason(response.getFailureMessage());
         }
         createPaymentTransaction(payment, response, type);
         paymentRepository.save(payment);
         if (!held && !payment.isVerifiedRelease() && previous != payment.getStatus()) {
             if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
-                if (outbox.enabled()) outbox.enqueue(payment);
-                else updateOrderStatus(payment.getOrderId(), "PAID", payment);
+                if (!outbox.enabled()) updateOrderStatus(payment.getOrderId(), "PAID", payment);
                 if (notificationOutbox.enabled()) notificationOutbox.enqueue(payment);
                 else if (notify) sendPaymentSuccessNotification(payment);
             } else if (payment.getStatus() == PaymentStatus.FAILED) {

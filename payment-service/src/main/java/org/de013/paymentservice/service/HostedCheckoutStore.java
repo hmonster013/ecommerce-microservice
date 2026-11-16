@@ -56,6 +56,8 @@ public class HostedCheckoutStore {
         boolean held = guard.lock(orderId);
         var existing = checkouts.findById(orderId).orElseThrow();
         var payment = payments.findById(existing.getPaymentId()).orElseThrow();
+        entityManager.refresh(payment);
+        if (!orderId.equals(payment.getOrderId())) throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout payment correlation changed");
         var checkout = checkouts.lockByOrderId(orderId).orElseThrow();
         if (checkout.getGeneration() != generation) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout session changed; read again");
@@ -77,13 +79,11 @@ public class HostedCheckoutStore {
         if (intent != null) payment.setStripePaymentIntentId(intent);
         payment.setGatewayTxnRef(sessionId);
         if ("PAID".equals(state)) {
-            boolean alreadySucceeded = payment.getStatus() == PaymentStatus.SUCCEEDED;
-            payment.setStatus(PaymentStatus.SUCCEEDED);
+            outbox.transition(payment, PaymentStatus.SUCCEEDED, held || payment.isVerifiedRelease());
             guard.recordSuccess(orderId);
             if (payment.isVerifiedRelease()) guard.hold(orderId);
-            if (!held && !payment.isVerifiedRelease() && !alreadySucceeded && outbox.enabled()) outbox.enqueue(payment);
         }
-        else if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) payment.setStatus(PaymentStatus.PENDING);
+        else if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) outbox.transition(payment, PaymentStatus.PENDING, held);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
