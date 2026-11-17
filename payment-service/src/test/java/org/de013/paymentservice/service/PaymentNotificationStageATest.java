@@ -41,6 +41,7 @@ class PaymentNotificationStageATest {
     @org.springframework.beans.factory.annotation.Autowired VnpayIpnService ipn;
     @org.springframework.beans.factory.annotation.Autowired org.de013.paymentservice.config.PaymentGatewayConfig gatewayConfig;
     @org.springframework.beans.factory.annotation.Autowired PaymentOrderGuard guard;
+    @org.springframework.beans.factory.annotation.Autowired PaymentRetryAttempts retryAttempts;
     @org.springframework.beans.factory.annotation.Autowired org.springframework.transaction.PlatformTransactionManager tx;
     @org.springframework.beans.factory.annotation.Autowired jakarta.validation.Validator validatorBean;
 
@@ -70,6 +71,9 @@ class PaymentNotificationStageATest {
         return jdbc.queryForObject("select count(*) from payment_notification_outbox where payment_id=?", Integer.class, id);
     }
     private void contract(org.de013.paymentservice.entity.Payment payment) throws Exception {
+        assertEquals(PaymentStatus.SUCCEEDED, repository.findById(payment.getId()).orElseThrow().getStatus());
+        assertEquals(1, count(payment.getId()));
+        assertEquals("PENDING", jdbc.queryForObject("select state from payment_notification_outbox where payment_id=?", String.class, payment.getId()));
         var json = new ObjectMapper().readTree(payload(payment.getId()));
         assertEquals(12, json.size());
         java.util.UUID.fromString(json.path("eventId").asText());
@@ -116,6 +120,22 @@ class PaymentNotificationStageATest {
         verifyNoInteractions(notifications, users);
     }
 
+    @Test void processAndCaptureRequestSnapshots() throws Exception {
+        when(factory.getGateway("STRIPE")).thenReturn(stripe);
+        when(stripe.mapToGatewayPaymentRequest(any())).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentRequest.builder().build());
+        when(stripe.createPaymentIntent(any())).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentResponse.builder().paymentIntentId("pi_99621").status("succeeded").build());
+        payments.processPayment(org.de013.paymentservice.dto.payment.ProcessPaymentRequest.builder().orderId(99621L).userId("owner").amount(new BigDecimal("25.00"))
+                .currency(org.de013.paymentservice.entity.enums.Currency.USD).paymentMethodType(org.de013.paymentservice.entity.enums.PaymentMethodType.CARD).provider("STRIPE").receiptEmail("fixture@example.test").build());
+        var created = repository.findByOrderId(99621L).get(0);
+        assertEquals(PaymentStatus.SUCCEEDED, created.getStatus()); contract(created); assertEquals(1, count(created.getId()));
+        var capture = payment(99622, "STRIPE", PaymentStatus.REQUIRES_CONFIRMATION);
+        when(stripe.capturePayment(eq("pi_99622"), any())).thenReturn(org.de013.paymentservice.dto.stripe.StripePaymentResponse.builder().paymentIntentId("pi_99622").status("succeeded").build());
+        payments.capturePayment(capture.getId(), null);
+        assertEquals(PaymentStatus.SUCCEEDED, repository.findById(capture.getId()).orElseThrow().getStatus()); contract(capture); assertEquals(1, count(capture.getId()));
+        assertEquals("PENDING", jdbc.queryForObject("select state from payment_notification_outbox where payment_id=?", String.class, capture.getId()));
+        verifyNoInteractions(notifications, users);
+    }
+
     @Test void signedVnpayAndMissingRecipientAndHold() throws Exception {
         var cfg = gatewayConfig.getGateways().getVnpay();
         var real = new org.de013.paymentservice.gateway.vnpay.VnpayPaymentGateway(gatewayConfig);
@@ -130,6 +150,11 @@ class PaymentNotificationStageATest {
         var missing = payment(99605, "STRIPE", PaymentStatus.PENDING);
         missing.setReceiptEmail(null); repository.saveAndFlush(missing); send(99605, "succeeded");
         assertEquals("RECONCILIATION", jdbc.queryForObject("select state from payment_notification_outbox where payment_id=?", String.class, missing.getId()));
+        var invalid = payment(99623, "STRIPE", PaymentStatus.PENDING);
+        invalid.setReceiptEmail("not-an-email"); repository.saveAndFlush(invalid); send(99623, "succeeded");
+        assertEquals(PaymentStatus.SUCCEEDED, repository.findById(invalid.getId()).orElseThrow().getStatus());
+        assertEquals(1, count(invalid.getId()));
+        assertEquals("RECONCILIATION", jdbc.queryForObject("select state from payment_notification_outbox where payment_id=?", String.class, invalid.getId()));
         var held = payment(99606, "STRIPE", PaymentStatus.PENDING);
         new org.springframework.transaction.support.TransactionTemplate(tx).executeWithoutResult(s -> guard.hold(99606L));
         send(99606, "succeeded"); assertEquals(0, count(held.getId()));
