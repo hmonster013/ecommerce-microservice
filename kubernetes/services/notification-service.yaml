@@ -48,11 +48,13 @@ spec:
             secretKeyRef:
               name: ecommerce-secret
               key: SPRING_DATASOURCE_PASSWORD
-        - name: KAFKA_BOOTSTRAP_SERVERS
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
           valueFrom:
             configMapKeyRef:
               name: ecommerce-configmap
-              key: KAFKA_BOOTSTRAP_SERVERS
+              key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+        - name: NOTIFICATION_PAYMENTEMAIL_EVENTS_ENABLED
+          value: "false"
         - name: MAIL_HOST
           valueFrom:
             configMapKeyRef:

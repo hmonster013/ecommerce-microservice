@@ -20,6 +20,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.yaml.snakeyaml.Yaml;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -53,10 +54,31 @@ class PaymentNotificationDeliveryIT {
                 x.sendResponseHeaders(200, bytes.length); x.getResponseBody().write(bytes); x.close();
             }); fixture.start();
             String url = "http://127.0.0.1:" + fixture.getAddress().getPort();
-            String[] on = paymentArgs(url, kafka.getBootstrapServers(), true), off = paymentArgs(url, kafka.getBootstrapServers(), false);
+            var fixtureValues = Map.of("SPRING_KAFKA_BOOTSTRAP_SERVERS", kafka.getBootstrapServers());
+            var paymentOff = manifestEnv("payment-service", "PAYMENT_NOTIFICATIONS_EVENTS_ENABLED", fixtureValues);
+            var notificationOff = manifestEnv("notification-service", "NOTIFICATION_PAYMENTEMAIL_EVENTS_ENABLED", fixtureValues);
+            var paymentOn = new HashMap<>(paymentOff); paymentOn.put("PAYMENT_NOTIFICATIONS_EVENTS_ENABLED", "true");
+            var notificationOn = new HashMap<>(notificationOff); notificationOn.put("NOTIFICATION_PAYMENTEMAIL_EVENTS_ENABLED", "true");
+            String[] args = paymentArgs(url);
             boolean paused = false;
             try (var db = DriverManager.getConnection(pdb.getJdbcUrl(), pdb.getUsername(), pdb.getPassword());
-                 var payment = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, on)) {
+                 var defaultNotification = new App(temp, isolated, "notification-service", "org.de013.notificationservice.NotificationServiceApplication", ndbContainer, notificationOff);
+                 var defaultPayment = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, paymentOff, args)) {
+                assertEquals(List.of(kafka.getBootstrapServers()).toString(), defaultPayment.brokers);
+                assertEquals(List.of(kafka.getBootstrapServers()).toString(), defaultNotification.brokers);
+                assertEquals("0", defaultPayment.paymentRelayBeans); assertEquals("0/0/0", defaultNotification.paymentEmailBeans);
+                long initial = seed(db, "manifest_default", 200, true);
+                assertEquals(200, webhook(defaultPayment.port, "manifest_default").statusCode());
+                assertEquals("SUCCEEDED", text(db, "SELECT status FROM payments WHERE id=" + initial));
+                assertEquals(1, legacy.get()); assertEquals(0, number(db, "SELECT count(*) FROM payment_notification_outbox WHERE payment_id=" + initial));
+                defaultPayment.close(); defaultNotification.close(); legacy.set(0);
+                try (var notification = new App(temp, isolated, "notification-service", "org.de013.notificationservice.NotificationServiceApplication", ndbContainer, notificationOn,
+                        "--notification.payment-email.poll-ms=500", "--spring.mail.host=127.0.0.1", "--spring.mail.port=" + smtp.port(),
+                        "--spring.mail.properties.mail.smtp.auth=false", "--spring.mail.properties.mail.smtp.starttls.enable=false");
+                     var payment = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, paymentOn, args)) {
+                assertEquals("1/1/1", notification.paymentEmailBeans);
+                assertEquals(List.of(kafka.getBootstrapServers()).toString(), notification.brokers);
+                assertEquals(List.of(kafka.getBootstrapServers()).toString(), payment.brokers);
                 assertEquals("1", payment.paymentRelayBeans);
                 docker("pause", kafka.getContainerId()); paused = true;
                 long id = seed(db, "cutover", 201, true);
@@ -68,8 +90,9 @@ class PaymentNotificationDeliveryIT {
                 assertFalse(paymentDrained(db));
                 assertEquals(0, legacy.get()); assertEquals(0, users.get()); assertEquals(0, other.get());
                 payment.close();
-                try (var restarted = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, on)) {
+                try (var restarted = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, paymentOn, args)) {
                     assertEquals("1", restarted.paymentRelayBeans);
+                    assertEquals(List.of(kafka.getBootstrapServers()).toString(), restarted.brokers);
                     assertEquals("SUCCEEDED", text(db, "SELECT status FROM payments WHERE id=" + id));
                     assertEquals(event, text(db, "SELECT event_id FROM payment_notification_outbox WHERE payment_id=" + id));
                     assertEquals(payload, text(db, "SELECT payload FROM payment_notification_outbox WHERE payment_id=" + id));
@@ -78,11 +101,7 @@ class PaymentNotificationDeliveryIT {
                     assertEquals(0, legacy.get()); assertEquals(0, users.get()); assertEquals(0, other.get());
                     // Harness has completed its only callback and will issue no new eligible writes before the barrier.
                     docker("unpause", kafka.getContainerId()); paused = false;
-                    try (var notification = new App(temp, isolated, "notification-service", "org.de013.notificationservice.NotificationServiceApplication", ndbContainer,
-                            "--notification.payment-email.events.enabled=true", "--notification.payment-email.poll-ms=500",
-                            "--spring.kafka.bootstrap-servers=" + kafka.getBootstrapServers(), "--spring.mail.host=127.0.0.1", "--spring.mail.port=" + smtp.port(),
-                            "--spring.mail.properties.mail.smtp.auth=false", "--spring.mail.properties.mail.smtp.starttls.enable=false");
-                         var ndb = DriverManager.getConnection(ndbContainer.getJdbcUrl(), ndbContainer.getUsername(), ndbContainer.getPassword());
+                    try (var ndb = DriverManager.getConnection(ndbContainer.getJdbcUrl(), ndbContainer.getUsername(), ndbContainer.getPassword());
                          var admin = AdminClient.create(Map.of("bootstrap.servers", kafka.getBootstrapServers()));
                          var consumer = new KafkaConsumer<String,String>(Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers(), ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString(), ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class, ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class))) {
                         assertEquals("1/1/1", notification.paymentEmailBeans);
@@ -95,8 +114,9 @@ class PaymentNotificationDeliveryIT {
                         var ends = consumer.endOffsets(partitions);
                         int sent = smtp.accepted.get(); assertEquals(1, sent);
                         restarted.close();
-                        try (var legacyPayment = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, off)) {
+                        try (var legacyPayment = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, paymentOff, args)) {
                             assertEquals("0", legacyPayment.paymentRelayBeans);
+                            assertEquals(List.of(kafka.getBootstrapServers()).toString(), legacyPayment.brokers);
                             long fresh = seed(db, "cutover_legacy", 202, true);
                             assertEquals(200, webhook(legacyPayment.port, "cutover_legacy").statusCode());
                             assertEquals(1, legacy.get()); assertEquals(0, users.get()); assertEquals(0, other.get());
@@ -122,21 +142,40 @@ class PaymentNotificationDeliveryIT {
                         assertEquals(sent, smtp.accepted.get());
                     }
                 }
+                }
             } finally { if (paused) docker("unpause", kafka.getContainerId()); fixture.stop(0); }
         }
     }
 
-    static String[] paymentArgs(String url, String broker, boolean enabled) {
+    static String[] paymentArgs(String url) {
         return new String[]{"stripe-base=" + url, "--payment.internal.issuer-uri=" + url,
                 "--payment.gateways.stripe.api-key=sk_test_fixture", "--payment.gateways.stripe.webhook-secret=" + SECRET,
-                "--payment.events.enabled=true", "--payment.notifications.events.enabled=" + enabled,
-                "--payment.notifications.events.relay-delay-ms=500", "--spring.kafka.bootstrap-servers=" + broker,
+                "--payment.events.enabled=true", "--payment.notifications.events.relay-delay-ms=500",
                 "--spring.cloud.openfeign.client.config.order-service.url=" + url,
                 "--spring.cloud.openfeign.client.config.notification-service.url=" + url,
                 "--spring.cloud.openfeign.client.config.user-service.url=" + url};
     }
+    @SuppressWarnings("unchecked")
+    static Map<String,String> manifestEnv(String service, String flag, Map<String,String> fixture) throws Exception {
+        Map<String,Object> doc;
+        try (var input = Files.newInputStream(Path.of("..", "kubernetes", "services", service + ".yaml"))) { doc = (Map<String,Object>) new Yaml().loadAll(input).iterator().next(); }
+        var spec = (Map<String,Object>) doc.get("spec");
+        var template = (Map<String,Object>) spec.get("template");
+        var pod = (Map<String,Object>) template.get("spec");
+        var containers = (List<Map<String,Object>>) pod.get("containers");
+        var env = (List<Map<String,Object>>) containers.stream().filter(c -> service.equals(c.get("name"))).findFirst().orElseThrow().get("env");
+        assertEquals(0, env.stream().filter(e -> "KAFKA_BOOTSTRAP_SERVERS".equals(e.get("name"))).count());
+        var broker = env.stream().filter(e -> "SPRING_KAFKA_BOOTSTRAP_SERVERS".equals(e.get("name"))).toList();
+        var flags = env.stream().filter(e -> flag.equals(e.get("name"))).toList();
+        assertEquals(1, broker.size()); assertEquals(1, flags.size());
+        var source = (Map<String,Object>) broker.get(0).get("valueFrom");
+        var ref = (Map<String,Object>) source.get("configMapKeyRef");
+        assertEquals("ecommerce-configmap", ref.get("name")); assertEquals("SPRING_KAFKA_BOOTSTRAP_SERVERS", ref.get("key"));
+        Object value = flags.get(0).get("value"); assertInstanceOf(String.class, value); assertEquals("false", value);
+        return Map.of("SPRING_KAFKA_BOOTSTRAP_SERVERS", Objects.requireNonNull(fixture.get(ref.get("key"))), flag, (String) value);
+    }
     static void docker(String action, String id) throws Exception {
-        var p = new ProcessBuilder("docker", action, id).inheritIO().start();
+        var p = new ProcessBuilder("docker", action, id).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
         awaitProcess(p, 30, action);
     }
     static void awaitProcess(Process process, long seconds, String label) throws Exception {
@@ -383,6 +422,9 @@ class PaymentNotificationDeliveryIT {
                     .invoke(null, l.loadClass(args[0]), Arrays.copyOfRange(args, 1, args.length));
             Object server = l.loadClass("org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext").getMethod("getWebServer").invoke(ctx);
             int port = (int) l.loadClass("org.springframework.boot.web.server.WebServer").getMethod("getPort").invoke(server);
+            Class<?> kafkaProperties = l.loadClass("org.springframework.boot.autoconfigure.kafka.KafkaProperties");
+            Object kafka = ctx.getClass().getMethod("getBean", Class.class).invoke(ctx, kafkaProperties);
+            org.slf4j.LoggerFactory.getLogger(Launcher.class).info("TEST_KAFKA_BROKERS {}", kafkaProperties.getMethod("getBootstrapServers").invoke(kafka));
             if (args[0].contains("paymentservice")) {
                 var names = ctx.getClass().getMethod("getBeanNamesForType", Class.class);
                 int relays = ((String[]) names.invoke(ctx, l.loadClass("org.de013.paymentservice.service.PaymentNotificationRelay"))).length;
@@ -406,8 +448,11 @@ class PaymentNotificationDeliveryIT {
         }
     }
     static class App implements AutoCloseable {
-        final Process process; final int port; final Path log; volatile String paymentEmailBeans, paymentRelayBeans; final ExecutorService reader = Executors.newSingleThreadExecutor();
+        final Process process; final int port; final Path log; volatile String paymentEmailBeans, paymentRelayBeans, brokers; final ExecutorService reader = Executors.newSingleThreadExecutor();
         App(Path temp, Path isolated, String module, String main, PostgreSQLContainer<?> db, String... extra) throws Exception {
+            this(temp, isolated, module, main, db, Map.of(), extra);
+        }
+        App(Path temp, Path isolated, String module, String main, PostgreSQLContainer<?> db, Map<String,String> env, String... extra) throws Exception {
             Path jar = Path.of("..", module, "target", module + "-0.0.1-SNAPSHOT.jar").toAbsolutePath();
             assertTrue(Files.isRegularFile(jar), "Missing artifact " + jar);
             var time = Files.getLastModifiedTime(jar);
@@ -422,9 +467,11 @@ class PaymentNotificationDeliveryIT {
                     "--spring.jpa.hibernate.ddl-auto=validate", "--spring.flyway.enabled=true", "--management.health.defaults.enabled=false",
                     "--spring.datasource.url=" + db.getJdbcUrl(), "--spring.datasource.username=" + db.getUsername(), "--spring.datasource.password=" + db.getPassword()));
             for (String e : extra) if (!e.startsWith("stripe-base=")) command.add(e);
-            process = new ProcessBuilder(command).redirectErrorStream(true).start(); var ready = new CompletableFuture<Integer>();
+            if (!env.isEmpty()) for (String e : command) for (String forbidden : List.of("--spring.kafka.bootstrap-servers", "--payment.notifications.events.enabled", "--notification.payment-email.events.enabled")) assertFalse(e.startsWith(forbidden), "Environment proof masked by CLI: " + e);
+            var builder = new ProcessBuilder(command).redirectErrorStream(true); builder.environment().putAll(env);
+            process = builder.start(); var ready = new CompletableFuture<Integer>();
             reader.submit(() -> { try (var input = new BufferedReader(new InputStreamReader(process.getInputStream())); var out = Files.newBufferedWriter(log)) {
-                String line; while ((line = input.readLine()) != null) { out.write(line); out.newLine(); out.flush(); int beans = line.indexOf("TEST_PAYMENT_EMAIL_BEANS "); if (beans >= 0) paymentEmailBeans = line.substring(beans + "TEST_PAYMENT_EMAIL_BEANS ".length()).trim(); int relay = line.indexOf("TEST_PAYMENT_RELAY_BEANS "); if (relay >= 0) paymentRelayBeans = line.substring(relay + "TEST_PAYMENT_RELAY_BEANS ".length()).trim(); int marker = line.indexOf("TEST_READY "); if (marker >= 0) ready.complete(Integer.parseInt(line.substring(marker + 11).trim())); }
+                String line; while ((line = input.readLine()) != null) { out.write(line); out.newLine(); out.flush(); int beans = line.indexOf("TEST_PAYMENT_EMAIL_BEANS "); if (beans >= 0) paymentEmailBeans = line.substring(beans + "TEST_PAYMENT_EMAIL_BEANS ".length()).trim(); int relay = line.indexOf("TEST_PAYMENT_RELAY_BEANS "); if (relay >= 0) paymentRelayBeans = line.substring(relay + "TEST_PAYMENT_RELAY_BEANS ".length()).trim(); int kafka = line.indexOf("TEST_KAFKA_BROKERS "); if (kafka >= 0) brokers = line.substring(kafka + "TEST_KAFKA_BROKERS ".length()).trim(); int marker = line.indexOf("TEST_READY "); if (marker >= 0) ready.complete(Integer.parseInt(line.substring(marker + 11).trim())); }
                 ready.completeExceptionally(new IllegalStateException("Process exited: " + log));
             } catch (Exception e) { ready.completeExceptionally(e); } });
             try { port = ready.get(120, TimeUnit.SECONDS); } catch (Exception e) { close(); throw new IllegalStateException("Startup failed: " + log, e); }
