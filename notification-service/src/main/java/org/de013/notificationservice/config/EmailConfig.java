@@ -1,6 +1,8 @@
 package org.de013.notificationservice.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.mail.MailProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -12,6 +14,7 @@ import java.util.Properties;
  * Email configuration for the notification service
  */
 @Configuration
+@EnableConfigurationProperties(MailProperties.class)
 public class EmailConfig {
 
     @Value("${spring.mail.host:smtp.gmail.com}")
