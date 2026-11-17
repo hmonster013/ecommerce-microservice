@@ -21,6 +21,12 @@ spec:
         ports:
         - containerPort: 8081
         env:
+        - name: MANAGEMENT_SERVER_PORT
+          value: "9010"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "health,prometheus"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+          value: "true"
         - name: KEYCLOAK_PROFILE_BASE_URL
           value: "http://keycloak:8080"
         - name: KEYCLOAK_PROFILE_REALM
@@ -202,14 +208,14 @@ spec:
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
-            port: 8081
+            port: 9010
           initialDelaySeconds: 120
           periodSeconds: 10
           failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
-            port: 8081
+            port: 9010
           initialDelaySeconds: 90
           periodSeconds: 5
           failureThreshold: 5
@@ -223,6 +229,11 @@ spec:
     app: user-service
   type: ClusterIP
   ports:
-    - protocol: TCP
+    - name: application
+      protocol: TCP
       port: 8081
       targetPort: 8081
+    - name: management
+      protocol: TCP
+      port: 9010
+      targetPort: 9010

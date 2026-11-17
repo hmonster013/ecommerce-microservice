@@ -62,8 +62,9 @@ public class PaymentOutbox {
                     ? new PaymentSucceeded(id.toString(), type, 1, now.toString(), payment.getId(), payment.getPaymentNumber(), payment.getOrderId(), provider, payment.getAmount(), currency)
                     : new PaymentTransitionEvent(id.toString(), type, 1, now.toString(), payment.getId(), payment.getPaymentNumber(), payment.getOrderId(), provider, payment.getAmount(), currency, payment.getRevision(), previous.name(), payment.getStatus().name());
             String payload = mapper.writeValueAsString(event);
-            int inserted = jdbc.update("INSERT INTO payment_outbox(event_id,payment_id,event_type,payload,created_at,revision,state) VALUES (?,?,?,?,?,?,?) ON CONFLICT DO NOTHING",
-                    id, payment.getId(), type.name(), payload, java.sql.Timestamp.from(now), payment.getRevision(), held ? "RECONCILIATION" : "PENDING");
+            var trace = OutboxTrace.capture();
+            int inserted = jdbc.update("INSERT INTO payment_outbox(event_id,payment_id,event_type,payload,created_at,revision,state,traceparent,tracestate) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING",
+                    id, payment.getId(), type.name(), payload, java.sql.Timestamp.from(now), payment.getRevision(), held ? "RECONCILIATION" : "PENDING", trace.get("traceparent"), trace.get("tracestate"));
             if (inserted == 0) {
                 if (type != PaymentEventType.PaymentSucceeded) throw new IllegalStateException("Conflicting payment event revision");
                 var existing = mapper.readTree(jdbc.queryForObject("SELECT payload FROM payment_outbox WHERE payment_id=? AND event_type=?", String.class, payment.getId(), "PaymentSucceeded"));

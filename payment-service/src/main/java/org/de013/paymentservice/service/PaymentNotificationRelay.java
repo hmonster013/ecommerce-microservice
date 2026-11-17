@@ -52,15 +52,16 @@ public class PaymentNotificationRelay {
 
     private void dispatch(Candidate candidate) {
         boolean held = guard.lock(candidate.orderId());
-        var payloads = jdbc.query("select payload from payment_notification_outbox where event_id=? and state='PENDING' for update skip locked",
-                (rs, row) -> rs.getString(1), candidate.id());
+        var payloads = jdbc.query("select payload,traceparent,tracestate from payment_notification_outbox where event_id=? and state='PENDING' for update skip locked",
+                (rs, row) -> new Event(rs.getString(1), rs.getString(2), rs.getString(3)), candidate.id());
         if (payloads.isEmpty()) return;
         if (held) {
             jdbc.update("update payment_notification_outbox set state='RECONCILIATION' where event_id=?", candidate.id());
             return;
         }
-        try {
-            kafka.send("notification.payment-email.v1", Long.toString(candidate.paymentId()), payloads.get(0)).get(15, TimeUnit.SECONDS);
+        var event = payloads.get(0);
+        try (var scope = OutboxTrace.restore(event.parent(), event.state()).makeCurrent()) {
+            kafka.send("notification.payment-email.v1", Long.toString(candidate.paymentId()), event.payload()).get(15, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Payment notification dispatch interrupted", e);
@@ -71,6 +72,7 @@ public class PaymentNotificationRelay {
     }
 
     private record Candidate(UUID id, long orderId, long paymentId) { }
+    private record Event(String payload, String parent, String state) { }
 
     @Configuration
     @EnableScheduling

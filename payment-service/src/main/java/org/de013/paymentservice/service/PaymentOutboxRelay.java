@@ -51,15 +51,15 @@ public class PaymentOutboxRelay {
 
     private void dispatch(Candidate candidate) {
         boolean held = guard.lock(candidate.orderId());
-        var payloads = jdbc.query("select payload,event_type from payment_outbox where event_id=? and state='PENDING' and next_attempt_at <= current_timestamp for update skip locked",
-                (rs, row) -> new Event(rs.getString(1), PaymentEventType.valueOf(rs.getString(2))), candidate.id());
+        var payloads = jdbc.query("select payload,event_type,traceparent,tracestate from payment_outbox where event_id=? and state='PENDING' and next_attempt_at <= current_timestamp for update skip locked",
+                (rs, row) -> new Event(rs.getString(1), PaymentEventType.valueOf(rs.getString(2)), rs.getString(3), rs.getString(4)), candidate.id());
         if (payloads.isEmpty()) return;
         if (held) {
             jdbc.update("update payment_outbox set state='RECONCILIATION' where event_id=?", candidate.id());
             return;
         }
-        try {
-            var event = payloads.get(0);
+        var event = payloads.get(0);
+        try (var scope = OutboxTrace.restore(event.parent(), event.state()).makeCurrent()) {
             kafka.send(event.type().topic(), Long.toString(candidate.orderId()), event.payload()).get(15, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -77,7 +77,7 @@ public class PaymentOutboxRelay {
     }
 
     private record Candidate(UUID id, long orderId) { }
-    private record Event(String payload, PaymentEventType type) { }
+    private record Event(String payload, PaymentEventType type, String parent, String state) { }
 
     @Configuration
     @EnableScheduling

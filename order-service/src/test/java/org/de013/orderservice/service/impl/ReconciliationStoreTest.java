@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Duration;
 import java.util.UUID;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +29,27 @@ class ReconciliationStoreTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired TransactionTemplate tx;
     @Autowired ReconciliationStore store;
+
+    @Test void metricsCountOnlyCurrentRevisionReasonsAndIncludeRevisionZero() {
+        var registry = new SimpleMeterRegistry();
+        new OrderObservability(registry, jdbc);
+        var findings = registry.get("ecommerce.reconciliation.findings").gauge();
+        var inventory = registry.get("ecommerce.reconciliation.reasons").tag("reason", "INVENTORY_MISMATCH").gauge();
+        var stale = registry.get("ecommerce.reconciliation.reasons").tag("reason", "UNKNOWN_OR_STALE").gauge();
+        var allocating = registry.get("ecommerce.saga.orders").tag("phase", "ALLOCATING").gauge();
+        var failures = registry.get("ecommerce.saga.failures").gauge();
+        double beforeFindings = findings.value(), beforeInventory = inventory.value(), beforeStale = stale.value();
+        double beforeAllocating = allocating.value(), beforeFailures = failures.value();
+        long id = jdbc.queryForObject("INSERT INTO orders(order_number,user_id,status,order_type,allocation_phase) VALUES (?, 'owner', 'PENDING', 'STANDARD', 'ALLOCATING') RETURNING id", Long.class, UUID.randomUUID().toString());
+        long pending = jdbc.queryForObject("INSERT INTO orders(order_number,user_id,status,order_type,allocation_phase) VALUES (?, 'owner', 'FAILED', 'STANDARD', 'FAILED') RETURNING id", Long.class, UUID.randomUUID().toString());
+        jdbc.update("INSERT INTO reconciliation_finding(order_id,current_revision,next_check_at) VALUES (?,2,clock_timestamp()+interval '1 day'), (?,0,clock_timestamp()+interval '1 day')", id, pending);
+        jdbc.update("INSERT INTO reconciliation_revision(order_id,revision,evidence,reasons) VALUES (?,1,'{}','[\"UNKNOWN_OR_STALE\"]'), (?,2,'{}','[\"INVENTORY_MISMATCH\"]')", id, id);
+        assertEquals(beforeFindings + 2, findings.value());
+        assertEquals(beforeInventory + 1, inventory.value());
+        assertEquals(beforeStale, stale.value());
+        assertEquals(beforeAllocating + 1, allocating.value());
+        assertEquals(beforeFailures + 1, failures.value());
+    }
 
     @Test void leaseTakeoverHistoryAndRevisionCas() {
         jdbc.update("DELETE FROM reconciliation_finding WHERE current_revision=0");

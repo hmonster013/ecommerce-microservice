@@ -65,6 +65,47 @@ class PaymentOutboxStageATest {
     @org.springframework.beans.factory.annotation.Autowired jakarta.validation.Validator validatorBean;
     @org.springframework.beans.factory.annotation.Autowired PaymentRetryAttempts retryAttempts;
     @org.springframework.beans.factory.annotation.Autowired CheckoutClosureService closures;
+    @org.springframework.beans.factory.annotation.Autowired PaymentOutbox outbox;
+
+    @Test void gaugesReflectBothPostgresOutboxes() {
+        var p = payment(99883, "STRIPE", PaymentStatus.PENDING);
+        jdbc.update("update payment_outbox set state='PUBLISHED' where state in ('PENDING','RECONCILIATION')");
+        jdbc.update("update payment_notification_outbox set state='PUBLISHED' where state in ('PENDING','RECONCILIATION')");
+        var registry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+        new OutboxMetrics(jdbc, registry);
+        for (String tag : java.util.List.of("financial", "notification")) {
+            assertEquals(0, registry.get("ecommerce.outbox.pending").tag("outbox", tag).gauge().value());
+            assertEquals(0, registry.get("ecommerce.outbox.oldest.age").tag("outbox", tag).gauge().value());
+        }
+        jdbc.update("insert into payment_outbox(event_id,payment_id,event_type,payload,state,created_at,revision) values (?,?,?,?,'PENDING',clock_timestamp()-interval '120 seconds',1001),(?,?,?,?,'RECONCILIATION',clock_timestamp(),1002)",
+                java.util.UUID.randomUUID(), p.getId(), "gauge-pending", "{}", java.util.UUID.randomUUID(), p.getId(), "gauge-recon", "{}");
+        jdbc.update("insert into payment_notification_outbox(event_id,payment_id,notification_type,payload,state,created_at) values (?,?,?,?,'PENDING',clock_timestamp()-interval '120 seconds'),(?,?,?,?,'RECONCILIATION',clock_timestamp())",
+                java.util.UUID.randomUUID(), p.getId(), "gauge-pending", "{}", java.util.UUID.randomUUID(), p.getId(), "gauge-recon", "{}");
+        for (String tag : java.util.List.of("financial", "notification")) {
+            assertEquals(1, registry.get("ecommerce.outbox.pending").tag("outbox", tag).gauge().value());
+            assertEquals(1, registry.get("ecommerce.outbox.reconciliation").tag("outbox", tag).gauge().value());
+            assertTrue(registry.get("ecommerce.outbox.oldest.age").tag("outbox", tag).gauge().value() >= 120);
+        }
+        jdbc.update("update payment_outbox set created_at=clock_timestamp()+interval '1 hour' where payment_id=? and state='PENDING'", p.getId());
+        jdbc.update("update payment_notification_outbox set created_at=clock_timestamp()+interval '1 hour' where payment_id=? and state='PENDING'", p.getId());
+        for (String tag : java.util.List.of("financial", "notification"))
+            assertEquals(0, registry.get("ecommerce.outbox.oldest.age").tag("outbox", tag).gauge().value());
+        jdbc.update("delete from payment_outbox where payment_id=?", p.getId());
+        jdbc.update("delete from payment_notification_outbox where payment_id=?", p.getId());
+    }
+
+    @Test void traceIsPersistedAndRolledBackWithFinancialEvent() {
+        var p = payment(99882, "STRIPE", PaymentStatus.PENDING);
+        var span = io.opentelemetry.api.trace.Span.wrap(io.opentelemetry.api.trace.SpanContext.create(
+                "0123456789abcdef0123456789abcdef", "0123456789abcdef", io.opentelemetry.api.trace.TraceFlags.getSampled(), io.opentelemetry.api.trace.TraceState.getDefault()));
+        try (var scope = span.makeCurrent()) {
+            new TransactionTemplate(tx).executeWithoutResult(s -> { outbox.transition(repository.findById(p.getId()).orElseThrow(), PaymentStatus.SUCCEEDED, false); s.setRollbackOnly(); });
+            assertEquals(0, jdbc.queryForObject("select count(*) from payment_outbox where payment_id=?", Integer.class, p.getId()));
+            new TransactionTemplate(tx).executeWithoutResult(s -> outbox.transition(repository.findById(p.getId()).orElseThrow(), PaymentStatus.SUCCEEDED, false));
+        }
+        assertEquals("00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
+                jdbc.queryForObject("select traceparent from payment_outbox where payment_id=?", String.class, p.getId()));
+    }
 
     @Test void failedOwnerRetryConfirmsSameIntentOnceWithDurableKey() throws Exception {
         var p = payment(99373, "STRIPE", PaymentStatus.FAILED);

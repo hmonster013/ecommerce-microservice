@@ -52,7 +52,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http,
+                                    @Value("${management.server.port:-1}") int managementPort,
+                                    @Value("${server.port:8080}") int serverPort) throws Exception {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             Object realm = jwt.getClaims().get("realm_access");
@@ -65,6 +67,9 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable).cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(request -> managementPort > 0 && managementPort != serverPort
+                            && request.getLocalPort() == managementPort && "GET".equals(request.getMethod())
+                            && "/actuator/prometheus".equals(request.getRequestURI())).permitAll()
                     .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/internal/inventory-reservations", "/internal/inventory-reservations/*/release", "/internal/inventory-reservations/*/fulfill")
                         .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(internal(authentication.get())))

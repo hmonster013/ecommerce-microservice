@@ -45,6 +45,42 @@ class PaymentOutboxRelayTest {
     @Autowired org.springframework.kafka.core.KafkaTemplate<String, String> kafka;
     @MockBean org.de013.paymentservice.client.HostedOrderClient orders;
 
+    @Test void relayRestoresEachTraceAndPublishesLegacyAndMalformed() {
+        jdbc.update("update payment_outbox set state='RECONCILIATION' where state='PENDING'");
+        long[] ids = {create(99111), create(99112), create(99113), create(99114), create(99115)};
+        String a = "00-11111111111111111111111111111111-1111111111111111-01";
+        String b = "00-22222222222222222222222222222222-2222222222222222-01";
+        jdbc.update("update payment_outbox set traceparent=? where payment_id=?", a, ids[0]);
+        jdbc.update("update payment_outbox set traceparent=? where payment_id=?", b, ids[1]);
+        jdbc.update("update payment_outbox set traceparent='malformed' where payment_id=?", ids[3]);
+        var observed = new java.util.HashMap<String, String>();
+        var payloads = new java.util.HashMap<String, String>();
+        var spy = org.mockito.Mockito.spy(kafka);
+        org.mockito.Mockito.doAnswer(inv -> {
+            String key = inv.getArgument(1);
+            observed.put(key, io.opentelemetry.api.trace.Span.current().getSpanContext().getTraceId());
+            payloads.put(key, inv.getArgument(2));
+            if (key.equals("99115")) throw new IllegalStateException("injected");
+            return inv.callRealMethod();
+        }).when(spy).send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+        var outer = io.opentelemetry.api.trace.Span.wrap(io.opentelemetry.api.trace.SpanContext.create(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaa", io.opentelemetry.api.trace.TraceFlags.getSampled(), io.opentelemetry.api.trace.TraceState.getDefault()));
+        try (var scope = outer.makeCurrent()) {
+            var instance = new PaymentOutboxRelay(jdbc, guard, spy, tx);
+            instance.relay(); instance.relay();
+            assertEquals(outer.getSpanContext(), io.opentelemetry.api.trace.Span.current().getSpanContext());
+        }
+        assertEquals("11111111111111111111111111111111", observed.get("99111"));
+        assertEquals("22222222222222222222222222222222", observed.get("99112"));
+        assertEquals("00000000000000000000000000000000", observed.get("99113"));
+        assertEquals("00000000000000000000000000000000", observed.get("99114"));
+        for (int i = 0; i < 4; i++) {
+            assertEquals("PUBLISHED", state(ids[i]));
+            assertEquals(jdbc.queryForObject("select payload from payment_outbox where payment_id=?", String.class, ids[i]), payloads.get(Long.toString(99111 + i)));
+        }
+        assertEquals("PENDING", state(ids[4]));
+    }
+
     private long create(long order) {
         var checkout = store.reserve(order, "owner", new BigDecimal("25.00"), "https://fixture.test/checkout/result");
         store.record(order, 0, "cs_" + order, "PAID", "pi_" + order);

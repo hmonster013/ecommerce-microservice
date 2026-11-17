@@ -57,8 +57,9 @@ public class PaymentNotificationOutbox {
         try {
             String payload = mapper.writeValueAsString(new Event(id.toString(), "PaymentEmailRequested", 1, now.toString(),
                     payment.getId(), payment.getPaymentNumber(), payment.getOrderId(), user, "EMAIL", recipient, subject, content));
-            int inserted = jdbc.update("INSERT INTO payment_notification_outbox(event_id,payment_id,notification_type,payload,state,created_at) VALUES (?,?,?,?,?,?) ON CONFLICT (payment_id,notification_type) DO NOTHING",
-                    id, payment.getId(), "EMAIL", payload, valid ? "PENDING" : "RECONCILIATION", Timestamp.from(now));
+            var trace = OutboxTrace.capture();
+            int inserted = jdbc.update("INSERT INTO payment_notification_outbox(event_id,payment_id,notification_type,payload,state,created_at,traceparent,tracestate) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT (payment_id,notification_type) DO NOTHING",
+                    id, payment.getId(), "EMAIL", payload, valid ? "PENDING" : "RECONCILIATION", Timestamp.from(now), trace.get("traceparent"), trace.get("tracestate"));
             if (inserted == 0) {
                 var existing = mapper.readTree(jdbc.queryForObject("select payload from payment_notification_outbox where payment_id=? and notification_type='EMAIL'", String.class, payment.getId()));
                 if (existing.path("paymentId").asLong() != payment.getId() || existing.path("orderId").asLong() != payment.getOrderId()

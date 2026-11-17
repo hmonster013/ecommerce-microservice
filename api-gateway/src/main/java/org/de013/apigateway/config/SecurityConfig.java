@@ -19,6 +19,7 @@ import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
@@ -28,6 +29,7 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.net.InetSocketAddress;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -36,18 +38,26 @@ public class SecurityConfig {
     @Value("${app.security.permit-all-swagger-paths:true}")
     private boolean permitAllSwaggerPaths;
 
+    @Value("${management.server.port:-1}")
+    private int managementPort;
+
+    @Value("${server.port:8080}")
+    private int serverPort;
+
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> {
+                    exchanges.matchers(managementEndpointMatcher()).permitAll();
+                    exchanges.pathMatchers("/actuator/**").hasRole(UserRole.ADMIN.roleName());
                     if (permitAllSwaggerPaths) {
                         // Allow Swagger UI and API docs access without authentication
-                        exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").permitAll();
+                        exchanges.pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").permitAll();
                     } else {
                         // Require authentication for all other paths
-                        exchanges.pathMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").hasRole(UserRole.ADMIN.roleName());
+                        exchanges.pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v1/api-docs/**", "/webjars/**", "/api/*/v1/api-docs/**", "/api/*/*/v1/api-docs/**").hasRole(UserRole.ADMIN.roleName());
                     }
 
                     exchanges
@@ -190,6 +200,19 @@ public class SecurityConfig {
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(grantedAuthoritiesExtractor()))
                 )
                 .build();
+    }
+
+    private ServerWebExchangeMatcher managementEndpointMatcher() {
+        return exchange -> {
+            InetSocketAddress local = exchange.getRequest().getLocalAddress();
+            String path = exchange.getRequest().getPath().pathWithinApplication().value();
+            boolean endpoint = path.equals("/actuator/health") || path.startsWith("/actuator/health/")
+                    || path.equals("/actuator/prometheus");
+            return managementPort > 0 && managementPort != serverPort && local != null
+                    && local.getPort() == managementPort && endpoint
+                    ? ServerWebExchangeMatcher.MatchResult.match()
+                    : ServerWebExchangeMatcher.MatchResult.notMatch();
+        };
     }
 
     @Bean

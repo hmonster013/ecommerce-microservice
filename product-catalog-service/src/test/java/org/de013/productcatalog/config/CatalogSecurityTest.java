@@ -59,6 +59,8 @@ class CatalogSecurityTest {
     @DynamicPropertySource
     static void issuer(DynamicPropertyRegistry registry) {
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> ISSUER);
+        registry.add("management.server.port", () -> "9010");
+        registry.add("server.port", () -> "8082");
     }
 
     @AfterAll
@@ -125,6 +127,18 @@ class CatalogSecurityTest {
         assertThat(call(HttpMethod.POST, "/unknown", null)).isIn(401, 403);
         assertThat(call(HttpMethod.OPTIONS, "/products", null)).isIn(401, 403);
         assertThat(call(HttpMethod.GET, "/products", "invalid")).isEqualTo(401);
+    }
+
+    @Test
+    void prometheusIsOnlyPublicOnManagementPort() throws Exception {
+        mvc.perform(request(HttpMethod.GET, "/actuator/prometheus").with(r -> { r.setLocalPort(9010); return r; }))
+                .andExpect(status().isOk());
+        mvc.perform(request(HttpMethod.GET, "/actuator/prometheus").with(r -> { r.setLocalPort(8082); return r; }))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(request(HttpMethod.GET, "/actuator/metrics").with(r -> { r.setLocalPort(9010); return r; }))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(request(HttpMethod.POST, "/actuator/prometheus").with(r -> { r.setLocalPort(9010); return r; }))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

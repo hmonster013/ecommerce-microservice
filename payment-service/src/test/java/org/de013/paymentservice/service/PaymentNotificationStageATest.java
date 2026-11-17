@@ -44,6 +44,20 @@ class PaymentNotificationStageATest {
     @org.springframework.beans.factory.annotation.Autowired PaymentRetryAttempts retryAttempts;
     @org.springframework.beans.factory.annotation.Autowired org.springframework.transaction.PlatformTransactionManager tx;
     @org.springframework.beans.factory.annotation.Autowired jakarta.validation.Validator validatorBean;
+    @org.springframework.beans.factory.annotation.Autowired PaymentNotificationOutbox outbox;
+
+    @Test void traceIsPersistedAndRolledBackWithNotification() {
+        var p = payment(99881, "STRIPE", PaymentStatus.PENDING);
+        var span = io.opentelemetry.api.trace.Span.wrap(io.opentelemetry.api.trace.SpanContext.create(
+                "0123456789abcdef0123456789abcdef", "0123456789abcdef", io.opentelemetry.api.trace.TraceFlags.getSampled(), io.opentelemetry.api.trace.TraceState.getDefault()));
+        try (var scope = span.makeCurrent()) {
+            new org.springframework.transaction.support.TransactionTemplate(tx).executeWithoutResult(s -> { outbox.enqueue(p); s.setRollbackOnly(); });
+            assertEquals(0, count(p.getId()));
+            new org.springframework.transaction.support.TransactionTemplate(tx).executeWithoutResult(s -> outbox.enqueue(p));
+        }
+        assertEquals("00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
+                jdbc.queryForObject("select traceparent from payment_notification_outbox where payment_id=?", String.class, p.getId()));
+    }
 
     private org.de013.paymentservice.entity.Payment payment(long order, String provider, PaymentStatus status) {
         return repository.saveAndFlush(org.de013.paymentservice.entity.Payment.builder().orderId(order).userId("owner")
