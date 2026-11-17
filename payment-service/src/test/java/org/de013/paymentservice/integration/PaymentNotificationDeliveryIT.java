@@ -30,6 +30,173 @@ class PaymentNotificationDeliveryIT {
     static final String SECRET = "whsec_artifact_fixture";
 
     @Test @Timeout(value = 12, unit = TimeUnit.MINUTES)
+    void localBacklogDrainBeforeProducerRollback() throws Exception {
+        Path temp = Path.of(System.getProperty("java.io.tmpdir"), "opencode");
+        Files.createDirectories(temp);
+        Path isolated = Files.createTempDirectory(temp, "notification-cutover-");
+        String resource = Launcher.class.getName().replace('.', '/') + ".class";
+        Path copy = isolated.resolve(resource); Files.createDirectories(copy.getParent());
+        try (var in = Launcher.class.getClassLoader().getResourceAsStream(resource)) { assertNotNull(in); Files.copy(in, copy); }
+        try (var pdb = new PostgreSQLContainer<>("postgres:17-alpine");
+             var ndbContainer = new PostgreSQLContainer<>("postgres:17-alpine");
+             var kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1")); var smtp = new Smtp()) {
+            pdb.start(); ndbContainer.start(); kafka.start();
+            var fixture = com.sun.net.httpserver.HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            AtomicInteger legacy = new AtomicInteger(), users = new AtomicInteger(), other = new AtomicInteger();
+            fixture.createContext("/", x -> {
+                String path = x.getRequestURI().getPath(); String body;
+                if (path.equals("/v1/account")) body = "{\"id\":\"acct_fixture\",\"object\":\"account\",\"charges_enabled\":true,\"payouts_enabled\":true,\"details_submitted\":true}";
+                else if (path.equals("/notifications/send-email")) { legacy.incrementAndGet(); body = "{\"success\":true,\"data\":{}}"; }
+                else if (path.startsWith("/users/internal/by-keycloak-id/")) { users.incrementAndGet(); body = "{\"success\":true,\"data\":{\"email\":\"owner@example.com\"}}"; }
+                else { other.incrementAndGet(); body = "{\"success\":true,\"data\":{}}"; }
+                byte[] bytes = body.getBytes(StandardCharsets.UTF_8); x.getResponseHeaders().add("Content-Type", "application/json");
+                x.sendResponseHeaders(200, bytes.length); x.getResponseBody().write(bytes); x.close();
+            }); fixture.start();
+            String url = "http://127.0.0.1:" + fixture.getAddress().getPort();
+            String[] on = paymentArgs(url, kafka.getBootstrapServers(), true), off = paymentArgs(url, kafka.getBootstrapServers(), false);
+            boolean paused = false;
+            try (var db = DriverManager.getConnection(pdb.getJdbcUrl(), pdb.getUsername(), pdb.getPassword());
+                 var payment = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, on)) {
+                assertEquals("1", payment.paymentRelayBeans);
+                docker("pause", kafka.getContainerId()); paused = true;
+                long id = seed(db, "cutover", 201, true);
+                assertEquals(200, webhook(payment.port, "cutover").statusCode());
+                assertEquals("SUCCEEDED", text(db, "SELECT status FROM payments WHERE id=" + id));
+                String event = text(db, "SELECT event_id FROM payment_notification_outbox WHERE payment_id=" + id);
+                String payload = text(db, "SELECT payload FROM payment_notification_outbox WHERE payment_id=" + id);
+                await(() -> Files.readString(payment.log).contains("Payment notification " + event + " dispatch failed; retained for retry"));
+                assertFalse(paymentDrained(db));
+                assertEquals(0, legacy.get()); assertEquals(0, users.get()); assertEquals(0, other.get());
+                payment.close();
+                try (var restarted = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, on)) {
+                    assertEquals("1", restarted.paymentRelayBeans);
+                    assertEquals("SUCCEEDED", text(db, "SELECT status FROM payments WHERE id=" + id));
+                    assertEquals(event, text(db, "SELECT event_id FROM payment_notification_outbox WHERE payment_id=" + id));
+                    assertEquals(payload, text(db, "SELECT payload FROM payment_notification_outbox WHERE payment_id=" + id));
+                    assertEquals("PENDING", text(db, "SELECT state FROM payment_notification_outbox WHERE payment_id=" + id));
+                    assertFalse(paymentDrained(db));
+                    assertEquals(0, legacy.get()); assertEquals(0, users.get()); assertEquals(0, other.get());
+                    // Harness has completed its only callback and will issue no new eligible writes before the barrier.
+                    docker("unpause", kafka.getContainerId()); paused = false;
+                    try (var notification = new App(temp, isolated, "notification-service", "org.de013.notificationservice.NotificationServiceApplication", ndbContainer,
+                            "--notification.payment-email.events.enabled=true", "--notification.payment-email.poll-ms=500",
+                            "--spring.kafka.bootstrap-servers=" + kafka.getBootstrapServers(), "--spring.mail.host=127.0.0.1", "--spring.mail.port=" + smtp.port(),
+                            "--spring.mail.properties.mail.smtp.auth=false", "--spring.mail.properties.mail.smtp.starttls.enable=false");
+                         var ndb = DriverManager.getConnection(ndbContainer.getJdbcUrl(), ndbContainer.getUsername(), ndbContainer.getPassword());
+                         var admin = AdminClient.create(Map.of("bootstrap.servers", kafka.getBootstrapServers()));
+                         var consumer = new KafkaConsumer<String,String>(Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers(), ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString(), ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class, ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class))) {
+                        assertEquals("1/1/1", notification.paymentEmailBeans);
+                        await(() -> "PUBLISHED".equals(text(db, "SELECT state FROM payment_notification_outbox WHERE payment_id=" + id)));
+                        await(() -> number(ndb, "SELECT count(*) FROM payment_email_request WHERE event_id='" + event + "' AND delivery_status='SENT'") == 1);
+                        await(() -> drained(db, ndb, admin, consumer, smtp));
+                        String request = text(ndb, "SELECT row_to_json(r)::text FROM payment_email_request r WHERE event_id='" + event + "'");
+                        String history = text(ndb, "SELECT row_to_json(n)::text FROM notifications n JOIN payment_email_request r ON n.id=r.notification_id WHERE r.event_id='" + event + "'");
+                        var partitions = consumer.partitionsFor(TOPIC).stream().map(p -> new TopicPartition(TOPIC, p.partition())).toList();
+                        var ends = consumer.endOffsets(partitions);
+                        int sent = smtp.accepted.get(); assertEquals(1, sent);
+                        restarted.close();
+                        try (var legacyPayment = new App(temp, isolated, "payment-service", "org.de013.paymentservice.PaymentServiceApplication", pdb, off)) {
+                            assertEquals("0", legacyPayment.paymentRelayBeans);
+                            long fresh = seed(db, "cutover_legacy", 202, true);
+                            assertEquals(200, webhook(legacyPayment.port, "cutover_legacy").statusCode());
+                            assertEquals(1, legacy.get()); assertEquals(0, users.get()); assertEquals(0, other.get());
+                            assertEquals("SUCCEEDED", text(db, "SELECT status FROM payments WHERE id=" + fresh));
+                            assertEquals(0, number(db, "SELECT count(*) FROM payment_notification_outbox WHERE payment_id=" + fresh));
+                            long observeUntil = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                            while (System.nanoTime() < observeUntil) {
+                                assertEquals(ends, consumer.endOffsets(partitions));
+                                assertEquals(sent, smtp.accepted.get());
+                                Thread.sleep(200);
+                            }
+                            await(() -> drained(db, ndb, admin, consumer, smtp));
+                            assertEquals(payload, text(db, "SELECT payload FROM payment_notification_outbox WHERE payment_id=" + id));
+                            assertEquals(request, text(ndb, "SELECT row_to_json(r)::text FROM payment_email_request r WHERE event_id='" + event + "'"));
+                            assertEquals(history, text(ndb, "SELECT row_to_json(n)::text FROM notifications n JOIN payment_email_request r ON n.id=r.notification_id WHERE r.event_id='" + event + "'"));
+                            assertEquals(sent, smtp.accepted.get());
+                        }
+                        notification.close();
+                        assertEquals(ends, consumer.endOffsets(partitions));
+                        assertEquals(payload, text(db, "SELECT payload FROM payment_notification_outbox WHERE payment_id=" + id));
+                        assertEquals(request, text(ndb, "SELECT row_to_json(r)::text FROM payment_email_request r WHERE event_id='" + event + "'"));
+                        assertEquals(history, text(ndb, "SELECT row_to_json(n)::text FROM notifications n JOIN payment_email_request r ON n.id=r.notification_id WHERE r.event_id='" + event + "'"));
+                        assertEquals(sent, smtp.accepted.get());
+                    }
+                }
+            } finally { if (paused) docker("unpause", kafka.getContainerId()); fixture.stop(0); }
+        }
+    }
+
+    static String[] paymentArgs(String url, String broker, boolean enabled) {
+        return new String[]{"stripe-base=" + url, "--payment.internal.issuer-uri=" + url,
+                "--payment.gateways.stripe.api-key=sk_test_fixture", "--payment.gateways.stripe.webhook-secret=" + SECRET,
+                "--payment.events.enabled=true", "--payment.notifications.events.enabled=" + enabled,
+                "--payment.notifications.events.relay-delay-ms=500", "--spring.kafka.bootstrap-servers=" + broker,
+                "--spring.cloud.openfeign.client.config.order-service.url=" + url,
+                "--spring.cloud.openfeign.client.config.notification-service.url=" + url,
+                "--spring.cloud.openfeign.client.config.user-service.url=" + url};
+    }
+    static void docker(String action, String id) throws Exception {
+        var p = new ProcessBuilder("docker", action, id).inheritIO().start();
+        awaitProcess(p, 30, action);
+    }
+    static void awaitProcess(Process process, long seconds, String label) throws Exception {
+        boolean interrupted = false;
+        try {
+            assertTrue(process.waitFor(seconds, TimeUnit.SECONDS), label + " timed out");
+            assertEquals(0, process.exitValue(), label + " failed");
+        } catch (InterruptedException e) {
+            interrupted = true;
+            throw e;
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                try { assertTrue(process.waitFor(10, TimeUnit.SECONDS), label + " did not terminate"); }
+                catch (InterruptedException e) { interrupted = true; throw e; }
+                finally { if (interrupted) Thread.currentThread().interrupt(); }
+            } else if (interrupted) Thread.currentThread().interrupt();
+        }
+    }
+    @Test @Timeout(value = 20, unit = TimeUnit.SECONDS)
+    void hungProcessIsTimedOutAndTerminated() throws Exception {
+        Path marker = Files.createTempFile("hung-process-", ".ready");
+        Files.delete(marker);
+        var process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-cp", System.getProperty("java.class.path"), HungProcess.class.getName(), marker.toString()).start();
+        try (var output = process.getInputStream()) {
+            long readyDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (!Files.exists(marker) && process.isAlive() && System.nanoTime() < readyDeadline) Thread.sleep(50);
+            assertTrue(Files.exists(marker), "Hung fixture did not start");
+            assertEquals(0, output.available());
+            long start = System.nanoTime();
+            assertThrows(AssertionError.class, () -> awaitProcess(process, 1, "hung fixture"));
+            assertTrue(System.nanoTime() - start < TimeUnit.SECONDS.toNanos(15));
+            assertFalse(process.isAlive());
+        } finally {
+            if (process.isAlive()) { process.destroyForcibly(); assertTrue(process.waitFor(10, TimeUnit.SECONDS)); }
+            Files.deleteIfExists(marker);
+        }
+    }
+    public static class HungProcess {
+        public static void main(String[] args) throws Exception {
+            Files.writeString(Path.of(args[0]), "ready");
+            Thread.sleep(TimeUnit.MINUTES.toMillis(2));
+        }
+    }
+    static boolean paymentDrained(Connection db) throws Exception {
+        return number(db, "SELECT count(*) FROM payment_notification_outbox WHERE state <> 'PUBLISHED'") == 0;
+    }
+    static boolean drained(Connection db, Connection ndb, AdminClient admin, KafkaConsumer<String,String> consumer, Smtp smtp) throws Exception {
+        if (!paymentDrained(db) || number(ndb, "SELECT count(*) FROM payment_email_request WHERE delivery_status <> 'SENT'") != 0
+                || number(ndb, "SELECT count(*) FROM payment_email_dlt_outbox WHERE published_at IS NULL") != 0
+                || number(ndb, "SELECT count(*) FROM payment_email_quarantine") != 0 || smtp.active.get() != 0) return false;
+        var partitions = consumer.partitionsFor(TOPIC).stream().map(p -> new TopicPartition(TOPIC, p.partition())).toList();
+        if (partitions.isEmpty()) return false;
+        var ends = consumer.endOffsets(partitions);
+        var committed = admin.listConsumerGroupOffsets("notification-payment-email-v1").partitionsToOffsetAndMetadata().get(5, TimeUnit.SECONDS);
+        return partitions.stream().allMatch(p -> committed.containsKey(p) && committed.get(p).offset() >= ends.get(p));
+    }
+
+    @Test @Timeout(value = 12, unit = TimeUnit.MINUTES)
     void notificationCatchesUpAfterBeingOffline() throws Exception {
         Path temp = Path.of(System.getProperty("java.io.tmpdir"), "opencode");
         Files.createDirectories(temp);
@@ -216,6 +383,11 @@ class PaymentNotificationDeliveryIT {
                     .invoke(null, l.loadClass(args[0]), Arrays.copyOfRange(args, 1, args.length));
             Object server = l.loadClass("org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext").getMethod("getWebServer").invoke(ctx);
             int port = (int) l.loadClass("org.springframework.boot.web.server.WebServer").getMethod("getPort").invoke(server);
+            if (args[0].contains("paymentservice")) {
+                var names = ctx.getClass().getMethod("getBeanNamesForType", Class.class);
+                int relays = ((String[]) names.invoke(ctx, l.loadClass("org.de013.paymentservice.service.PaymentNotificationRelay"))).length;
+                org.slf4j.LoggerFactory.getLogger(Launcher.class).info("TEST_PAYMENT_RELAY_BEANS {}", relays);
+            }
             if (args[0].contains("notificationservice")) {
                 var names = ctx.getClass().getMethod("getBeanNamesForType", Class.class);
                 int workers = ((String[]) names.invoke(ctx, l.loadClass("org.de013.notificationservice.service.PaymentEmailWorkers"))).length;
@@ -234,7 +406,7 @@ class PaymentNotificationDeliveryIT {
         }
     }
     static class App implements AutoCloseable {
-        final Process process; final int port; final Path log; volatile String paymentEmailBeans; final ExecutorService reader = Executors.newSingleThreadExecutor();
+        final Process process; final int port; final Path log; volatile String paymentEmailBeans, paymentRelayBeans; final ExecutorService reader = Executors.newSingleThreadExecutor();
         App(Path temp, Path isolated, String module, String main, PostgreSQLContainer<?> db, String... extra) throws Exception {
             Path jar = Path.of("..", module, "target", module + "-0.0.1-SNAPSHOT.jar").toAbsolutePath();
             assertTrue(Files.isRegularFile(jar), "Missing artifact " + jar);
@@ -252,7 +424,7 @@ class PaymentNotificationDeliveryIT {
             for (String e : extra) if (!e.startsWith("stripe-base=")) command.add(e);
             process = new ProcessBuilder(command).redirectErrorStream(true).start(); var ready = new CompletableFuture<Integer>();
             reader.submit(() -> { try (var input = new BufferedReader(new InputStreamReader(process.getInputStream())); var out = Files.newBufferedWriter(log)) {
-                String line; while ((line = input.readLine()) != null) { out.write(line); out.newLine(); out.flush(); int beans = line.indexOf("TEST_PAYMENT_EMAIL_BEANS "); if (beans >= 0) paymentEmailBeans = line.substring(beans + "TEST_PAYMENT_EMAIL_BEANS ".length()).trim(); int marker = line.indexOf("TEST_READY "); if (marker >= 0) ready.complete(Integer.parseInt(line.substring(marker + 11).trim())); }
+                String line; while ((line = input.readLine()) != null) { out.write(line); out.newLine(); out.flush(); int beans = line.indexOf("TEST_PAYMENT_EMAIL_BEANS "); if (beans >= 0) paymentEmailBeans = line.substring(beans + "TEST_PAYMENT_EMAIL_BEANS ".length()).trim(); int relay = line.indexOf("TEST_PAYMENT_RELAY_BEANS "); if (relay >= 0) paymentRelayBeans = line.substring(relay + "TEST_PAYMENT_RELAY_BEANS ".length()).trim(); int marker = line.indexOf("TEST_READY "); if (marker >= 0) ready.complete(Integer.parseInt(line.substring(marker + 11).trim())); }
                 ready.completeExceptionally(new IllegalStateException("Process exited: " + log));
             } catch (Exception e) { ready.completeExceptionally(e); } });
             try { port = ready.get(120, TimeUnit.SECONDS); } catch (Exception e) { close(); throw new IllegalStateException("Startup failed: " + log, e); }
@@ -261,15 +433,15 @@ class PaymentNotificationDeliveryIT {
     }
     static class Smtp implements AutoCloseable {
         final ServerSocket server = new ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"));
-        final AtomicInteger accepted = new AtomicInteger(); final ExecutorService pool = Executors.newSingleThreadExecutor();
+        final AtomicInteger accepted = new AtomicInteger(), active = new AtomicInteger(); final ExecutorService pool = Executors.newSingleThreadExecutor();
         Smtp() throws IOException { pool.submit(() -> { while (!server.isClosed()) try (var socket = server.accept(); var in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII)); var out = new PrintWriter(socket.getOutputStream(), true, StandardCharsets.US_ASCII)) {
-            out.print("220 localhost ESMTP\r\n"); out.flush(); String line; boolean data = false;
+            active.incrementAndGet(); try { out.print("220 localhost ESMTP\r\n"); out.flush(); String line; boolean data = false;
             while ((line = in.readLine()) != null) {
                 if (data) { if (line.equals(".")) { accepted.incrementAndGet(); data = false; out.print("250 accepted\r\n"); out.flush(); } continue; }
                 if (line.startsWith("DATA")) { data = true; out.print("354 end with dot\r\n"); }
                 else if (line.startsWith("QUIT")) { out.print("221 bye\r\n"); out.flush(); break; }
                 else out.print("250 OK\r\n"); out.flush();
-            }
+            } } finally { active.decrementAndGet(); }
         } catch (IOException e) { if (!server.isClosed()) throw new UncheckedIOException(e); } }); }
         int port() { return server.getLocalPort(); }
         public void close() throws Exception { server.close(); pool.shutdownNow(); pool.awaitTermination(5, TimeUnit.SECONDS); }
