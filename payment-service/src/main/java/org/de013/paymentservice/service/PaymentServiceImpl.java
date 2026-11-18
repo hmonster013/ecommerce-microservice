@@ -182,11 +182,13 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse cancelPayment(Long paymentId, String reason) {
         return locked(paymentId, (payment, held) -> {
+            guard.requireNotPermanentlyFenced(payment.getOrderId());
             if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
                 outbox.transition(payment, PaymentStatus.CANCELED, held);
                 payment.setFailureReason(reason);
                 createPaymentTransaction(payment, null, TransactionType.CANCELLATION);
                 paymentRepository.save(payment);
+                guard.financialChange(payment.getOrderId());
             }
             return paymentMapper.toPaymentResponse(payment);
         });
@@ -277,11 +279,14 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public PaymentResponse updatePaymentStatus(Long paymentId, PaymentStatus status, String reason) {
         return locked(paymentId, (payment, held) -> {
+            guard.requireNotPermanentlyFenced(payment.getOrderId());
             if (!payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.SUCCEEDED) {
+                boolean changed = payment.getStatus() != status;
                 outbox.transition(payment, status, held);
                 if (status == PaymentStatus.SUCCEEDED) guard.recordSuccess(payment.getOrderId());
                 if (reason != null) payment.setFailureReason(reason);
                 paymentRepository.save(payment);
+                if (changed) guard.financialChange(payment.getOrderId());
             }
             return paymentMapper.toPaymentResponse(payment);
         });
@@ -582,6 +587,18 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private PaymentResponse applyProviderResponse(Payment payment, StripePaymentResponse response, TransactionType type, boolean held, boolean notify) {
+        String priorIntent = payment.getStripePaymentIntentId();
+        String chargeId = response.getLatestCharge() == null ? null : response.getLatestCharge().getChargeId();
+        boolean knownCharge = chargeId != null && !chargeId.isBlank() && response.getAmount() != null
+                && response.getCurrency() != null && response.getLivemode() != null
+                && response.getAmount().compareTo(payment.getAmount()) == 0
+                && payment.getCurrency() != null && payment.getCurrency().name().equalsIgnoreCase(response.getCurrency())
+                && java.util.Objects.equals(response.getLivemode(), payment.getStripeIntentLivemode())
+                && payment.isStripeIntentCreatedByService()
+                && payment.getTransactions().stream().anyMatch(t -> chargeId.equals(t.getStripeChargeId())
+                    && java.util.Objects.equals(priorIntent, t.getStripePaymentIntentId())
+                    && t.getStatus() == payment.getStatus() && t.getAmount().compareTo(payment.getAmount()) == 0
+                    && payment.getCurrency().name().equalsIgnoreCase(t.getCurrency()));
         String intent = response.getPaymentIntentId();
         if (intent != null && payment.getStripePaymentIntentId() != null && !intent.equals(payment.getStripePaymentIntentId()))
             throw new PaymentProcessingException("Payment intent mismatch");
@@ -590,6 +607,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (response.getPaymentMethodId() != null) payment.setStripePaymentMethodId(response.getPaymentMethodId());
         PaymentStatus previous = payment.getStatus();
         PaymentStatus next = mapStripeStatusToPaymentStatus(response.getStatus());
+        boolean sameObservation = knownCharge && intent != null && intent.equals(priorIntent) && next == previous;
         if (next == PaymentStatus.SUCCEEDED) {
             outbox.transition(payment, next, held || payment.isVerifiedRelease());
             guard.recordSuccess(payment.getOrderId());
@@ -600,6 +618,10 @@ public class PaymentServiceImpl implements PaymentService {
         }
         createPaymentTransaction(payment, response, type);
         paymentRepository.save(payment);
+        if (!sameObservation) {
+            guard.financialChange(payment.getOrderId());
+            if (held) guard.hold(payment.getOrderId());
+        }
         if (!held && !payment.isVerifiedRelease() && previous != payment.getStatus()) {
             if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
                 if (!outbox.enabled()) updateOrderStatus(payment.getOrderId(), "PAID", payment);
@@ -689,6 +711,10 @@ public class PaymentServiceImpl implements PaymentService {
 
         if (stripeResponse != null) {
             transaction.setStripePaymentIntentId(stripeResponse.getPaymentIntentId());
+            // Charge identities are unique in this table; later observations retain their synthetic history without duplicating the identity.
+            if (stripeResponse.getLatestCharge() != null && stripeResponse.getLatestCharge().getChargeId() != null
+                    && payment.getTransactions().stream().noneMatch(t -> stripeResponse.getLatestCharge().getChargeId().equals(t.getStripeChargeId())))
+                transaction.setStripeChargeId(stripeResponse.getLatestCharge().getChargeId());
             // Do not persist response objects that can contain client secrets.
             transaction.setGatewayTransactionId(stripeResponse.getPaymentIntentId());
             if (stripeResponse.getFailureMessage() != null) {

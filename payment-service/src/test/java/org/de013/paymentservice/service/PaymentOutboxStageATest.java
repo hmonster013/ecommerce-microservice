@@ -63,7 +63,8 @@ class PaymentOutboxStageATest {
     @org.springframework.beans.factory.annotation.Autowired PaymentOrderGuard guard;
     @org.springframework.beans.factory.annotation.Autowired org.springframework.transaction.PlatformTransactionManager tx;
     @org.springframework.beans.factory.annotation.Autowired jakarta.validation.Validator validatorBean;
-    @org.springframework.beans.factory.annotation.Autowired PaymentRetryAttempts retryAttempts;
+    @org.springframework.boot.test.mock.mockito.SpyBean PaymentRetryAttempts retryAttempts;
+    @org.springframework.beans.factory.annotation.Autowired CompensationProofStore proofStore;
     @org.springframework.beans.factory.annotation.Autowired CheckoutClosureService closures;
     @org.springframework.beans.factory.annotation.Autowired PaymentOutbox outbox;
 
@@ -282,6 +283,150 @@ class PaymentOutboxStageATest {
             var x = pool.submit(call); var y = pool.submit(call); gate.countDown();
             var one = x.get(); var two = y.get(); assertEquals(one.providerKey(), two.providerKey()); assertNotEquals(one.created(), two.created());
         } finally { pool.shutdownNow(); }
+    }
+
+    @Test void retryClaimAfterFenceDoesNotCreateAttempt() {
+        var p = payment(199373, "STRIPE", PaymentStatus.FAILED);
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(tx);
+        transaction.executeWithoutResult(s -> guard.hold(p.getOrderId()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> retryAttempts.claim(p.getId(), "fenced", "pm_a", p.getAmount(), "USD"));
+        assertEquals(0, jdbc.queryForObject("select count(*) from payment_retry_attempt where payment_id=?", Integer.class, p.getId()));
+    }
+
+    @Test void admittedOwnerRetryIsFencedBeforeRealClaim() {
+        var p = payment(199376, "STRIPE", PaymentStatus.FAILED);
+        var order = new OrderDto(); order.setId(p.getOrderId()); order.setUserId("owner"); order.setStatus("PENDING");
+        order.setInventoryReady(true); order.setPaymentRetryEligible(true); order.setCurrency("USD");
+        var total = new OrderDto.MoneyDto(); total.setAmount(p.getAmount()); total.setCurrency("USD"); order.setTotalAmount(total);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(order));
+        var op = java.util.UUID.randomUUID(); var calls = new AtomicInteger();
+        var newTx = new TransactionTemplate(tx); newTx.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            calls.incrementAndGet();
+            newTx.executeWithoutResult(s -> proofStore.begin(p.getOrderId(), new CompensationProofStore.Request(op, 1, p.getId(), p.getPaymentNumber(), p.getAmount(), "USD", null)));
+            return invocation.callRealMethod();
+        }).when(retryAttempts).claim(eq(p.getId()), eq("fence-race"), eq("pm_retry"), any(), eq("USD"));
+        var error = assertThrows(ResponseStatusException.class, () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "fence-race"));
+        assertEquals(409, error.getStatusCode().value()); assertEquals("Order requires payment reconciliation", error.getReason());
+        assertEquals(1, calls.get());
+        assertTrue(jdbc.queryForObject("select permanent_fence from payment_order_guard where order_id=?", Boolean.class, p.getOrderId()));
+        assertEquals(1, jdbc.queryForObject("select count(*) from compensation_operation where operation_id=?", Integer.class, op));
+        assertEquals(0, jdbc.queryForObject("select count(*) from payment_retry_attempt where payment_id=?", Integer.class, p.getId()));
+        verifyNoInteractions(factory, stripe);
+    }
+
+    @Test void proofBeginWaitsForRealRetryCompletedCommit() throws Exception {
+        var p = retryPayment(199380);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        when(stripe.getSupportedCurrencies()).thenCallRealMethod();
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var entered = new java.util.concurrent.CountDownLatch(1); var release = new java.util.concurrent.CountDownLatch(1);
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_199380", exchange -> {
+            boolean post = "POST".equals(exchange.getRequestMethod());
+            if (post) { entered.countDown(); try { release.await(5, java.util.concurrent.TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } }
+            String status = post ? "succeeded" : "requires_payment_method";
+            byte[] bytes = ("{\"id\":\"pi_199380\",\"object\":\"payment_intent\",\"livemode\":false,\"currency\":\"usd\",\"amount\":2500,\"status\":\"" + status + "\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2); String base = Stripe.getApiBase(), key = Stripe.apiKey; server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            var retry = pool.submit(() -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key-c1-complete"));
+            assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            var request = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, p.getId(), p.getPaymentNumber(), p.getAmount(), "USD", null);
+            var started = new java.util.concurrent.CountDownLatch(1);
+            var claim = pool.submit(() -> { started.countDown(); return proofStore.begin(p.getOrderId(), request); });
+            assertTrue(started.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            assertThrows(java.util.concurrent.TimeoutException.class, () -> claim.get(200, java.util.concurrent.TimeUnit.MILLISECONDS));
+            release.countDown(); assertEquals(PaymentStatus.SUCCEEDED, retry.get(10, java.util.concurrent.TimeUnit.SECONDS).getStatus());
+            var result = claim.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals("COMPLETED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            assertTrue(result.snapshot().contains("COMPLETED"));
+            assertEquals(result.view().financialVersion(), jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, p.getOrderId()));
+            assertTrue(jdbc.queryForObject("select permanent_fence from payment_order_guard where order_id=?", Boolean.class, p.getOrderId()));
+        } finally { release.countDown(); pool.shutdownNow(); assertTrue(pool.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)); Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
+    }
+
+    @Test void proofBeginAfterRetryClaimTriggersRealRejectedCommit() {
+        var p = retryPayment(199381);
+        when(orderClient.getOrderById(p.getOrderId())).thenReturn(ResponseEntity.ok(retryOrder(p)));
+        clearInvocations(factory, stripe);
+        var op = java.util.UUID.randomUUID(); var hooks = new AtomicInteger();
+        var request = new CompensationProofStore.Request(op, 1, p.getId(), p.getPaymentNumber(), p.getAmount(), "USD", null);
+        var claimRef = new AtomicReference<CompensationProofStore.Claim>();
+        Runnable begin = () -> {
+            assertEquals("RESERVED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+            var txNew = new TransactionTemplate(tx); txNew.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            claimRef.set(txNew.execute(s -> proofStore.begin(p.getOrderId(), request))); hooks.incrementAndGet();
+        };
+        org.mockito.Mockito.doAnswer(invocation -> {
+            var attempt = invocation.callRealMethod();
+            if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive())
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void afterCommit() { begin.run(); }
+                });
+            else begin.run();
+            return attempt;
+        }).when(retryAttempts).claim(eq(p.getId()), eq("key-c1-reject"), eq("pm_retry"), any(), eq("USD"));
+        var error = assertThrows(ResponseStatusException.class, () -> payments.confirmPaymentForOwner(p.getId(), "pm_retry", "owner", "key-c1-reject"));
+        assertEquals(409, error.getStatusCode().value()); assertEquals("Order requires payment reconciliation", error.getReason());
+        assertEquals(1, hooks.get()); assertNotNull(claimRef.get());
+        assertEquals("REJECTED", jdbc.queryForObject("select state from payment_retry_attempt where payment_id=?", String.class, p.getId()));
+        assertTrue(jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, p.getOrderId()) > claimRef.get().view().financialVersion());
+        var evidence = new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Evidence("acct_test", false, java.time.Instant.now(), java.util.List.of(
+                new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.ChargeEvidence("ch_c1_reject", p.getStripePaymentIntentId(), 2500, "succeeded", java.util.List.of(
+                        new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.RefundEvidence("re_c1_reject", 2500, "succeeded")))));
+        var result = proofStore.complete(p.getOrderId(), op, claimRef.get().token(), new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Result(true, null, evidence));
+        assertEquals("HOLD", result.status()); assertEquals("FINANCIAL_FACTS_CHANGED", result.reason());
+        verifyNoInteractions(factory, stripe);
+    }
+
+    @Test void permanentFenceBlocksRetryAndVersionIsDurable() {
+        var p = payment(199374, "STRIPE", PaymentStatus.FAILED);
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(tx);
+        transaction.executeWithoutResult(s -> {
+            guard.lock(p.getOrderId());
+            guard.financialChange(p.getOrderId());
+            guard.permanentFence(p.getOrderId());
+        });
+        assertEquals(1L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, p.getOrderId()));
+        assertThrows(ResponseStatusException.class,
+                () -> retryAttempts.claim(p.getId(), "fenced", "pm_a", p.getAmount(), "USD"));
+        assertEquals(1L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, p.getOrderId()));
+    }
+
+    @Test void stripeReadbackDeduplicatesKnownChargeButNotChangedOrUnknownFacts() throws Exception {
+        var p = payment(199375, "STRIPE", PaymentStatus.SUCCEEDED);
+        p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); repository.saveAndFlush(p);
+        when(factory.getGateway("STRIPE")).thenReturn(new StripePaymentGateway(gatewayConfig, null, null, null));
+        var response = new AtomicReference<>("{\"id\":\"pi_199375\",\"object\":\"payment_intent\",\"status\":\"succeeded\",\"amount\":2500,\"currency\":\"usd\",\"livemode\":false,\"latest_charge\":\"ch_199375\"}");
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/payment_intents/pi_199375", exchange -> {
+            assertEquals("GET", exchange.getRequestMethod());
+            byte[] body = response.get().getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length); exchange.getResponseBody().write(body); exchange.close();
+        });
+        String base = Stripe.getApiBase(), key = Stripe.apiKey;
+        server.start();
+        try {
+            Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+            payments.syncPaymentStatusWithStripe(p.getId());
+            long version = jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, p.getOrderId());
+            new TransactionTemplate(tx).executeWithoutResult(s -> guard.permanentFence(p.getOrderId()));
+            long count = jdbc.queryForObject("select count(*) from payment_transactions where payment_id=?", Long.class, p.getId());
+            payments.syncPaymentStatusWithStripe(p.getId()); payments.syncPaymentStatusWithStripe(p.getId());
+            assertEquals(version, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, p.getOrderId()));
+            assertEquals(count + 2, jdbc.queryForObject("select count(*) from payment_transactions where payment_id=?", Long.class, p.getId()));
+            for (String changed : java.util.List.of(response.get().replace("ch_199375", "ch_new_199375"), response.get().replace("2500", "2501"),
+                    response.get().replace("usd", "eur"), response.get().replace("succeeded", "processing"), response.get().replace("\"ch_199375\"", "null"))) {
+                response.set(changed); payments.syncPaymentStatusWithStripe(p.getId());
+                assertEquals(++version, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, p.getOrderId()));
+                assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id=?", Boolean.class, p.getOrderId()));
+            }
+        } finally { Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0); }
     }
 
     @Test void directUpdatesAndCancelRecordTransitions() {

@@ -48,6 +48,7 @@ public class HostedCheckoutStore {
         // Insert only: an assigned-ID merge must never overwrite a concurrent owner's reservation.
         entityManager.persist(checkout);
         entityManager.flush();
+        guard.financialChange(orderId);
         return checkout;
     }
 
@@ -71,6 +72,13 @@ public class HostedCheckoutStore {
         if (payment.getGatewayTxnRef() != null && !payment.getGatewayTxnRef().equals(sessionId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Checkout payment session mismatch");
         }
+        boolean changed = !java.util.Objects.equals(checkout.getSessionId(), sessionId)
+                || !java.util.Objects.equals(checkout.getSessionState(), state)
+                || (intent != null && !java.util.Objects.equals(payment.getStripePaymentIntentId(), intent))
+                || !java.util.Objects.equals(payment.getGatewayTxnRef(), sessionId)
+                || ("PAID".equals(state) && payment.getStatus() != PaymentStatus.SUCCEEDED)
+                || (!"PAID".equals(state) && payment.getStatus() != PaymentStatus.SUCCEEDED
+                    && !payment.isVerifiedRelease() && payment.getStatus() != PaymentStatus.PENDING);
         checkout.setSessionId(sessionId);
         if ("PAID".equals(checkout.getSessionState()) && !"PAID".equals(state)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "A stale response cannot downgrade a paid checkout");
@@ -84,6 +92,7 @@ public class HostedCheckoutStore {
             if (payment.isVerifiedRelease()) guard.hold(orderId);
         }
         else if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) outbox.transition(payment, PaymentStatus.PENDING, held);
+        if (changed) guard.financialChange(orderId);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

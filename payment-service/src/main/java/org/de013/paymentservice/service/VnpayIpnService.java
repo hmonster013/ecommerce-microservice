@@ -63,7 +63,8 @@ public class VnpayIpnService {
         if (events.existsById(eventId) || payment.getStatus() == PaymentStatus.SUCCEEDED)
             return Map.of("RspCode", "02", "Message", "Order already confirmed");
         if ("00".equals(params.get("vnp_ResponseCode")) && "00".equals(params.get("vnp_TransactionStatus"))) {
-            outbox.transition(payment, PaymentStatus.SUCCEEDED, held);
+            boolean changed = outbox.transition(payment, PaymentStatus.SUCCEEDED, held);
+            if (changed) guard.financialChange(orderId);
             guard.recordSuccess(orderId);
             payment.setGatewayResponse(params.toString());
             events.save(ProcessedStripeEvent.builder().eventId(eventId).processedAt(LocalDateTime.now()).build());
@@ -93,7 +94,8 @@ public class VnpayIpnService {
                 } catch (Exception e) { log.warn("Failed to send VNPay notification for payment {}", payment.getId(), e); }
             }
         } else {
-            outbox.transition(payment, PaymentStatus.FAILED, held);
+            boolean changed = outbox.transition(payment, PaymentStatus.FAILED, held);
+            if (changed) guard.financialChange(orderId);
             payment.setFailureReason("VNPay failed with response code: " + params.get("vnp_ResponseCode"));
             payments.flush();
             if (!held) try {

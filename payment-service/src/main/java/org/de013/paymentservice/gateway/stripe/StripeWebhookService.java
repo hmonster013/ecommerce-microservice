@@ -56,7 +56,8 @@ public class StripeWebhookService {
      */
     public StripeWebhookRequest parseWebhookPayload(String payload) throws Exception {
         try {
-            return objectMapper.readValue(payload, StripeWebhookRequest.class);
+            return objectMapper.readerFor(StripeWebhookRequest.class)
+                    .with(com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS).readValue(payload);
         } catch (JsonProcessingException e) {
             throw new InvalidStripeWebhookException(e);
         } catch (Exception e) {

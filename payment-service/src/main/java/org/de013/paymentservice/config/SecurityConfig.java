@@ -73,7 +73,11 @@ public class SecurityConfig {
         http.securityMatcher("/internal/**")
                 .csrf(AbstractHttpConfigurer::disable).cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a.requestMatchers(HttpMethod.GET, "/internal/reconciliation/orders/{orderId}")
+                .authorizeHttpRequests(a -> a.requestMatchers(HttpMethod.POST, "/internal/reconciliation/orders/{orderId}/compensation-proofs")
+                        .access((authentication, context) -> hasRole(authentication.get(), "payment-reconciliation-resolve"))
+                        .requestMatchers(HttpMethod.GET, "/internal/reconciliation/orders/{orderId}/compensation-proofs/{operationId}")
+                        .access((authentication, context) -> hasRole(authentication.get(), "payment-reconciliation-read"))
+                        .requestMatchers(HttpMethod.GET, "/internal/reconciliation/orders/{orderId}")
                         .access((authentication, context) -> {
                             var auth = authentication.get();
                             if (!(auth instanceof JwtAuthenticationToken jwt)) return new AuthorizationDecision(false);
@@ -92,6 +96,13 @@ public class SecurityConfig {
                         }).anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o.jwt(j -> j.decoder(internalJwtDecoder)));
         return http.build();
+    }
+
+    private static AuthorizationDecision hasRole(org.springframework.security.core.Authentication auth, String role) {
+        if (!(auth instanceof JwtAuthenticationToken jwt)) return new AuthorizationDecision(false);
+        Object resource = jwt.getToken().getClaims().get("resource_access");
+        return new AuthorizationDecision(resource instanceof Map<?, ?> m && m.get("payment-service") instanceof Map<?, ?> client
+                && client.get("roles") instanceof List<?> roles && roles.contains(role));
     }
 
     @Bean

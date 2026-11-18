@@ -81,6 +81,7 @@ public class CheckoutClosureService {
             if (Boolean.TRUE.equals(row[3])) {
                 entityManager.createNativeQuery("UPDATE payment_order_guard SET close_operation_id = :op, close_status = 'HOLD', close_reason = 'RECONCILIATION_HOLD', close_claim_token = NULL, close_claim_until = NULL WHERE order_id = :id")
                         .setParameter("op", operationId).setParameter("id", orderId).executeUpdate();
+                guard.financialChange(orderId);
                 return new Processing(new Result(orderId, operationId, "HOLD", "RECONCILIATION_HOLD"), null, List.of());
             }
             if (row[0] == null) {
@@ -93,12 +94,14 @@ public class CheckoutClosureService {
                             .setParameter("op", operationId).setParameter("id", orderId).executeUpdate();
                     else entityManager.createNativeQuery("UPDATE payment_order_guard SET close_operation_id = :op, close_status = 'HOLD', close_reason = 'RECONCILIATION_HOLD' WHERE order_id = :id")
                             .setParameter("op", operationId).setParameter("id", orderId).executeUpdate();
+                    guard.financialChange(orderId);
                     return new Processing(new Result(orderId, operationId, safe ? "SAFE" : "HOLD", reason), null, List.of());
                 }
             }
             UUID claim = UUID.randomUUID();
             entityManager.createNativeQuery("UPDATE payment_order_guard SET close_operation_id = :op, close_status = 'CLOSING', close_claim_token = :claim, close_claim_until = clock_timestamp() + interval '30 seconds' WHERE order_id = :id")
                     .setParameter("op", operationId).setParameter("claim", claim).setParameter("id", orderId).executeUpdate();
+            if (row[0] == null) guard.financialChange(orderId);
             return new Processing(null, claim, attempts(orderId));
         });
     }
@@ -108,9 +111,11 @@ public class CheckoutClosureService {
             throw new IllegalArgumentException("Only HOLD completion is supported without provider proof");
         return Boolean.TRUE.equals(newTransaction().execute(tx -> {
             guard.lock(orderId);
-            return entityManager.createNativeQuery("UPDATE payment_order_guard SET close_status = 'HOLD', close_reason = :reason, close_claim_token = NULL, close_claim_until = NULL "
+            int changed = entityManager.createNativeQuery("UPDATE payment_order_guard SET close_status = 'HOLD', close_reason = :reason, close_claim_token = NULL, close_claim_until = NULL "
                     + "WHERE order_id = :id AND close_operation_id = :op AND close_status = 'CLOSING' AND close_claim_token = :claim AND close_claim_until > clock_timestamp()")
-                    .setParameter("id", orderId).setParameter("op", operationId).setParameter("claim", claim).setParameter("reason", reason).executeUpdate() == 1;
+                    .setParameter("id", orderId).setParameter("op", operationId).setParameter("claim", claim).setParameter("reason", reason).executeUpdate();
+            if (changed == 1) guard.financialChange(orderId);
+            return changed == 1;
         }));
     }
 
@@ -146,6 +151,7 @@ public class CheckoutClosureService {
             if (hold != null) {
                 entityManager.createNativeQuery("UPDATE payment_order_guard SET close_status = 'HOLD', close_reason = :reason, close_claim_token = NULL, close_claim_until = NULL WHERE order_id = :id")
                         .setParameter("reason", hold).setParameter("id", orderId).executeUpdate();
+                guard.financialChange(orderId);
                 return new Result(orderId, operationId, "HOLD", hold);
             }
             String proof;
@@ -153,6 +159,7 @@ public class CheckoutClosureService {
             catch (JsonProcessingException e) { throw new IllegalStateException("Cannot serialize closure proof", e); }
             entityManager.createNativeQuery("UPDATE payment_order_guard SET close_status = 'SAFE', close_safe_proof = :proof, close_safe_at = current_timestamp, close_claim_token = NULL, close_claim_until = NULL WHERE order_id = :id")
                     .setParameter("proof", proof).setParameter("id", orderId).executeUpdate();
+            guard.financialChange(orderId);
             return new Result(orderId, operationId, "SAFE", null);
         });
         return result;

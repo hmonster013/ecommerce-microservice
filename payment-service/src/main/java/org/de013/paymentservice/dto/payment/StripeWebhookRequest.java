@@ -24,6 +24,7 @@ public class StripeWebhookRequest {
     private String object;
     private String type;
     private Boolean livemode;
+    private String account;
     private Long created;
 
     @JsonProperty("api_version")
@@ -136,8 +137,9 @@ public class StripeWebhookRequest {
     public Long getAmount() {
         if (data != null && data.getObject() != null) {
             Object amount = data.getObject().get("amount");
-            if (amount instanceof Number) {
-                return ((Number) amount).longValue();
+            if (amount instanceof Number number) {
+                try { return new java.math.BigDecimal(number.toString()).longValueExact(); }
+                catch (NumberFormatException | ArithmeticException e) { return null; }
             }
         }
         return null;

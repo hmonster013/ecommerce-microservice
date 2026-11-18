@@ -34,6 +34,12 @@ public final class GenericExternalApplicationLauncher {
                         var run = job.getDeclaredMethod("run");
                         run.setAccessible(true);
                         run.invoke(bean);
+                    } else if ("COMPENSATE".equals(command[1])) {
+                        Class<?> resolver = loader.loadClass("org.de013.orderservice.service.impl.CompensationResolver");
+                        Object bean = context.getClass().getMethod("getBean", Class.class).invoke(context, resolver);
+                        var run = resolver.getDeclaredMethod("processOne");
+                        run.setAccessible(true);
+                        run.invoke(bean);
                     } else {
                         long id = Long.parseLong(command[1]);
                         Class<?> recovery = loader.loadClass("org.de013.orderservice.service.impl.CheckoutExpiryRecovery");

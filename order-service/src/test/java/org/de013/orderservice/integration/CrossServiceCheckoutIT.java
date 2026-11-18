@@ -466,7 +466,7 @@ class CrossServiceCheckoutIT {
         }
     }
 
-    private static final class App implements AutoCloseable {
+    static final class App implements AutoCloseable {
         private final Process process;
         private final Path temp, isolated;
         private final String module, main;
@@ -474,7 +474,7 @@ class CrossServiceCheckoutIT {
         private final String[] extra;
         private final java.util.concurrent.ExecutorService reader = Executors.newSingleThreadExecutor();
         private final Path log;
-        private final int port;
+        final int port;
         private final java.util.concurrent.BlockingQueue<String> results = new java.util.concurrent.LinkedBlockingQueue<>();
 
         App(Path temp, Path isolated, String module, String main, PostgreSQLContainer<?> db, String... extra) throws Exception {
@@ -497,15 +497,18 @@ class CrossServiceCheckoutIT {
             var args = new ArrayList<>(List.of(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
                     "-Dloader.path=" + isolated, "-Dloader.main=" + GenericExternalApplicationLauncher.class.getName()));
             for (String value : extra) if (value.startsWith("stripe-base=")) args.add("-Dtest.stripe.base=" + value.substring(12));
+            String dbUser = java.util.Arrays.stream(extra).filter(v -> v.startsWith("test-db-user=")).map(v -> v.substring("test-db-user=".length())).findFirst().orElse(db.getUsername());
+            String dbPassword = java.util.Arrays.stream(extra).filter(v -> v.startsWith("test-db-password=")).map(v -> v.substring("test-db-password=".length())).findFirst().orElse(db.getPassword());
+            boolean runtimeDb = java.util.Arrays.stream(extra).anyMatch(v -> v.startsWith("test-db-user="));
             args.addAll(List.of(
                     "-cp", jar.toString(), "org.springframework.boot.loader.launch.PropertiesLauncher", main,
                     "--spring.cloud.config.enabled=false", "--spring.cloud.bus.enabled=false",
-                    "--eureka.client.enabled=false", "--spring.jpa.hibernate.ddl-auto=validate", "--spring.flyway.enabled=true",
+                    "--eureka.client.enabled=false", "--spring.jpa.hibernate.ddl-auto=validate", "--spring.flyway.enabled=" + !runtimeDb,
                     "--management.health.defaults.enabled=false", "--management.health.db.enabled=true",
-                    "--spring.datasource.url=" + db.getJdbcUrl(), "--spring.datasource.username=" + db.getUsername(),
-                    "--spring.datasource.password=" + db.getPassword(), "--logging.level.org.springframework.security=WARN"));
+                    "--spring.datasource.url=" + db.getJdbcUrl(), "--spring.datasource.username=" + dbUser,
+                    "--spring.datasource.password=" + dbPassword, "--logging.level.org.springframework.security=WARN"));
             if (java.util.Arrays.stream(extra).noneMatch(value -> value.startsWith("--server.port="))) args.add("--server.port=0");
-            for (String value : extra) if (!value.startsWith("stripe-base=")) args.add(value);
+            for (String value : extra) if (!value.startsWith("stripe-base=") && !value.startsWith("test-db-user=") && !value.startsWith("test-db-password=")) args.add(value);
             process = new ProcessBuilder(args).redirectErrorStream(true).start();
             var ready = new CompletableFuture<Integer>();
             reader.submit(() -> {
@@ -524,6 +527,12 @@ class CrossServiceCheckoutIT {
         }
 
         App restart() throws Exception { return new App(temp, isolated, module, main, db, extra); }
+        App restartAs(String user, String password) throws Exception {
+            var options = new ArrayList<String>();
+            for (String option : extra) if (!option.startsWith("test-db-user=") && !option.startsWith("test-db-password=")) options.add(option);
+            options.add("test-db-user=" + user); options.add("test-db-password=" + password);
+            return new App(temp, isolated, module, main, db, options.toArray(String[]::new));
+        }
         void kill() throws Exception {
             process.destroyForcibly();
             assertTrue(process.waitFor(15, TimeUnit.SECONDS), "Order JVM did not terminate");
@@ -538,6 +547,12 @@ class CrossServiceCheckoutIT {
             process.getOutputStream().write((correlation + " RECONCILE\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
             process.getOutputStream().flush();
             assertEquals("TEST_RESULT " + correlation + " OK", results.poll(90, TimeUnit.SECONDS), "Reconciliation failed; log: " + log);
+        }
+        void compensate() throws Exception {
+            String correlation = UUID.randomUUID().toString();
+            process.getOutputStream().write((correlation + " COMPENSATE\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            process.getOutputStream().flush();
+            assertEquals("TEST_RESULT " + correlation + " OK", results.poll(90, TimeUnit.SECONDS), "Compensation failed; log: " + log);
         }
         void recover(long id, boolean error) throws Exception {
             String correlation = UUID.randomUUID().toString();
@@ -686,7 +701,7 @@ class CrossServiceCheckoutIT {
                 b.method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
     }
 
-    private static final class Keycloak {
+    static final class Keycloak {
         final String base;
         String admin;
         final String password;
@@ -694,7 +709,7 @@ class CrossServiceCheckoutIT {
         Keycloak(String base, String password, String secret) throws Exception {
             this.base = base;
             this.password = password;
-            admin = form("/realms/master/protocol/openid-connect/token", "grant_type=password&client_id=admin-cli&username=admin&password=" + password).path("access_token").asText();
+            refreshAdmin();
             api("POST", "/admin/realms", "{\"realm\":\"checkout-test\",\"enabled\":true}");
             String root = "/admin/realms/checkout-test";
             api("POST", root + "/clients", "{\"clientId\":\"order-service\",\"enabled\":true,\"publicClient\":false,\"serviceAccountsEnabled\":true,\"secret\":\"" + secret + "\"}");
@@ -712,9 +727,14 @@ class CrossServiceCheckoutIT {
             api("POST", root + "/clients/" + payment + "/roles", "{\"name\":\"payment-reconciliation-read\"}");
             JsonNode readRole = api("GET", root + "/clients/" + payment + "/roles/payment-reconciliation-read", null);
             api("POST", root + "/users/" + user + "/role-mappings/clients/" + payment, "[" + readRole + "]");
+            api("POST", root + "/clients/" + payment + "/roles", "{\"name\":\"payment-reconciliation-resolve\"}");
+            JsonNode resolveRole = api("GET", root + "/clients/" + payment + "/roles/payment-reconciliation-resolve", null);
+            api("POST", root + "/users/" + user + "/role-mappings/clients/" + payment, "[" + resolveRole + "]");
         }
         String token(String secret) throws Exception { return form("/realms/checkout-test/protocol/openid-connect/token", "grant_type=client_credentials&client_id=order-service&client_secret=" + secret).path("access_token").asText(); }
+        void refreshAdmin() throws Exception { admin = form("/realms/master/protocol/openid-connect/token", "grant_type=password&client_id=admin-cli&username=admin&password=" + password).path("access_token").asText(); }
         String paymentRoleToken(String secret, String removed) throws Exception {
+            refreshAdmin();
             String root = "/admin/realms/checkout-test";
             String order = api("GET", root + "/clients?clientId=order-service", null).get(0).path("id").asText();
             String user = api("GET", root + "/clients/" + order + "/service-account-user", null).path("id").asText();
@@ -725,6 +745,7 @@ class CrossServiceCheckoutIT {
             finally { api("POST", root + "/users/" + user + "/role-mappings/clients/" + payment, "[" + role + "]"); }
         }
         String wrongPaymentAudienceToken(String secret) throws Exception {
+            refreshAdmin();
             String root = "/admin/realms/checkout-test";
             String order = api("GET", root + "/clients?clientId=order-service", null).get(0).path("id").asText();
             JsonNode mappers = api("GET", root + "/clients/" + order + "/protocol-mappers/models", null);
@@ -749,7 +770,7 @@ class CrossServiceCheckoutIT {
             }
         }
         String wrongRoleToken(String secret) throws Exception {
-            admin = form("/realms/master/protocol/openid-connect/token", "grant_type=password&client_id=admin-cli&username=admin&password=" + password).path("access_token").asText();
+            refreshAdmin();
             String root = "/admin/realms/checkout-test";
             String order = api("GET", root + "/clients?clientId=order-service", null).get(0).path("id").asText();
             String user = api("GET", root + "/clients/" + order + "/service-account-user", null).path("id").asText();

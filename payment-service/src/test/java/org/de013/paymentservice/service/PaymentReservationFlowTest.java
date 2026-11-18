@@ -69,6 +69,8 @@ class PaymentReservationFlowTest {
     @Autowired HostedCheckoutService hosted;
     @Autowired PaymentReservation reservation;
     @SpyBean PaymentOrderGuard guard;
+    @Autowired CompensationProofStore proofStore;
+    @Autowired PaymentRetryAttempts retryAttempts;
     @Autowired CheckoutClosureService closures;
     @Autowired org.springframework.web.context.WebApplicationContext webContext;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
@@ -570,6 +572,188 @@ class PaymentReservationFlowTest {
         webhook.processStripeWebhook(body, signature(body));
     }
 
+    private void refundHttp(String body) throws Exception {
+        MockMvcBuilders.standaloneSetup(webhookController).build().perform(post("/webhooks/stripe")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON).header("Stripe-Signature", signature(body)).content(body))
+                .andExpect(status().isOk());
+    }
+
+    private String refundEvent(String event, String type, String status, String amount, String currency, String intent, String charge, String mode, String account) {
+        return "{\"id\":\"" + event + "\",\"object\":\"event\",\"type\":\"" + type + "\",\"livemode\":" + mode
+                + (account == null ? "" : ",\"account\":\"" + account + "\"")
+                + ",\"data\":{\"object\":{\"object\":\"refund\",\"id\":\"" + (event.contains("18171") ? "re_18171" : "re_18170") + "\",\"status\":\"" + status
+                + "\",\"amount\":" + amount + ",\"currency\":\"" + currency + "\",\"payment_intent\":\"" + intent + "\",\"charge\":\"" + charge + "\"}}}";
+    }
+
+    @Test void signedRefundLateFailurePersistsContradictionAndDeduplicates() throws Exception {
+        var payment = intent(18170, "pi_18170", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        payment.setStripeIntentCreatedByService(true); payment.setStripeIntentLivemode(false); repository.saveAndFlush(payment);
+        var r = refund(payment, "REF-18170", "re_18170", org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED);
+        r.setStripeChargeId("ch_18170"); r.setStripePaymentIntentId("pi_18170"); refundRepository.saveAndFlush(r);
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> guard.permanentFence(18170L));
+        String failed = refundEvent("evt_rf_18170_a", "refund.failed", "failed", "500", "usd", "pi_18170", "ch_18170", "false", null);
+        refundHttp(failed);
+        long version = jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18170L);
+        assertTrue(version > 0); assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id=?", Boolean.class, 18170L));
+        assertEquals(org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED, refundRepository.findById(r.getId()).orElseThrow().getStatus());
+        refundHttp(failed);
+        refundHttp(refundEvent("evt_rf_18170_b", "refund.updated", "failed", "500", "usd", "pi_18170", "ch_18170", "false", null));
+        assertEquals(version, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18170L));
+        assertEquals(2, jdbc.queryForObject("select count(*) from stripe_financial_observation where order_id=? and status='failed'", Integer.class, 18170L));
+    }
+
+    @Test void signedRefundPendingAndMismatchesNeverInventSuccess() throws Exception {
+        var payment = intent(18171, "pi_18171", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        payment.setStripeIntentCreatedByService(true); payment.setStripeIntentLivemode(false); repository.saveAndFlush(payment);
+        var r = refund(payment, "REF-18171", "re_18171", org.de013.paymentservice.entity.enums.RefundStatus.PENDING);
+        r.setStripeChargeId("ch_18171"); r.setStripePaymentIntentId("pi_18171"); refundRepository.saveAndFlush(r);
+        refundHttp(refundEvent("evt_rf_18171_pending", "refund.created", "pending", "500", "usd", "pi_18171", "ch_18171", "false", null));
+        assertNotEquals(org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED, refundRepository.findById(r.getId()).orElseThrow().getStatus());
+        String[][] cases = {{"501","usd","pi_18171","ch_18171","false",""},{"500","eur","pi_18171","ch_18171","false",""},
+                {"500","usd","pi_wrong","ch_18171","false",""},{"500","usd","pi_18171","ch_wrong","false",""},
+                {"500","usd","pi_18171","ch_18171","true",""},{"500","usd","pi_18171","ch_18171","false","acct_other"}};
+        for (int i = 0; i < cases.length; i++) {
+            var c = cases[i]; refundHttp(refundEvent("evt_rf_18171_" + i, "refund.updated", "succeeded", c[0], c[1], c[2], c[3], c[4], c[5].isEmpty() ? null : c[5]));
+            assertNotEquals(org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED, refundRepository.findById(r.getId()).orElseThrow().getStatus());
+        }
+        assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id=?", Boolean.class, 18171L));
+    }
+
+    @Test void signedRefundForeignIntentOnlyVersionsLocalOrderAndOppositeEventsDoNotDeadlock() throws Exception {
+        var a = intent(18401, "pi_18401", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        var b = intent(18402, "pi_18402", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        for (var p : java.util.List.of(a, b)) { p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); repository.saveAndFlush(p); }
+        var ra = refund(a, "REF-18401", "re_18401", org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED);
+        var rb = refund(b, "REF-18402", "re_18402", org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED);
+        ra.setStripeChargeId("ch_18401"); ra.setStripePaymentIntentId("pi_18401"); refundRepository.saveAndFlush(ra);
+        rb.setStripeChargeId("ch_18402"); rb.setStripePaymentIntentId("pi_18402"); refundRepository.saveAndFlush(rb);
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> { guard.permanentFence(18401L); guard.permanentFence(18402L); });
+        String first = refundEvent("evt_rf_cross_a", "refund.updated", "failed", "500", "usd", "pi_18402", "ch_18401", "false", null).replace("re_18170", "re_18401");
+        refundHttp(first);
+        assertEquals  (1L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=18401", Long.class));
+        assertEquals  (0L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=18402", Long.class));
+        assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id=18401", Boolean.class));
+        assertEquals(1, jdbc.queryForObject("select count(*) from stripe_financial_observation where event_id='evt_rf_cross_a' and order_id=18401", Integer.class));
+        String oppositeA = first.replace("evt_rf_cross_a", "evt_rf_cross_a2").replace("500", "501");
+        String oppositeB = refundEvent("evt_rf_cross_b", "refund.updated", "failed", "500", "usd", "pi_18401", "ch_18402", "false", null).replace("re_18170", "re_18402");
+        var start = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var fa = pool.submit(() -> { start.await(); refundHttp(oppositeA); return null; });
+            var fb = pool.submit(() -> { start.await(); refundHttp(oppositeB); return null; });
+            start.countDown(); fa.get(15, TimeUnit.SECONDS); fb.get(15, TimeUnit.SECONDS);
+        } finally { pool.shutdownNow(); }
+        assertEquals(2L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=18401", Long.class));
+        assertEquals(1L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=18402", Long.class));
+        assertEquals(0, jdbc.queryForObject("select count(*) from stripe_financial_observation where (event_id='evt_rf_cross_a2' and order_id<>18401) or (event_id='evt_rf_cross_b' and order_id<>18402)", Integer.class));
+    }
+
+    @Test void signedRefundFractionalAndOverflowAmountsAreNeverTruncated() throws Exception {
+        var p = intent(18403, "pi_18403", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); repository.saveAndFlush(p);
+        var r = refund(p, "REF-18403", "re_18403", org.de013.paymentservice.entity.enums.RefundStatus.PENDING);
+        r.setStripeChargeId("ch_18403"); r.setStripePaymentIntentId("pi_18403"); refundRepository.saveAndFlush(r);
+        int i = 0;
+        for (String amount : java.util.List.of("500.9", "9223372036854775808", "500.00000000000001", "500.00000000000000000000000000000000000000000001")) {
+            String event = "evt_rf_precision_" + i++;
+            refundHttp(refundEvent(event, "refund.updated", "succeeded", amount, "usd", "pi_18403", "ch_18403", "false", null).replace("re_18170", "re_18403"));
+            assertNotEquals(org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED, refundRepository.findById(r.getId()).orElseThrow().getStatus());
+            assertEquals(1, jdbc.queryForObject("select count(*) from stripe_financial_observation where event_id=? and amount is null and order_id=18403", Integer.class, event));
+        }
+        assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id=18403", Boolean.class));
+    }
+
+    @Test void signedSameStatusIntentFactsInvalidateProofAndDeduplicate() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            long order = 18500 + i;
+            String pi = "pi_facts_" + i, charge = "ch_facts_" + i;
+            var p = intent(order, pi, org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+            p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); repository.saveAndFlush(p);
+            jdbc.update("insert into payment_transactions(payment_id,type,amount,status,stripe_charge_id,stripe_payment_intent_id) values (?,'CAPTURE',25,'SUCCEEDED',?,?)", p.getId(), charge, pi);
+            var request = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, p.getId(), p.getPaymentNumber(), new BigDecimal("25.00"), "USD", null);
+            var claim = proofStore.begin(order, request);
+            String baseline = "{\"id\":\"evt_facts_base_" + i + "\",\"object\":\"event\",\"type\":\"payment_intent.succeeded\",\"livemode\":false,\"data\":{\"object\":{\"object\":\"payment_intent\",\"id\":\"" + pi + "\",\"status\":\"succeeded\",\"amount\":2500,\"currency\":\"usd\",\"latest_charge\":\"" + charge + "\"}}}";
+            refundHttp(baseline);
+            // Reclaim a snapshot after the baseline was ingested.
+            jdbc.update("update compensation_operation set claim_until=clock_timestamp()-interval '1 second' where order_id=?", order);
+            claim = proofStore.begin(order, request);
+            var evidence = new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Evidence("acct_test", false, java.time.Instant.now(), java.util.List.of(
+                    new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.ChargeEvidence(charge, pi, 2500, "succeeded", java.util.List.of(
+                            new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.RefundEvidence("re_facts_" + i, 2500, "succeeded")))));
+            var completed = proofStore.complete(order, request.operationId(), claim.token(), new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Result(true, null, evidence));
+            assertEquals("COMPENSATED", completed.status(), completed.reason());
+            long version = completed.financialVersion();
+            refundHttp(baseline.replace("evt_facts_base_", "evt_facts_duplicate_"));
+            assertEquals(version, proofStore.view(order, request.operationId()).financialVersion());
+            String changed = baseline.replace("evt_facts_base_", "evt_facts_changed_");
+            changed = switch (i) {
+                case 0 -> changed.replace("2500", "2501");
+                case 1 -> changed.replace("\"usd\"", "\"eur\"");
+                case 2 -> changed.replace("\"livemode\":false", "\"livemode\":true");
+                case 3 -> changed.replace(charge, charge + "_new");
+                default -> changed.replace("\"livemode\":false", "\"livemode\":false,\"account\":\"acct_other\"");
+            };
+            refundHttp(changed);
+            var held = proofStore.view(order, request.operationId());
+            assertEquals("HOLD", held.status()); assertEquals(version + 1, held.financialVersion());
+            assertEquals(completed.proofId(), held.proofId()); assertEquals(completed.proofVersion(), held.proofVersion());
+            assertEquals(1, jdbc.queryForObject("select count(*) from payment_transactions where payment_id=? and stripe_charge_id=?", Integer.class, p.getId(), charge));
+            assertEquals(1, jdbc.queryForObject("select count(*) from compensation_proof where proof_id=?", Integer.class, completed.proofId()));
+            if (i == 4) {
+                assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id=?", Boolean.class, order));
+                assertEquals(1, jdbc.queryForObject("select count(*) from stripe_financial_observation where event_id=? and order_id is null and account_id='acct_other'", Integer.class, "evt_facts_changed_" + i));
+                jdbc.update("delete from stripe_financial_observation where event_id=?", "evt_facts_changed_" + i);
+            }
+        }
+    }
+
+    @Test void stripeIntentAndChargeObservationsVersionOnlyChangedFacts() throws Exception {
+        intent(18160, "pi_18160", org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> guard.permanentFence(18160L));
+        send("evt_intent_18160_a", "payment_intent.succeeded", "payment_intent", "pi_18160", "succeeded");
+        long version = jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18160L);
+        assertTrue(version > 0);
+        send("evt_intent_18160_b", "payment_intent.succeeded", "payment_intent", "pi_18160", "succeeded");
+        assertEquals(++version, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18160L));
+        String charge = "{\"id\":\"%s\",\"type\":\"charge.succeeded\",\"livemode\":false,\"data\":{\"object\":{\"object\":\"charge\",\"id\":\"ch_18160\",\"payment_intent\":\"pi_18160\",\"status\":\"succeeded\",\"amount\":2500,\"currency\":\"usd\"}}}";
+        String first = charge.formatted("evt_charge_18160_a"); webhook.processStripeWebhook(first, signature(first));
+        assertEquals(version + 1, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18160L));
+        String duplicate = charge.formatted("evt_charge_18160_b"); webhook.processStripeWebhook(duplicate, signature(duplicate));
+        assertEquals(version + 1, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18160L));
+    }
+
+    @Test void disputeAndUnresolvedObservationRemainDurable() throws Exception {
+        intent(18161, "pi_18161", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> guard.permanentFence(18161L));
+        String body = "{\"id\":\"evt_dispute_18161\",\"type\":\"charge.dispute.created\",\"livemode\":false,\"data\":{\"object\":{\"object\":\"dispute\",\"id\":\"dp_18161\",\"charge\":\"ch_18161\",\"payment_intent\":\"pi_18161\",\"status\":\"needs_response\",\"amount\":2500,\"currency\":\"usd\"}}}";
+        webhook.processStripeWebhook(body, signature(body));
+        assertEquals(1L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18161L));
+        String unknown = "{\"id\":\"evt_dispute_unknown_18161\",\"type\":\"charge.dispute.created\",\"livemode\":false,\"data\":{\"object\":{\"object\":\"dispute\",\"id\":\"dp_unknown_18161\",\"charge\":\"ch_unknown_18161\"}}}";
+        webhook.processStripeWebhook(unknown, signature(unknown));
+        assertEquals(1, jdbc.queryForObject("select count(*) from stripe_financial_observation where event_id=? and order_id is null", Integer.class, "evt_dispute_unknown_18161"));
+        jdbc.update("delete from stripe_financial_observation where event_id=?", "evt_dispute_unknown_18161");
+    }
+
+    @Test void vnpayRepeatedFailureAndSuccessVersionActualTransitions() {
+        var cfg = gatewayConfig.getGateways().getVnpay();
+        when(vnpayGateway.verifyCallback(anyMap())).thenReturn(true);
+        var payment = repository.saveAndFlush(Payment.builder().orderId(18162L).userId("owner").paymentNumber("VNP-18162")
+                .amount(new BigDecimal("25.00")).currency(Currency.USD).method(PaymentMethodType.WALLET)
+                .status(org.de013.paymentservice.entity.enums.PaymentStatus.PENDING).gatewayName("VNPAY")
+                .providerAmountVnd(100L).providerCurrency("VND").build());
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> guard.permanentFence(18162L));
+        var fields = new java.util.HashMap<String, String>();
+        fields.put("vnp_TmnCode", cfg.getTmnCode()); fields.put("vnp_TxnRef", payment.getPaymentNumber()); fields.put("vnp_Amount", "10000");
+        fields.put("vnp_ResponseCode", "01"); fields.put("vnp_TransactionStatus", "01");
+        assertEquals("00", ipn.process(fields).get("RspCode"));
+        assertEquals(1L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18162L));
+        assertEquals("00", ipn.process(fields).get("RspCode"));
+        assertEquals(1L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18162L));
+        fields.put("vnp_ResponseCode", "00"); fields.put("vnp_TransactionStatus", "00");
+        assertEquals("00", ipn.process(fields).get("RspCode"));
+        assertEquals(2L, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18162L));
+    }
+
     @Test void orderOutageDoesNotRollBackProviderTruth() throws Exception {
         var loggers = java.util.List.of(PaymentServiceImpl.class, WebhookServiceImpl.class, VnpayIpnService.class).stream()
                 .map(c -> (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(c)).toList();
@@ -830,6 +1014,159 @@ class PaymentReservationFlowTest {
                 .refundNumber(number).amount(new BigDecimal("5.00")).currency("USD").status(status).stripeRefundId(stripeId).build());
     }
 
+    @Test void proofClaimBlocksRefundMutationsAndCleanupWithoutProviderDispatch() throws Exception {
+        var p = intent(18700, "pi_c1_18700", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); repository.saveAndFlush(p);
+        var pending = refund(p, "REF-C1-18700-P", null, org.de013.paymentservice.entity.enums.RefundStatus.PENDING);
+        var old = refund(p, "REF-C1-18700-F", "re_c1_old", org.de013.paymentservice.entity.enums.RefundStatus.FAILED);
+        var r = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, p.getId(), p.getPaymentNumber(), p.getAmount(), "USD", null);
+        var claim = proofStore.begin(18700, r);
+        var request = org.de013.paymentservice.dto.refund.RefundRequest.builder().paymentId(p.getId()).amount(new BigDecimal("5.00")).reason("requested_by_customer").build();
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> refunds.createRefund(request)).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> refunds.processRefund(pending.getId())).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> refunds.approveRefund(pending.getId(), "admin")).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> refunds.cancelRefund(pending.getId(), "no")).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> refunds.rejectRefund(pending.getId(), "admin", "no")).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> refunds.updateRefundStatus(pending.getId(), org.de013.paymentservice.entity.enums.RefundStatus.FAILED, "no")).getStatusCode().value());
+        refunds.cleanupOldFailedRefunds(java.time.LocalDateTime.now().plusDays(1));
+        assertTrue(refundRepository.existsById(old.getId()));
+        verify(stripe, never()).createRefund(any());
+        var evidence = new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Evidence("acct_test", false, java.time.Instant.now(), java.util.List.of(
+                new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.ChargeEvidence("ch_c1_18700", "pi_c1_18700", 2500, "succeeded", java.util.List.of(
+                        new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.RefundEvidence("re_c1_18700", 2500, "succeeded")))));
+        assertEquals("COMPENSATED", proofStore.complete(18700, r.operationId(), claim.token(), new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Result(true, null, evidence)).status());
+    }
+
+    @Test void proofClaimRejectsLateRefundReadbackFacts() throws Exception {
+        var p = intent(18701, "pi_c1_18701", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        var pending = refund(p, "REF-C1-18701", "re_c1_18701", org.de013.paymentservice.entity.enums.RefundStatus.PENDING);
+        var r = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, p.getId(), p.getPaymentNumber(), p.getAmount(), "USD", null);
+        var claim = proofStore.begin(18701, r);
+        when(factory.getStripeGateway()).thenReturn(stripe);
+        when(stripe.getRefundResponse("re_c1_18701")).thenReturn(org.de013.paymentservice.dto.stripe.StripeRefundResponse.builder().refundId("re_c1_18701").status("succeeded").build());
+        refunds.syncRefundStatusWithStripe(pending.getId());
+        assertEquals(org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED, refundRepository.findById(pending.getId()).orElseThrow().getStatus());
+        assertEquals(claim.view().financialVersion() + 1, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=18701", Long.class));
+        var result = proofStore.complete(18701, r.operationId(), claim.token(), c1Proof("pi_c1_18701"));
+        assertEquals("HOLD", result.status()); assertEquals("FINANCIAL_FACTS_CHANGED", result.reason());
+    }
+
+    @Test void proofClaimBlocksReservationHostedRetryAndDirectPaymentMutation() {
+        var p = intent(18702, "pi_c1_18702", org.de013.paymentservice.entity.enums.PaymentStatus.FAILED, null);
+        p.setBlocking(false); p.setPaymentNumber("C1-FAILED-18702"); repository.saveAndFlush(p);
+        var candidate = intent(18702, "pi_c1_candidate_18702", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        candidate.setStripeIntentCreatedByService(true); candidate.setStripeIntentLivemode(false); repository.saveAndFlush(candidate);
+        var r = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, candidate.getId(), candidate.getPaymentNumber(), candidate.getAmount(), "USD", null);
+        var claim = proofStore.begin(18702, r);
+        var newPayment = Payment.builder().orderId(18702L).userId("owner").paymentNumber("C1-SECOND").amount(new BigDecimal("25.00")).currency(Currency.USD).method(PaymentMethodType.CARD).status(org.de013.paymentservice.entity.enums.PaymentStatus.PENDING).gatewayName("STRIPE").build();
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> reservation.reserve(newPayment)).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> hostedStore.reserve(18702L, "owner", new BigDecimal("25.00"), "http://fixture.test")).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> retryAttempts.claim(p.getId(), "c1-retry", "pm_c1", p.getAmount(), "USD")).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> payments.cancelPayment(p.getId(), "no")).getStatusCode().value());
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> payments.updatePaymentStatus(p.getId(), org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, "no")).getStatusCode().value());
+        assertEquals(0, jdbc.queryForObject("select count(*) from payment_retry_attempt where payment_id=?", Integer.class, p.getId()));
+        assertEquals(2, jdbc.queryForObject("select count(*) from payments where order_id=18702", Integer.class));
+        assertEquals(claim.view().financialVersion(), jdbc.queryForObject("select financial_version from payment_order_guard where order_id=18702", Long.class));
+        verifyNoInteractions(factory, hostedStripe);
+        assertEquals("COMPENSATED", proofStore.complete(18702, r.operationId(), claim.token(), c1Proof("pi_c1_candidate_18702")).status());
+    }
+
+    private org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Result c1Proof(String intent) {
+        var evidence = new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Evidence("acct_test", false, java.time.Instant.now(), java.util.List.of(
+                new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.ChargeEvidence("ch_" + intent, intent, 2500, "succeeded", java.util.List.of(
+                        new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.RefundEvidence("re_" + intent, 2500, "succeeded")))));
+        return new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Result(true, null, evidence);
+    }
+
+    @Test void proofClaimDetectsSignedIntentAndKnownChargeAndUnknownDispute() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            long order = 18800 + i; String pi = "pi_ingest_" + i;
+            var p = intent(order, pi, i == 0 ? org.de013.paymentservice.entity.enums.PaymentStatus.PENDING : org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+            p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); repository.saveAndFlush(p);
+            var r = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, p.getId(), p.getPaymentNumber(), p.getAmount(), "USD", null);
+            var claim = proofStore.begin(order, r);
+            String body = switch (i) {
+                case 0 -> "{\"id\":\"evt_c1_intent\",\"type\":\"payment_intent.succeeded\",\"livemode\":false,\"data\":{\"object\":{\"object\":\"payment_intent\",\"id\":\"" + pi + "\",\"status\":\"succeeded\",\"amount\":2500,\"currency\":\"usd\",\"latest_charge\":\"ch_c1_intent\"}}}";
+                case 1 -> "{\"id\":\"evt_c1_charge\",\"type\":\"charge.succeeded\",\"livemode\":false,\"data\":{\"object\":{\"object\":\"charge\",\"id\":\"ch_c1_known\",\"payment_intent\":\"" + pi + "\",\"status\":\"succeeded\",\"amount\":2500,\"currency\":\"usd\"}}}";
+                default -> "{\"id\":\"evt_c1_unknown\",\"type\":\"charge.dispute.created\",\"livemode\":false,\"data\":{\"object\":{\"object\":\"dispute\",\"id\":\"dp_c1_unknown\",\"charge\":\"ch_unknown\"}}}";
+            };
+            refundHttp(body);
+            long version = jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, order);
+            if (i == 2) assertEquals(claim.view().financialVersion(), version); else assertTrue(version > claim.view().financialVersion());
+            if (i == 0) assertEquals(org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, repository.findById(p.getId()).orElseThrow().getStatus());
+            assertTrue(jdbc.queryForObject("select permanent_fence from payment_order_guard where order_id=?", Boolean.class, order));
+            var result = proofStore.complete(order, r.operationId(), claim.token(), c1Proof(pi));
+            assertEquals("HOLD", result.status()); assertEquals(i == 2 ? "UNRESOLVED_FINANCIAL_OBSERVATION" : "FINANCIAL_FACTS_CHANGED", result.reason());
+            if (i == 2) jdbc.update("delete from stripe_financial_observation where event_id='evt_c1_unknown'");
+        }
+    }
+
+    @Test void proofClaimDetectsSignedVnpaySuccessAndFailure() {
+        when(vnpayGateway.verifyCallback(anyMap())).thenReturn(true);
+        for (int i = 0; i < 2; i++) {
+            long order = 18810 + i; String pi = "pi_vnp_candidate_" + i;
+            var p = intent(order, pi, org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+            p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); p.setBlocking(false); repository.saveAndFlush(p);
+            var v = repository.saveAndFlush(Payment.builder().orderId(order).userId("owner").paymentNumber("VNP-C1-" + i).amount(new BigDecimal("25.00"))
+                    .currency(Currency.USD).method(PaymentMethodType.WALLET).status(org.de013.paymentservice.entity.enums.PaymentStatus.PENDING).gatewayName("VNPAY").providerAmountVnd(100L).providerCurrency("VND").build());
+            var r = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, p.getId(), p.getPaymentNumber(), p.getAmount(), "USD", null);
+            var claim = proofStore.begin(order, r);
+            var fields = new java.util.HashMap<String, String>(); fields.put("vnp_TmnCode", gatewayConfig.getGateways().getVnpay().getTmnCode());
+            fields.put("vnp_TxnRef", v.getPaymentNumber()); fields.put("vnp_Amount", "10000"); fields.put("vnp_ResponseCode", i == 0 ? "00" : "01"); fields.put("vnp_TransactionStatus", i == 0 ? "00" : "01");
+            assertEquals("00", ipn.process(fields).get("RspCode"));
+            assertTrue(jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, order) > claim.view().financialVersion());
+            assertTrue(jdbc.queryForObject("select permanent_fence from payment_order_guard where order_id=?", Boolean.class, order));
+            var result = proofStore.complete(order, r.operationId(), claim.token(), c1Proof(pi));
+            assertEquals("HOLD", result.status()); assertEquals("FINANCIAL_FACTS_CHANGED", result.reason());
+        }
+    }
+
+    @Test void proofClaimDetectsLateHostedRecord() {
+        long order = 18820;
+        var hostedPayment = hostedStore.reserve(order, "owner", new BigDecimal("25.00"), "https://fixture.test");
+        hostedStore.record(order, 0, "cs_c1_18820", "OPEN", null);
+        jdbc.update("update payments set blocking=false where id=?", hostedPayment.getPaymentId());
+        var candidate = intent(order, "pi_c1_hosted_candidate", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        candidate.setStripeIntentCreatedByService(true); candidate.setStripeIntentLivemode(false); repository.saveAndFlush(candidate);
+        var r = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, candidate.getId(), candidate.getPaymentNumber(), candidate.getAmount(), "USD", null);
+        var claim = proofStore.begin(order, r);
+        hostedStore.record(order, 0, "cs_c1_18820", "PAID", "pi_c1_hosted");
+        assertEquals("PAID", jdbc.queryForObject("select session_state from hosted_checkouts where order_id=?", String.class, order));
+        assertTrue(jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, order) > claim.view().financialVersion());
+        assertTrue(jdbc.queryForObject("select permanent_fence from payment_order_guard where order_id=?", Boolean.class, order));
+        var result = proofStore.complete(order, r.operationId(), claim.token(), c1Proof("pi_c1_hosted_candidate"));
+        assertEquals("HOLD", result.status()); assertEquals("FINANCIAL_FACTS_CHANGED", result.reason());
+    }
+
+    @Test void proofClaimDetectsProviderReadbackAndLateClosureContradiction() throws Exception {
+        for (int i = 0; i < 2; i++) {
+            long order = 18830 + i; String pi = "pi_readback_c1_" + i;
+            var p = intent(order, pi, i == 0 ? org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED : org.de013.paymentservice.entity.enums.PaymentStatus.PENDING, null);
+            p.setStripeIntentCreatedByService(true); p.setStripeIntentLivemode(false); repository.saveAndFlush(p);
+            java.util.UUID close = null;
+            if (i == 1) {
+                close = java.util.UUID.randomUUID();
+                jdbc.update("insert into payment_order_guard(order_id,close_operation_id,close_status,close_safe_proof,close_safe_at) values (?,?,'SAFE','fixture',clock_timestamp())", order, close);
+            }
+            var r = new CompensationProofStore.Request(java.util.UUID.randomUUID(), 1, p.getId(), p.getPaymentNumber(), p.getAmount(), "USD", close);
+            var claim = proofStore.begin(order, r);
+            if (i == 0) {
+                when(factory.getGateway("STRIPE")).thenReturn(stripe);
+                when(stripe.getPaymentIntent(pi)).thenReturn(StripePaymentResponse.builder().paymentIntentId(pi).status("processing").amount(new BigDecimal("25.00")).build());
+                payments.syncPaymentStatusWithStripe(p.getId());
+            } else {
+                String body = "{\"id\":\"evt_c1_late_closure\",\"type\":\"payment_intent.succeeded\",\"livemode\":false,\"data\":{\"object\":{\"object\":\"payment_intent\",\"id\":\"" + pi + "\",\"status\":\"succeeded\",\"amount\":2500,\"currency\":\"usd\",\"latest_charge\":\"ch_c1_late\"}}}";
+                refundHttp(body);
+                assertEquals("HOLD", jdbc.queryForObject("select close_status from payment_order_guard where order_id=?", String.class, order));
+                assertEquals("LATE_SUCCESS", jdbc.queryForObject("select close_reason from payment_order_guard where order_id=?", String.class, order));
+            }
+            assertTrue(jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, order) > claim.view().financialVersion());
+            assertTrue(jdbc.queryForObject("select permanent_fence from payment_order_guard where order_id=?", Boolean.class, order));
+            var result = proofStore.complete(order, r.operationId(), claim.token(), c1Proof(pi));
+            assertEquals("HOLD", result.status()); assertEquals("FINANCIAL_FACTS_CHANGED", result.reason());
+        }
+    }
+
     @Test void holdBlocksRefundCreateProcessAndApprove() throws Exception {
         var payment = intent(8150, "pi_refund_8150", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
         var first = refund(payment, "REF-8150-A", null, org.de013.paymentservice.entity.enums.RefundStatus.PENDING);
@@ -853,7 +1190,7 @@ class PaymentReservationFlowTest {
         refunds.updateRefundStatus(pending.getId(), org.de013.paymentservice.entity.enums.RefundStatus.FAILED, "stale");
         assertEquals(org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED, refundRepository.findById(pending.getId()).orElseThrow().getStatus());
         send("evt_refund_8151", "refund.updated", "refund", "re_8151_b", "succeeded");
-        assertEquals(org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED, refundRepository.findById(failed.getId()).orElseThrow().getStatus());
+        assertEquals(org.de013.paymentservice.entity.enums.RefundStatus.FAILED, refundRepository.findById(failed.getId()).orElseThrow().getStatus());
         var old = refund(payment, "REF-8151-C", "re_8151_c", org.de013.paymentservice.entity.enums.RefundStatus.FAILED);
         refunds.cleanupOldFailedRefunds(java.time.LocalDateTime.now().plusDays(1));
         assertTrue(refundRepository.existsById(old.getId()));
@@ -882,6 +1219,37 @@ class PaymentReservationFlowTest {
             assertEquals(org.de013.paymentservice.entity.enums.RefundStatus.SUCCEEDED, refundRepository.findById(pending.getId()).orElseThrow().getStatus());
             verify(stripe, times(1)).createRefund(any());
         } finally { resume.countDown(); pool.shutdownNow(); }
+    }
+
+    @Test void fencedRefundIngestionVersionsOnlyChangedFacts() throws Exception {
+        var payment = intent(18151, "pi_refund_18151", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        var pending = refund(payment, "REF-18151-A", "re_18151_a", org.de013.paymentservice.entity.enums.RefundStatus.PENDING);
+        var other = refund(payment, "REF-18151-B", "re_18151_b", org.de013.paymentservice.entity.enums.RefundStatus.PENDING);
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> guard.permanentFence(18151L));
+        assertThrows(ResponseStatusException.class, () -> refunds.cancelRefund(other.getId(), "no"));
+        assertThrows(ResponseStatusException.class, () -> refunds.rejectRefund(other.getId(), "admin", "no"));
+        assertThrows(ResponseStatusException.class, () -> refunds.updateRefundStatus(other.getId(), org.de013.paymentservice.entity.enums.RefundStatus.FAILED, "no"));
+        when(factory.getStripeGateway()).thenReturn(stripe);
+        when(stripe.getRefundResponse("re_18151_a")).thenReturn(org.de013.paymentservice.dto.stripe.StripeRefundResponse.builder().refundId("re_18151_a").status("succeeded").build());
+        long before = jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18151L);
+        refunds.syncRefundStatusWithStripe(pending.getId());
+        assertEquals(before + 1, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18151L));
+        refunds.syncRefundStatusWithStripe(pending.getId());
+        assertEquals(before + 1, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18151L));
+        send("evt_refund_18151_a", "refund.updated", "refund", "re_18151_b", "succeeded");
+        assertEquals(before + 2, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18151L));
+        send("evt_refund_18151_b", "refund.updated", "refund", "re_18151_b", "succeeded");
+        assertEquals(before + 3, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18151L));
+    }
+
+    @Test void refundCleanupVersionsOnlyActualDeletion() {
+        var payment = intent(18152, "pi_refund_18152", org.de013.paymentservice.entity.enums.PaymentStatus.SUCCEEDED, null);
+        var old = refund(payment, "REF-18152", "re_18152", org.de013.paymentservice.entity.enums.RefundStatus.FAILED);
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(s -> guard.lock(18152L));
+        long before = jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18152L);
+        refunds.cleanupOldFailedRefunds(java.time.LocalDateTime.now().plusDays(1));
+        assertFalse(refundRepository.existsById(old.getId()));
+        assertEquals(before + 1, jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, 18152L));
     }
 
     @Test void stripeCreateResponseSerializesBeforeHold() throws Exception {

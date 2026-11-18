@@ -50,9 +50,91 @@ class CheckoutClosureServiceTest {
     @Autowired PaymentOrderGuard guard;
     @Autowired PlatformTransactionManager transactions;
     @Autowired ObjectMapper json;
+    @Autowired CompensationProofStore proofStore;
+
+    private CompensationProofStore.Request compensationRequest(long order, long payment, String intent, UUID close) {
+        return new CompensationProofStore.Request(UUID.randomUUID(), 1, payment, "fixture-" + intent, new BigDecimal("25.00"), "USD", close);
+    }
+    private org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Result compensationEvidence(String intent) {
+        var evidence = new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Evidence("acct_test", false, java.time.Instant.now(), java.util.List.of(
+                new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.ChargeEvidence("ch_" + intent, intent, 2500, "succeeded", java.util.List.of(
+                        new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.RefundEvidence("re_" + intent, 2500, "succeeded")))));
+        return new org.de013.paymentservice.gateway.stripe.StripeCompensationVerifier.Result(true, null, evidence);
+    }
+
+    @Test void compensationClaimDetectsClosureBindingAndPreexistingHoldAndNoAttempts() {
+        for (int i = 0; i < 3; i++) {
+            long order = 988100 + i; String intent = "pi_close_c1_" + i;
+            long payment = i == 2 ? 999999 : trusted(order, intent);
+            if (i == 1) jdbc.update("update payments set stripe_intent_created_by_service=false where id=?", payment);
+            if (i == 0) new TransactionTemplate(transactions).executeWithoutResult(s -> guard.hold(order));
+            var request = compensationRequest(order, payment, intent, null);
+            var claim = proofStore.begin(order, request);
+            var result = closures.close(order, UUID.randomUUID());
+            if (i == 0) assertEquals("RECONCILIATION_HOLD", result.reason());
+            if (i == 2) assertEquals("SAFE", result.status());
+            assertTrue(jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, order) > claim.view().financialVersion());
+            var completed = proofStore.complete(order, request.operationId(), claim.token(), compensationEvidence(intent));
+            assertEquals("HOLD", completed.status()); assertEquals("FINANCIAL_FACTS_CHANGED", completed.reason());
+        }
+    }
+
+    @Test void compensationClaimDetectsPackageClosureHoldCompletion() {
+        long order = 988110; String intent = "pi_close_helper"; long payment = trusted(order, intent); UUID close = UUID.randomUUID();
+        var processing = closures.beginProcessing(order, close); assertNotNull(processing.claim());
+        var request = compensationRequest(order, payment, intent, close); var claim = proofStore.begin(order, request);
+        assertTrue(closures.completeProcessing(order, close, processing.claim(), "HOLD", "FIXTURE"));
+        assertTrue(jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, order) > claim.view().financialVersion());
+        var completed = proofStore.complete(order, request.operationId(), claim.token(), compensationEvidence(intent));
+        assertEquals("HOLD", completed.status()); assertEquals("FINANCIAL_FACTS_CHANGED", completed.reason());
+    }
+
+    @Test void compensationClaimDetectsInFlightRealClosureSafeAndUnsafeCompletion() throws Exception {
+        for (boolean safe : new boolean[]{true, false}) {
+            long order = safe ? 988120 : 988121; String intent = safe ? "pi_close_safe_c1" : "pi_close_unsafe_c1";
+            long payment = trusted(order, intent); UUID close = UUID.randomUUID();
+            var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+            var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            server.createContext("/v1/payment_intents/" + intent, exchange -> {
+                entered.countDown();
+                try { release.await(5, TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                String body = "{\"id\":\"" + intent + "\",\"object\":\"payment_intent\",\"status\":\"" + (safe ? "canceled" : "processing") + "\",\"currency\":\"usd\",\"livemode\":false,\"amount\":2500,\"amount_received\":0,\"latest_charge\":null}";
+                byte[] bytes = body.getBytes(StandardCharsets.UTF_8); exchange.getResponseHeaders().set("Content-Type", "application/json"); exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+            });
+            String base = Stripe.getApiBase(), key = Stripe.apiKey; var pool = Executors.newSingleThreadExecutor(); server.start();
+            try {
+                Stripe.overrideApiBase("http://127.0.0.1:" + server.getAddress().getPort()); Stripe.apiKey = "sk_test_fixture";
+                var future = pool.submit(() -> closures.close(order, close));
+                assertTrue(entered.await(5, TimeUnit.SECONDS));
+                var request = compensationRequest(order, payment, intent, close); var claim = proofStore.begin(order, request);
+                release.countDown(); var result = future.get(5, TimeUnit.SECONDS);
+                assertEquals(safe ? "SAFE" : "HOLD", result.status());
+                assertTrue(jdbc.queryForObject("select financial_version from payment_order_guard where order_id=?", Long.class, order) > claim.view().financialVersion());
+                var completed = proofStore.complete(order, request.operationId(), claim.token(), compensationEvidence(intent));
+                assertEquals("HOLD", completed.status()); assertEquals("FINANCIAL_FACTS_CHANGED", completed.reason());
+            } finally {
+                release.countDown(); pool.shutdownNow(); assertTrue(pool.awaitTermination(5, TimeUnit.SECONDS));
+                Stripe.overrideApiBase(base); Stripe.apiKey = key; server.stop(0);
+            }
+        }
+    }
 
     private long trusted(long order, String intent) {
         return jdbc.queryForObject("INSERT INTO payments (payment_number, order_id, user_id, amount, currency, status, method, stripe_payment_intent_id, stripe_intent_livemode, stripe_intent_created_by_service, blocking) VALUES (?, ?, 'owner', 25.00, 'USD', 'PENDING', 'CARD', ?, false, true, false) RETURNING id", Long.class, "fixture-" + intent, order, intent);
+    }
+
+    @Test void closureBindingAndContradictionAdvanceVersionOnce() {
+        long order = 987902L;
+        UUID operation = UUID.randomUUID();
+        assertEquals("SAFE", closures.close(order, operation).status());
+        long bound = jdbc.queryForObject("SELECT financial_version FROM payment_order_guard WHERE order_id=?", Long.class, order);
+        assertTrue(bound > 0);
+        closures.close(order, operation);
+        assertEquals(bound, jdbc.queryForObject("SELECT financial_version FROM payment_order_guard WHERE order_id=?", Long.class, order));
+        closures.recordContradiction(order);
+        assertEquals(bound + 1, jdbc.queryForObject("SELECT financial_version FROM payment_order_guard WHERE order_id=?", Long.class, order));
+        closures.recordContradiction(order);
+        assertEquals(bound + 1, jdbc.queryForObject("SELECT financial_version FROM payment_order_guard WHERE order_id=?", Long.class, order));
     }
 
     @Test void multipleAttemptProofAndMixedPreflightAndTakeover() throws Exception {

@@ -20,7 +20,9 @@ public class PaymentReservation {
     public Payment reserve(Payment payment) {
         guard.requirePayable(payment.getOrderId());
         try {
-            return payments.saveAndFlush(payment);
+            Payment saved = payments.saveAndFlush(payment);
+            guard.financialChange(payment.getOrderId());
+            return saved;
         } catch (DataIntegrityViolationException failure) {
             if (isOrderConflict(failure)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Order already has a blocking payment", failure);
             throw failure;

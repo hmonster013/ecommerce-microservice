@@ -159,8 +159,17 @@ public class WebhookServiceImpl implements WebhookService {
                 case "charge.failed" -> handleChargeFailed(webhookRequest);
                 case "charge.dispute.created" -> handleChargeDisputeCreated(webhookRequest);
                 case "refund.created" -> handleRefundCreated(webhookRequest);
-                case "refund.updated" -> handleRefundUpdated(webhookRequest);
-                default -> log.debug("Unhandled webhook event type: {}", eventType);
+                case "refund.updated", "refund.failed" -> handleRefundUpdated(webhookRequest);
+                default -> {
+                    if (eventType.startsWith("charge.") || eventType.contains("refund")) {
+                        String id = webhookRequest.getEventId();
+                        if (id == null || id.isBlank() || id.length() > 255 || eventType.length() > 80)
+                            throw new PaymentGatewayException("Invalid financial event identity");
+                        // ponytail: unsupported financial semantics are globally unresolved; classify only when explicitly supported.
+                        entityManager.createNativeQuery("INSERT INTO stripe_financial_observation(event_id,event_type) VALUES (:id,:type) ON CONFLICT (event_id) DO NOTHING")
+                                .setParameter("id", id).setParameter("type", eventType).executeUpdate();
+                    } else log.debug("Unhandled webhook event type: {}", eventType);
+                }
             }
         } catch (Exception e) {
             log.error("Error processing webhook event: {}", eventType, e);
@@ -203,6 +212,11 @@ public class WebhookServiceImpl implements WebhookService {
         if (!"STRIPE".equals(payment.getGatewayName())) {
             throw new PaymentGatewayException("Payment intent provider is not correlated");
         }
+        if (event.getAccount() != null) {
+            recordFinancialObservation(event, orderId);
+            guard.hold(orderId);
+            return true;
+        }
         if (retryAttempts.exists(payment.getId()) && ("payment_intent.payment_failed".equals(event.getEventType())
                 || "payment_intent.requires_action".equals(event.getEventType())
                 || "payment_intent.succeeded".equals(event.getEventType()))) {
@@ -224,6 +238,10 @@ public class WebhookServiceImpl implements WebhookService {
                 throw new PaymentGatewayException("Retry provider state is unavailable", e);
             }
         }
+        recordFinancialObservation(event, orderId);
+        PaymentStatus before = payment.getStatus();
+        boolean wasBlocking = payment.isBlocking();
+        boolean wasReleased = payment.isVerifiedRelease();
         switch (event.getEventType()) {
             case "payment_intent.canceled" -> {
                 if (payment.getStatus() != PaymentStatus.SUCCEEDED && !payment.isVerifiedRelease()) {
@@ -258,6 +276,8 @@ public class WebhookServiceImpl implements WebhookService {
             }
             default -> log.debug("Unhandled webhook event type: {}", event.getEventType());
         }
+        if (before != payment.getStatus() || wasBlocking != payment.isBlocking() || wasReleased != payment.isVerifiedRelease())
+            guard.financialChange(orderId);
         return true;
     }
 
@@ -332,42 +352,75 @@ public class WebhookServiceImpl implements WebhookService {
 
     @Override
     public void handleChargeSucceeded(StripeWebhookRequest webhookRequest) {
-        String paymentIntentId = webhookRequest.getPaymentIntentId();
-        log.info("Handling charge succeeded for payment intent: {}", paymentIntentId);
-        // Payment intent succeeded event will handle the main logic
+        recordFinancialObservation(webhookRequest);
     }
 
     @Override
     public void handleChargeFailed(StripeWebhookRequest webhookRequest) {
-        String paymentIntentId = webhookRequest.getPaymentIntentId();
-        log.info("Handling charge failed for payment intent: {}", paymentIntentId);
-        // Payment intent failed event will handle the main logic
+        recordFinancialObservation(webhookRequest);
     }
 
     @Override
     public void handleChargeDisputeCreated(StripeWebhookRequest webhookRequest) {
-        String paymentIntentId = webhookRequest.getPaymentIntentId();
-        log.warn("CRITICAL: Stripe charge dispute created for payment intent: {}. Please audit customer payment details.", paymentIntentId);
+        recordFinancialObservation(webhookRequest);
+    }
+
+    private void recordFinancialObservation(StripeWebhookRequest event) {
+        recordFinancialObservation(event, null);
+    }
+
+    private void recordFinancialObservation(StripeWebhookRequest event, Long affectedOrder) {
+        if (event.getEventId() == null || event.getEventId().isBlank() || event.getEventId().length() > 255
+                || event.getEventType() == null || event.getEventType().length() > 80)
+            throw new PaymentGatewayException("Invalid financial event identity");
+        String object = event.getObjectId();
+        String intent = event.getPaymentIntentId();
+        String charge = "charge".equals(event.getObjectType()) ? object : null;
+        if ("payment_intent".equals(event.getObjectType()) && event.getData() != null && event.getData().getObject() != null
+                && event.getData().getObject().get("latest_charge") instanceof String id) charge = id;
+        if ("dispute".equals(event.getObjectType()) && event.getData() != null && event.getData().getObject() != null
+                && event.getData().getObject().get("charge") instanceof String id) charge = id;
+        if ("refund".equals(event.getObjectType()) && event.getData() != null && event.getData().getObject() != null
+                && event.getData().getObject().get("charge") instanceof String id) charge = id;
+        if (intent == null && event.getData() != null && event.getData().getObject() != null
+                && event.getData().getObject().get("payment_intent") instanceof String id) intent = id;
+        if ((object != null && object.length() > 255) || (intent != null && intent.length() > 255)
+                || (charge != null && charge.length() > 255)
+                || (event.getStatus() != null && event.getStatus().length() > 80)
+                || (event.getCurrency() != null && event.getCurrency().length() > 16)
+                || (event.getAccount() != null && event.getAccount().length() > 255))
+            throw new PaymentGatewayException("Invalid financial event facts");
+        Long orderId;
+        if ("refund".equals(event.getObjectType())) {
+            Long paymentId = object == null ? null : refundRepository.findPaymentIdByStripeRefundId(object).orElse(null);
+            orderId = paymentId == null ? null : paymentRepository.findOrderIdByPaymentId(paymentId).orElse(null);
+        } else {
+            orderId = intent == null || event.getAccount() != null ? null : paymentRepository.findOrderIdByStripeIntent(intent).orElse(null);
+        }
+        if (orderId != null) guard.lock(orderId);
+        boolean complete = (orderId != null || affectedOrder != null) && object != null && charge != null && intent != null && event.getStatus() != null
+                && event.getAmount() != null && event.getCurrency() != null && event.getLivemode() != null;
+        String kind = "refund".equals(event.getObjectType()) ? "refund.observed" : event.getEventType();
+        boolean existing = complete && Boolean.TRUE.equals(entityManager.createNativeQuery("SELECT EXISTS (SELECT 1 FROM stripe_financial_observation WHERE order_id IS NOT DISTINCT FROM :orderId AND account_id IS NOT DISTINCT FROM :account AND event_type = :type AND object_id = :object AND intent_id = :intent AND charge_id = :charge AND status = :status AND amount = :amount AND currency = :currency AND livemode = :mode)")
+                .setParameter("orderId", orderId).setParameter("type", kind).setParameter("object", object)
+                .setParameter("account", event.getAccount())
+                .setParameter("intent", intent).setParameter("charge", charge).setParameter("status", event.getStatus())
+                .setParameter("amount", event.getAmount()).setParameter("currency", event.getCurrency()).setParameter("mode", event.getLivemode())
+                .getSingleResult());
+        int inserted = entityManager.createNativeQuery("INSERT INTO stripe_financial_observation(event_id,event_type,object_id,intent_id,charge_id,status,amount,currency,livemode,account_id,order_id) VALUES (:event,:type,:object,:intent,:charge,:status,:amount,:currency,:mode,:account,:orderId) ON CONFLICT (event_id) DO NOTHING")
+                .setParameter("event", event.getEventId()).setParameter("type", kind).setParameter("object", object)
+                .setParameter("intent", intent).setParameter("charge", charge).setParameter("status", event.getStatus())
+                .setParameter("amount", event.getAmount()).setParameter("currency", event.getCurrency()).setParameter("mode", event.getLivemode())
+                .setParameter("account", event.getAccount()).setParameter("orderId", orderId).executeUpdate();
+        Long changedOrder = affectedOrder != null ? affectedOrder : orderId;
+        if (inserted == 1 && changedOrder != null && !existing) guard.financialChange(changedOrder);
     }
 
     // ========== REFUND EVENTS ==========
 
     @Override
     public void handleRefundCreated(StripeWebhookRequest webhookRequest) {
-        String refundId = webhookRequest.getRefundId();
-        log.info("Handling refund created: {}", refundId);
-
-        lockRefundWebhook(refundId);
-        Optional<Refund> refundOpt = refundRepository.findByStripeRefundId(refundId);
-        if (refundOpt.isPresent()) {
-            Refund refund = refundOpt.get();
-            refund.setStatus(RefundStatus.SUCCEEDED);
-            refundRepository.save(refund);
-
-            log.info("Refund status updated to SUCCEEDED: {}", refund.getRefundNumber());
-        } else {
-            throw new PaymentGatewayException("Refund is not correlated");
-        }
+        handleRefundUpdated(webhookRequest);
     }
 
     @Override
@@ -375,24 +428,39 @@ public class WebhookServiceImpl implements WebhookService {
         String refundId = webhookRequest.getRefundId();
         log.info("Handling refund updated: {}", refundId);
 
+        if (refundId == null || refundId.isBlank()) { recordFinancialObservation(webhookRequest); return; }
+        var paymentId = refundRepository.findPaymentIdByStripeRefundId(refundId);
+        if (paymentId.isEmpty()) { recordFinancialObservation(webhookRequest); return; }
         lockRefundWebhook(refundId);
-        Optional<Refund> refundOpt = refundRepository.findByStripeRefundId(refundId);
-        if (refundOpt.isPresent()) {
-            Refund refund = refundOpt.get();
-            // Update refund status based on webhook data
-            if (refund.getStatus() == RefundStatus.SUCCEEDED) {
-                return;
-            } else if (webhookRequest.getFailureReason() != null) {
-                refund.setStatus(RefundStatus.FAILED);
-            } else {
-                refund.setStatus(RefundStatus.SUCCEEDED);
-            }
-            refundRepository.save(refund);
-
-            log.info("Refund updated: {}", refund.getRefundNumber());
-        } else {
-            throw new PaymentGatewayException("Refund is not correlated");
+        Refund refund = refundRepository.findByStripeRefundId(refundId).orElseThrow();
+        verifyRefundOrder(refund);
+        Payment payment = paymentRepository.findById(paymentId.get()).orElseThrow();
+        var object = webhookRequest.getData() == null ? null : webhookRequest.getData().getObject();
+        String charge = object != null && object.get("charge") instanceof String s ? s : null;
+        String intent = object != null && object.get("payment_intent") instanceof String s ? s : null;
+        Long amount = null;
+        try { amount = refund.getAmount().movePointRight(2).longValueExact(); } catch (ArithmeticException ignored) { }
+        boolean valid = webhookRequest.getAccount() == null && webhookRequest.getLivemode() != null
+                && webhookRequest.getLivemode().equals(payment.getStripeIntentLivemode()) && payment.isStripeIntentCreatedByService()
+                && amount != null && amount.equals(webhookRequest.getAmount()) && refund.getCurrency() != null
+                && refund.getCurrency().equalsIgnoreCase(webhookRequest.getCurrency())
+                && charge != null && charge.equals(refund.getStripeChargeId())
+                && intent != null && intent.equals(refund.getStripePaymentIntentId()) && intent.equals(payment.getStripePaymentIntentId())
+                && webhookRequest.getStatus() != null;
+        recordFinancialObservation(webhookRequest);
+        if (!valid) { guard.hold(refund.getOrderId()); return; }
+        RefundStatus next = switch (webhookRequest.getStatus()) {
+            case "succeeded" -> RefundStatus.SUCCEEDED;
+            case "pending", "requires_action" -> RefundStatus.PROCESSING;
+            case "failed" -> RefundStatus.FAILED;
+            case "canceled" -> RefundStatus.CANCELED;
+            default -> null;
+        };
+        if (next == null || ("refund.failed".equals(webhookRequest.getEventType()) && next != RefundStatus.FAILED)) {
+            guard.hold(refund.getOrderId()); return;
         }
+        if (refund.getStatus() == RefundStatus.SUCCEEDED && next != RefundStatus.SUCCEEDED) { guard.hold(refund.getOrderId()); return; }
+        if (refund.getStatus() != next) { refund.setStatus(next); refundRepository.save(refund); }
     }
 
     private void lockRefundWebhook(String refundId) {
@@ -404,6 +472,12 @@ public class WebhookServiceImpl implements WebhookService {
         guard.lock(orderId);
         paymentRepository.findById(paymentId).filter(p -> orderId.equals(p.getOrderId()))
                 .orElseThrow(() -> new PaymentGatewayException("Refund payment correlation changed"));
+    }
+
+    private void verifyRefundOrder(Refund refund) {
+        Long orderId = paymentRepository.findOrderIdByPaymentId(refund.getPaymentId())
+                .orElseThrow(() -> new PaymentGatewayException("Refund payment is not correlated"));
+        if (!orderId.equals(refund.getOrderId())) throw new PaymentGatewayException("Refund order is not correlated");
     }
 
     // ========== WEBHOOK VALIDATION ==========

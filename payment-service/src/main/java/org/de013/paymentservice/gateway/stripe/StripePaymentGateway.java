@@ -308,6 +308,8 @@ public class StripePaymentGateway implements PaymentGateway {
                 .confirmationMethod(paymentIntent.getConfirmationMethod())
                 .created(paymentIntent.getCreated())
                 .livemode(paymentIntent.getLivemode())
+                .latestCharge(paymentIntent.getLatestCharge() == null ? null : StripePaymentResponse.StripeChargeInfo.builder()
+                        .chargeId(paymentIntent.getLatestCharge()).build())
                 .build();
     }
 

@@ -383,9 +383,7 @@ class InventoryReservationIntegrationTest {
             assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM variant_inventory WHERE variant_id=?", Integer.class, child));
             assertEquals("RESERVED", service.lookup(variantReservation.operationId()).state());
         } finally {
-            jdbc.execute("ALTER ROLE " + jdbc.queryForObject("SELECT current_user", String.class) + " RESET search_path");
-            ((com.zaxxer.hikari.HikariDataSource) dataSource).getHikariPoolMXBean().softEvictConnections();
-            flyway.clean();
+            cleanRoleSchema(flyway);
         }
     }
 
@@ -425,10 +423,37 @@ class InventoryReservationIntegrationTest {
                 assertEquals("FULFILLED", service.lookup(r.operationId()).state());
             }
         } finally {
-            jdbc.execute("ALTER ROLE " + jdbc.queryForObject("SELECT current_user", String.class) + " RESET search_path");
-            ((com.zaxxer.hikari.HikariDataSource) dataSource).getHikariPoolMXBean().softEvictConnections();
-            flyway.clean();
+            cleanRoleSchema(flyway);
         }
+    }
+
+    private void cleanRoleSchema(Flyway flyway) {
+        try {
+            flyway.clean();
+        } finally {
+            try {
+                jdbc.execute("ALTER ROLE " + jdbc.queryForObject("SELECT current_user", String.class) + " RESET search_path");
+            } finally {
+                ((com.zaxxer.hikari.HikariDataSource) dataSource).getHikariPoolMXBean().softEvictConnections();
+            }
+        }
+    }
+
+    @Test void roleSchemaCleanupRestoresPooledConnectionsForSetup() {
+        String schema = "catalog_cleanup_" + UUID.randomUUID().toString().replace("-", "");
+        Flyway flyway = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
+                .locations("classpath:db/migration").cleanDisabled(false).load();
+        try {
+            flyway.migrate();
+            jdbc.execute("ALTER ROLE " + jdbc.queryForObject("SELECT current_user", String.class) + " SET search_path TO " + schema);
+            ((com.zaxxer.hikari.HikariDataSource) dataSource).getHikariPoolMXBean().softEvictConnections();
+            assertEquals(schema, jdbc.queryForObject("SELECT current_schema()", String.class));
+        } finally {
+            cleanRoleSchema(flyway);
+        }
+        assertEquals("public", jdbc.queryForObject("SELECT current_schema()", String.class));
+        assertEquals("\"$user\", public", jdbc.queryForObject("SHOW search_path", String.class));
+        setup();
     }
 
     @Test void legacyAndDurableReserveRaceBothOrderings() throws Exception {
