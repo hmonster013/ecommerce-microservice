@@ -6,6 +6,9 @@ spring:
     name: api-gateway
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
+  http:
+    codecs:
+      preferred-json-mapper: jackson2
   # Development profile - no need for multiple profiles
   profiles:
     active: default

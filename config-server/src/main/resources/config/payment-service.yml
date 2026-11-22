@@ -11,7 +11,7 @@ server:
 
 spring:
   # Jackson configuration for proper date/time serialization
-  jackson:
+  jackson2:
     serialization:
       write-dates-as-timestamps: false
       write-durations-as-timestamps: false

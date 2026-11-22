@@ -397,7 +397,7 @@ public class RefundServiceImpl implements RefundService {
             String refundType, BigDecimal minAmount, BigDecimal maxAmount,
             LocalDateTime startDate, LocalDateTime endDate, String initiatedBy, Pageable pageable) {
 
-        Specification<Refund> spec = Specification.where(null);
+        Specification<Refund> spec = Specification.unrestricted();
 
         if (StringUtils.hasText(refundNumber)) {
             spec = spec.and((root, query, cb) ->

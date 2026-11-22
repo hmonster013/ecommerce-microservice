@@ -12,7 +12,7 @@ import org.de013.notificationservice.service.PaymentEmailIngestion;
 import org.de013.notificationservice.service.PaymentEmailWorkers;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.*;
-import org.springframework.boot.autoconfigure.mail.MailProperties;
+import org.springframework.boot.mail.autoconfigure.MailProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;

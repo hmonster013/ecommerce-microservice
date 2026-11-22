@@ -23,14 +23,14 @@ class PaymentNotificationRetryTest {
     @org.springframework.beans.factory.annotation.Autowired WebhookService webhook;
     @org.springframework.beans.factory.annotation.Autowired PaymentRetryAttempts retryAttempts;
     @org.springframework.beans.factory.annotation.Autowired org.de013.paymentservice.config.PaymentGatewayConfig gatewayConfig;
-    @org.springframework.boot.test.mock.mockito.MockBean org.de013.paymentservice.client.HostedOrderClient orders;
-    @org.springframework.boot.test.mock.mockito.MockBean org.de013.paymentservice.client.OrderServiceClient orderClient;
-    @org.springframework.boot.test.mock.mockito.MockBean org.de013.paymentservice.client.NotificationServiceClient notifications;
-    @org.springframework.boot.test.mock.mockito.MockBean org.de013.paymentservice.client.UserServiceClient users;
-    @org.springframework.boot.test.mock.mockito.MockBean org.de013.paymentservice.gateway.PaymentGatewayFactory factory;
-    @org.springframework.boot.test.mock.mockito.MockBean org.de013.paymentservice.gateway.stripe.StripePaymentGateway stripe;
-    @org.springframework.boot.test.mock.mockito.MockBean org.de013.paymentservice.gateway.vnpay.VnpayPaymentGateway vnpay;
-    @org.springframework.boot.test.mock.mockito.MockBean org.de013.paymentservice.service.validation.PaymentRequestValidator validator;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.de013.paymentservice.client.HostedOrderClient orders;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.de013.paymentservice.client.OrderServiceClient orderClient;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.de013.paymentservice.client.NotificationServiceClient notifications;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.de013.paymentservice.client.UserServiceClient users;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.de013.paymentservice.gateway.PaymentGatewayFactory factory;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.de013.paymentservice.gateway.stripe.StripePaymentGateway stripe;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.de013.paymentservice.gateway.vnpay.VnpayPaymentGateway vnpay;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.de013.paymentservice.service.validation.PaymentRequestValidator validator;
     private org.de013.paymentservice.entity.Payment payment(long order, String provider, PaymentStatus status) {
         return repository.saveAndFlush(org.de013.paymentservice.entity.Payment.builder().orderId(order).userId("owner")
                 .paymentNumber("TEST-" + order).amount(new BigDecimal("25.00"))

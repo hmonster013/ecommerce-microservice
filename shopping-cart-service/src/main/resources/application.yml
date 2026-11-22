@@ -2,6 +2,9 @@ server:
   port: 8083
 
 spring:
+  http:
+    converters:
+      preferred-json-mapper: jackson2
   application:
     name: shopping-cart-service
   profiles:

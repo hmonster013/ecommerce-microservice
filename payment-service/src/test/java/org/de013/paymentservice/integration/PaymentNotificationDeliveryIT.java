@@ -420,9 +420,9 @@ class PaymentNotificationDeliveryIT {
             if (System.getProperty("test.stripe.base") != null) l.loadClass("com.stripe.Stripe").getMethod("overrideApiBase", String.class).invoke(null, System.getProperty("test.stripe.base"));
             Object ctx = l.loadClass("org.springframework.boot.SpringApplication").getMethod("run", Class.class, String[].class)
                     .invoke(null, l.loadClass(args[0]), Arrays.copyOfRange(args, 1, args.length));
-            Object server = l.loadClass("org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext").getMethod("getWebServer").invoke(ctx);
+            Object server = l.loadClass("org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContext").getMethod("getWebServer").invoke(ctx);
             int port = (int) l.loadClass("org.springframework.boot.web.server.WebServer").getMethod("getPort").invoke(server);
-            Class<?> kafkaProperties = l.loadClass("org.springframework.boot.autoconfigure.kafka.KafkaProperties");
+            Class<?> kafkaProperties = l.loadClass("org.springframework.boot.kafka.autoconfigure.KafkaProperties");
             Object kafka = ctx.getClass().getMethod("getBean", Class.class).invoke(ctx, kafkaProperties);
             org.slf4j.LoggerFactory.getLogger(Launcher.class).info("TEST_KAFKA_BROKERS {}", kafkaProperties.getMethod("getBootstrapServers").invoke(kafka));
             if (args[0].contains("paymentservice")) {

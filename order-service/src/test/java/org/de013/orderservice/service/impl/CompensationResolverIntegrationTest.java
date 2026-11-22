@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -41,8 +41,8 @@ class CompensationResolverIntegrationTest {
     @Autowired ObjectMapper mapper;
     @Autowired CompensationResolver resolver;
     @Autowired CompensationStore store;
-    @MockBean PaymentReconciliationClient payment;
-    @MockBean InventoryReservationClient catalog;
+    @MockitoBean PaymentReconciliationClient payment;
+    @MockitoBean InventoryReservationClient catalog;
     @BeforeEach void clearPriorDueWork() {
         jdbc.update("UPDATE compensation_request SET next_check_at=clock_timestamp()+interval '1 day' WHERE status IN ('REQUESTED','CLAIMED','COMPENSATED')");
     }

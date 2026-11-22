@@ -10,8 +10,8 @@ import org.de013.paymentservice.controller.CheckoutClosureController;
 import org.de013.paymentservice.service.CheckoutClosureService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -42,7 +42,7 @@ class CheckoutClosureKeycloakTest {
             .withCommand("start-dev").withExposedPorts(8080).waitingFor(Wait.forHttp("/realms/master").forStatusCode(200));
     static String base, admin, paymentId, orderId, otherId;
     @Autowired MockMvc mvc;
-    @MockBean CheckoutClosureService closures;
+    @MockitoBean CheckoutClosureService closures;
 
     @DynamicPropertySource static void setup(DynamicPropertyRegistry registry) {
         try {

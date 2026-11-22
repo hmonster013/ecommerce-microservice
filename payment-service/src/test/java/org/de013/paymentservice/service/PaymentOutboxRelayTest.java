@@ -11,7 +11,7 @@ import org.de013.paymentservice.entity.enums.PaymentStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -43,7 +43,7 @@ class PaymentOutboxRelayTest {
     @Autowired PlatformTransactionManager tx;
     @Autowired JdbcTemplate jdbc;
     @Autowired org.springframework.kafka.core.KafkaTemplate<String, String> kafka;
-    @MockBean org.de013.paymentservice.client.HostedOrderClient orders;
+    @MockitoBean org.de013.paymentservice.client.HostedOrderClient orders;
 
     @Test void relayRestoresEachTraceAndPublishesLegacyAndMalformed() {
         jdbc.update("update payment_outbox set state='RECONCILIATION' where state='PENDING'");

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.data.domain.PageRequest;
@@ -31,7 +31,7 @@ class CategoryActiveOnlyPaginationTest {
     @Autowired private CategoryService categoryService;
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private ProductCategoryRepository productCategoryRepository;
-    @MockBean(name = "cacheManager") private CacheManager cacheManager;
+    @MockitoBean(name = "cacheManager") private CacheManager cacheManager;
 
     @BeforeEach
     void setUp() {

@@ -223,7 +223,7 @@ public class ProductSpecification {
     }
 
     public static Specification<Product> buildProductListSpec(ProductStatus status, String brand, Long categoryId, String q) {
-        Specification<Product> spec = Specification.where(null);
+        Specification<Product> spec = Specification.unrestricted();
         if (status != null) {
             spec = spec.and(hasStatus(status));
         }

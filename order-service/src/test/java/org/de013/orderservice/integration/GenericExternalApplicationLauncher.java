@@ -17,7 +17,7 @@ public final class GenericExternalApplicationLauncher {
         Class<?> spring = loader.loadClass("org.springframework.boot.SpringApplication");
         Object context = spring.getMethod("run", Class.class, String[].class)
                 .invoke(null, source, Arrays.copyOfRange(args, 1, args.length));
-        Class<?> webContext = loader.loadClass("org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext");
+        Class<?> webContext = loader.loadClass("org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContext");
         Object server = webContext.getMethod("getWebServer").invoke(context);
         int port = (int) loader.loadClass("org.springframework.boot.web.server.WebServer")
                 .getMethod("getPort").invoke(server);

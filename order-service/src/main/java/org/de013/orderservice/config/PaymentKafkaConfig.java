@@ -3,7 +3,7 @@ package org.de013.orderservice.config;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -17,7 +17,7 @@ import org.springframework.util.backoff.FixedBackOff;
 public class PaymentKafkaConfig {
     @Bean
     ConcurrentKafkaListenerContainerFactory<String, String> paymentKafkaListenerContainerFactory(KafkaProperties properties) {
-        var config = properties.buildConsumerProperties(null);
+        var config = properties.buildConsumerProperties();
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);

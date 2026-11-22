@@ -30,9 +30,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.http.MediaType;
@@ -51,7 +51,7 @@ class CatalogAuditSecurityTest {
     @Autowired MockMvc mvc;
     @Autowired CurrencySettingsRepository settings;
     @Autowired CategoryRepository categories;
-    @MockBean(name = "cacheManager") CacheManager cacheManager;
+    @MockitoBean(name = "cacheManager") CacheManager cacheManager;
 
     @BeforeEach
     void caches() {

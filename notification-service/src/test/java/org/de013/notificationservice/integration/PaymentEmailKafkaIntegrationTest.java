@@ -20,7 +20,7 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.testcontainers.containers.KafkaContainer;
@@ -127,6 +127,31 @@ class PaymentEmailKafkaIntegrationTest {
         var template = (org.springframework.kafka.core.KafkaTemplate<String, String>) context.getBean("paymentEmailDltTemplate");
         var result = template.send("notification.payment-email.v1.dlt", "key", "value").get(20, TimeUnit.SECONDS);
         assertEquals("notification.payment-email.v1.dlt", result.getRecordMetadata().topic());
+    }
+
+    @Test void lz4RecordRoundTripsThroughKafka() throws Exception {
+        byte[] bytes = PaymentEmailIngestionTest.JSON.getBytes(StandardCharsets.UTF_8);
+        try (var compressed = new KafkaProducer<String, byte[]>(Map.of(
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers(),
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class,
+                ProducerConfig.COMPRESSION_TYPE_CONFIG, "lz4"));
+             var consumer = new org.apache.kafka.clients.consumer.KafkaConsumer<String, byte[]>(Map.of(
+                     org.apache.kafka.clients.consumer.ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers(),
+                     org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringDeserializer.class,
+                     org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.ByteArrayDeserializer.class))) {
+            long offset = compressed.send(new ProducerRecord<>(TOPIC, 0, "12", bytes)).get(20, TimeUnit.SECONDS).offset();
+            var partition = new TopicPartition(TOPIC, 0);
+            consumer.assign(List.of(partition));
+            consumer.seek(partition, offset);
+            var records = consumer.poll(java.time.Duration.ofSeconds(20)).records(partition);
+            assertFalse(records.isEmpty());
+            assertEquals(offset, records.get(0).offset());
+            assertEquals("12", records.get(0).key());
+            assertArrayEquals(bytes, records.get(0).value());
+            await(() -> committed() > offset);
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM payment_email_request WHERE event_id=?::uuid", Integer.class, "9d382afe-7447-4cc6-ad51-6ce447bd32f0"));
+        }
     }
 
     @Test void freshGroupConsumesExistingTopicBacklog() throws Exception {

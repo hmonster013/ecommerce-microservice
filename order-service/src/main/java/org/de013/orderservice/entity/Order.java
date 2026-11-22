@@ -12,7 +12,7 @@ import org.de013.orderservice.entity.enums.OrderType;
 import org.de013.orderservice.entity.valueobject.Address;
 import org.de013.orderservice.entity.valueobject.Money;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ import java.util.List;
         @Index(name = "idx_status_created", columnList = "status, createdAt")
 })
 @SQLDelete(sql = "UPDATE orders SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor

@@ -8,11 +8,11 @@ import org.de013.notificationservice.service.NotificationService;
 import org.de013.notificationservice.service.SmsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -63,8 +63,8 @@ class NotificationSubmissionPostgresTest {
     }
 
     @Autowired NotificationController controller;
-    @MockBean EmailService email;
-    @SpyBean SmsService sms;
+    @MockitoBean EmailService email;
+    @MockitoSpyBean SmsService sms;
 
     private JdbcTemplate externalJdbc() {
         return new JdbcTemplate(new DriverManagerDataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword()));

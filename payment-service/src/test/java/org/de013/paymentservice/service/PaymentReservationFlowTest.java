@@ -21,8 +21,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -68,7 +68,7 @@ class PaymentReservationFlowTest {
     @Autowired VnpayIpnService ipn;
     @Autowired HostedCheckoutService hosted;
     @Autowired PaymentReservation reservation;
-    @SpyBean PaymentOrderGuard guard;
+    @MockitoSpyBean PaymentOrderGuard guard;
     @Autowired CompensationProofStore proofStore;
     @Autowired PaymentRetryAttempts retryAttempts;
     @Autowired CheckoutClosureService closures;
@@ -82,17 +82,17 @@ class PaymentReservationFlowTest {
     @Autowired org.de013.paymentservice.repository.ProcessedStripeEventRepository events;
     @Autowired RefundService refunds;
     @Autowired org.de013.paymentservice.repository.RefundRepository refundRepository;
-    @MockBean org.de013.paymentservice.client.OrderServiceClient orderClient;
-    @MockBean org.de013.paymentservice.client.UserServiceClient users;
-    @MockBean org.de013.paymentservice.client.NotificationServiceClient notifications;
-    @SpyBean PaymentRepository repository;
-    @SpyBean HostedCheckoutStore hostedStore;
-    @MockBean PaymentRequestValidator validator;
-    @MockBean PaymentGatewayFactory factory;
-    @MockBean StripePaymentGateway stripe;
-    @MockBean StripeHostedGateway hostedStripe;
-    @MockBean VnpayPaymentGateway vnpayGateway;
-    @MockBean HostedOrderClient orders;
+    @MockitoBean org.de013.paymentservice.client.OrderServiceClient orderClient;
+    @MockitoBean org.de013.paymentservice.client.UserServiceClient users;
+    @MockitoBean org.de013.paymentservice.client.NotificationServiceClient notifications;
+    @MockitoSpyBean PaymentRepository repository;
+    @MockitoSpyBean HostedCheckoutStore hostedStore;
+    @MockitoBean PaymentRequestValidator validator;
+    @MockitoBean PaymentGatewayFactory factory;
+    @MockitoBean StripePaymentGateway stripe;
+    @MockitoBean StripeHostedGateway hostedStripe;
+    @MockitoBean VnpayPaymentGateway vnpayGateway;
+    @MockitoBean HostedOrderClient orders;
 
     @BeforeEach void setup() throws Exception {
         when(factory.getGateway("STRIPE")).thenReturn(stripe);

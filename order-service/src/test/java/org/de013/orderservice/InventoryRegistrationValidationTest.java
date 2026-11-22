@@ -19,7 +19,7 @@ import feign.RequestInterceptor;
 import static org.junit.jupiter.api.Assertions.*;
 
 class InventoryRegistrationValidationTest {
-    @Test void rejectsWrongGrantEvenWithCachedToken() { reject(AuthorizationGrantType.PASSWORD, "order-service"); }
+    @Test void rejectsWrongGrantEvenWithCachedToken() { reject(new AuthorizationGrantType("password"), "order-service"); }
     @Test void rejectsWrongClientEvenWithCachedToken() { reject(AuthorizationGrantType.CLIENT_CREDENTIALS, "other-client"); }
 
     private void reject(AuthorizationGrantType grant, String clientId) {

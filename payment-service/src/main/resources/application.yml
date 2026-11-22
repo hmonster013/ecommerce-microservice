@@ -2,6 +2,9 @@ server:
   port: 8085
 
 spring:
+  http:
+    converters:
+      preferred-json-mapper: jackson2
   application:
     name: payment-service
   profiles:

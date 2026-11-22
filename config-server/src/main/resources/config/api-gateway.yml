@@ -15,25 +15,27 @@ spring:
   # Exclude database auto-configuration since API Gateway doesn't need database
   autoconfigure:
     exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration
   cloud:
     compatibility-verifier:
       enabled: false
     gateway:
-      discovery:
-        locator:
-          # Disabled - using RouteLocator bean in GatewayRoutesConfig instead
-          enabled: false
-      forwarded:
-        enabled: false
-      httpclient:
-        connect-timeout: 5000  # 5 seconds
-        response-timeout: 30s   # 30 seconds (for Swagger first-time generation)
-        pool:
-          max-connections: 500
-          max-idle-time: 30s
+      server:
+        webflux:
+          discovery:
+            locator:
+              # Disabled - using RouteLocator bean in GatewayRoutesConfig instead
+              enabled: false
+          forwarded:
+            enabled: false
+          httpclient:
+            connect-timeout: 5000  # 5 seconds
+            response-timeout: 30s   # 30 seconds (for Swagger first-time generation)
+            pool:
+              max-connections: 500
+              max-idle-time: 30s
 
 # Resilience4j Circuit Breaker Configuration
 resilience4j:

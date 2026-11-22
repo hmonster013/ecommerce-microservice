@@ -2,6 +2,9 @@ server:
   port: 8081
 
 spring:
+  http:
+    converters:
+      preferred-json-mapper: jackson2
   application:
     name: user-service
   profiles:

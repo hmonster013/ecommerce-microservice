@@ -8,7 +8,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.de013.notificationservice.service.PaymentEmailIngestion;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
@@ -30,7 +30,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 public class PaymentEmailKafkaConfig {
     @Bean
     DefaultKafkaProducerFactory<String, String> paymentEmailDltProducerFactory(KafkaProperties properties) {
-        var config = properties.buildProducerProperties(null);
+        var config = properties.buildProducerProperties();
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
@@ -47,7 +47,7 @@ public class PaymentEmailKafkaConfig {
 
     @Bean
     ConcurrentKafkaListenerContainerFactory<String, byte[]> paymentEmailListenerFactory(KafkaProperties properties) {
-        var config = properties.buildConsumerProperties(null);
+        var config = properties.buildConsumerProperties();
         config.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-payment-email-v1");
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");

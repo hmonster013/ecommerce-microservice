@@ -22,7 +22,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.cache.transaction.TransactionAwareCacheManagerProxy;
@@ -86,7 +86,7 @@ class InventoryConcurrencyTest {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private DataSource dataSource;
     @Autowired private PlatformTransactionManager transactionManager;
-    @MockBean(name = "cacheManager") private CacheManager cacheManager;
+    @MockitoBean(name = "cacheManager") private CacheManager cacheManager;
 
     private TransactionTemplate transaction;
     private ExecutorService workers;

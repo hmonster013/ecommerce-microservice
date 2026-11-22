@@ -11,7 +11,7 @@ import org.de013.orderservice.service.impl.CheckoutOrderService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @Testcontainers
-@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @SpringBootTest(properties = {"spring.cloud.config.enabled=false", "spring.cloud.bus.enabled=false", "eureka.client.enabled=false", "spring.jpa.hibernate.ddl-auto=validate", "order.allocation.recovery-delay-ms=3600000"})
 class DurableIntentTest {
     @Container static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>("postgres:17-alpine");
@@ -40,11 +40,13 @@ class DurableIntentTest {
     @Autowired ObjectMapper mapper;
     @Autowired org.springframework.test.web.servlet.MockMvc mvc;
     @Autowired org.de013.orderservice.service.OrderService orderService;
-    @MockBean org.de013.orderservice.client.ProductCatalogClient catalog;
-    @MockBean CartClient carts;
-    @MockBean org.de013.orderservice.client.InventoryReservationClient reservations;
+    @MockitoBean org.de013.orderservice.client.ProductCatalogClient catalog;
+    @MockitoBean CartClient carts;
+    @MockitoBean org.de013.orderservice.client.InventoryReservationClient reservations;
     @Autowired org.de013.orderservice.service.impl.AllocationRecovery recovery;
     @Autowired org.de013.orderservice.service.impl.PaymentEventProcessor paymentEvents;
+    @Autowired org.de013.orderservice.repository.OrderRepository orders;
+    @Autowired org.springframework.transaction.support.TransactionTemplate transaction;
 
     private long paymentOrder(String status, String phase) {
         return jdbc.queryForObject("INSERT INTO orders(order_number,user_id,status,order_type,created_at,updated_at,total_amount,currency,allocation_phase,shipping_first_name,shipping_last_name,shipping_street_address,shipping_city,shipping_state,shipping_postal_code,shipping_country) VALUES (?, 'owner', ?, 'STANDARD', CURRENT_TIMESTAMP,CURRENT_TIMESTAMP, 12.50, 'USD', ?, 'Test','Owner','Street','City','State','12345','US') RETURNING id", Long.class, UUID.randomUUID().toString(), status, phase);
@@ -52,6 +54,24 @@ class DurableIntentTest {
 
     private String paymentEvent(UUID event, long order, long payment) {
         return "{\"eventId\":\"" + event + "\",\"eventType\":\"PaymentSucceeded\",\"schemaVersion\":1,\"occurredAt\":\"2026-01-01T00:00:00Z\",\"paymentId\":" + payment + ",\"paymentNumber\":\"P-" + payment + "\",\"orderId\":" + order + ",\"provider\":\"STRIPE\",\"amount\":12.50,\"currency\":\"USD\"}";
+    }
+
+    @Test void persistedCanonicalHashReplaysWithoutConflict() {
+        UUID event = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        String hash = "8fe169f0dba4450a26a9c932d1fc3a1aef2e7d7ee44f4353490012cf145f178a";
+        jdbc.update("INSERT INTO payment_event_inbox(event_id,payload_hash,result) VALUES (?,?,'ACCEPTED')", event, hash);
+        paymentEvents.process(paymentEvent(event, 987654321L, 101), "987654321", "hash-replay", 0, 1);
+        assertEquals(hash, jdbc.queryForObject("SELECT payload_hash FROM payment_event_inbox WHERE event_id=?", String.class, event));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM payment_event_quarantine WHERE topic='hash-replay' AND record_offset=1", Integer.class));
+    }
+
+    @Test void deletedOrderIsHiddenFromReadsAndPaymentLock() {
+        long id = paymentOrder("PENDING", "READY");
+        orders.deleteById(id);
+        assertNotNull(jdbc.queryForObject("SELECT deleted_at FROM orders WHERE id=?", java.sql.Timestamp.class, id));
+        assertTrue(orders.findById(id).isEmpty());
+        assertFalse(orders.findByUserId("owner", org.springframework.data.domain.Pageable.unpaged()).stream().anyMatch(o -> o.getId().equals(id)));
+        assertTrue(Boolean.TRUE.equals(transaction.execute(status -> orders.lockForPayment(id).isEmpty())));
     }
 
     @Test void paymentInboxConcurrentDuplicateAndConflictingPayload() throws Exception {

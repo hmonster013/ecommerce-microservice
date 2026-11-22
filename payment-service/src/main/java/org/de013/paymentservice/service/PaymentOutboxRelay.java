@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -85,7 +85,7 @@ public class PaymentOutboxRelay {
     static class Scheduling {
         @Bean
         KafkaTemplate<String, String> paymentKafkaTemplate(KafkaProperties properties) {
-            var config = properties.buildProducerProperties(null);
+            var config = properties.buildProducerProperties();
             config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
             config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
             config.put(ProducerConfig.ACKS_CONFIG, "all");

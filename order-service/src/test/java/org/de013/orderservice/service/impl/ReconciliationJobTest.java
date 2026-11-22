@@ -12,7 +12,7 @@ import org.de013.orderservice.client.InventoryReservationClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -32,8 +32,8 @@ class ReconciliationJobTest {
     }
     @Autowired JdbcTemplate jdbc;
     @Autowired ReconciliationJob job;
-    @MockBean PaymentReconciliationClient payment;
-    @MockBean InventoryReservationClient catalog;
+    @MockitoBean PaymentReconciliationClient payment;
+    @MockitoBean InventoryReservationClient catalog;
 
     @Test void observesWithoutBusinessMutationAndDetectsConcurrentIntentChange() {
         long id = jdbc.queryForObject("INSERT INTO orders(order_number,user_id,status,order_type,allocation_phase,total_amount,currency,accepted_payment_id,accepted_payment_number) VALUES (?, 'owner','CANCELLED','STANDARD','CLOSURE_HOLD',12,'USD',2,'P2') RETURNING id", Long.class, UUID.randomUUID().toString());

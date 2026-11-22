@@ -16,18 +16,23 @@ import org.de013.paymentservice.controller.CheckoutClosureController;
 import org.de013.paymentservice.service.CheckoutClosureService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest({CheckoutClosureController.class, org.de013.paymentservice.controller.ReconciliationController.class})
+@org.springframework.boot.autoconfigure.ImportAutoConfiguration(org.springframework.boot.jackson2.autoconfigure.Jackson2AutoConfiguration.class)
 @org.springframework.test.context.ContextConfiguration(classes = {CheckoutClosureController.class, org.de013.paymentservice.controller.ReconciliationController.class, SecurityConfig.class, HeaderAuthenticationFilter.class})
 @Import({SecurityConfig.class, HeaderAuthenticationFilter.class})
 public class CheckoutClosureSecurityTest {
@@ -55,8 +60,22 @@ public class CheckoutClosureSecurityTest {
     }
     @DynamicPropertySource static void issuer(DynamicPropertyRegistry p) { p.add("payment.internal.issuer-uri", () -> issuer); }
     @Autowired MockMvc mvc;
-    @MockBean CheckoutClosureService closures;
-    @MockBean org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @MockitoBean CheckoutClosureService closures;
+    @MockitoBean org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired RequestMappingHandlerAdapter handlerAdapter;
+    @Autowired com.fasterxml.jackson.databind.ObjectMapper mapper;
+
+    record JsonFixture(java.time.LocalDate date, java.math.BigDecimal amount, String optional) {}
+
+    @Test void mvcUsesJackson2MapperForDateDecimalAndNull() throws Exception {
+        var converter = handlerAdapter.getMessageConverters().stream()
+                .filter(c -> c.canWrite(JsonFixture.class, MediaType.APPLICATION_JSON))
+                .findFirst().orElseThrow();
+        assertInstanceOf(MappingJackson2HttpMessageConverter.class, converter);
+        assertSame(mapper, ((MappingJackson2HttpMessageConverter) converter).getObjectMapper());
+        assertEquals("{\"date\":\"2025-01-02\",\"amount\":12.30,\"optional\":null}",
+                mapper.writeValueAsString(new JsonFixture(java.time.LocalDate.of(2025, 1, 2), new java.math.BigDecimal("12.30"), null)));
+    }
 
     public static String token(String iss, String audience, String azp, boolean role, Instant expiration, boolean wrongKey) throws Exception {
         return tokenWithRole(iss, audience, azp, role ? "payment-checkout-close" : "", expiration, wrongKey);

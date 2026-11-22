@@ -36,7 +36,7 @@ public final class ArtifactConfigLauncher {
                     if (beans.length != 0) throw new IllegalStateException("Unexpected payment email component: " + name);
                 }
             }
-            Class<?> webContext = loader.loadClass("org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext");
+            Class<?> webContext = loader.loadClass("org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContext");
             Object server = webContext.getMethod("getWebServer").invoke(context);
             int port = (int) loader.loadClass("org.springframework.boot.web.server.WebServer").getMethod("getPort").invoke(server);
             System.out.println("TEST_READY " + port);

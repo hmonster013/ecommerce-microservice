@@ -82,6 +82,24 @@ class PaymentKafkaTest {
         assertEquals("ACCEPTED", jdbc.queryForObject("SELECT result FROM payment_event_inbox WHERE event_id=?", String.class, goodEvent));
     }
 
+    @Test void lz4CompressedPaymentRecordIsProcessed() throws Exception {
+        compressedPaymentRecordIsProcessed("lz4");
+    }
+
+    @Test void snappyCompressedPaymentRecordIsProcessed() throws Exception {
+        compressedPaymentRecordIsProcessed("snappy");
+    }
+
+    private void compressedPaymentRecordIsProcessed(String compression) throws Exception {
+        long id = order(); UUID event = UUID.randomUUID();
+        try (var producer = new KafkaProducer<String, String>(Map.of("bootstrap.servers", KAFKA.getBootstrapServers(), "key.serializer", "org.apache.kafka.common.serialization.StringSerializer", "value.serializer", "org.apache.kafka.common.serialization.StringSerializer", "compression.type", compression))) {
+            long offset = producer.send(new ProducerRecord<>(TOPIC, 0, Long.toString(id), event(event, id))).get(30, TimeUnit.SECONDS).offset();
+            awaitOffset(offset + 1);
+        }
+        assertEquals("ACCEPTED", jdbc.queryForObject("SELECT result FROM payment_event_inbox WHERE event_id=?", String.class, event));
+        assertEquals("PAID", jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id));
+    }
+
     @Test
     @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "payment.contract.capture", matches = ".*")
     void capturedPaymentRelayPayloadIsAcceptedAndReplayIsIdempotent() throws Exception {
