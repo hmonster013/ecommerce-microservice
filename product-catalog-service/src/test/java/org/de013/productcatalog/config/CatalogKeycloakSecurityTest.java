@@ -20,6 +20,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -54,6 +55,7 @@ class CatalogKeycloakSecurityTest {
     @Configuration
     @Profile("keycloak-security-test")
     @EnableAutoConfiguration
+    @EnableWebSecurity
     @Import({SecurityConfig.class, Endpoint.class})
     static class App { }
 
