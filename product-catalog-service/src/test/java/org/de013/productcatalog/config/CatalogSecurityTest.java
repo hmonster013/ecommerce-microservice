@@ -35,6 +35,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -53,6 +54,7 @@ class CatalogSecurityTest {
     @Configuration
     @Profile("catalog-security-test")
     @EnableAutoConfiguration
+    @EnableWebSecurity
     @Import({SecurityConfig.class, Endpoint.class})
     static class TestApplication { }
     private static final RSAKey KEY = key("catalog-test");
