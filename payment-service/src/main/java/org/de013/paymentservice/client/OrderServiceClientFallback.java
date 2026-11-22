@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * Fallback implementation for OrderServiceClient
- * Provides default responses when Order Service is unavailable
+ * Reports unavailable or denies requests when Order Service is unavailable
  */
 @Slf4j
 @Component
@@ -21,15 +21,13 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     @Override
     public ResponseEntity<OrderDto> getOrderById(Long orderId) {
         log.warn("Order Service unavailable - using fallback for getOrderById: {}", orderId);
-        return ResponseEntity.ok(createFallbackOrderDto(orderId));
+        return ResponseEntity.status(503).build();
     }
 
     @Override
     public ResponseEntity<OrderDto> getOrderByNumber(String orderNumber) {
         log.warn("Order Service unavailable - using fallback for getOrderByNumber: {}", orderNumber);
-        OrderDto fallbackOrder = createFallbackOrderDto(null);
-        fallbackOrder.setOrderNumber(orderNumber);
-        return ResponseEntity.ok(fallbackOrder);
+        return ResponseEntity.status(503).build();
     }
 
     @Override
@@ -50,7 +48,7 @@ public class OrderServiceClientFallback implements OrderServiceClient {
     @Override
     public ResponseEntity<BigDecimal> getOrderTotal(Long orderId) {
         log.warn("Order Service unavailable - using fallback for getOrderTotal: {}", orderId);
-        return ResponseEntity.ok(BigDecimal.ZERO);
+        return ResponseEntity.status(503).build();
     }
 
     @Override
@@ -86,21 +84,5 @@ public class OrderServiceClientFallback implements OrderServiceClient {
         return ResponseEntity.status(503).build();
     }
 
-    /**
-     * Creates a fallback OrderDto with minimal information
-     */
-    private OrderDto createFallbackOrderDto(Long orderId) {
-        OrderDto fallbackOrder = new OrderDto();
-        fallbackOrder.setId(orderId);
-        fallbackOrder.setOrderNumber("FALLBACK-ORDER");
-        fallbackOrder.setUserId(null);
-        OrderDto.MoneyDto money = new OrderDto.MoneyDto();
-        money.setAmount(BigDecimal.ZERO);
-        money.setCurrency("USD");
-        fallbackOrder.setTotalAmount(money);
-        fallbackOrder.setCurrency("USD");
-        fallbackOrder.setStatus("UNKNOWN");
-        return fallbackOrder;
-    }
 }
 
