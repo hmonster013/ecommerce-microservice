@@ -24,11 +24,14 @@ import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
 import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
+import org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails;
 import org.de013.paymentservice.service.PaymentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -106,9 +109,8 @@ public class PaymentController extends BaseController {
     }
 
     private String getCurrentUserKeycloakId() {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getDetails() instanceof org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails) {
-            org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails details = (org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails) auth.getDetails();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof HeaderUserDetails details) {
             return details.getKeycloakId();
         }
         return null;
