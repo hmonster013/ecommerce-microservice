@@ -36,6 +36,9 @@ class PaymentKafkaTest {
     @Container static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
 
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r) throws Exception {
+        r.add("spring.datasource.driver-class-name", DB::getDriverClassName);
+        r.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        r.add("spring.flyway.enabled", () -> true);
         r.add("spring.datasource.url", DB::getJdbcUrl); r.add("spring.datasource.username", DB::getUsername); r.add("spring.datasource.password", DB::getPassword);
         r.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
         try (var admin = admin()) { admin.createTopics(java.util.List.of(new NewTopic(TOPIC, 1, (short) 1))).all().get(30, TimeUnit.SECONDS); }

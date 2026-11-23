@@ -33,6 +33,9 @@ class DurableIntentTest {
             statement.executeUpdate("INSERT INTO checkout_attempts(attempt_key,user_id) VALUES ('legacy-key','owner')");
             statement.executeUpdate("INSERT INTO orders(order_number,user_id,status,order_type,created_at,updated_at,checkout_key) VALUES ('LEGACY','owner','PENDING','STANDARD',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'legacy-key')");
         } catch (java.sql.SQLException e) { throw new IllegalStateException(e); }
+        r.add("spring.datasource.driver-class-name", DB::getDriverClassName);
+        r.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        r.add("spring.flyway.enabled", () -> true);
         r.add("spring.datasource.url", DB::getJdbcUrl); r.add("spring.datasource.username", DB::getUsername); r.add("spring.datasource.password", DB::getPassword);
     }
     @Autowired CheckoutOrderService checkout;

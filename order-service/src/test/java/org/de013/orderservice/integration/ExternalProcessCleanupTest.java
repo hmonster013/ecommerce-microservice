@@ -10,7 +10,8 @@ class ExternalProcessCleanupTest {
 
     @Test void interruptedCleanupTerminatesChildAndRestoresInterrupt() throws Exception {
         Process child = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                "-cp", System.getProperty("java.class.path"), ExternalProcessCleanupTest.class.getName()).start();
+                "-cp", Path.of(ExternalProcessCleanupTest.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString(),
+                ExternalProcessCleanupTest.class.getName()).start();
         try {
             Thread.currentThread().interrupt();
             CrossServiceCheckoutIT.closeProcess(child);

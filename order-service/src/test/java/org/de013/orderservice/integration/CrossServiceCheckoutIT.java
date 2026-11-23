@@ -505,6 +505,7 @@ class CrossServiceCheckoutIT {
                     "--spring.cloud.config.enabled=false", "--spring.cloud.bus.enabled=false",
                     "--eureka.client.enabled=false", "--spring.jpa.hibernate.ddl-auto=validate", "--spring.flyway.enabled=" + !runtimeDb,
                     "--management.health.defaults.enabled=false", "--management.health.db.enabled=true",
+                    "--spring.datasource.driver-class-name=" + db.getDriverClassName(),
                     "--spring.datasource.url=" + db.getJdbcUrl(), "--spring.datasource.username=" + dbUser,
                     "--spring.datasource.password=" + dbPassword, "--logging.level.org.springframework.security=WARN"));
             if (java.util.Arrays.stream(extra).noneMatch(value -> value.startsWith("--server.port="))) args.add("--server.port=0");

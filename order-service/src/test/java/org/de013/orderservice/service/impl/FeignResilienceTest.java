@@ -2,6 +2,7 @@ package org.de013.orderservice.service.impl;
 
 import com.sun.net.httpserver.HttpServer;
 import feign.FeignException;
+import feign.MethodHandlerConfiguration;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.net.InetSocketAddress;
@@ -10,7 +11,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.lang.reflect.Proxy;
 import java.util.Map;
-import feign.Request;
 import feign.Retryer;
 import org.de013.orderservice.client.CartClient;
 import org.de013.orderservice.client.CartServiceClient;
@@ -104,10 +104,11 @@ class FeignResilienceTest {
             var dispatch = (Map<?, ?>) field(Proxy.getInvocationHandler(proxy), "dispatch");
             assertFalse(dispatch.isEmpty());
             for (Object handler : dispatch.values()) {
-                var options = (Request.Options) field(handler, "options");
+                var configuration = (MethodHandlerConfiguration) field(handler, "methodHandlerConfiguration");
+                var options = configuration.getOptions();
                 assertEquals(5000, options.connectTimeoutMillis());
                 assertEquals(5000, options.readTimeoutMillis());
-                assertSame(Retryer.NEVER_RETRY, field(handler, "retryer"));
+                assertSame(Retryer.NEVER_RETRY, configuration.getRetryer());
             }
         }
     }

@@ -23,6 +23,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class CompensationStoreTest {
     @Container static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>("postgres:17-alpine");
     @DynamicPropertySource static void database(DynamicPropertyRegistry r) {
+        r.add("spring.datasource.driver-class-name", DB::getDriverClassName);
+        r.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
         r.add("spring.datasource.url", DB::getJdbcUrl);
         r.add("spring.datasource.username", DB::getUsername);
         r.add("spring.datasource.password", DB::getPassword);
