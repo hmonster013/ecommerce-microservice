@@ -8,6 +8,8 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -47,8 +49,30 @@ class PaymentNotificationRelayTest {
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("paymentNotificationKafkaTemplate") org.springframework.kafka.core.KafkaTemplate<String, String> kafka;
     @MockitoBean org.de013.paymentservice.client.HostedOrderClient orders;
 
-    @Test void relayRestoresEachTraceAndPublishesLegacyAndMalformed() {
+    @BeforeAll static void createTopic() throws Exception {
+        try (var admin = org.apache.kafka.clients.admin.AdminClient.create(Map.of("bootstrap.servers", broker.getBootstrapServers()))) {
+            String topic = "notification.payment-email.v1";
+            admin.createTopics(java.util.List.of(new org.apache.kafka.clients.admin.NewTopic(topic, 1, (short) 1))).all().get(30, java.util.concurrent.TimeUnit.SECONDS);
+            long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+            org.apache.kafka.clients.admin.TopicDescription description;
+            do {
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) throw new IllegalStateException("Topic leader not ready");
+                description = admin.describeTopics(java.util.List.of(topic)).allTopicNames().get(remaining, java.util.concurrent.TimeUnit.NANOSECONDS).get(topic);
+                if (!description.partitions().isEmpty() && description.partitions().get(0).leader() != null && description.partitions().get(0).leader().id() >= 0) break;
+                Thread.sleep(100);
+            } while (true);
+            assertEquals(1, description.partitions().size());
+            assertNotNull(description.partitions().get(0).leader());
+            assertTrue(description.partitions().get(0).leader().id() >= 0);
+        }
+    }
+
+    @BeforeEach void isolateOutbox() {
         jdbc.update("update payment_notification_outbox set state='RECONCILIATION' where state='PENDING'");
+    }
+
+    @Test void relayRestoresEachTraceAndPublishesLegacyAndMalformed() {
         long[] ids = {create(99121), create(99122), create(99123), create(99124), create(99125)};
         String a = "00-11111111111111111111111111111111-1111111111111111-01";
         String b = "00-22222222222222222222222222222222-2222222222222222-01";

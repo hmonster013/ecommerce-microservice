@@ -200,7 +200,7 @@ class PaymentNotificationDeliveryIT {
         Path marker = Files.createTempFile("hung-process-", ".ready");
         Files.delete(marker);
         var process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                "-cp", System.getProperty("java.class.path"), HungProcess.class.getName(), marker.toString()).start();
+                "-cp", Path.of(HungProcess.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString(), HungProcess.class.getName(), marker.toString()).start();
         try (var output = process.getInputStream()) {
             long readyDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
             while (!Files.exists(marker) && process.isAlive() && System.nanoTime() < readyDeadline) Thread.sleep(50);
