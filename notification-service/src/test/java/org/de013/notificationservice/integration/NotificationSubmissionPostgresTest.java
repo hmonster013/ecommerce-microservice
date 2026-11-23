@@ -41,6 +41,7 @@ import static org.mockito.Mockito.verify;
 
 @Testcontainers(disabledWithoutDocker = true)
 @DataJpaTest(properties = {"spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect",
         "spring.test.database.replace=none", "app.notification.sms.enabled=false"})
 @Import({NotificationService.class, SmsService.class, NotificationController.class})
 @ContextConfiguration(classes = NotificationSubmissionPostgresTest.TestApplication.class)
