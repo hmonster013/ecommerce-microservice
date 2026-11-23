@@ -9,7 +9,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.MountableFile;
-import org.junit.jupiter.api.Assumptions;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -121,7 +121,6 @@ class NotificationMigrationTest {
     }
 
     @Test void operatorPreflightUsesDatabaseIdentityAndValidatedReference() throws Exception {
-        Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"));
         var actual = new DriverManagerDataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword());
         var admin = new JdbcTemplate(actual);
         admin.execute("CREATE DATABASE notification_reference");
@@ -137,7 +136,13 @@ class NotificationMigrationTest {
             Files.writeString(services, config);
             DB.copyFileToContainer(MountableFile.forHostPath(services), "/tmp/preflight-services.conf");
             DB.copyFileToContainer(MountableFile.forHostPath(Path.of("schema-fingerprint.sql").toAbsolutePath()), "/tmp/preflight-fingerprint.sql");
-            Files.writeString(temp.resolve("psql.cmd"), "@echo off\r\nset service=%2\r\nshift\r\nif \"%9\"==\"-f\" (\r\n docker exec -e PGSERVICEFILE=/tmp/preflight-services.conf " + DB.getContainerId() + " psql service=%service% -X -q -t -A -v ON_ERROR_STOP=1 -f /tmp/preflight-fingerprint.sql\r\n) else (\r\n docker exec -e PGSERVICEFILE=/tmp/preflight-services.conf " + DB.getContainerId() + " psql %*\r\n)\r\nexit /b %ERRORLEVEL%\r\n");
+            if (System.getProperty("os.name").startsWith("Windows")) {
+                Files.writeString(temp.resolve("psql.cmd"), "@echo off\r\nset service=%2\r\nshift\r\nif \"%9\"==\"-f\" (\r\n docker exec -e PGSERVICEFILE=/tmp/preflight-services.conf " + DB.getContainerId() + " psql service=%service% -X -q -t -A -v ON_ERROR_STOP=1 -f /tmp/preflight-fingerprint.sql\r\n) else (\r\n docker exec -e PGSERVICEFILE=/tmp/preflight-services.conf " + DB.getContainerId() + " psql %*\r\n)\r\nexit /b %ERRORLEVEL%\r\n");
+            } else {
+                Path launcher = temp.resolve("psql");
+                Files.writeString(launcher, "#!/bin/sh\nfor arg do\n  if [ \"$arg\" = -f ]; then\n    exec docker exec -e PGSERVICEFILE=/tmp/preflight-services.conf " + DB.getContainerId() + " psql \"$1\" -X -q -t -A -v ON_ERROR_STOP=1 -f /tmp/preflight-fingerprint.sql\n  fi\ndone\nexec docker exec -e PGSERVICEFILE=/tmp/preflight-services.conf " + DB.getContainerId() + " psql \"$@\"\n");
+                assertTrue(launcher.toFile().setExecutable(true), "Could not make psql launcher executable");
+            }
             admin.execute("CREATE ROLE preflight_restricted LOGIN PASSWORD 'fixture_only'");
             admin.execute("REVOKE EXECUTE ON FUNCTION pg_catalog.pg_control_system() FROM PUBLIC");
             for (int version = 1; version <= 4; version++) {
@@ -214,9 +219,15 @@ class NotificationMigrationTest {
     }
 
     private int preflight(Path shim, int version, String actual, String reference, String expectedOutput) throws Exception {
-        var process = new ProcessBuilder("powershell", "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", Path.of("schema-preflight.ps1").toAbsolutePath().toString(), "-ExpectedVersion", Integer.toString(version), "-ActualService", actual, "-ReferenceService", reference)
+        boolean windows = System.getProperty("os.name").startsWith("Windows");
+        var command = new java.util.ArrayList<String>();
+        command.add(windows ? "powershell" : "pwsh");
+        command.add("-NoProfile");
+        if (windows) java.util.Collections.addAll(command, "-ExecutionPolicy", "RemoteSigned");
+        java.util.Collections.addAll(command, "-File", Path.of("schema-preflight.ps1").toAbsolutePath().toString(), "-ExpectedVersion", Integer.toString(version), "-ActualService", actual, "-ReferenceService", reference);
+        var process = new ProcessBuilder(command)
                 .redirectErrorStream(true);
-        process.environment().put("PATH", shim.toAbsolutePath() + ";" + System.getenv("PATH"));
+        process.environment().put("PATH", shim.toAbsolutePath() + File.pathSeparator + System.getenv("PATH"));
         var running = process.start();
         String output = new String(running.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         int exit = running.waitFor();

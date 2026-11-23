@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
@@ -15,6 +16,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CartOperatorPreflightTest {
+    private static final boolean WINDOWS = File.separatorChar == '\\';
     @TempDir Path temp;
 
     @Test
@@ -35,7 +37,13 @@ class CartOperatorPreflightTest {
             }
             Path sql = Path.of("src/main/resources/db/cart-preflight.sql").toAbsolutePath();
             assertEquals(0, new ProcessBuilder("docker", "cp", sql.toString(), name + ":/tmp/cart-preflight.sql").inheritIO().start().waitFor());
-            Files.writeString(temp.resolve("psql.cmd"), "@echo off\r\npowershell -NoProfile -ExecutionPolicy RemoteSigned -File \"%~dp0shim.ps1\" %*\r\nexit /b %errorlevel%\r\n");
+            if (WINDOWS) {
+                Files.writeString(temp.resolve("psql.cmd"), "@echo off\r\npowershell -NoProfile -ExecutionPolicy RemoteSigned -File \"%~dp0shim.ps1\" %*\r\nexit /b %errorlevel%\r\n");
+            } else {
+                Path launcher = temp.resolve("psql");
+                Files.writeString(launcher, "#!/bin/sh\nexec pwsh -NoProfile -File \"$(dirname \"$0\")/shim.ps1\" \"$@\"\n");
+                assertTrue(launcher.toFile().setExecutable(true));
+            }
             Files.writeString(temp.resolve("shim.ps1"), "$a = @($args); for ($i=0; $i -lt $a.Count; $i++) { if ($a[$i] -eq '-f') { $a[$i+1] = '/tmp/cart-preflight.sql' } }; & docker exec -i -e PGUSER=$env:CART_PGUSER " + name + " psql @a; exit $LASTEXITCODE\n");
             Flyway ref1 = flyway(base + "reference", pg, "1");
             Flyway target1 = flyway(base + "target", pg, "1");
@@ -95,8 +103,11 @@ class CartOperatorPreflightTest {
         try (var c = DriverManager.getConnection(url, pg.getUsername(), pg.getPassword()); var s = c.createStatement(); var r = s.executeQuery(sql)) { assertTrue(r.next()); return r.getString(1); }
     }
     private void assertResult(String reference, String target, String version, String user, boolean success, String expected) throws Exception {
-        var command = new ProcessBuilder("powershell", "-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", Path.of("src/main/resources/db/cart-preflight.ps1").toAbsolutePath().toString(), "-ReferenceDatabase", reference, "-TargetDatabase", target, "-Version", version).redirectErrorStream(true);
-        command.environment().put("PATH", temp + ";" + System.getenv("PATH"));
+        var command = new ProcessBuilder(WINDOWS ? "powershell" : "pwsh", "-NoProfile");
+        if (WINDOWS) command.command().addAll(java.util.List.of("-ExecutionPolicy", "RemoteSigned"));
+        command.command().addAll(java.util.List.of("-File", Path.of("src/main/resources/db/cart-preflight.ps1").toAbsolutePath().toString(), "-ReferenceDatabase", reference, "-TargetDatabase", target, "-Version", version));
+        command.redirectErrorStream(true);
+        command.environment().put("PATH", temp + File.pathSeparator + System.getenv("PATH"));
         command.environment().put("CART_PGUSER", user);
         var p = command.start();
         String output = new String(p.getInputStream().readAllBytes());
