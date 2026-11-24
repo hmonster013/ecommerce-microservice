@@ -67,8 +67,12 @@ public class EmailValidator implements ConstraintValidator<ValidEmail, String> {
      */
     @Override
     public boolean isValid(String email, ConstraintValidatorContext context) {
-        // Null or empty check
-        if (email == null || email.trim().isEmpty()) {
+        // Null values are valid for format validation (handled by @NotNull if field is mandatory)
+        if (email == null) {
+            return true;
+        }
+
+        if (email.trim().isEmpty()) {
             return false;
         }
 

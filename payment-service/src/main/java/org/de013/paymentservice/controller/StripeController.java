@@ -2,17 +2,16 @@ package org.de013.paymentservice.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResult;
+import org.de013.common.security.UserContextHolder;
 import org.de013.paymentservice.dto.stripe.StripeCustomerRequest;
 import org.de013.paymentservice.dto.stripe.StripeCustomerResponse;
-import org.de013.paymentservice.dto.stripe.StripePaymentRequest;
 import org.de013.paymentservice.dto.stripe.StripePaymentResponse;
 import org.de013.paymentservice.entity.Payment;
 import org.de013.paymentservice.exception.PaymentNotFoundException;
@@ -42,43 +41,27 @@ public class StripeController extends BaseController {
 
     @PostMapping("/payment-intents")
     @Operation(
-            summary = "Create Stripe Payment Intent",
+            summary = "Retrieve existing Stripe Payment Intent",
             description = """
-                    Create a new Stripe Payment Intent for processing payments.
-                    
-                    **Payment Intent Flow:**
-                    1. Create Payment Intent with amount and currency
-                    2. Client confirms payment with payment method
-                    3. Stripe processes payment and sends webhook
-                    4. Service updates payment status
-                    
-                    **Features:**
-                    - Automatic payment methods (cards, wallets, bank transfers)
-                    - 3D Secure authentication support
-                    - Multi-currency support
-                    - Metadata for order tracking
-                    
-                    **Example Response:**
-                    ```json
-                    {
-                      "id": "pi_1234567890",
-                      "client_secret": "pi_1234567890_secret_xyz",
-                      "status": "requires_payment_method",
-                      "amount": 9999,
-                      "currency": "usd"
-                    }
-                    ```
+                    Retrieve the existing Stripe Payment Intent for a payment owned by the caller.
+                    This endpoint does not create a Payment Intent. If the payment has no stored
+                    intent ID, manual reconciliation is required.
                     """)
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Payment Intent created successfully"),
+            @ApiResponse(responseCode = "200", description = "Existing Payment Intent retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
-            @ApiResponse(responseCode = "500", description = "Stripe API error")
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Payment is not owned by the caller"),
+            @ApiResponse(responseCode = "404", description = "Payment not found"),
+            @ApiResponse(responseCode = "409", description = "Payment has no intent ID; manual reconciliation required"),
+            @ApiResponse(responseCode = "500", description = "Stripe API error"),
+            @ApiResponse(responseCode = "503", description = "Stripe is not configured or enabled")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<StripePaymentResponse>> createPaymentIntent(
-            @Parameter(description = "Payment ID to create intent for", required = true)
+    public ResponseEntity<ApiResult<StripePaymentResponse>> createPaymentIntent(
+            @Parameter(description = "Payment ID whose existing intent to retrieve", required = true)
             @RequestParam Long paymentId) {
 
-        log.info("Creating Stripe Payment Intent for payment: {}", paymentId);
+        log.info("Retrieving Stripe Payment Intent for payment: {}", paymentId);
 
         try {
             // Validate input
@@ -88,45 +71,32 @@ public class StripeController extends BaseController {
 
             if (!isStripeConfigured()) {
                 return ResponseEntity.status(503)
-                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+                        .body(ApiResult.error("Stripe is not configured or enabled", null));
             }
 
             // Get payment details
             Payment payment = paymentService.getPaymentEntityById(paymentId)
                     .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
 
-            // Create Stripe payment request
-            StripePaymentRequest stripeRequest = StripePaymentRequest.builder()
-                    .amount(payment.getAmount())
-                    .currency(payment.getCurrency().name().toLowerCase())
-                    .description(payment.getDescription())
-                    .receiptEmail(payment.getReceiptEmail())
-                    .metadata(java.util.Map.of(
-                            "payment_id", paymentId.toString(),
-                            "order_id", payment.getOrderId().toString(),
-                            "user_id", payment.getUserId().toString()
-                    ))
-                    .build();
+            String userId = UserContextHolder.requireAuthenticated().getUserId();
+            if (!StringUtils.hasText(payment.getUserId()) || !payment.getUserId().equals(userId)) {
+                return ResponseEntity.status(403).body(ApiResult.error("Access denied", null));
+            }
 
-            // Create payment intent with Stripe
-            StripePaymentResponse stripeResponse = stripePaymentGateway.createPaymentIntent(stripeRequest);
-
-            // Update payment with Stripe payment intent ID
-            payment.setStripePaymentIntentId(stripeResponse.getPaymentIntentId());
-            paymentService.savePaymentEntity(payment);
-
-            log.info("Payment Intent created successfully: {} for payment: {}",
-                    stripeResponse.getPaymentIntentId(), paymentId);
-
-            return created(stripeResponse, "Payment Intent created successfully");
+            if (StringUtils.hasText(payment.getStripePaymentIntentId())) {
+                return success(stripePaymentGateway.getPaymentIntent(payment.getStripePaymentIntentId()), "Payment Intent retrieved successfully");
+            }
+            return ResponseEntity.status(409).body(ApiResult.error("Payment intent creation requires reconciliation", null));
 
         } catch (PaymentNotFoundException e) {
             log.error("Payment not found: {}", paymentId);
             return notFound("Payment not found: " + paymentId);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(401).body(ApiResult.error("Authentication required", null));
         } catch (Exception e) {
-            log.error("Error creating Stripe Payment Intent for payment: {}", paymentId, e);
+            log.error("Error retrieving Stripe Payment Intent for payment: {}", paymentId, e);
             return ResponseEntity.status(500)
-                    .body(org.de013.common.dto.ApiResponse.error("Failed to create Payment Intent", e.getMessage()));
+                    .body(ApiResult.error("Failed to create Payment Intent", e.getMessage()));
         }
     }
 
@@ -155,7 +125,7 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Customer not found"),
             @ApiResponse(responseCode = "500", description = "Stripe API error")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<java.util.List<org.de013.paymentservice.dto.paymentmethod.PaymentMethodResponse>>> getCustomerPaymentMethods(
+    public ResponseEntity<ApiResult<java.util.List<org.de013.paymentservice.dto.paymentmethod.PaymentMethodResponse>>> getCustomerPaymentMethods(
             @Parameter(description = "Stripe customer ID", required = true)
             @PathVariable String customerId,
             @Parameter(description = "Payment method type filter") @RequestParam(required = false) String type) {
@@ -170,7 +140,7 @@ public class StripeController extends BaseController {
 
             if (!isStripeConfigured()) {
                 return ResponseEntity.status(503)
-                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+                        .body(ApiResult.error("Stripe is not configured or enabled", null));
             }
 
             // Get payment methods from Stripe
@@ -189,11 +159,11 @@ public class StripeController extends BaseController {
         } catch (org.de013.paymentservice.exception.PaymentProcessingException e) {
             log.error("Payment processing error for customer: {}", customerId, e);
             return ResponseEntity.status(400)
-                    .body(org.de013.common.dto.ApiResponse.error("Failed to retrieve payment methods", e.getMessage()));
+                    .body(ApiResult.error("Failed to retrieve payment methods", e.getMessage()));
         } catch (Exception e) {
             log.error("Unexpected error retrieving payment methods for customer: {}", customerId, e);
             return ResponseEntity.status(500)
-                    .body(org.de013.common.dto.ApiResponse.error("Internal server error", e.getMessage()));
+                    .body(ApiResult.error("Internal server error", e.getMessage()));
         }
     }
 
@@ -222,7 +192,7 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "409", description = "Customer already exists"),
             @ApiResponse(responseCode = "500", description = "Stripe API error")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<StripeCustomerResponse>> createStripeCustomer(
+    public ResponseEntity<ApiResult<StripeCustomerResponse>> createStripeCustomer(
             @Parameter(description = "User ID to create customer for", required = true)
             @RequestParam String userId,
             @Parameter(description = "Customer email") @RequestParam(required = false) String email,
@@ -239,7 +209,7 @@ public class StripeController extends BaseController {
 
             if (!isStripeConfigured()) {
                 return ResponseEntity.status(503)
-                        .body(org.de013.common.dto.ApiResponse.error("Stripe is not configured or enabled", null));
+                        .body(ApiResult.error("Stripe is not configured or enabled", null));
             }
 
             // Create Stripe customer request
@@ -265,7 +235,7 @@ public class StripeController extends BaseController {
         } catch (Exception e) {
             log.error("Error creating Stripe customer for user: {}", userId, e);
             return ResponseEntity.status(500)
-                    .body(org.de013.common.dto.ApiResponse.error("Failed to create Stripe customer", e.getMessage()));
+                    .body(ApiResult.error("Failed to create Stripe customer", e.getMessage()));
         }
     }
 
@@ -285,7 +255,7 @@ public class StripeController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Stripe integration is healthy"),
             @ApiResponse(responseCode = "503", description = "Stripe integration issues detected")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Object>> checkStripeHealth() {
+    public ResponseEntity<ApiResult<Object>> checkStripeHealth() {
         log.info("Checking Stripe integration health");
 
         try {
@@ -326,7 +296,7 @@ public class StripeController extends BaseController {
                 return success(healthStatus, "Stripe integration is healthy");
             } else {
                 return ResponseEntity.status(503)
-                        .body(org.de013.common.dto.ApiResponse.error("Stripe integration issues detected", healthStatus));
+                        .body(ApiResult.error("Stripe integration issues detected", healthStatus));
             }
 
         } catch (Exception e) {
@@ -337,7 +307,7 @@ public class StripeController extends BaseController {
                     "timestamp", System.currentTimeMillis()
             );
             return ResponseEntity.status(503)
-                    .body(org.de013.common.dto.ApiResponse.error("Stripe integration unhealthy", errorStatus));
+                    .body(ApiResult.error("Stripe integration unhealthy", errorStatus));
         }
     }
 

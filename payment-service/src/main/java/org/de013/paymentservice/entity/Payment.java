@@ -9,6 +9,7 @@ import org.de013.paymentservice.entity.enums.PaymentMethodType;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,11 +40,31 @@ public class Payment extends BaseEntity {
     @Column(name = "order_id", nullable = false)
     private Long orderId;
 
+    @Builder.Default
+    @Column(name = "blocking", nullable = false)
+    private boolean blocking = true;
+
+    @Column(name = "verified_release", nullable = false)
+    private boolean verifiedRelease;
+
     @Column(name = "user_id", nullable = false, length = 36)
     private String userId;
 
     @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
+
+    @Column(name = "provider_amount_vnd")
+    private Long providerAmountVnd;
+
+    @Column(name = "provider_currency", length = 3)
+    private String providerCurrency;
+
+    @Column(name = "provider_exchange_rate")
+    private Long providerExchangeRate;
+
+    /** VNPay quote time in Asia/Ho_Chi_Minh (UTC+07:00). */
+    @Column(name = "provider_quoted_at")
+    private LocalDateTime providerQuotedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "currency", nullable = false, length = 3)
@@ -53,6 +74,9 @@ public class Payment extends BaseEntity {
     @Column(name = "status", nullable = false, length = 30)
     private PaymentStatus status;
 
+    @Column(name = "revision", nullable = false)
+    private long revision;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "method", nullable = false, length = 30)
     private PaymentMethodType method;
@@ -60,6 +84,12 @@ public class Payment extends BaseEntity {
     // Stripe-specific fields
     @Column(name = "stripe_payment_intent_id", unique = true, length = 100)
     private String stripePaymentIntentId;
+
+    @Column(name = "stripe_intent_livemode")
+    private Boolean stripeIntentLivemode;
+
+    @Column(name = "stripe_intent_created_by_service", nullable = false)
+    private boolean stripeIntentCreatedByService;
 
     @Column(name = "stripe_customer_id", length = 100)
     private String stripeCustomerId;

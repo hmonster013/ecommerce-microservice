@@ -1,6 +1,8 @@
 package org.de013.productcatalog.repository;
 
+import jakarta.persistence.LockModeType;
 import org.de013.productcatalog.entity.VariantInventory;
+import org.springframework.data.jpa.repository.Lock;
 import org.de013.productcatalog.entity.enums.VariantType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -16,6 +18,10 @@ public interface VariantInventoryRepository extends JpaRepository<VariantInvento
 
     // Basic queries
     Optional<VariantInventory> findByVariantId(Long variantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT vi FROM VariantInventory vi WHERE vi.variant.id = :variantId")
+    Optional<VariantInventory> findByVariantIdForUpdate(@Param("variantId") Long variantId);
 
     List<VariantInventory> findByProductId(Long productId);
 
@@ -53,17 +59,17 @@ public interface VariantInventoryRepository extends JpaRepository<VariantInvento
     // Stock reservation operations
     @Modifying
     @Query("UPDATE VariantInventory vi SET vi.reservedQuantity = vi.reservedQuantity + :quantity " +
-            "WHERE vi.variant.id = :variantId AND (vi.quantity - vi.reservedQuantity) >= :quantity")
+            "WHERE vi.variant.id = :variantId AND :quantity > 0 AND (vi.quantity - vi.reservedQuantity) >= :quantity")
     int reserveStock(@Param("variantId") Long variantId, @Param("quantity") Integer quantity);
 
     @Modifying
     @Query("UPDATE VariantInventory vi SET vi.reservedQuantity = vi.reservedQuantity - :quantity " +
-            "WHERE vi.variant.id = :variantId AND vi.reservedQuantity >= :quantity")
+            "WHERE vi.variant.id = :variantId AND :quantity > 0 AND vi.reservedQuantity >= :quantity")
     int releaseReservedStock(@Param("variantId") Long variantId, @Param("quantity") Integer quantity);
 
     @Modifying
     @Query("UPDATE VariantInventory vi SET vi.quantity = vi.quantity - :quantity, vi.reservedQuantity = vi.reservedQuantity - :quantity " +
-            "WHERE vi.variant.id = :variantId AND vi.reservedQuantity >= :quantity")
+            "WHERE vi.variant.id = :variantId AND :quantity > 0 AND vi.reservedQuantity >= :quantity")
     int fulfillOrder(@Param("variantId") Long variantId, @Param("quantity") Integer quantity);
 
     // Bulk operations

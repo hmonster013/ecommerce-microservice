@@ -127,21 +127,13 @@ services:
     depends_on:
       eureka-server:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       # Service Discovery
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: ${EUREKA_URL}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      # Redis Configuration (for token blacklist)
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
-      REDIS_DATABASE: ${REDIS_DATABASE}
       # JWT Configuration
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER}
-      # Token Blacklist
-      TOKEN_BLACKLIST_PREFIX: ${TOKEN_BLACKLIST_PREFIX}
       # OpenTelemetry Configuration
       OTEL_SERVICE_NAME: api-gateway
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}

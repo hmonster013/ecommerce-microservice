@@ -1,5 +1,6 @@
 package org.de013.paymentservice.client;
 
+import org.de013.common.dto.ApiResult;
 import org.de013.paymentservice.dto.external.UserDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -21,7 +22,7 @@ public interface UserServiceClient {
      * Get user details by ID
      */
     @GetMapping("/by-keycloak-id/{userId}")
-    ResponseEntity<org.de013.common.dto.ApiResponse<UserDto>> getUserById(@PathVariable("userId") String userId);
+    ResponseEntity<ApiResult<UserDto>> getUserById(@PathVariable("userId") String userId);
 
     /**
      * Validate user for payment processing

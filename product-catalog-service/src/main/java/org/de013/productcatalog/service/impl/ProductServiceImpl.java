@@ -17,13 +17,16 @@ import org.de013.productcatalog.repository.CategoryRepository;
 import org.de013.productcatalog.repository.InventoryRepository;
 import org.de013.productcatalog.repository.ProductCategoryRepository;
 import org.de013.productcatalog.repository.ProductRepository;
+import org.de013.productcatalog.repository.specification.ProductSpecification;
 import org.de013.productcatalog.service.ProductService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +50,11 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products", allEntries = true),
+            @CacheEvict(value = "featured", allEntries = true),
+            @CacheEvict(value = "categories", allEntries = true)
+    })
     public ProductResponseDto createProduct(ProductCreateDto createDto) {
         log.info("Creating product with SKU: {}", createDto.getSku());
 
@@ -101,7 +109,11 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {"products", "featuredProducts", "popularProducts", "searchResults"}, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "products", allEntries = true),
+            @CacheEvict(value = "featured", allEntries = true),
+            @CacheEvict(value = "categories", allEntries = true)
+    })
     public ProductResponseDto updateProduct(Long id, ProductUpdateDto updateDto) {
         log.info("Updating product with ID: {}", id);
 
@@ -124,7 +136,11 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "products", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(value = "products", allEntries = true),
+            @CacheEvict(value = "featured", allEntries = true),
+            @CacheEvict(value = "categories", allEntries = true)
+    })
     public void deleteProduct(Long id) {
         log.info("Deleting product with ID: {}", id);
 
@@ -152,6 +168,16 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ProductNotFoundException(sku));
 
         return productMapper.toProductDetailDto(product);
+    }
+
+    @Override
+    public PageResponse<ProductSummaryDto> getProducts(ProductStatus status, String brand, Long categoryId, String q, Pageable pageable) {
+        log.debug("Getting products with status: {}, brand: {}, categoryId: {}, q: {}, pagination: {}",
+                status, brand, categoryId, q, pageable);
+
+        Specification<Product> spec = ProductSpecification.buildProductListSpec(status, brand, categoryId, q);
+        Page<Product> products = productRepository.findAll(spec, pageable);
+        return mapToPageResponse(products);
     }
 
     @Override

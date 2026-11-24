@@ -28,6 +28,12 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
+    Optional<Order> findByCheckoutKeyAndUserId(String checkoutKey, String userId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from Order o where o.id = :id")
+    Optional<Order> lockForPayment(@Param("id") Long id);
+
     /**
      * Find order by order number
      *

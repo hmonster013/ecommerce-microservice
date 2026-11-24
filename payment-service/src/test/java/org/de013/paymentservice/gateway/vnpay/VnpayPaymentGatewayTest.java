@@ -69,6 +69,10 @@ class VnpayPaymentGatewayTest {
         params.put("vnp_SecureHash", secureHash);
 
         assertTrue(vnpayPaymentGateway.verifyCallback(params));
+        params.put("vnp_SecureHash", secureHash.toUpperCase(java.util.Locale.ROOT));
+        assertTrue(vnpayPaymentGateway.verifyCallback(params));
+        params.put("vnp_SecureHash", secureHash.toLowerCase(java.util.Locale.ROOT));
+        assertTrue(vnpayPaymentGateway.verifyCallback(params));
     }
 
     @Test
@@ -78,6 +82,12 @@ class VnpayPaymentGatewayTest {
         params.put("vnp_TxnRef", "PMT-999");
         params.put("vnp_SecureHash", "invalid_signature");
 
+        assertFalse(vnpayPaymentGateway.verifyCallback(params));
+        for (String signature : new String[]{"0".repeat(127), "0".repeat(126), "g".repeat(128), "0".repeat(128)}) {
+            params.put("vnp_SecureHash", signature);
+            assertFalse(vnpayPaymentGateway.verifyCallback(params));
+        }
+        params.put("vnp_SecureHash", null);
         assertFalse(vnpayPaymentGateway.verifyCallback(params));
     }
 }

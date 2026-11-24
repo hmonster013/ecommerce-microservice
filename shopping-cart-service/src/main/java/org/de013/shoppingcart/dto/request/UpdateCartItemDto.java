@@ -7,63 +7,67 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
-import lombok.*;
+import lombok.Builder;
 
 
 /**
  * DTO for updating cart items
  */
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-@ToString
-@EqualsAndHashCode
 @Schema(description = "Request to update cart item")
-public class UpdateCartItemDto {
+public record UpdateCartItemDto(
 
 
     @Schema(description = "New quantity for the item", example = "3", minimum = "1", maximum = "99")
     @Min(value = 1, message = "{quantity.min}")
     @Max(value = 99, message = "{quantity.max}")
-    private Integer quantity;
+    Integer quantity,
 
 
     @Schema(description = "Updated special instructions", example = "Please handle with care")
     @Size(max = 500, message = "{instructions.size}")
     @JsonProperty("special_instructions")
-    private String specialInstructions;
+    String specialInstructions,
 
     @Schema(description = "Update gift status", example = "true")
     @JsonProperty("is_gift")
-    private Boolean isGift;
+    Boolean isGift,
 
     @Schema(description = "Updated gift message", example = "Congratulations!")
     @Size(max = 500, message = "{gift.message.size}")
     @JsonProperty("gift_message")
-    private String giftMessage;
+    String giftMessage,
 
     @Schema(description = "Updated gift wrap type", example = "luxury", allowableValues = {"basic", "premium", "luxury"})
     @Size(max = 50, message = "{gift.wrap.size}")
     @JsonProperty("gift_wrap_type")
-    private String giftWrapType;
+    String giftWrapType,
 
 
     @Schema(description = "Validate price against current product price", example = "true")
     @JsonProperty("validate_price")
-    @Builder.Default
-    private Boolean validatePrice = true;
+    Boolean validatePrice,
 
     @Schema(description = "Update operation type", example = "QUANTITY", allowableValues = {"QUANTITY", "GIFT_OPTIONS", "INSTRUCTIONS", "ALL"})
     @JsonProperty("update_type")
-    @Builder.Default
-    private String updateType = "ALL";
+    String updateType,
 
     @Schema(description = "Refresh price from Product Catalog", example = "false")
     @JsonProperty("refresh_price")
-    @Builder.Default
-    private Boolean refreshPrice = false;
+    Boolean refreshPrice
+) {
+    public UpdateCartItemDto {
+        if (validatePrice == null) {
+            validatePrice = true;
+        }
+        if (updateType == null) {
+            updateType = "ALL";
+        }
+        if (refreshPrice == null) {
+            refreshPrice = false;
+        }
+    }
+
 
 
     /**

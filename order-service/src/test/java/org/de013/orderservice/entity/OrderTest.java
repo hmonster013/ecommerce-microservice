@@ -12,6 +12,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class OrderTest {
 
     @Test
+    void beanUtilsReadsPropertiesButSuppressesEnumDeclaringClass() throws Exception {
+        var properties = new org.apache.commons.beanutils.PropertyUtilsBean();
+        assertEquals("ORD-1001", properties.getProperty(Order.builder().orderNumber("ORD-1001").build(), "orderNumber"));
+        assertFalse(properties.isReadable(OrderStatus.PENDING, "declaringClass"));
+    }
+
+    @Test
     void recalculateTotals_WithMultipleItems_ShouldCalculateCorrectly() {
         Order order = Order.builder()
                 .orderNumber("ORD-1001")

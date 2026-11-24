@@ -41,7 +41,7 @@ public class CartSecurityService {
             
             CartResponseDto cart = cartOpt.get();
             // Allow if guest cart (no userId) or if user owns the cart
-            boolean isOwner = cart.getUserId() == null || cart.getUserId().equals(userContext.getUserId());
+            boolean isOwner = cart.userId() == null || cart.userId().equals(userContext.getUserId());
             log.debug("User {} {} access cart {} (owner: {})",
                     userContext.getUsername(),
                     isOwner ? "granted" : "denied",

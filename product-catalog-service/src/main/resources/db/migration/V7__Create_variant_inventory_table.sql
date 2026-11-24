@@ -26,12 +26,6 @@ CREATE TABLE variant_inventory (
 
 -- Indexes are defined in JPA entity @Index annotations
 
--- Create trigger to update updated_at
-CREATE TRIGGER update_variant_inventory_updated_at 
-    BEFORE UPDATE ON variant_inventory 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
-
 -- Create function to automatically create variant inventory record when variant is created
 CREATE OR REPLACE FUNCTION create_default_variant_inventory()
 RETURNS TRIGGER AS $$

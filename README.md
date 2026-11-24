@@ -8,7 +8,7 @@ A scalable e-commerce platform built with microservices architecture using Sprin
 
 ## 📖 Docs
 
-- [Architecture overview (tiếng Việt)](docs/architecture.md) — sơ đồ tổng thể, vai trò service, luồng auth, lưu ý maintenance.
+- [Architecture overview (tiếng Việt)](../docs/backend/architecture.md) — sơ đồ tổng thể, vai trò service, luồng auth, lưu ý maintenance.
 
 ## 🏗️ Architecture
 
@@ -103,8 +103,8 @@ graph LR
 ```
 
 ### Microservices
-- **API Gateway** (8080) - Single entry point with OAuth2 authentication
-- **User Service** (8081) - User profile management
+- **API Gateway** (8080) - Single entry point with OAuth2 authentication and auth endpoints
+- **User Service** (8081) - User profile, Keycloak sync, and internal user validation
 - **Product Catalog** (8082) - Product and inventory management
 - **Shopping Cart** (8083) - Shopping cart operations
 - **Order Service** (8084) - Order processing
@@ -248,21 +248,17 @@ Environment file:
 
 ## 🔐 Security
 
-- **Keycloak OAuth2/OIDC** - Enterprise-grade authentication server
-- **JWT Token-Based Auth** - Access tokens with refresh mechanism
-- **API Gateway Security** - Centralized authentication/authorization
-- **Role-Based Access Control (RBAC)** - Multiple roles (ADMIN, CUSTOMER, MANAGER, SUPPORT)
-- **User Sync** - Automatic synchronization between Keycloak and User Service
-- **Rate Limiting** - API Gateway level rate limiting
-- **Password Policy** - Managed by Keycloak
+- **Keycloak OAuth2/OIDC** - Enterprise-grade identity & authentication server (Single Source of Truth)
+- **Frontend PKCE Flow** - Direct OIDC Authorization Code Flow with PKCE (S256) via `frontend-app` client
+- **Event-Driven Profile Sync** - Keycloak Event Listener SPI (`profile-sync`) provisions profiles to User Service on user registration
+- **API Gateway Resource Server** - Centralized JWT token validation, RBAC enforcement, and trusted header propagation
+- **Role-Based Access Control (RBAC)** - Multiple realm roles (ADMIN, CUSTOMER, MANAGER, SUPPORT)
+- **Security Hardening** - Automatic header sanitization (`X-User-*` stripping) to prevent identity spoofing
 
-### Authentication Endpoints
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Token refresh
-- `POST /api/auth/logout` - User logout
-
-See [AUTHENTICATION_TEST_GUIDE.md](AUTHENTICATION_TEST_GUIDE.md) for detailed testing guide.
+### Authentication Flow
+1. **User Authentication**: Client initiates OIDC Authorization Code + PKCE directly against Keycloak (`/realms/ecommerce-realm/protocol/openid-connect/auth`).
+2. **Profile Provisioning**: On registration, Keycloak triggers the `profile-sync` event listener, which calls `POST /internal/keycloak/users` in User Service with a shared secret to idempotently create the business profile.
+3. **API Access**: Client calls API Gateway with Bearer JWT token. API Gateway validates issuer, timestamp, and signature, and forwards verified identity headers downstream.
 
 ## 📈 Key Features
 
@@ -319,7 +315,7 @@ sequenceDiagram
 2. IPN là server-to-server nên không gọi được `localhost` → expose qua **ngrok** (nên dùng *static domain* để không phải đăng ký lại): `ngrok http --url=https://<static>.ngrok-free.dev 8080`. Đăng ký URL ngrok đó làm IPN URL trong merchant admin.
 3. Thẻ test: **NCB** · `9704198526191432198` · `NGUYEN VAN A` · `07/15` · OTP `123456`.
 
-Chi tiết: [`docs/vnpay-integration-guide.md`](docs/vnpay-integration-guide.md) · plan: [`docs/plan/vnpay-integration.md`](docs/plan/vnpay-integration.md).
+Chi tiết: [`docs/vnpay-integration-guide.md`](../docs/backend/vnpay-integration-guide.md) · plan: [`docs/plan/vnpay-integration.md`](../docs/backend/plan/vnpay-integration.md).
 
 ## 🚀 Development
 
@@ -350,11 +346,11 @@ ecommerce-microservice/
 ├── api-gateway/               # API Gateway with security
 ├── config-server/            # Configuration server
 ├── eureka-server/            # Service registry
-├── user-service/             # User & auth management
+├── user-service/             # User profile, sync, and validation
 ├── product-catalog-service/  # Product management
 ├── shopping-cart-service/    # Shopping cart
 ├── order-service/            # Order processing
-├── payment-service/          # Payment with Stripe
+├── payment-service/          # Payment with Stripe and VNPay
 ├── notification-service/     # Email/SMS notifications
 ├── docker/
 │   ├── default/              # Local dev: infrastructure only (business svc chạy IntelliJ)

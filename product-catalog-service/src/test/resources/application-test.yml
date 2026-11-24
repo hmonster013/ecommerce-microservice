@@ -1,4 +1,9 @@
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://issuer.example.test
   application:
     name: product-catalog-service-test
   datasource:
@@ -17,6 +22,8 @@ spring:
     enabled: false
   cloud:
     config:
+      enabled: false
+    bus:
       enabled: false
   eureka:
     client:

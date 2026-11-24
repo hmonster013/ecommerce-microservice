@@ -41,7 +41,3 @@ CREATE TABLE payment_transactions (
 
 -- Add business constraints
 ALTER TABLE payment_transactions ADD CONSTRAINT chk_payment_transactions_amount_positive CHECK (amount > 0);
-
--- Create trigger to update updated_at timestamp
-CREATE TRIGGER update_payment_transactions_updated_at BEFORE UPDATE ON payment_transactions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

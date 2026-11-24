@@ -43,6 +43,7 @@ public class RefundServiceImpl implements RefundService {
     private final PaymentRepository paymentRepository;
     private final PaymentGatewayFactory gatewayFactory;
     private final RefundMapper refundMapper;
+    private final PaymentOrderGuard guard;
 
     // ========== REFUND PROCESSING ==========
 
@@ -50,6 +51,8 @@ public class RefundServiceImpl implements RefundService {
     public RefundResponse createRefund(RefundRequest request) {
         log.info("Creating refund for payment: {}, amount: {}", request.getPaymentId(), request.getAmount());
 
+        if (request == null || request.getPaymentId() == null) throw new PaymentProcessingException("Payment ID is required");
+        lockPayment(request.getPaymentId(), true);
         try {
             // Validate refund request
             validateRefundRequest(request);
@@ -66,6 +69,7 @@ public class RefundServiceImpl implements RefundService {
             // Create refund entity
             Refund refund = createRefundEntity(request, payment);
             Refund savedRefund = refundRepository.save(refund);
+            guard.financialChange(payment.getOrderId());
 
             // Process refund with Stripe
             StripePaymentGateway stripeGateway = gatewayFactory.getStripeGateway();
@@ -82,6 +86,8 @@ public class RefundServiceImpl implements RefundService {
             log.info("Refund created successfully: {}", finalRefund.getRefundNumber());
             return refundMapper.toRefundResponse(finalRefund);
 
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to create refund for payment: {}", request.getPaymentId(), e);
             throw new PaymentProcessingException("Failed to create refund: " + e.getMessage(), e);
@@ -92,6 +98,12 @@ public class RefundServiceImpl implements RefundService {
     public RefundResponse processRefund(Long refundId) {
         log.info("Processing refund: {}", refundId);
 
+        lockRefund(refundId, true);
+        return processLocked(refundId);
+    }
+
+    private RefundResponse processLocked(Long refundId) {
+
         Refund refund = getRefundEntityById(refundId)
                 .orElseThrow(() -> new RefundNotFoundException("Refund not found: " + refundId));
 
@@ -99,6 +111,7 @@ public class RefundServiceImpl implements RefundService {
             throw new PaymentProcessingException("Refund is not in pending status: " + refund.getStatus());
         }
 
+        var before = financialFacts(refund);
         try {
             // Process with Stripe if not already processed
             if (refund.getStripeRefundId() == null) {
@@ -116,8 +129,9 @@ public class RefundServiceImpl implements RefundService {
                 updateRefundFromStripeResponse(refund, stripeResponse);
             }
 
-            refund.setStatus(RefundStatus.PROCESSING);
+            if (refund.getStripeRefundId() == null && refund.getStatus() != RefundStatus.SUCCEEDED) refund.setStatus(RefundStatus.PROCESSING);
             Refund processedRefund = refundRepository.save(refund);
+            if (!before.equals(financialFacts(refund))) guard.financialChange(refund.getOrderId());
 
             log.info("Refund processed successfully: {}", processedRefund.getRefundNumber());
             return refundMapper.toRefundResponse(processedRefund);
@@ -134,9 +148,11 @@ public class RefundServiceImpl implements RefundService {
     @Override
     public RefundResponse cancelRefund(Long refundId, String reason) {
         log.info("Canceling refund: {} with reason: {}", refundId, reason);
+        lockRefund(refundId, false);
 
         Refund refund = getRefundEntityById(refundId)
                 .orElseThrow(() -> new RefundNotFoundException("Refund not found: " + refundId));
+        guard.requireNotPermanentlyFenced(refund.getOrderId());
 
         if (refund.getStatus() != RefundStatus.PENDING) {
             throw new PaymentProcessingException("Only pending refunds can be canceled");
@@ -145,6 +161,7 @@ public class RefundServiceImpl implements RefundService {
         refund.setStatus(RefundStatus.CANCELED);
         refund.setFailureReason(reason);
         Refund canceledRefund = refundRepository.save(refund);
+        guard.financialChange(refund.getOrderId());
 
         log.info("Refund canceled successfully: {}", canceledRefund.getRefundNumber());
         return refundMapper.toRefundResponse(canceledRefund);
@@ -153,6 +170,7 @@ public class RefundServiceImpl implements RefundService {
     @Override
     public RefundResponse approveRefund(Long refundId, String approvedBy) {
         log.info("Approving refund: {} by: {}", refundId, approvedBy);
+        lockRefund(refundId, true);
 
         Refund refund = getRefundEntityById(refundId)
                 .orElseThrow(() -> new RefundNotFoundException("Refund not found: " + refundId));
@@ -165,15 +183,17 @@ public class RefundServiceImpl implements RefundService {
         refundRepository.save(refund);
 
         // Process the approved refund
-        return processRefund(refundId);
+        return processLocked(refundId);
     }
 
     @Override
     public RefundResponse rejectRefund(Long refundId, String rejectedBy, String reason) {
         log.info("Rejecting refund: {} by: {} with reason: {}", refundId, rejectedBy, reason);
+        lockRefund(refundId, false);
 
         Refund refund = getRefundEntityById(refundId)
                 .orElseThrow(() -> new RefundNotFoundException("Refund not found: " + refundId));
+        guard.requireNotPermanentlyFenced(refund.getOrderId());
 
         if (refund.getStatus() != RefundStatus.PENDING) {
             throw new PaymentProcessingException("Only pending refunds can be rejected");
@@ -182,6 +202,7 @@ public class RefundServiceImpl implements RefundService {
         refund.setStatus(RefundStatus.REJECTED);
         refund.setFailureReason(reason);
         Refund rejectedRefund = refundRepository.save(refund);
+        guard.financialChange(refund.getOrderId());
 
         log.info("Refund rejected successfully: {}", rejectedRefund.getRefundNumber());
         return refundMapper.toRefundResponse(rejectedRefund);
@@ -237,14 +258,18 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     public RefundResponse updateRefundStatus(Long refundId, RefundStatus status, String reason) {
+        lockRefund(refundId, false);
         Refund refund = getRefundEntityById(refundId)
                 .orElseThrow(() -> new RefundNotFoundException("Refund not found: " + refundId));
+        guard.requireNotPermanentlyFenced(refund.getOrderId());
+        var before = financialFacts(refund);
 
-        refund.setStatus(status);
-        if (reason != null) {
+        if (refund.getStatus() != RefundStatus.SUCCEEDED) refund.setStatus(status);
+        if (reason != null && refund.getStatus() != RefundStatus.SUCCEEDED) {
             refund.setFailureReason(reason);
         }
         Refund updatedRefund = refundRepository.save(refund);
+        if (!before.equals(financialFacts(refund))) guard.financialChange(refund.getOrderId());
 
         log.info("Refund status updated: {} -> {}", refundId, status);
         return refundMapper.toRefundResponse(updatedRefund);
@@ -252,6 +277,7 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     public RefundResponse syncRefundStatusWithStripe(Long refundId) {
+        lockRefund(refundId, false);
         Refund refund = getRefundEntityById(refundId)
                 .orElseThrow(() -> new RefundNotFoundException("Refund not found: " + refundId));
 
@@ -259,6 +285,7 @@ public class RefundServiceImpl implements RefundService {
             throw new PaymentProcessingException("Refund does not have Stripe refund ID");
         }
 
+        var before = financialFacts(refund);
         try {
             StripePaymentGateway stripeGateway = gatewayFactory.getStripeGateway();
             StripeRefundResponse stripeResponse = stripeGateway.getRefundResponse(refund.getStripeRefundId());
@@ -266,6 +293,7 @@ public class RefundServiceImpl implements RefundService {
             // Update refund with latest Stripe status
             updateRefundFromStripeResponse(refund, stripeResponse);
             Refund syncedRefund = refundRepository.save(refund);
+            if (!before.equals(financialFacts(refund))) guard.financialChange(refund.getOrderId());
 
             log.info("Refund status synced with Stripe: {}", syncedRefund.getRefundNumber());
             return refundMapper.toRefundResponse(syncedRefund);
@@ -369,7 +397,7 @@ public class RefundServiceImpl implements RefundService {
             String refundType, BigDecimal minAmount, BigDecimal maxAmount,
             LocalDateTime startDate, LocalDateTime endDate, String initiatedBy, Pageable pageable) {
 
-        Specification<Refund> spec = Specification.where(null);
+        Specification<Refund> spec = Specification.unrestricted();
 
         if (StringUtils.hasText(refundNumber)) {
             spec = spec.and((root, query, cb) ->
@@ -555,40 +583,66 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     public Refund saveRefundEntity(Refund refund) {
-        return refundRepository.save(refund);
+        throw new UnsupportedOperationException("Unrestricted refund entity saves are not supported");
     }
 
     // ========== CLEANUP OPERATIONS ==========
 
     @Override
     public void cleanupOldFailedRefunds(LocalDateTime cutoffDate) {
-        List<Refund> oldFailedRefunds = refundRepository.findOldFailedRefunds(cutoffDate);
-
-        for (Refund refund : oldFailedRefunds) {
-            try {
-                refundRepository.delete(refund);
-                log.info("Cleaned up old failed refund: {}", refund.getRefundNumber());
-            } catch (Exception e) {
-                log.warn("Failed to cleanup failed refund: {}", refund.getId(), e);
-            }
-        }
+        cleanup(cutoffDate, RefundStatus.FAILED);
     }
 
     @Override
     public void cleanupOldCanceledRefunds(LocalDateTime cutoffDate) {
-        List<Refund> oldCanceledRefunds = refundRepository.findOldCanceledRefunds(cutoffDate);
+        cleanup(cutoffDate, RefundStatus.CANCELED);
+    }
 
-        for (Refund refund : oldCanceledRefunds) {
-            try {
-                refundRepository.delete(refund);
-                log.info("Cleaned up old canceled refund: {}", refund.getRefundNumber());
-            } catch (Exception e) {
-                log.warn("Failed to cleanup canceled refund: {}", refund.getId(), e);
+    private void cleanup(LocalDateTime cutoff, RefundStatus status) {
+        var ids = refundRepository.findOldIds(status, cutoff);
+        ids.sort(java.util.Comparator.comparing(id -> refundRepository.findPaymentIdByRefundId(id)
+                .flatMap(paymentRepository::findOrderIdByPaymentId).orElse(Long.MAX_VALUE)));
+        for (Long id : ids) {
+            if (!lockRefund(id, false)) {
+                refundRepository.findById(id).filter(r -> r.getStatus() == status && r.getCreatedAt().isBefore(cutoff))
+                        .ifPresent(refund -> {
+                            refundRepository.delete(refund);
+                            guard.financialChange(refund.getOrderId());
+                        });
             }
         }
     }
 
+    private boolean lockRefund(Long refundId, boolean requirePayable) {
+        Long paymentId = refundRepository.findPaymentIdByRefundId(refundId)
+                .orElseThrow(() -> new RefundNotFoundException("Refund not found: " + refundId));
+        boolean held = lockPayment(paymentId, requirePayable);
+        Long orderId = paymentRepository.findOrderIdByPaymentId(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
+        Refund refund = refundRepository.findById(refundId)
+                .orElseThrow(() -> new RefundNotFoundException("Refund not found: " + refundId));
+        if (!orderId.equals(refund.getOrderId()) || !paymentId.equals(refund.getPaymentId()))
+            throw new PaymentProcessingException("Refund payment correlation changed");
+        return held;
+    }
+
+    private boolean lockPayment(Long paymentId, boolean requirePayable) {
+        Long orderId = paymentRepository.findOrderIdByPaymentId(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
+        boolean held = guard.lock(orderId);
+        if (held && requirePayable) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Order requires payment reconciliation");
+        paymentRepository.findById(paymentId).filter(p -> orderId.equals(p.getOrderId()))
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found: " + paymentId));
+        return held;
+    }
+
     // ========== HELPER METHODS ==========
+
+    private record FinancialFacts(RefundStatus status, String refundId, String chargeId, String intentId) { }
+
+    private FinancialFacts financialFacts(Refund refund) {
+        return new FinancialFacts(refund.getStatus(), refund.getStripeRefundId(), refund.getStripeChargeId(), refund.getStripePaymentIntentId());
+    }
 
     private Refund createRefundEntity(RefundRequest request, Payment payment) {
         String refundType = request.getAmount().compareTo(payment.getAmount()) == 0 ? "FULL" : "PARTIAL";
@@ -624,7 +678,7 @@ public class RefundServiceImpl implements RefundService {
         refund.setStripeChargeId(stripeResponse.getChargeId());
 
         // Map Stripe status to internal status
-        switch (stripeResponse.getStatus().toLowerCase()) {
+        if (refund.getStatus() != RefundStatus.SUCCEEDED) switch (stripeResponse.getStatus().toLowerCase()) {
             case "succeeded" -> refund.setStatus(RefundStatus.SUCCEEDED);
             case "pending" -> refund.setStatus(RefundStatus.PROCESSING);
             case "failed" -> {

@@ -1,0 +1,68 @@
+# Local kind only: Keycloak and user-service remain on the Docker Desktop host.
+# Apply suspended, inspect drift and complete a dry run before explicitly resuming.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: keycloak-profile-reconciliation
+  namespace: profile-sync-dev
+  labels:
+    app: profile-reconciliation
+spec:
+  schedule: "*/5 * * * *"
+  suspend: true
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 240
+      template:
+        metadata:
+          labels:
+            app: profile-reconciliation
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconciler
+              image: de013/ecommerce-keycloak-reconciler:kind-be1e94f
+              imagePullPolicy: Never
+              command: ["java", "-cp", "/app/keycloak-profile-sync.jar:/app/lib/*", "org.de013.keycloak.profilesync.reconciliation.ProfileReconciliationRunner"]
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: "1"
+                  memory: 256Mi
+              env:
+                - name: KEYCLOAK_SERVER_URL
+                  value: "http://host.docker.internal:8090"
+                - name: KEYCLOAK_REALM
+                  value: "ecommerce-realm"
+                - name: KEYCLOAK_CLIENT_ID
+                  value: "user-profile-manager"
+                - name: KEYCLOAK_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: profile-reconciliation-credentials
+                      key: KEYCLOAK_PROFILE_CLIENT_SECRET
+                - name: USER_SERVICE_PROVISION_URL
+                  value: "http://host.docker.internal:8081/internal/keycloak/users"
+                - name: USER_PROFILE_PROVISIONER_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: profile-reconciliation-credentials
+                      key: USER_PROFILE_PROVISIONER_SECRET

@@ -1,0 +1,36 @@
+:root {
+  /* Brand Primary Colors */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #eff6ff;
+  --color-primary-border: #bfdbfe;
+
+  /* Surfaces & Backgrounds */
+  --color-bg-page: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-border: #e2e8f0;
+  --color-border-focus: #3b82f6;
+
+  /* Typography */
+  --color-text-main: #0f172a;
+  --color-text-muted: #64748b;
+  --color-text-link: #2563eb;
+
+  /* Feedback Colors */
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-danger-text: #b91c1c;
+
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-success-text: #15803d;
+
+  --color-warn-bg: #fffbeb;
+  --color-warn-border: #fef3c7;
+  --color-warn-text: #b45309;
+
+  /* Geometry & Shadows */
+  --radius-card: 1rem;
+  --radius-control: 0.5rem;
+  --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+}

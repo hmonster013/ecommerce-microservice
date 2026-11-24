@@ -3,27 +3,26 @@ package org.de013.userservice.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.dto.PageResponse;
-import org.de013.common.exception.BusinessException;
 import org.de013.common.exception.ResourceNotFoundException;
-import org.de013.userservice.exception.EmailAlreadyExistsException;
-import org.de013.userservice.exception.UsernameAlreadyExistsException;
+import org.de013.userservice.dto.KeycloakProfile;
 import org.de013.userservice.dto.UserProfileDto;
-import org.de013.userservice.dto.UserRegistrationDto;
 import org.de013.userservice.dto.UserResponse;
 import org.de013.userservice.dto.UserUpdateDto;
 import org.de013.userservice.entity.User;
+import org.de013.userservice.exception.ProfileSyncException;
 import org.de013.userservice.mapper.UserMapper;
 import org.de013.userservice.repository.UserRepository;
+import org.de013.userservice.service.KeycloakProfileClient;
 import org.de013.userservice.service.UserManagementService;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -33,65 +32,8 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-
-    // ========== User Registration & Creation ==========
-
-    @Override
-    public UserResponse registerUser(UserRegistrationDto request) {
-        log.info("Registering new user: {}", request.getUsername());
-
-        validateUserRegistration(request);
-
-        // Get default CUSTOMER role
-        // Note: User registration should be done through Keycloak
-        // This method creates profile only - password managed by Keycloak
-
-        User user = User.builder()
-                .keycloakId(request.getKeycloakId()) // Required: Keycloak user UUID
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .phone(request.getPhone())
-                .address(request.getAddress())
-                .createdBy("SYSTEM")
-                .build();
-
-        user = userRepository.save(user);
-
-        log.info("User registered successfully: {}", user.getUsername());
-
-        return userMapper.convertToUserResponse(user);
-    }
-
-    @Override
-    public UserResponse createUser(UserRegistrationDto request) {
-        log.info("Creating new user: {}", request.getUsername());
-
-        // Note: User creation should be done through Keycloak
-        // This method creates profile only - password managed by Keycloak
-
-        validateUserRegistration(request);
-
-        User user = User.builder()
-                .keycloakId(request.getKeycloakId()) // Required: Keycloak user UUID
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .phone(request.getPhone())
-                .address(request.getAddress())
-                .createdBy("ADMIN")
-                .build();
-
-        user = userRepository.save(user);
-
-        log.info("User created successfully: {}", user.getUsername());
-
-        return userMapper.convertToUserResponse(user);
-    }
-
-    // ========== User Retrieval ==========
+    private final KeycloakProfileClient keycloakProfileClient;
+    private final UserIdentityWriter identityWriter;
 
     @Override
     @Transactional(readOnly = true)
@@ -109,14 +51,6 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserResponse getUserByEmail(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
-        return userMapper.convertToUserResponse(user);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public User findUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
@@ -129,55 +63,41 @@ public class UserManagementServiceImpl implements UserManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
     }
 
-    // ========== User Profile Management ==========
-
     @Override
     @Transactional(readOnly = true)
-    public UserProfileDto getUserProfile(String username) {
-        User user = findUserByUsername(username);
+    public UserProfileDto getUserProfile(String subject) {
+        User user = userRepository.findByKeycloakId(subject)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "keycloakId", subject));
         return userMapper.convertToUserProfileDto(user);
     }
 
     @Override
-    public UserResponse updateUserProfile(String username, UserUpdateDto request) {
-        log.info("Updating profile for user: {}", username);
-
-        User user = findUserByUsername(username);
-
-        // Validate email uniqueness if changed
-        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-            if (!isEmailAvailableForUpdate(request.getEmail(), user.getId())) {
-                throw new EmailAlreadyExistsException(request.getEmail());
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public UserResponse updateUserProfile(String subject, UserUpdateDto request) {
+        if (!userRepository.existsByKeycloakId(subject)) throw new ResourceNotFoundException("User", "keycloakId", subject);
+        KeycloakProfile canonical = keycloakProfileClient.read(subject);
+        identityWriter.checkConflict(canonical);
+        boolean namesChanged = (request.firstName() != null && !Objects.equals(request.firstName(), canonical.firstName()))
+                || (request.lastName() != null && !Objects.equals(request.lastName(), canonical.lastName()));
+        if (namesChanged) keycloakProfileClient.updateNames(subject, request.firstName(), request.lastName());
+        try {
+            for (int attempt = 0; attempt < 3; attempt++) {
+                try {
+                    canonical = keycloakProfileClient.read(subject);
+                    return identityWriter.write(canonical, request, false).user();
+                } catch (OptimisticLockingFailureException ex) {
+                    // Read canonical identity again before retrying a short DB transaction.
+                }
             }
-            user.setEmail(request.getEmail());
+            throw new ProfileSyncException(HttpStatus.SERVICE_UNAVAILABLE, "PROFILE_SYNC_PENDING");
+        } catch (DataIntegrityViolationException ex) {
+            throw new ProfileSyncException(HttpStatus.CONFLICT, "PROFILE_IDENTITY_CONFLICT");
+        } catch (RuntimeException ex) {
+            if (ex instanceof ProfileSyncException sync && sync.getStatus().value() == 409) throw ex;
+            throw new ProfileSyncException(HttpStatus.SERVICE_UNAVAILABLE,
+                    namesChanged ? "PROFILE_SYNC_PENDING" : "PROFILE_IDENTITY_UNAVAILABLE");
         }
-
-        // Update other fields
-        if (request.getFirstName() != null) {
-            user.setFirstName(request.getFirstName());
-        }
-        if (request.getLastName() != null) {
-            user.setLastName(request.getLastName());
-        }
-        if (request.getPhone() != null) {
-            user.setPhone(request.getPhone());
-        }
-        if (request.getAddress() != null) {
-            user.setAddress(request.getAddress());
-        }
-
-        user.setUpdatedBy(username);
-        user = userRepository.save(user);
-
-        log.info("Profile updated successfully for user: {}", username);
-
-        return userMapper.convertToUserResponse(user);
     }
-
-    // Password management is now handled by Keycloak
-    // Users should change password through Keycloak UI or API
-
-    // ========== User Administration ==========
 
     @Override
     @Transactional(readOnly = true)
@@ -199,15 +119,6 @@ public class UserManagementServiceImpl implements UserManagementService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public PageResponse<UserResponse> getUsersCreatedBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
-        Page<User> users = userRepository.findUsersCreatedBetween(startDate, endDate, pageable);
-        return PageResponse.of(users.map(userMapper::convertToUserResponse));
-    }
-
-    // ========== User Deletion ==========
-
-    @Override
     public void deleteUser(Long userId) {
         log.info("Deleting user: {}", userId);
         User user = findUserById(userId);
@@ -215,41 +126,4 @@ public class UserManagementServiceImpl implements UserManagementService {
         log.info("User deleted successfully: {}", userId);
     }
 
-    // ========== Validation Methods ==========
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByUsername(String username) {
-        return userRepository.existsByUsername(username);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isUsernameAvailableForUpdate(String username, Long userId) {
-        return !userRepository.existsByUsernameAndIdNot(username, userId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isEmailAvailableForUpdate(String email, Long userId) {
-        return !userRepository.existsByEmailAndIdNot(email, userId);
-    }
-
-    // ========== Helper Methods ==========
-
-    private void validateUserRegistration(UserRegistrationDto request) {
-        if (existsByUsername(request.getUsername())) {
-            throw new UsernameAlreadyExistsException(request.getUsername());
-        }
-
-        if (existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException(request.getEmail());
-        }
-    }
 }

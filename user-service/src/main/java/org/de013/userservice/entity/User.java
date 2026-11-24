@@ -12,14 +12,16 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User extends BaseEntity {
+    @Version
+    private Long version;
 
     @Column(name = "keycloak_id", unique = true, length = 36)
     private String keycloakId;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 255)
     private String username;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 255)
     private String email;
 
     @Column(name = "first_name")

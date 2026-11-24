@@ -12,7 +12,7 @@ import org.de013.orderservice.entity.enums.OrderType;
 import org.de013.orderservice.entity.valueobject.Address;
 import org.de013.orderservice.entity.valueobject.Money;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ import java.util.List;
         @Index(name = "idx_status_created", columnList = "status, createdAt")
 })
 @SQLDelete(sql = "UPDATE orders SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Where(clause = "deleted_at IS NULL")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -47,6 +47,30 @@ import java.util.List;
 @ToString(exclude = {"orderItems"})
 @EqualsAndHashCode(callSuper = true, exclude = {"orderItems"})
 public class Order extends BaseEntity {
+
+    @Column(name = "accepted_payment_id")
+    private Long acceptedPaymentId;
+
+    @Column(name = "accepted_payment_number")
+    private String acceptedPaymentNumber;
+
+    @Column(name = "allocation_phase", length = 32)
+    private String allocationPhase;
+
+    @Column(name = "checkout_deadline")
+    private LocalDateTime checkoutDeadline;
+
+    @Column(name = "checkout_close_operation")
+    private java.util.UUID checkoutCloseOperation;
+
+    @Column(name = "checkout_close_safe_at")
+    private LocalDateTime checkoutCloseSafeAt;
+
+    @Column(name = "checkout_close_hold_reason")
+    private String checkoutCloseHoldReason;
+
+    @Column(name = "checkout_key", unique = true, length = 36)
+    private String checkoutKey;
 
     /**
      * Unique order number for customer reference

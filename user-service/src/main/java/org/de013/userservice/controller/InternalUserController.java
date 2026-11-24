@@ -3,69 +3,108 @@ package org.de013.userservice.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ApiResult;
+import org.de013.userservice.dto.KeycloakProfileProvisionRequest;
+import org.de013.userservice.dto.ProvisionResult;
 import org.de013.userservice.dto.SyncUserRequest;
+import org.de013.userservice.dto.UserIdentitySyncResponse;
 import org.de013.userservice.dto.UserResponse;
 import org.de013.userservice.dto.UserValidationResponse;
 import org.de013.userservice.entity.User;
 import org.de013.userservice.repository.UserRepository;
+import org.de013.userservice.service.UserProfileProvisioningService;
+import org.de013.userservice.service.UserIdentitySyncService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/users/internal")
 @RequiredArgsConstructor
 @Slf4j
 public class InternalUserController {
 
     private final UserRepository userRepository;
+    private final UserProfileProvisioningService userProfileProvisioningService;
+    private final UserIdentitySyncService userIdentitySyncService;
 
-    @PostMapping("/sync")
-    public ResponseEntity<ApiResponse<UserResponse>> syncUserFromKeycloak(@Valid @RequestBody SyncUserRequest request) {
-        log.info("Syncing user from Keycloak - keycloakId: {}, username: {}", request.getKeycloakId(), request.getUsername());
+    @PostMapping("/internal/keycloak/users/{keycloakId}/sync")
+    public ResponseEntity<ApiResult<UserIdentitySyncResponse>> syncIdentity(
+            @PathVariable String keycloakId,
+            @RequestHeader(value = "X-Profile-Provisioner-Secret", required = false) String secret) {
+        userProfileProvisioningService.verifyProvisionerSecret(secret);
+        return ResponseEntity.ok(ApiResult.success(userIdentitySyncService.sync(keycloakId)));
+    }
 
-        User user = userRepository.findByKeycloakId(request.getKeycloakId())
+    /**
+     * Idempotent Keycloak user profile provisioning endpoint.
+     * Authenticated via X-Profile-Provisioner-Secret header.
+     * Available on private service network only.
+     */
+    @PostMapping({"/internal/keycloak/users", "/users/internal/keycloak/users"})
+    public ResponseEntity<ApiResult<UserResponse>> provisionUserProfile(
+            @RequestHeader(value = "X-Profile-Provisioner-Secret", required = false) String secret,
+            @Valid @RequestBody KeycloakProfileProvisionRequest request) {
+
+        log.info("Internal request to provision user profile: keycloakId={}, username={}",
+                request.keycloakId(), request.username());
+
+        userProfileProvisioningService.verifyProvisionerSecret(secret);
+        ProvisionResult result = userProfileProvisioningService.provisionUserProfile(request);
+
+        if (result.isCreated()) {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResult.success(result.getUser(), "User profile created successfully"));
+        } else {
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(ApiResult.success(result.getUser(), "User profile already provisioned"));
+        }
+    }
+
+    @PostMapping("/users/internal/sync")
+    public ResponseEntity<ApiResult<UserResponse>> syncUserFromKeycloak(@Valid @RequestBody SyncUserRequest request) {
+        log.info("Syncing user from Keycloak - keycloakId: {}, username: {}", request.keycloakId(), request.username());
+
+        User user = userRepository.findByKeycloakId(request.keycloakId())
                 .orElseGet(() -> {
                     User newUser = User.builder()
-                            .keycloakId(request.getKeycloakId())
-                            .username(request.getUsername())
-                            .email(request.getEmail())
-                            .firstName(request.getFirstName() != null ? request.getFirstName() : "N/A")
-                            .lastName(request.getLastName() != null ? request.getLastName() : "N/A")
+                            .keycloakId(request.keycloakId())
+                            .username(request.username())
+                            .email(request.email())
+                            .firstName(request.firstName() != null ? request.firstName() : "N/A")
+                            .lastName(request.lastName() != null ? request.lastName() : "N/A")
                             .build();
 
-                    log.info("Creating new user profile for Keycloak user: {}", request.getKeycloakId());
+                    log.info("Creating new user profile for Keycloak user: {}", request.keycloakId());
                     return userRepository.save(newUser);
                 });
 
         UserResponse response = UserResponse.fromEntity(user);
         return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.success(response, "User synced successfully"));
+                .body(ApiResult.success(response, "User synced successfully"));
     }
 
-    @GetMapping("/by-keycloak-id/{keycloakId}")
-    public ResponseEntity<ApiResponse<UserResponse>> getUserByKeycloakId(@PathVariable String keycloakId) {
+    @GetMapping("/users/internal/by-keycloak-id/{keycloakId}")
+    public ResponseEntity<ApiResult<UserResponse>> getUserByKeycloakId(@PathVariable String keycloakId) {
         log.debug("Fetching user by keycloakId: {}", keycloakId);
 
         return userRepository.findByKeycloakId(keycloakId)
-                .map(user -> ResponseEntity.ok(ApiResponse.success(UserResponse.fromEntity(user))))
+                .map(user -> ResponseEntity.ok(ApiResult.success(UserResponse.fromEntity(user))))
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error("User not found with keycloakId: " + keycloakId, "USER_NOT_FOUND")));
+                        .body(ApiResult.error("User not found with keycloakId: " + keycloakId, "USER_NOT_FOUND")));
     }
 
-    @DeleteMapping("/by-keycloak-id/{keycloakId}")
-    public ResponseEntity<ApiResponse<String>> deleteUserByKeycloakId(@PathVariable String keycloakId) {
+    @DeleteMapping("/users/internal/by-keycloak-id/{keycloakId}")
+    public ResponseEntity<ApiResult<String>> deleteUserByKeycloakId(@PathVariable String keycloakId) {
         log.info("Internal request to delete user by keycloakId: {}", keycloakId);
 
         return userRepository.findByKeycloakId(keycloakId)
                 .map(user -> {
                     userRepository.delete(user);
                     log.info("User {} deleted successfully from DB", keycloakId);
-                    return ResponseEntity.ok(ApiResponse.success("User deleted successfully"));
+                    return ResponseEntity.ok(ApiResult.success("User deleted successfully"));
                 })
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error("User not found with keycloakId: " + keycloakId, "USER_NOT_FOUND")));
+                        .body(ApiResult.error("User not found with keycloakId: " + keycloakId, "USER_NOT_FOUND")));
     }
 
     /**
@@ -80,8 +119,8 @@ public class InternalUserController {
      * @param lastName   Last name (optional)
      * @return User response with user details
      */
-    @GetMapping("/get-or-create")
-    public ResponseEntity<ApiResponse<UserResponse>> getOrCreateUser(
+    @GetMapping("/users/internal/get-or-create")
+    public ResponseEntity<ApiResult<UserResponse>> getOrCreateUser(
             @RequestParam String keycloakId,
             @RequestParam String username,
             @RequestParam String email,
@@ -111,13 +150,13 @@ public class InternalUserController {
         });
 
         UserResponse response = UserResponse.fromEntity(user);
-        return ResponseEntity.ok(ApiResponse.success(response, "User retrieved successfully"));
+        return ResponseEntity.ok(ApiResult.success(response, "User retrieved successfully"));
     }
 
     /**
      * Validate user for payment processing (Internal)
      */
-    @GetMapping("/{keycloakId}/validate-payment")
+    @GetMapping("/users/internal/{keycloakId}/validate-payment")
     public ResponseEntity<UserValidationResponse> validateUserForPayment(@PathVariable String keycloakId) {
         log.info("Internal request to validate user for payment: {}", keycloakId);
 

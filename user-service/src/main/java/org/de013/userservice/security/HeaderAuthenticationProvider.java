@@ -46,30 +46,4 @@ public class HeaderAuthenticationProvider implements AuthenticationProvider {
         return auth;
     }
 
-    /**
-     * Custom UserDetails to hold additional user information from headers
-     */
-    public static class HeaderUserDetails {
-        private final String keycloakId;
-        private final String username;
-        private final String email;
-
-        public HeaderUserDetails(String keycloakId, String username, String email) {
-            this.keycloakId = keycloakId;
-            this.username = username;
-            this.email = email;
-        }
-
-        public String getKeycloakId() {
-            return keycloakId;
-        }
-
-        public String getUsername() {
-            return username;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-    }
 }

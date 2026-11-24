@@ -18,9 +18,3 @@ CREATE TABLE product_variants (
     
     CONSTRAINT fk_product_variants_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
-
--- Create trigger to update updated_at
-CREATE TRIGGER update_product_variants_updated_at 
-    BEFORE UPDATE ON product_variants 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();

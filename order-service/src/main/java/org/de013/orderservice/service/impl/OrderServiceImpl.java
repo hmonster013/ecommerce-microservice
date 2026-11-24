@@ -38,17 +38,26 @@ public class OrderServiceImpl implements OrderService {
     private final CartServiceClient cartServiceClient;
     private final ProductCatalogClient productCatalogClient;
 
+    private final jakarta.persistence.EntityManager entityManager;
+
     @Override
-    @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
-        log.info("Creating order for user: {} from cart: {}", request.getUserId(), request.getCartId());
+        throw new UnsupportedOperationException("Use idempotent checkout");
+    }
 
-        // Get cart items from Shopping Cart Service
-        List<org.de013.orderservice.dto.CartItemDto> cartItems = cartServiceClient.getCartItems(request.getCartId()).getData();
-        if (cartItems == null || cartItems.isEmpty()) {
-            throw new IllegalArgumentException("Cart is empty or not found");
-        }
+    @Override
+    public OrderResponse createCheckoutOrder(CreateOrderRequest request, String checkoutKey) {
+        throw new UnsupportedOperationException("Use idempotent checkout");
+    }
 
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public OrderResponse createIntent(CreateOrderRequest request, String checkoutKey, String snapshot,
+                                      List<org.de013.orderservice.dto.CartItemDto> cartItems) {
+        int inserted = entityManager.createNativeQuery("INSERT INTO checkout_attempts (attempt_key,user_id,request_snapshot) VALUES (:key,:owner,:snapshot) ON CONFLICT (attempt_key) DO NOTHING")
+                .setParameter("key", checkoutKey).setParameter("owner", request.userId())
+                .setParameter("snapshot", snapshot).executeUpdate();
+        if (inserted == 0) throw new org.springframework.dao.DuplicateKeyException("Attempt exists");
         // Generate order number
         String orderNumber = "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         while (orderRepository.existsByOrderNumber(orderNumber)) {
@@ -57,12 +66,14 @@ public class OrderServiceImpl implements OrderService {
 
         // Create order from request
         Order order = orderMapper.toEntity(request);
+        order.setCheckoutKey(checkoutKey);
         order.setOrderNumber(orderNumber);
-        order.setStatus(OrderStatus.PENDING);
+        order.setStatus(OrderStatus.ON_HOLD);
+        order.setAllocationPhase("ALLOCATING");
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
-        String currency = request.getCurrency() != null ? request.getCurrency() : "USD";
+        String currency = request.currency() != null ? request.currency() : "USD";
         order.setTaxAmount(new Money(BigDecimal.ZERO, currency));
         order.setShippingAmount(new Money(BigDecimal.ZERO, currency));
         order.setDiscountAmount(new Money(BigDecimal.ZERO, currency));
@@ -71,45 +82,45 @@ public class OrderServiceImpl implements OrderService {
         for (org.de013.orderservice.dto.CartItemDto cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
 
-            orderItem.setProductId(cartItem.getProductId());
+            orderItem.setProductId(cartItem.productId());
 
-            orderItem.setSku(cartItem.getProductSku());
-            orderItem.setProductName(cartItem.getProductName());
-            orderItem.setProductDescription(cartItem.getProductDescription());
-            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setSku(cartItem.productSku());
+            orderItem.setProductName(cartItem.productName());
+            orderItem.setProductDescription(cartItem.productDescription());
+            orderItem.setQuantity(cartItem.quantity());
             // unitPrice is the list price per unit; totalPrice is the GROSS line amount (unitPrice * qty).
             // The order-level recalculation subtracts the per-line discount once to reach the net total.
-            BigDecimal qty = BigDecimal.valueOf(cartItem.getQuantity());
-            orderItem.setUnitPrice(new Money(cartItem.getUnitPrice(), cartItem.getCurrency()));
-            orderItem.setTotalPrice(new Money(cartItem.getUnitPrice().multiply(qty), cartItem.getCurrency()));
+            BigDecimal qty = BigDecimal.valueOf(cartItem.quantity());
+            orderItem.setUnitPrice(new Money(cartItem.unitPrice(), cartItem.currency()));
+            orderItem.setTotalPrice(new Money(cartItem.unitPrice().multiply(qty), cartItem.currency()));
 
             // cart exposes discount per unit; scale by quantity for the line-level discount
-            BigDecimal discountPerUnit = cartItem.getDiscountAmount() != null ? cartItem.getDiscountAmount() : BigDecimal.ZERO;
-            orderItem.setDiscountAmount(new Money(discountPerUnit.multiply(qty), cartItem.getCurrency()));
+            BigDecimal discountPerUnit = cartItem.discountAmount() != null ? cartItem.discountAmount() : BigDecimal.ZERO;
+            orderItem.setDiscountAmount(new Money(discountPerUnit.multiply(qty), cartItem.currency()));
             
             // Set tax amount (default to 0)
-            orderItem.setTaxAmount(new Money(BigDecimal.ZERO, cartItem.getCurrency()));
+            orderItem.setTaxAmount(new Money(BigDecimal.ZERO, cartItem.currency()));
             
             // Set product category and brand
-            orderItem.setProductCategory(cartItem.getCategoryName());
-            orderItem.setProductBrand(cartItem.getProductBrand());
+            orderItem.setProductCategory(cartItem.categoryName());
+            orderItem.setProductBrand(cartItem.productBrand());
             
             orderItem.setOrder(order);
             order.getOrderItems().add(orderItem);
 
-            // Deduct stock in Product Catalog Service
-            try {
-                log.info("Deducting {} stock for product ID: {}", cartItem.getQuantity(), cartItem.getProductId());
-                productCatalogClient.removeStock(cartItem.getProductId(), cartItem.getQuantity());
-            } catch (Exception e) {
-                log.error("Failed to deduct stock for product ID: {} - Error: {}", cartItem.getProductId(), e.getMessage());
-                throw new IllegalStateException("Failed to allocate inventory for product: " + cartItem.getProductName());
-            }
+
         }
 
         order.recalculateTotals();
 
-        order = orderRepository.save(order);
+        order = orderRepository.saveAndFlush(order);
+        for (var item : cartItems) {
+            entityManager.createNativeQuery("INSERT INTO inventory_allocation_intents (operation_id,order_id,target_kind,target_id,quantity,owner_id,state) VALUES (:id,:orderId,:kind,:target,:quantity,:owner,'PENDING')")
+                    .setParameter("id", UUID.randomUUID()).setParameter("orderId", order.getId())
+                    .setParameter("kind", item.variantId() == null ? "PRODUCT" : "VARIANT")
+                    .setParameter("target", item.variantId() == null ? Long.parseLong(item.productId()) : Long.parseLong(item.variantId()))
+                    .setParameter("quantity", item.quantity()).setParameter("owner", request.userId()).executeUpdate();
+        }
         log.info("Order created successfully: {} with {} items", orderNumber, cartItems.size());
 
         return orderMapper.toResponse(order);
@@ -153,12 +164,13 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse updateOrder(Long id, UpdateOrderRequest request) {
         log.debug("Updating order: {}", id);
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.lockForPayment(id)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null) throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
 
         // Basic update - can be enhanced later
-        if (request.getCustomerNotes() != null) {
-            order.setCustomerNotes(request.getCustomerNotes());
+        if (request.customerNotes() != null) {
+            order.setCustomerNotes(request.customerNotes());
         }
 
         order.setUpdatedAt(LocalDateTime.now());
@@ -171,8 +183,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void cancelOrder(Long id, String reason) {
         log.debug("Cancelling order: {} with reason: {}", id, reason);
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.lockForPayment(id)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null) throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
 
         // Basic cancellation - can be enhanced later
         order.setStatus(OrderStatus.CANCELLED);
@@ -188,9 +201,30 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void markOrderAsPaid(Long orderId, Long paymentId, String paymentNumber) {
         log.info("Marking order {} as PAID with paymentId {} and number {}", orderId, paymentId, paymentNumber);
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.lockForPayment(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null && java.util.Set.of("CLOSING", "RELEASE_PENDING", "CLOSED", "CLOSURE_HOLD").contains(order.getAllocationPhase())) {
+            order.setAllocationPhase("CLOSURE_HOLD");
+            order.setCheckoutCloseHoldReason("PAYMENT_SUCCESS_AFTER_CLOSURE");
+            return;
+        }
+        if (order.getStatus() != null && order.getStatus().isPaidState()) {
+            if (order.getAcceptedPaymentId() != null && (!order.getAcceptedPaymentId().equals(paymentId)
+                    || !java.util.Objects.equals(order.getAcceptedPaymentNumber(), paymentNumber))) {
+                throw new org.de013.common.exception.ConflictException("Order requires payment reconciliation");
+            }
+            return;
+        }
+        if (order.getAllocationPhase() != null && !"READY".equals(order.getAllocationPhase())) {
+            throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
+        }
+        if (!java.util.EnumSet.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PAYMENT_AUTHORIZED).contains(order.getStatus())) {
+            throw new org.de013.common.exception.ConflictException("Order requires payment reconciliation");
+        }
         order.setStatus(OrderStatus.PAID);
+        order.setAcceptedPaymentId(paymentId);
+        order.setAcceptedPaymentNumber(paymentNumber);
+        if (order.getAllocationPhase() != null) order.setAllocationPhase("FULFILL_PENDING");
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
         log.info("Order {} successfully marked as PAID", orderId);
@@ -200,8 +234,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void markOrderPaymentFailed(Long orderId, String reason) {
         log.info("Marking order {} as FAILED due to: {}", orderId, reason);
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.lockForPayment(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+        if (order.getAllocationPhase() != null) throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
         order.setStatus(OrderStatus.FAILED);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
@@ -211,18 +246,20 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void updateOrderStatus(Long orderId, org.de013.orderservice.dto.request.OrderStatusUpdateRequest request) {
-        log.info("Updating order {} status to {}", orderId, request.getStatus());
-        Order order = orderRepository.findById(orderId)
+        log.info("Updating order {} status to {}", orderId, request.status());
+        Order order = orderRepository.lockForPayment(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
-        OrderStatus newStatus = OrderStatus.fromCode(request.getStatus());
+        if (order.getAllocationPhase() != null) throw new org.de013.common.exception.ConflictException("Order requires allocation reconciliation");
+        OrderStatus newStatus = OrderStatus.fromCode(request.status());
         if (newStatus == null) {
-            throw new IllegalArgumentException("Invalid order status code: " + request.getStatus());
+            throw new IllegalArgumentException("Invalid order status code: " + request.status());
         }
         order.setStatus(newStatus);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
         log.info("Order {} status successfully updated to {}", orderId, newStatus);
     }
+
 }
 
 

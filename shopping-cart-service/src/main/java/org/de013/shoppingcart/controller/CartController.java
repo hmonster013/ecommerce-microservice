@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResult;
 import org.de013.common.security.UserContext;
 import org.de013.common.security.UserContextHolder;
 import org.de013.shoppingcart.dto.request.CartCheckoutDto;
@@ -50,7 +51,7 @@ public class CartController extends BaseController {
     })
     @GetMapping
     // Allow both authenticated users and guests with sessionId
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> getOrCreateCart(
+    public ResponseEntity<ApiResult<CartResponseDto>> getOrCreateCart(
             @Parameter(description = "Session ID for guest users (optional if user is authenticated)")
             @RequestParam(required = false) String sessionId) {
 
@@ -74,7 +75,7 @@ public class CartController extends BaseController {
             CartResponseDto cart = cartService.getOrCreateCart(userId, sessionId);
 
             // Return 201 if cart was just created, 200 if existing
-            boolean isNewCart = cart.getCreatedAt().equals(cart.getUpdatedAt());
+            boolean isNewCart = cart.createdAt().equals(cart.updatedAt());
 
             return isNewCart ? created(cart, "Cart created successfully") : ok(cart);
 
@@ -93,7 +94,7 @@ public class CartController extends BaseController {
     })
     @GetMapping("/{cartId}")
     @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> getCartById(
+    public ResponseEntity<ApiResult<CartResponseDto>> getCartById(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
 
@@ -113,7 +114,7 @@ public class CartController extends BaseController {
 
     // ==================== CART OPERATIONS ====================
 
-    @Operation(summary = "[ADMIN] Clear cart", description = "Remove all items from the cart while keeping the cart structure intact. This action cannot be undone")
+    @Operation(summary = "Clear cart", description = "Clear the authenticated user's cart using trusted user context, or the existing guest session cart. This action cannot be undone")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cart cleared successfully",
                     content = @Content(schema = @Schema(implementation = CartResponseDto.class))),
@@ -122,13 +123,23 @@ public class CartController extends BaseController {
     })
     @DeleteMapping("/clear")
     @PreAuthorize("#userId == null or @cartSecurity.canAccessCart(#userId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CartResponseDto>> clearCart(
-            @Parameter(description = "User ID for authenticated users")
+    public ResponseEntity<ApiResult<CartResponseDto>> clearCart(
+            @Parameter(description = "Optional legacy user ID; must match the authenticated user")
             @RequestParam(required = false) String userId,
             @Parameter(description = "Session ID for guest users")
             @RequestParam(required = false) String sessionId) {
 
         try {
+            UserContext userContext = UserContextHolder.getCurrentUser();
+            if (userContext != null) {
+                if (userId != null && !userId.equals(userContext.getUserId())) {
+                    return forbidden("Cannot clear another user's cart");
+                }
+                userId = userContext.getUserId();
+                sessionId = null;
+            } else if (userId != null) {
+                return forbidden("Authentication is required to clear a user cart");
+            }
             log.debug("Clearing cart for user: {}, session: {}", userId, sessionId);
 
             if (userId == null && sessionId == null) {
@@ -159,7 +170,7 @@ public class CartController extends BaseController {
     })
     @DeleteMapping
     @PreAuthorize("#userId == null or @cartSecurity.canAccessCart(#userId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCart(
+    public ResponseEntity<ApiResult<String>> deleteCart(
             @Parameter(description = "User ID for authenticated users", example = "user-123e4567-e89b-12d3-a456-426614174000")
             @RequestParam(required = false) String userId,
             @Parameter(description = "Session ID for guest users", example = "sess-123e4567-e89b-12d3-a456-426614174000")
@@ -207,7 +218,7 @@ public class CartController extends BaseController {
     })
     @GetMapping("/{cartId}/validate")
     @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> validateCart(
+    public ResponseEntity<ApiResult<Map<String, Object>>> validateCart(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
 
@@ -221,13 +232,13 @@ public class CartController extends BaseController {
             }
 
             CartResponseDto cart = cartOpt.get();
-            boolean isValid = cart.getItemCount() > 0 && cart.getTotalAmount().compareTo(BigDecimal.ZERO) > 0;
+            boolean isValid = cart.itemCount() > 0 && cart.totalAmount().compareTo(BigDecimal.ZERO) > 0;
 
             Map<String, Object> validation = Map.of(
                     "cartId", cartId,
                     "isValid", isValid,
-                    "itemCount", cart.getItemCount(),
-                    "totalAmount", cart.getTotalAmount(),
+                    "itemCount", cart.itemCount(),
+                    "totalAmount", cart.totalAmount(),
                     "isCheckoutReady", isValid
             );
 
@@ -254,7 +265,7 @@ public class CartController extends BaseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/checkout/prepare")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Map<String, Object>>> prepareCheckout(
+    public ResponseEntity<ApiResult<Map<String, Object>>> prepareCheckout(
             @Parameter(description = "Checkout preparation request", required = true)
             @Valid @RequestBody CartCheckoutDto request) {
 
@@ -281,7 +292,7 @@ public class CartController extends BaseController {
     })
     @PutMapping("/{cartId}/activity")
     @PreAuthorize("@cartSecurity.canAccessCart(#cartId)")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> updateCartActivity(
+    public ResponseEntity<ApiResult<String>> updateCartActivity(
             @Parameter(description = "Cart ID", required = true)
             @PathVariable Long cartId) {
 

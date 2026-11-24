@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableFeignClients
 @EnableJpaAuditing(auditorAwareRef = "auditorAwareImpl")
 @EnableTransactionManagement
+@org.springframework.scheduling.annotation.EnableScheduling
 public class OrderServiceApplication {
 
     public static void main(String[] args) {

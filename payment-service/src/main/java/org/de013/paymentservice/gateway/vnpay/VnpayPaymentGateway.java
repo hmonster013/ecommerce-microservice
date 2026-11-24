@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
 import org.springframework.stereotype.Component;
 
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -39,6 +41,8 @@ public class VnpayPaymentGateway {
      * @return Full VNPAY payment URL with secure hash signature
      */
     public String buildPaymentUrl(String txnRef, long amountVnd, String orderInfo, String ipAddr, String createDate) {
+        if (amountVnd <= 0 || amountVnd > Long.MAX_VALUE / 100)
+            throw new IllegalArgumentException("Invalid VNPay wire amount");
         PaymentGatewayConfig.Vnpay vnpayConfig = config.getGateways().getVnpay();
         
         SortedMap<String, String> fields = new TreeMap<>();
@@ -63,7 +67,7 @@ public class VnpayPaymentGateway {
         
         // Build final redirect URL
         String finalUrl = vnpayConfig.getPayUrl() + "?" + hashData + "&vnp_SecureHash=" + secureHash;
-        log.debug("Built VNPay payment URL for txnRef {}: {}", txnRef, finalUrl);
+        log.debug("Built VNPay payment URL for txnRef {}", txnRef);
         return finalUrl;
     }
 
@@ -77,6 +81,13 @@ public class VnpayPaymentGateway {
         String secureHash = params.get("vnp_SecureHash");
         if (secureHash == null || secureHash.isEmpty()) {
             log.warn("Missing vnp_SecureHash parameter in VNPay callback");
+            return false;
+        }
+        if (secureHash.length() != 128) return false;
+        byte[] suppliedHash;
+        try {
+            suppliedHash = HexFormat.of().parseHex(secureHash);
+        } catch (IllegalArgumentException e) {
             return false;
         }
 
@@ -93,9 +104,9 @@ public class VnpayPaymentGateway {
         // Calculate signature
         String computedHash = VnpayUtils.hmacSHA512(config.getGateways().getVnpay().getHashSecret(), hashData);
         
-        boolean isValid = secureHash.equalsIgnoreCase(computedHash);
+        boolean isValid = MessageDigest.isEqual(suppliedHash, HexFormat.of().parseHex(computedHash));
         if (!isValid) {
-            log.error("VNPay signature verification failed! Received: {}, Computed: {}", secureHash, computedHash);
+            log.error("VNPay signature verification failed");
         } else {
             log.info("VNPay signature verification successful for txnRef: {}", params.get("vnp_TxnRef"));
         }

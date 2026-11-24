@@ -5,41 +5,40 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.*;
 import org.de013.productcatalog.validation.ValidSlug;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Category creation request")
-public class CategoryCreateDto {
+public record CategoryCreateDto(
 
     @NotBlank(message = "{category.name.required}")
     @Size(max = 255, message = "{category.name.too.long}")
     @Schema(description = "Category name", example = "Smartphones", required = true)
-    private String name;
+    String name,
 
     @Schema(description = "Category description", example = "Mobile phones and accessories")
-    private String description;
+    String description,
 
     @ValidSlug(allowNull = true, message = "{ValidSlug.message}")
     @Schema(description = "Category slug (auto-generated if not provided)", example = "smartphones")
-    private String slug;
+    String slug,
 
     @Schema(description = "Parent category ID", example = "1")
-    private Long parentId;
+    Long parentId,
 
     @Min(value = 0, message = "{category.display.order.invalid}")
     @Schema(description = "Display order", example = "1")
-    @Builder.Default
-    private Integer displayOrder = 0;
+    Integer displayOrder,
 
     @Schema(description = "Is category active", example = "true")
-    @Builder.Default
-    private Boolean isActive = true;
-
-
+    Boolean isActive
+) {
+    public CategoryCreateDto {
+        if (displayOrder == null) {
+            displayOrder = 0;
+        }
+        if (isActive == null) {
+            isActive = true;
+        }
+    }
 }

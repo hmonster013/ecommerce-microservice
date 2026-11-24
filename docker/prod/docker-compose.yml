@@ -215,9 +215,14 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:5432/${USER_SERVICE_DB}
       # OpenTelemetry
       OTEL_SERVICE_NAME: user-service
+      KEYCLOAK_PROFILE_BASE_URL: ${KEYCLOAK_PROFILE_BASE_URL:-http://keycloak:8080}
+      KEYCLOAK_PROFILE_REALM: ${KEYCLOAK_PROFILE_REALM:-ecommerce-realm}
+      KEYCLOAK_PROFILE_CLIENT_ID: ${KEYCLOAK_PROFILE_CLIENT_ID:-user-profile-manager}
+      KEYCLOAK_PROFILE_CLIENT_SECRET: ${KEYCLOAK_PROFILE_CLIENT_SECRET}
       OTEL_RESOURCE_ATTRIBUTES: service.name=user-service,service.namespace=ecommerce,deployment.environment=${SPRING_PROFILES_ACTIVE}
       # User Service specific configs
       TOKEN_BLACKLIST_PREFIX: ${TOKEN_BLACKLIST_PREFIX}
+      USER_PROFILE_PROVISIONER_SECRET: ${USER_PROFILE_PROVISIONER_SECRET:-change-me-in-production-profile-provisioner-secret}
       PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH}
       PASSWORD_REQUIRE_UPPERCASE: ${PASSWORD_REQUIRE_UPPERCASE}
       PASSWORD_REQUIRE_LOWERCASE: ${PASSWORD_REQUIRE_LOWERCASE}
@@ -445,7 +450,7 @@ services:
     ports:
       - 9000
     volumes:
-      - ./.data/minio:/data
+      - minio_data:/data
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 15s
@@ -649,25 +654,12 @@ services:
 # ============================================
 # SECURITY & AUTHENTICATION
 # ============================================
-  keycloak-db:
-    image: postgres:15-alpine
-    container_name: ecommerce-keycloak-db
-    environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: keycloak_password
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "keycloak"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - keycloak_data:/var/lib/postgresql/data
-    networks:
-      - ecommerce-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.4.5
+    build:
+      context: ../..
+      dockerfile: docker/keycloak/Dockerfile
+    image: de013/ecommerce-keycloak:26.4.5-profile-sync
     container_name: ecommerce-keycloak
     ports:
       - "${KEYCLOAK_PORT:-8090}:8080"
@@ -677,9 +669,9 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-admin}
       # Database configuration
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: keycloak_password
+      KC_DB_URL: ${KC_DB_URL:-jdbc:postgresql://postgres:5432/keycloak}
+      KC_DB_USERNAME: ${KC_DB_USERNAME:-${SPRING_DATASOURCE_USERNAME:-postgres}}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-${SPRING_DATASOURCE_PASSWORD:-password}}
       # Keycloak configuration
       KC_HOSTNAME_STRICT: false
       KC_HOSTNAME_STRICT_HTTPS: false
@@ -689,11 +681,23 @@ services:
       # Logging
       KC_LOG_LEVEL: INFO
       KEYCLOAK_LOGLEVEL: INFO
+      USER_PROFILE_PROVISIONER_SECRET: ${USER_PROFILE_PROVISIONER_SECRET:-change-me-in-production-profile-provisioner-secret}
+      USER_SERVICE_PROVISION_URL: ${USER_SERVICE_PROVISION_URL:-http://user-service:8081/internal/keycloak/users}
+      KC_MAIL_HOST: ${KC_MAIL_HOST:-${MAIL_HOST}}
+      KC_MAIL_PORT: ${KC_MAIL_PORT:-${MAIL_PORT}}
+      KC_MAIL_USERNAME: ${KC_MAIL_USERNAME:-${MAIL_USERNAME}}
+      KC_MAIL_PASSWORD: ${KC_MAIL_PASSWORD:-${MAIL_PASSWORD}}
+      KC_MAIL_FROM_NAME: ${KC_MAIL_FROM_NAME:-${MAIL_FROM_NAME:-DE013 STORE}}
+      KC_MAIL_SMTP_AUTH: ${KC_MAIL_SMTP_AUTH:-${MAIL_SMTP_AUTH:-true}}
+      KC_MAIL_SMTP_STARTTLS_ENABLE: ${KC_MAIL_SMTP_STARTTLS_ENABLE:-${MAIL_SMTP_STARTTLS_ENABLE:-true}}
     volumes:
       - ../keycloak/realm-config:/opt/keycloak/data/import
     command:
       - start-dev
       - --import-realm
+      - --spi-events-listener-profile-sync-user-service-url=http://user-service:8081/internal/keycloak/users
+      - --spi-events-listener-profile-sync-shared-secret=${USER_PROFILE_PROVISIONER_SECRET:-change-me-in-production-profile-provisioner-secret}
+      - --spi-events-listener-profile-sync-realm=ecommerce-realm
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
       interval: 30s
@@ -701,7 +705,7 @@ services:
       retries: 5
       start_period: 60s
     depends_on:
-      keycloak-db:
+      postgres:
         condition: service_healthy
     networks:
       - ecommerce-network
@@ -711,9 +715,9 @@ services:
 # ============================================
 volumes:
   postgres_data:
-  keycloak_data:
   prometheus_data:
   tempo_data:
+  minio_data:
 
 # ============================================
 # NETWORKS

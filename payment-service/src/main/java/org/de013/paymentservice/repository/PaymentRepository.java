@@ -64,6 +64,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      */
     Optional<Payment> findByStripePaymentIntentId(String stripePaymentIntentId);
 
+    @Query("select p.orderId from Payment p where p.stripePaymentIntentId = :intentId")
+    Optional<Long> findOrderIdByStripeIntent(@Param("intentId") String intentId);
+
+    @Query("select p.orderId from Payment p where p.id = :id")
+    Optional<Long> findOrderIdByPaymentId(@Param("id") Long id);
+
+    @Query("select p.orderId from Payment p where p.paymentNumber = :number")
+    Optional<Long> findOrderIdByPaymentNumber(@Param("number") String number);
+
     /**
      * Find payment by Stripe customer ID
      */

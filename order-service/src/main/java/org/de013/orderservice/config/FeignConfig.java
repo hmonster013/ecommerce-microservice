@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@org.springframework.context.annotation.Import(FeignResilienceConfig.RethrowFallbackFactory.class)
 public class FeignConfig {
 
     @Bean

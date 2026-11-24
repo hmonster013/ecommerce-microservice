@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResult;
 import org.de013.common.dto.PageResponse;
 import org.de013.productcatalog.dto.category.*;
 import org.de013.productcatalog.dto.product.ProductSummaryDto;
@@ -42,7 +43,7 @@ public class CategoryController extends BaseController {
             @ApiResponse(responseCode = "400", description = "Invalid request parameters")
     })
     @GetMapping
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<CategoryResponseDto>>> getAllCategories(
+    public ResponseEntity<ApiResult<PageResponse<CategoryResponseDto>>> getAllCategories(
             @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable,
 
             @Parameter(description = "Show only active categories")
@@ -50,7 +51,7 @@ public class CategoryController extends BaseController {
 
         log.info("Getting categories with activeOnly: {}", activeOnly);
 
-        PageResponse<CategoryResponseDto> categories = categoryService.getAllCategories(pageable);
+        PageResponse<CategoryResponseDto> categories = categoryService.getAllCategories(activeOnly, pageable);
         return ok(categories);
     }
 
@@ -60,7 +61,7 @@ public class CategoryController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> getCategoryById(
+    public ResponseEntity<ApiResult<CategoryResponseDto>> getCategoryById(
             @Parameter(description = "Category ID", required = true)
             @PathVariable @Positive(message = "Category ID must be positive") Long id) {
 
@@ -76,7 +77,7 @@ public class CategoryController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @GetMapping("/slug/{slug}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> getCategoryBySlug(
+    public ResponseEntity<ApiResult<CategoryResponseDto>> getCategoryBySlug(
             @Parameter(description = "Category slug", required = true)
             @PathVariable String slug) {
 
@@ -93,11 +94,11 @@ public class CategoryController extends BaseController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> createCategory(
+    public ResponseEntity<ApiResult<CategoryResponseDto>> createCategory(
             @Parameter(description = "Category creation data", required = true)
             @Valid @RequestBody CategoryCreateDto createDto) {
 
-        log.info("Creating new category with name: {}", createDto.getName());
+        log.info("Creating new category with name: {}", createDto.name());
 
         CategoryResponseDto category = categoryService.createCategory(createDto);
         return created(category, "Category created successfully");
@@ -111,7 +112,7 @@ public class CategoryController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> updateCategory(
+    public ResponseEntity<ApiResult<CategoryResponseDto>> updateCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id,
 
@@ -132,7 +133,7 @@ public class CategoryController extends BaseController {
             @ApiResponse(responseCode = "409", description = "Category has children or products")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteCategory(
+    public ResponseEntity<ApiResult<String>> deleteCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id) {
 
@@ -148,7 +149,7 @@ public class CategoryController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @GetMapping("/{id}/products")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<ProductSummaryDto>>> getProductsInCategory(
+    public ResponseEntity<ApiResult<PageResponse<ProductSummaryDto>>> getProductsInCategory(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -164,7 +165,7 @@ public class CategoryController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Category tree retrieved successfully")
     })
     @GetMapping("/tree")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategoryTreeDto>>> getCategoryTree(
+    public ResponseEntity<ApiResult<List<CategoryTreeDto>>> getCategoryTree(
             @Parameter(description = "Maximum depth level to retrieve")
             @RequestParam(required = false) @Min(0) Integer maxLevel) {
 
@@ -177,7 +178,7 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "Get root categories", description = "Retrieve top-level categories")
     @GetMapping("/root")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategorySummaryDto>>> getRootCategories() {
+    public ResponseEntity<ApiResult<List<CategorySummaryDto>>> getRootCategories() {
         log.info("Getting root categories");
 
         List<CategorySummaryDto> categories = categoryService.getRootCategories();
@@ -186,7 +187,7 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "Get child categories", description = "Retrieve child categories of a parent category")
     @GetMapping("/{id}/children")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategorySummaryDto>>> getChildCategories(
+    public ResponseEntity<ApiResult<List<CategorySummaryDto>>> getChildCategories(
             @Parameter(description = "Parent category ID", required = true)
             @PathVariable Long id) {
 
@@ -198,7 +199,7 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "Get category path", description = "Get breadcrumb path for a category")
     @GetMapping("/{id}/path")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategorySummaryDto>>> getCategoryPath(
+    public ResponseEntity<ApiResult<List<CategorySummaryDto>>> getCategoryPath(
             @Parameter(description = "Category ID", required = true)
             @PathVariable Long id) {
 
@@ -210,7 +211,7 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "Search categories", description = "Search categories by name")
     @GetMapping("/search")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<CategorySummaryDto>>> searchCategories(
+    public ResponseEntity<ApiResult<List<CategorySummaryDto>>> searchCategories(
             @Parameter(description = "Search query", required = true)
             @RequestParam String q) {
 
@@ -223,7 +224,7 @@ public class CategoryController extends BaseController {
     // Admin endpoints
     @Operation(summary = "[ADMIN] Set category active status", description = "Activate or deactivate category")
     @PutMapping("/{id}/active")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> setActiveStatus(
+    public ResponseEntity<ApiResult<CategoryResponseDto>> setActiveStatus(
             @PathVariable Long id,
             @RequestParam Boolean active) {
 
@@ -236,7 +237,7 @@ public class CategoryController extends BaseController {
 
     @Operation(summary = "[ADMIN] Move category", description = "Move category to different parent")
     @PutMapping("/{id}/move")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<CategoryResponseDto>> moveCategory(
+    public ResponseEntity<ApiResult<CategoryResponseDto>> moveCategory(
             @PathVariable Long id,
             @RequestParam(required = false) Long newParentId) {
 

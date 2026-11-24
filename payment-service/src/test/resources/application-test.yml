@@ -54,6 +54,8 @@ management:
 
 # Mock payment gateway settings
 payment:
+  internal:
+    issuer-uri: http://localhost:65535/realms/payment-test
   gateways:
     stripe:
       enabled: true

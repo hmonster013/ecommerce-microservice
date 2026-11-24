@@ -1,434 +1,262 @@
 package org.de013.orderservice.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.de013.orderservice.entity.enums.OrderStatus;
 import org.de013.orderservice.entity.enums.OrderType;
 import org.de013.orderservice.entity.valueobject.Address;
 import org.de013.orderservice.entity.valueobject.Money;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * Order Response DTO
- * <p>
- * Complete order information response including all related data.
- * Used for detailed order views and order management operations.
- *
- * @author Development Team
- * @version 1.0.0
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class OrderResponse {
+public record OrderResponse(
+        // Order ID
+        Long id,
 
-    /**
-     * Order ID
-     */
-    private Long id;
+        // Unique order number
+        String orderNumber,
 
-    /**
-     * Unique order number
-     */
-    private String orderNumber;
+        // User ID who placed the order
+        String userId,
 
-    /**
-     * User ID who placed the order
-     */
-    private String userId;
+        // Current order status
+        OrderStatus status,
 
-    /**
-     * Current order status
-     */
-    private OrderStatus status;
+        Boolean inventoryReady,
 
-    /**
-     * Order type
-     */
-    private OrderType orderType;
+        // Order type
+        OrderType orderType,
 
-    /**
-     * Total order amount
-     */
-    private Money totalAmount;
+        // Total order amount
+        Money totalAmount,
 
-    /**
-     * Subtotal amount (before taxes and fees)
-     */
-    private Money subtotalAmount;
+        // Subtotal amount (before taxes and fees)
+        Money subtotalAmount,
 
-    /**
-     * Tax amount
-     */
-    private Money taxAmount;
+        // Tax amount
+        Money taxAmount,
 
-    /**
-     * Shipping amount
-     */
-    private Money shippingAmount;
+        // Shipping amount
+        Money shippingAmount,
 
-    /**
-     * Discount amount
-     */
-    private Money discountAmount;
+        // Discount amount
+        Money discountAmount,
 
-    /**
-     * Shipping address
-     */
-    private Address shippingAddress;
+        // Shipping address
+        Address shippingAddress,
 
-    /**
-     * Billing address
-     */
-    private Address billingAddress;
+        // Billing address
+        Address billingAddress,
 
-    /**
-     * Customer notes
-     */
-    private String customerNotes;
+        // Customer notes
+        String customerNotes,
 
-    /**
-     * Internal notes
-     */
-    private String internalNotes;
+        // Internal notes
+        String internalNotes,
 
-    /**
-     * Order source
-     */
-    private String orderSource;
+        // Order source
+        String orderSource,
 
-    /**
-     * Expected delivery date
-     */
-    private LocalDateTime expectedDeliveryDate;
+        // Expected delivery date
+        LocalDateTime expectedDeliveryDate,
 
-    /**
-     * Actual delivery date
-     */
-    private LocalDateTime actualDeliveryDate;
+        // Actual delivery date
+        LocalDateTime actualDeliveryDate,
 
-    /**
-     * Order confirmation date
-     */
-    private LocalDateTime confirmedAt;
+        // Order confirmation date
+        LocalDateTime confirmedAt,
 
-    /**
-     * Order cancellation date
-     */
-    private LocalDateTime cancelledAt;
+        // Order cancellation date
+        LocalDateTime cancelledAt,
 
-    /**
-     * Cancellation reason
-     */
-    private String cancellationReason;
+        // Cancellation reason
+        String cancellationReason,
 
-    /**
-     * Priority level
-     */
-    private Integer priorityLevel;
+        // Priority level
+        Integer priorityLevel,
 
-    /**
-     * Special handling requirement
-     */
-    private Boolean requiresSpecialHandling;
+        // Special handling requirement
+        Boolean requiresSpecialHandling,
 
-    /**
-     * Gift order flag
-     */
-    private Boolean isGift;
+        // Gift order flag
+        Boolean isGift,
 
-    /**
-     * Gift message
-     */
-    private String giftMessage;
+        // Gift message
+        String giftMessage,
 
-    /**
-     * Order creation timestamp
-     */
-    private LocalDateTime createdAt;
+        // Order creation timestamp
+        LocalDateTime createdAt,
 
-    /**
-     * Last update timestamp
-     */
-    private LocalDateTime updatedAt;
+        // Last update timestamp
+        LocalDateTime updatedAt,
 
-    /**
-     * Order items
-     */
-    private List<OrderItemResponse> orderItems;
+        // Order items
+        List<OrderItemResponse> orderItems,
 
-
-    /**
-     * Order summary statistics
-     */
-    private OrderSummaryStats summaryStats;
+        // Order summary statistics
+        OrderSummaryStats summaryStats,
+        boolean paymentRetryEligible
+) {
 
     /**
      * Order Summary Statistics
      */
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class OrderSummaryStats {
+    public record OrderSummaryStats(
+            // Total number of items
+            Integer totalItems,
 
-        /**
-         * Total number of items
-         */
-        private Integer totalItems;
+            // Total quantity of all items
+            Integer totalQuantity,
 
-        /**
-         * Total quantity of all items
-         */
-        private Integer totalQuantity;
+            // Number of unique products
+            Integer uniqueProducts,
 
-        /**
-         * Number of unique products
-         */
-        private Integer uniqueProducts;
+            // Order age in hours
+            Long orderAgeHours,
 
-        /**
-         * Order age in hours
-         */
-        private Long orderAgeHours;
+            // Days since order placed
+            Long daysSinceOrdered,
 
-        /**
-         * Days since order placed
-         */
-        private Long daysSinceOrdered;
+            // Whether order is overdue
+            Boolean isOverdue,
 
-        /**
-         * Whether order is overdue
-         */
-        private Boolean isOverdue;
+            // Whether order is expedited
+            Boolean isExpedited,
 
-        /**
-         * Whether order is expedited
-         */
-        private Boolean isExpedited;
+            // Whether order is paid
+            Boolean isPaid,
 
-        /**
-         * Whether order is paid
-         */
-        private Boolean isPaid;
+            // Whether order is shipped
+            Boolean isShipped,
 
-        /**
-         * Whether order is shipped
-         */
-        private Boolean isShipped;
+            // Whether order is delivered
+            Boolean isDelivered,
 
-        /**
-         * Whether order is delivered
-         */
-        private Boolean isDelivered;
+            // Whether order can be cancelled
+            Boolean canBeCancelled,
 
-        /**
-         * Whether order can be cancelled
-         */
-        private Boolean canBeCancelled;
+            // Whether order can be modified
+            Boolean canBeModified,
 
-        /**
-         * Whether order can be modified
-         */
-        private Boolean canBeModified;
+            // Whether order is in final state
+            Boolean isFinalState,
 
-        /**
-         * Whether order is in final state
-         */
-        private Boolean isFinalState;
+            // Estimated delivery days remaining
+            Long deliveryDaysRemaining,
 
-        /**
-         * Estimated delivery days remaining
-         */
-        private Long deliveryDaysRemaining;
-
-        /**
-         * Order progress percentage (0-100)
-         */
-        private Integer progressPercentage;
+            // Order progress percentage (0-100)
+            Integer progressPercentage
+    ) {
     }
 
     /**
      * Order Item Response
      */
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class OrderItemResponse {
+    public record OrderItemResponse(
+            // Order item ID
+            Long id,
 
-        /**
-         * Order item ID
-         */
-        private Long id;
+            // Product ID
+            String productId,
 
-        /**
-         * Product ID
-         */
-        private String productId;
+            // Product SKU
+            String sku,
 
-        /**
-         * Product SKU
-         */
-        private String sku;
+            // Product name
+            String productName,
 
-        /**
-         * Product name
-         */
-        private String productName;
+            // Product description
+            String productDescription,
 
-        /**
-         * Product description
-         */
-        private String productDescription;
+            // Product category
+            String productCategory,
 
-        /**
-         * Product category
-         */
-        private String productCategory;
+            // Product brand
+            String productBrand,
 
-        /**
-         * Product brand
-         */
-        private String productBrand;
+            // Quantity ordered
+            Integer quantity,
 
-        /**
-         * Quantity ordered
-         */
-        private Integer quantity;
+            // Unit price
+            Money unitPrice,
 
-        /**
-         * Unit price
-         */
-        private Money unitPrice;
+            // Total price for this line item
+            Money totalPrice,
 
-        /**
-         * Total price for this line item
-         */
-        private Money totalPrice;
+            // Discount amount
+            Money discountAmount,
 
-        /**
-         * Discount amount
-         */
-        private Money discountAmount;
+            // Tax amount
+            Money taxAmount,
 
-        /**
-         * Tax amount
-         */
-        private Money taxAmount;
+            // Final price after discount
+            Money finalPrice,
 
-        /**
-         * Final price after discount
-         */
-        private Money finalPrice;
+            // Price including tax
+            Money priceIncludingTax,
 
-        /**
-         * Price including tax
-         */
-        private Money priceIncludingTax;
+            // Product weight
+            BigDecimal weight,
 
-        /**
-         * Product weight
-         */
-        private java.math.BigDecimal weight;
+            // Weight unit
+            String weightUnit,
 
-        /**
-         * Weight unit
-         */
-        private String weightUnit;
+            // Product dimensions
+            String dimensions,
 
-        /**
-         * Product dimensions
-         */
-        private String dimensions;
+            // Product image URL
+            String productImageUrl,
 
-        /**
-         * Product image URL
-         */
-        private String productImageUrl;
+            // Product variant information
+            String variantInfo,
 
-        /**
-         * Product variant information
-         */
-        private String variantInfo;
+            // Special instructions
+            String specialInstructions,
 
-        /**
-         * Special instructions
-         */
-        private String specialInstructions;
+            // Gift item flag
+            Boolean isGift,
 
-        /**
-         * Gift item flag
-         */
-        private Boolean isGift;
+            // Gift wrap type
+            String giftWrapType,
 
-        /**
-         * Gift wrap type
-         */
-        private String giftWrapType;
+            // Gift message
+            String giftMessage,
 
-        /**
-         * Gift message
-         */
-        private String giftMessage;
+            // Special handling requirement
+            Boolean requiresSpecialHandling,
 
-        /**
-         * Special handling requirement
-         */
-        private Boolean requiresSpecialHandling;
+            // Fragile item flag
+            Boolean isFragile,
 
-        /**
-         * Fragile item flag
-         */
-        private Boolean isFragile;
+            // Hazardous item flag
+            Boolean isHazardous,
 
-        /**
-         * Hazardous item flag
-         */
-        private Boolean isHazardous;
+            // Expected delivery date
+            LocalDateTime expectedDeliveryDate,
 
-        /**
-         * Expected delivery date
-         */
-        private LocalDateTime expectedDeliveryDate;
+            // Actual delivery date
+            LocalDateTime actualDeliveryDate,
 
-        /**
-         * Actual delivery date
-         */
-        private LocalDateTime actualDeliveryDate;
+            // Item status
+            String status,
 
-        /**
-         * Item status
-         */
-        private String status;
+            // Discount percentage
+            BigDecimal discountPercentage,
 
-        /**
-         * Discount percentage
-         */
-        private java.math.BigDecimal discountPercentage;
+            // Total weight for this line item
+            BigDecimal totalWeight,
 
-        /**
-         * Total weight for this line item
-         */
-        private java.math.BigDecimal totalWeight;
+            // Whether item is delivered
+            Boolean isDelivered,
 
-        /**
-         * Whether item is delivered
-         */
-        private Boolean isDelivered;
-
-        /**
-         * Whether item is overdue
-         */
-        private Boolean isOverdue;
+            // Whether item is overdue
+            Boolean isOverdue
+    ) {
     }
-
 
     /**
      * Check if billing address is same as shipping
@@ -445,7 +273,6 @@ public class OrderResponse {
     public Address getEffectiveBillingAddress() {
         return billingAddress != null ? billingAddress : shippingAddress;
     }
-
 
     /**
      * Check if order is international

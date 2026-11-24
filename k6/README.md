@@ -15,12 +15,12 @@ k6 run -e BASE_URL=http://localhost:8080 k6/load-test.js
 k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<jwt> k6/load-test.js
 ```
 
-Get a token via the auth endpoint, e.g.:
+Get a token via Keycloak token endpoint, e.g.:
 
 ```bash
-curl -s -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"<user>","password":"<pass>"}'
+curl -s -X POST http://localhost:8090/realms/ecommerce-realm/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials&client_id=api-gateway&client_secret=api-gateway-secret-change-in-production"
 ```
 
 ## Profile

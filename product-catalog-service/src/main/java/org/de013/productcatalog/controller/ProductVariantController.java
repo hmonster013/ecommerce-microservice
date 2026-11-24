@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.common.controller.BaseController;
+import org.de013.common.dto.ApiResult;
 import org.de013.productcatalog.dto.product.ProductVariantDto;
 import org.de013.productcatalog.dto.variant.ProductVariantCreateDto;
 import org.de013.productcatalog.dto.variant.ProductVariantUpdateDto;
@@ -36,7 +37,7 @@ public class ProductVariantController extends BaseController {
             @ApiResponse(responseCode = "409", description = "Variant combination already exists")
     })
     @PostMapping("/products/{id}/variants")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> createVariant(
+    public ResponseEntity<ApiResult<ProductVariantDto>> createVariant(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id,
             @Parameter(description = "Variant creation data", required = true)
@@ -56,7 +57,7 @@ public class ProductVariantController extends BaseController {
             @ApiResponse(responseCode = "409", description = "Variant combination already exists")
     })
     @PutMapping("/variants/{variantId}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> updateVariant(
+    public ResponseEntity<ApiResult<ProductVariantDto>> updateVariant(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long variantId,
             @Parameter(description = "Variant update data", required = true)
@@ -74,7 +75,7 @@ public class ProductVariantController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Variant not found")
     })
     @DeleteMapping("/variants/{variantId}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<String>> deleteVariant(
+    public ResponseEntity<ApiResult<String>> deleteVariant(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long variantId) {
 
@@ -90,7 +91,7 @@ public class ProductVariantController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Variant not found")
     })
     @GetMapping("/variants/{variantId}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> getVariantById(
+    public ResponseEntity<ApiResult<ProductVariantDto>> getVariantById(
             @Parameter(description = "Variant ID", required = true)
             @PathVariable Long variantId) {
 
@@ -106,7 +107,7 @@ public class ProductVariantController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Variant not found")
     })
     @GetMapping("/variants/sku/{sku}")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<ProductVariantDto>> getVariantBySku(
+    public ResponseEntity<ApiResult<ProductVariantDto>> getVariantBySku(
             @Parameter(description = "Variant SKU", required = true)
             @PathVariable String sku) {
 
@@ -122,7 +123,7 @@ public class ProductVariantController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
     @GetMapping("/products/{id}/variants")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<ProductVariantDto>>> getVariantsByProductId(
+    public ResponseEntity<ApiResult<List<ProductVariantDto>>> getVariantsByProductId(
             @Parameter(description = "Product ID", required = true)
             @PathVariable Long id) {
 

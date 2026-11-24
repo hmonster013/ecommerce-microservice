@@ -2,7 +2,7 @@ package org.de013.shoppingcart.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ApiResult;
 import org.de013.common.dto.ProductDetailDto;
 import org.de013.shoppingcart.client.ProductCatalogFeignClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,7 +46,7 @@ public class ProductCatalogClient {
             log.debug("Fetching product info for product: {}", productId);
 
             // Use Feign client for primary call
-            ApiResponse<ProductDetailDto> response = productCatalogFeignClient.getProductById(productId);
+            ApiResult<ProductDetailDto> response = productCatalogFeignClient.getProductById(productId);
 
             if (response != null && response.isSuccess() && response.getData() != null) {
                 ProductDetailDto productInfo = response.getData();

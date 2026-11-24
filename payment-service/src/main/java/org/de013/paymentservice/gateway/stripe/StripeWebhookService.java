@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.net.Webhook;
+import com.google.gson.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.de013.paymentservice.exception.InvalidStripeWebhookException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.de013.paymentservice.config.PaymentGatewayConfig;
@@ -28,11 +31,20 @@ public class StripeWebhookService {
     public boolean verifyWebhookSignature(String payload, String signature, String secret) throws Exception {
         try {
             String webhookSecret = secret != null ? secret : config.getGateways().getStripe().getWebhookSecret();
+            if (webhookSecret == null || webhookSecret.isBlank()) throw new IllegalStateException("Stripe webhook secret is missing");
+            try {
+                Webhook.Signature.verifyHeader(payload, signature, webhookSecret, 300L);
+            } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+                throw new InvalidStripeWebhookException(e);
+            }
             Event event = Webhook.constructEvent(payload, signature, webhookSecret);
             return event != null;
+        } catch (InvalidStripeWebhookException e) {
+            throw e;
         } catch (SignatureVerificationException e) {
-            log.warn("Webhook signature verification failed", e);
-            return false;
+            throw new InvalidStripeWebhookException(e);
+        } catch (JsonParseException e) {
+            throw new InvalidStripeWebhookException(e);
         } catch (Exception e) {
             log.error("Error verifying webhook signature", e);
             throw new PaymentGatewayException("Failed to verify webhook signature: " + e.getMessage(), e);
@@ -44,7 +56,10 @@ public class StripeWebhookService {
      */
     public StripeWebhookRequest parseWebhookPayload(String payload) throws Exception {
         try {
-            return objectMapper.readValue(payload, StripeWebhookRequest.class);
+            return objectMapper.readerFor(StripeWebhookRequest.class)
+                    .with(com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS).readValue(payload);
+        } catch (JsonProcessingException e) {
+            throw new InvalidStripeWebhookException(e);
         } catch (Exception e) {
             log.error("Failed to parse webhook payload", e);
             throw new PaymentGatewayException("Failed to parse webhook payload: " + e.getMessage(), e);

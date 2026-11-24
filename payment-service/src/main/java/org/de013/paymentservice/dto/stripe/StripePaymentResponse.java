@@ -35,6 +35,9 @@ public class StripePaymentResponse {
     private Long created;
     private Boolean livemode;
 
+    @JsonIgnore
+    private boolean createdByStripe;
+
     // Charges information
     private StripeChargeInfo latestCharge;
 

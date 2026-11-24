@@ -1,5 +1,6 @@
 package org.de013.common.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -129,6 +130,7 @@ public class ProductDetailDto {
     @Schema(description = "Product image")
     public static class ProductImageDto {
         private Long id;
+        @JsonAlias("url")
         private String imageUrl;
         private String altText;
         private String imageType;

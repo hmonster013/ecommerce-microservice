@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableJpaAuditing(auditorAwareRef = "auditorAwareImpl")
+@EnableJpaAuditing(auditorAwareRef = "catalogAuditor")
 @ComponentScan(basePackages = {"org.de013.productcatalog", "org.de013.common"})
 public class ProductCatalogApplication {
     public static void main(String[] args) {

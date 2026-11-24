@@ -1,6 +1,7 @@
 package org.de013.paymentservice.client;
 
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.dto.ApiResult;
 import org.de013.paymentservice.dto.external.UserDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +20,9 @@ import java.util.List;
 public class UserServiceClientFallback implements UserServiceClient {
 
     @Override
-    public ResponseEntity<org.de013.common.dto.ApiResponse<UserDto>> getUserById(String userId) {
+    public ResponseEntity<ApiResult<UserDto>> getUserById(String userId) {
         log.warn("User Service unavailable - using fallback for getUserById: {}", userId);
-        return ResponseEntity.ok(org.de013.common.dto.ApiResponse.success(createFallbackUserDto(userId)));
+        return ResponseEntity.ok(ApiResult.success(createFallbackUserDto(userId)));
     }
 
     @Override

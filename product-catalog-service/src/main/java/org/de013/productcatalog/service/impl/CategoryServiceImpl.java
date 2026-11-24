@@ -36,37 +36,38 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponseDto createCategory(CategoryCreateDto createDto) {
-        log.info("Creating category with name: {}", createDto.getName());
+        log.info("Creating category with name: {}", createDto.name());
 
         validateCategoryData(createDto);
 
         // Generate slug if not provided
-        String slug = StringUtils.hasText(createDto.getSlug()) ?
-                createDto.getSlug() : generateUniqueSlug(createDto.getName());
+        String slug = StringUtils.hasText(createDto.slug()) ?
+                createDto.slug() : generateUniqueSlug(createDto.name());
 
         // Determine level and parent
         Category parent = null;
         int level = 0;
-        if (createDto.getParentId() != null) {
-            parent = findCategoryById(createDto.getParentId());
+        if (createDto.parentId() != null) {
+            parent = findCategoryById(createDto.parentId());
             level = parent.getLevel() + 1;
         }
 
         // Determine display order
-        Integer displayOrder = createDto.getDisplayOrder();
+        Integer displayOrder = createDto.displayOrder();
         if (displayOrder == null) {
-            displayOrder = categoryRepository.findMaxDisplayOrderBySiblings(createDto.getParentId()) + 1;
+            displayOrder = categoryRepository.findMaxDisplayOrderBySiblings(createDto.parentId()) + 1;
         }
 
         Category category = Category.builder()
-                .name(createDto.getName())
-                .description(createDto.getDescription())
+                .name(createDto.name())
+                .description(createDto.description())
                 .slug(slug)
                 .parent(parent)
                 .level(level)
                 .displayOrder(displayOrder)
-                .isActive(createDto.getIsActive())
+                .isActive(createDto.isActive())
                 .build();
 
         category = categoryRepository.save(category);
@@ -77,7 +78,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "categories", key = "#id")
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponseDto updateCategory(Long id, CategoryUpdateDto updateDto) {
         log.info("Updating category with ID: {}", id);
 
@@ -88,9 +89,9 @@ public class CategoryServiceImpl implements CategoryService {
         updateCategoryFields(category, updateDto);
 
         // Handle parent change
-        if (updateDto.getParentId() != null && !updateDto.getParentId().equals(
+        if (updateDto.parentId() != null && !updateDto.parentId().equals(
                 category.getParent() != null ? category.getParent().getId() : null)) {
-            updateCategoryParent(category, updateDto.getParentId());
+            updateCategoryParent(category, updateDto.parentId());
         }
 
         category = categoryRepository.save(category);
@@ -101,14 +102,14 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "categories", key = "#id")
+    @CacheEvict(value = "categories", allEntries = true)
     public void deleteCategory(Long id) {
         log.info("Deleting category with ID: {}", id);
 
         Category category = findCategoryById(id);
 
         if (!canBeDeleted(id)) {
-            long childCount = categoryRepository.countByParentIdAndIsActiveTrue(id);
+            long childCount = categoryRepository.countByParentId(id);
             long productCount = productCategoryRepository.countByCategoryId(id);
 
             if (childCount > 0) {
@@ -145,11 +146,14 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Cacheable(value = "categories", key = "'all:' + #pageable.pageNumber + ':' + #pageable.pageSize")
-    public PageResponse<CategoryResponseDto> getAllCategories(Pageable pageable) {
-        log.debug("Getting all categories with pagination: {}", pageable);
+    @Cacheable(value = "categories", key = "'all:' + #activeOnly + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort")
+    public PageResponse<CategoryResponseDto> getAllCategories(Boolean activeOnly, Pageable pageable) {
+        log.debug("Getting all categories with activeOnly: {}, pagination: {}", activeOnly, pageable);
 
-        Page<Category> categories = categoryRepository.findAll(pageable);
+        Page<Category> categories = Boolean.TRUE.equals(activeOnly)
+                ? categoryRepository.findByIsActiveTrue(pageable)
+                : categoryRepository.findAll(pageable);
+
         List<CategoryResponseDto> content = categories.getContent().stream()
                 .map(categoryMapper::toCategoryResponseDto)
                 .collect(Collectors.toList());
@@ -164,6 +168,11 @@ public class CategoryServiceImpl implements CategoryService {
                 .last(categories.isLast())
                 .empty(categories.isEmpty())
                 .build();
+    }
+
+    @Override
+    public PageResponse<CategoryResponseDto> getAllCategories(Pageable pageable) {
+        return getAllCategories(true, pageable);
     }
 
     @Override
@@ -264,29 +273,29 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public void validateCategoryData(CategoryCreateDto createDto) {
         // Validate slug uniqueness
-        String slug = StringUtils.hasText(createDto.getSlug()) ?
-                createDto.getSlug() : generateSlug(createDto.getName());
+        String slug = StringUtils.hasText(createDto.slug()) ?
+                createDto.slug() : generateSlug(createDto.name());
 
         if (!isSlugUnique(slug)) {
             throw new RuntimeException("Category slug already exists: " + slug);
         }
 
         // Validate parent exists
-        if (createDto.getParentId() != null && !categoryRepository.existsById(createDto.getParentId())) {
-            throw new RuntimeException("Parent category not found with ID: " + createDto.getParentId());
+        if (createDto.parentId() != null && !categoryRepository.existsById(createDto.parentId())) {
+            throw new RuntimeException("Parent category not found with ID: " + createDto.parentId());
         }
     }
 
     @Override
     public void validateCategoryData(CategoryUpdateDto updateDto, Long categoryId) {
         // Validate slug uniqueness if provided
-        if (StringUtils.hasText(updateDto.getSlug()) && !isSlugUnique(updateDto.getSlug(), categoryId)) {
-            throw new RuntimeException("Category slug already exists: " + updateDto.getSlug());
+        if (StringUtils.hasText(updateDto.slug()) && !isSlugUnique(updateDto.slug(), categoryId)) {
+            throw new RuntimeException("Category slug already exists: " + updateDto.slug());
         }
 
         // Validate parent exists and not creating circular reference
-        if (updateDto.getParentId() != null) {
-            validateCategoryHierarchy(updateDto.getParentId(), categoryId);
+        if (updateDto.parentId() != null) {
+            validateCategoryHierarchy(updateDto.parentId(), categoryId);
         }
     }
 
@@ -341,20 +350,20 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     private void updateCategoryFields(Category category, CategoryUpdateDto updateDto) {
-        if (StringUtils.hasText(updateDto.getName())) {
-            category.setName(updateDto.getName());
+        if (StringUtils.hasText(updateDto.name())) {
+            category.setName(updateDto.name());
         }
-        if (updateDto.getDescription() != null) {
-            category.setDescription(updateDto.getDescription());
+        if (updateDto.description() != null) {
+            category.setDescription(updateDto.description());
         }
-        if (StringUtils.hasText(updateDto.getSlug())) {
-            category.setSlug(updateDto.getSlug());
+        if (StringUtils.hasText(updateDto.slug())) {
+            category.setSlug(updateDto.slug());
         }
-        if (updateDto.getDisplayOrder() != null) {
-            category.setDisplayOrder(updateDto.getDisplayOrder());
+        if (updateDto.displayOrder() != null) {
+            category.setDisplayOrder(updateDto.displayOrder());
         }
-        if (updateDto.getIsActive() != null) {
-            category.setIsActive(updateDto.getIsActive());
+        if (updateDto.isActive() != null) {
+            category.setIsActive(updateDto.isActive());
         }
     }
 

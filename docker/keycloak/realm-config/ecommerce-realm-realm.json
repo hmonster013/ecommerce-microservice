@@ -4,14 +4,37 @@
   "displayName": "E-Commerce Microservices Realm",
   "enabled": true,
   "sslRequired": "none",
+  "loginTheme": "ecommerce",
+  "accountTheme": "ecommerce",
+  "emailTheme": "ecommerce",
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "vi",
+    "en"
+  ],
+  "defaultLocale": "vi",
   "registrationAllowed": true,
-  "registrationEmailAsUsername": false,
+  "registrationEmailAsUsername": true,
   "rememberMe": true,
-  "verifyEmail": false,
+  "verifyEmail": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
+  "passwordPolicy": "length(8) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername and notEmail",
+  "smtpServer": {
+    "host": "${KC_MAIL_HOST:smtp.gmail.com}",
+    "port": "${KC_MAIL_PORT:587}",
+    "from": "${KC_MAIL_USERNAME:}",
+    "fromDisplayName": "${KC_MAIL_FROM_NAME:}",
+    "replyTo": "${KC_MAIL_USERNAME:}",
+    "replyToDisplayName": "${KC_MAIL_FROM_NAME:}",
+    "auth": "${KC_MAIL_SMTP_AUTH:true}",
+    "ssl": "false",
+    "starttls": "${KC_MAIL_SMTP_STARTTLS_ENABLE:true}",
+    "user": "${KC_MAIL_USERNAME:}",
+    "password": "${KC_MAIL_PASSWORD:}"
+  },
   "bruteForceProtected": true,
   "permanentLockout": false,
   "maxFailureWaitSeconds": 900,
@@ -25,6 +48,18 @@
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 36000,
   "offlineSessionIdleTimeout": 2592000,
+  "eventsEnabled": true,
+  "eventsListeners": [
+    "jboss-logging",
+    "profile-sync"
+  ],
+  "enabledEventTypes": [
+    "REGISTER",
+    "UPDATE_PROFILE",
+    "UPDATE_EMAIL"
+  ],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": false,
   "roles": {
     "realm": [
       {
@@ -54,7 +89,29 @@
     ]
   },
   "defaultRoles": ["CUSTOMER"],
+  "clientScopeMappings": {
+    "realm-management": [{"client": "user-profile-manager", "roles": ["view-users", "manage-users"]}]
+  },
+  "users": [{
+    "username": "service-account-user-profile-manager",
+    "enabled": true,
+    "serviceAccountClientId": "user-profile-manager",
+    "clientRoles": {"realm-management": ["view-users", "manage-users"]}
+  }],
   "clients": [
+    {
+      "clientId": "user-profile-manager",
+      "name": "User Profile Manager",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false
+    },
     {
       "clientId": "api-gateway",
       "name": "API Gateway Service",
@@ -66,7 +123,7 @@
       "webOrigins": ["http://localhost:8080", "http://localhost:3000", "http://localhost:4200"],
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
       "publicClient": false,
       "protocol": "openid-connect",
@@ -157,8 +214,11 @@
       "webOrigins": ["http://localhost:3000", "http://localhost:4200"],
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
       "protocolMappers": [
         {
           "name": "roles",

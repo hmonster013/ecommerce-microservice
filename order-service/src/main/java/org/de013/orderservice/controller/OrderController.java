@@ -37,6 +37,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class OrderController {
 
     private final OrderService orderService;
+    private final org.de013.orderservice.service.impl.CheckoutOrderService checkout;
 
     /**
      * Create a new order
@@ -51,18 +52,13 @@ public class OrderController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public OrderResponse createOrder(
-            @Parameter(description = "Order creation request", required = true)
+    public org.springframework.http.ResponseEntity<?> createOrder(
+            @RequestHeader("Idempotency-Key") String key,
             @Valid @RequestBody CreateOrderRequest request) {
-        UserContext userContext = UserContextHolder.getCurrentUser();
-        if (userContext != null && userContext.getUserId() != null) {
-            log.info("Overriding request userId with Keycloak authenticated userId: {}", userContext.getUserId());
-            request.setUserId(userContext.getUserId());
-        } else {
-            throw new IllegalArgumentException("User context is missing");
-        }
-        return orderService.createOrder(request);
+        var result = checkout.create(key, UserContextHolder.requireAuthenticated().getUserId(), request);
+        if ("READY".equals(result.state())) return org.springframework.http.ResponseEntity.status(HttpStatus.CREATED).body(result.order());
+        if ("FAILED".equals(result.state())) return org.springframework.http.ResponseEntity.status(HttpStatus.CONFLICT).body(result);
+        return org.springframework.http.ResponseEntity.status(HttpStatus.ACCEPTED).body(result);
     }
 
     /**
@@ -204,7 +200,7 @@ public class OrderController {
             @Parameter(description = "Cancellation request with optional reason")
             @RequestBody(required = false) CancelOrderRequest request) {
         log.debug("Cancelling order {}", orderId);
-        String reason = (request != null && request.getReason() != null) ? request.getReason() : "Cancelled by user";
+        String reason = (request != null && request.reason() != null) ? request.reason() : "Cancelled by user";
         orderService.cancelOrder(orderId, reason);
     }
 

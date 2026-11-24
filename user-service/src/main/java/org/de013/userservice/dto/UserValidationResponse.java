@@ -1,9 +1,6 @@
 package org.de013.userservice.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,60 +9,58 @@ import java.util.List;
 /**
  * Response DTO for user validation for payment processing
  */
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class UserValidationResponse {
+public record UserValidationResponse(
+        boolean valid,
+        String message,
+        List<String> errors,
 
-    private boolean valid;
-    private String message;
-    private List<String> errors;
+        // User details
+        String userId,
+        String username,
+        String email,
+        String status,
+        String role,
 
-    // User details
-    private String userId;
-    private String username;
-    private String email;
-    private String status;
-    private String role;
+        // Validation flags
+        boolean userExists,
+        boolean userActive,
+        boolean userBlocked,
+        boolean userDeleted,
+        boolean emailVerified,
+        boolean phoneVerified,
 
-    // Validation flags
-    private boolean userExists;
-    private boolean userActive;
-    private boolean userBlocked;
-    private boolean userDeleted;
-    private boolean emailVerified;
-    private boolean phoneVerified;
+        // Payment validation
+        boolean canMakePayments,
+        String paymentBlockReason,
+        boolean hasPaymentLimits,
+        boolean withinPaymentLimits,
 
-    // Payment validation
-    private boolean canMakePayments;
-    private String paymentBlockReason;
-    private boolean hasPaymentLimits;
-    private boolean withinPaymentLimits;
+        // Risk assessment
+        String riskLevel,
+        Integer riskScore,
+        boolean requiresVerification,
+        boolean highRiskUser,
 
-    // Risk assessment
-    private String riskLevel;
-    private Integer riskScore;
-    private boolean requiresVerification;
-    private boolean highRiskUser;
+        // Limits information
+        BigDecimal dailyLimit,
+        BigDecimal monthlyLimit,
+        BigDecimal transactionLimit,
+        BigDecimal remainingDailyLimit,
+        BigDecimal remainingMonthlyLimit,
+        Integer remainingTransactionsToday,
 
-    // Limits information
-    private BigDecimal dailyLimit;
-    private BigDecimal monthlyLimit;
-    private BigDecimal transactionLimit;
-    private BigDecimal remainingDailyLimit;
-    private BigDecimal remainingMonthlyLimit;
-    private Integer remainingTransactionsToday;
-
-    // Activity information
-    private LocalDateTime lastPaymentAt;
-    private Integer recentPaymentCount;
-    private BigDecimal recentPaymentAmount;
+        // Activity information
+        LocalDateTime lastPaymentAt,
+        Integer recentPaymentCount,
+        BigDecimal recentPaymentAmount
+) {
 
     // Factory methods matching payment-service
     public static UserValidationResponse valid(String userId, String username, String email) {
         return UserValidationResponse.builder()
                 .valid(true)
+                .message("User is valid for payment processing")
                 .userId(userId)
                 .username(username)
                 .email(email)
@@ -78,17 +73,16 @@ public class UserValidationResponse {
                 .requiresVerification(false)
                 .riskLevel("LOW")
                 .riskScore(10)
-                .message("User is valid for payment processing")
                 .build();
     }
 
     public static UserValidationResponse userNotFound(String userId) {
         return UserValidationResponse.builder()
                 .valid(false)
+                .message("User not found")
                 .userId(userId)
                 .userExists(false)
                 .canMakePayments(false)
-                .message("User not found")
                 .build();
     }
 }

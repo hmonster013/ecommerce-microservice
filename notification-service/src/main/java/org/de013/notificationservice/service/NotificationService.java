@@ -34,7 +34,7 @@ public class NotificationService {
      */
     @Transactional
     public Notification sendEmail(String userId, String recipient, String subject, String content) {
-        log.info("Sending email notification to: {}", recipient);
+
 
         Notification notification = Notification.builder()
                 .userId(userId)
@@ -51,11 +51,11 @@ public class NotificationService {
             emailService.sendEmail(recipient, subject, content);
             notification.setStatus(NotificationStatus.SENT);
             notification.setSentAt(LocalDateTime.now());
-            log.info("Email sent successfully to: {}", recipient);
+
         } catch (Exception e) {
             notification.setStatus(NotificationStatus.FAILED);
-            notification.setErrorMessage(e.getMessage());
-            log.error("Failed to send email to {}: {}", recipient, e.getMessage());
+            notification.setErrorMessage("Provider submission failed");
+            log.warn("Email provider submission failed");
         }
 
         return notificationRepository.save(notification);
@@ -66,7 +66,7 @@ public class NotificationService {
      */
     @Transactional
     public Notification sendSms(String userId, String phoneNumber, String message) {
-        log.info("Sending SMS notification to: {}", phoneNumber);
+
 
         Notification notification = Notification.builder()
                 .userId(userId)
@@ -82,11 +82,11 @@ public class NotificationService {
             smsService.sendSms(phoneNumber, message);
             notification.setStatus(NotificationStatus.SENT);
             notification.setSentAt(LocalDateTime.now());
-            log.info("SMS sent successfully to: {}", phoneNumber);
+
         } catch (Exception e) {
             notification.setStatus(NotificationStatus.FAILED);
-            notification.setErrorMessage(e.getMessage());
-            log.error("Failed to send SMS to {}: {}", phoneNumber, e.getMessage());
+            notification.setErrorMessage("Provider submission failed");
+            log.warn("SMS provider submission failed");
         }
 
         return notificationRepository.save(notification);
@@ -97,7 +97,7 @@ public class NotificationService {
      */
     @Transactional
     public List<Notification> sendBoth(String userId, String email, String phoneNumber, String subject, String message) {
-        log.info("Sending both email and SMS notifications for user: {}", userId);
+
 
         // Send email
         Notification emailNotification = sendEmail(userId, email, subject, message);

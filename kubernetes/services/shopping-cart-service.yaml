@@ -21,6 +21,12 @@ spec:
         ports:
         - containerPort: 8083
         env:
+        - name: MANAGEMENT_SERVER_PORT
+          value: "9010"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "health,prometheus"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+          value: "true"
         - name: SPRING_PROFILES_ACTIVE
           valueFrom:
             configMapKeyRef:
@@ -98,14 +104,14 @@ spec:
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
-            port: 8083
+            port: 9010
           initialDelaySeconds: 120
           periodSeconds: 10
           failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
-            port: 8083
+            port: 9010
           initialDelaySeconds: 90
           periodSeconds: 5
           failureThreshold: 5
@@ -119,6 +125,11 @@ spec:
     app: shopping-cart-service
   type: ClusterIP
   ports:
-    - protocol: TCP
+    - name: application
+      protocol: TCP
       port: 8083
       targetPort: 8083
+    - name: management
+      protocol: TCP
+      port: 9010
+      targetPort: 9010

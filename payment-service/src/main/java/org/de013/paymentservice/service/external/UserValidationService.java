@@ -2,6 +2,7 @@ package org.de013.paymentservice.service.external;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.dto.ApiResult;
 import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.dto.external.UserDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
@@ -56,7 +57,7 @@ public class UserValidationService {
     public UserDto getUserById(String userId) {
         try {
             log.debug("Getting user by ID: {}", userId);
-            ResponseEntity<org.de013.common.dto.ApiResponse<UserDto>> response = userServiceClient.getUserById(userId);
+            ResponseEntity<ApiResult<UserDto>> response = userServiceClient.getUserById(userId);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().getData() != null) {
                 return response.getBody().getData();

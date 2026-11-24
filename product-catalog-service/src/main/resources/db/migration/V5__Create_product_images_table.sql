@@ -26,9 +26,3 @@ CREATE TABLE product_images (
 CREATE UNIQUE INDEX idx_product_images_main_unique 
     ON product_images(product_id) 
     WHERE image_type = 'MAIN' AND is_active = true;
-
--- Create trigger to update updated_at
-CREATE TRIGGER update_product_images_updated_at 
-    BEFORE UPDATE ON product_images 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();

@@ -1,5 +1,11 @@
 package org.de013.paymentservice.gateway.stripe;
 
+import com.stripe.net.LiveStripeResponseGetter;
+
+import com.stripe.service.PaymentIntentService;
+
+import com.stripe.net.RequestOptions;
+
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
 import com.stripe.model.Customer;
@@ -277,7 +283,9 @@ public class StripePaymentGateway implements PaymentGateway {
             }
 
             PaymentIntent paymentIntent = PaymentIntent.create(paramsBuilder.build());
-            return mapPaymentIntentToResponse(paymentIntent);
+            StripePaymentResponse response = mapPaymentIntentToResponse(paymentIntent);
+            response.setCreatedByStripe(true);
+            return response;
 
         } catch (StripeException e) {
             log.error("Failed to create Stripe payment intent", e);
@@ -300,6 +308,8 @@ public class StripePaymentGateway implements PaymentGateway {
                 .confirmationMethod(paymentIntent.getConfirmationMethod())
                 .created(paymentIntent.getCreated())
                 .livemode(paymentIntent.getLivemode())
+                .latestCharge(paymentIntent.getLatestCharge() == null ? null : StripePaymentResponse.StripeChargeInfo.builder()
+                        .chargeId(paymentIntent.getLatestCharge()).build())
                 .build();
     }
 
@@ -342,6 +352,22 @@ public class StripePaymentGateway implements PaymentGateway {
             log.error("Failed to confirm Stripe payment intent: {}", paymentIntentId, e);
             throw new PaymentGatewayException("Failed to confirm payment intent: " + e.getMessage(), e);
         }
+    }
+
+    public StripePaymentResponse retryReadBack(PaymentIntent intent) {
+        return mapPaymentIntentToResponse(intent);
+    }
+
+    public PaymentIntent confirmPaymentIntent(String paymentIntentId, String paymentMethodId, String providerKey) throws StripeException {
+        var options = RequestOptions.builder().setIdempotencyKey(providerKey)
+                .setMaxNetworkRetries(0).build();
+        var params = PaymentIntentConfirmParams.builder().setPaymentMethod(paymentMethodId);
+        String returnUrl = config.getGateways().getStripe().getSuccessUrl();
+        if (returnUrl != null && !returnUrl.isBlank()) params.setReturnUrl(returnUrl);
+        var intents = new PaymentIntentService(new LiveStripeResponseGetter(new StripeMutationHttpClient()));
+        PaymentIntent intent = intents.confirm(paymentIntentId, params.build(), options);
+        if (!paymentIntentId.equals(intent.getId())) throw new IllegalStateException("Payment intent mismatch");
+        return intent;
     }
 
     @Override

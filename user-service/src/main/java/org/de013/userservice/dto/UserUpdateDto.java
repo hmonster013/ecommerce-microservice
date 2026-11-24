@@ -1,31 +1,20 @@
 package org.de013.userservice.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.de013.userservice.validator.ValidEmail;
 import org.de013.userservice.validator.ValidPhone;
 
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class UserUpdateDto {
-    @Email(message = "Email should be valid")
-    @ValidEmail(allowDisposable = true, message = "Invalid email format")
-    private String email;
+public record UserUpdateDto(
+        @Size(max = 50, message = "First name must not exceed 50 characters")
+        String firstName,
 
-    @Size(max = 50, message = "First name must not exceed 50 characters")
-    private String firstName;
+        @Size(max = 50, message = "Last name must not exceed 50 characters")
+        String lastName,
 
-    @Size(max = 50, message = "Last name must not exceed 50 characters")
-    private String lastName;
+        @ValidPhone(countryCode = "VN", message = "Invalid phone number format")
+        String phone,
 
-    @ValidPhone(countryCode = "VN", message = "Invalid phone number format")
-    private String phone;
-
-    private String address;
-}
+        @Size(max = 255, message = "Address must not exceed 255 characters")
+        String address
+) {}

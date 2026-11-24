@@ -15,6 +15,7 @@ import org.de013.shoppingcart.repository.redis.RedisCartSessionManager;
 import org.de013.shoppingcart.service.CartItemService;
 import org.de013.shoppingcart.service.CartMergeService;
 import org.de013.shoppingcart.service.CartService;
+import org.de013.shoppingcart.service.CartTotalsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,7 @@ public class CartServiceImpl implements CartService {
 
     private final CartMergeService mergeService;
     private final CartItemService cartItemService;
+    private final CartTotalsService cartTotalsService;
 
     // ==================== CART CREATION & RETRIEVAL ====================
 
@@ -211,37 +213,7 @@ public class CartServiceImpl implements CartService {
      */
     @Override
     public void updateCartTotals(Long cartId) {
-        try {
-            log.debug("Updating totals for cart: {}", cartId);
-
-            // Get cart items and calculate totals
-            BigDecimal subtotal = cartItemService.calculateCartSubtotal(cartId);
-            int itemCount = cartItemService.getCartItemCount(cartId);
-            int totalQuantity = cartItemService.getCartTotalQuantity(cartId);
-
-            // Update in database
-            cartRepository.updateCartTotals(cartId, subtotal, subtotal, itemCount, totalQuantity, LocalDateTime.now());
-
-            // Update in Redis
-            Optional<RedisCart> redisCart = redisCartRepository.findByCartId(cartId);
-            if (redisCart.isPresent()) {
-                RedisCart cart = redisCart.get();
-                cart.setSubtotal(subtotal);
-                cart.setTotalAmount(subtotal);
-                cart.setItemCount(itemCount);
-                cart.setTotalQuantity(totalQuantity);
-                cart.updateCartTotals();
-
-                redisCartRepository.save(cart);
-            }
-
-            log.debug("Updated cart {} totals: subtotal={}, items={}, quantity={}",
-                    cartId, subtotal, itemCount, totalQuantity);
-
-        } catch (Exception e) {
-            log.error("Error updating cart totals for cart {}: {}", cartId, e.getMessage(), e);
-            throw new RuntimeException("Failed to update cart totals", e);
-        }
+        cartTotalsService.recalculate(cartId);
     }
 
     /**
@@ -273,16 +245,14 @@ public class CartServiceImpl implements CartService {
                 throw new RuntimeException("Cart not found");
             }
 
-            CartResponseDto cart = cartOpt.get();
-
-            // Remove all items - use repository directly for bulk operation
-            cartItemRepository.deleteByCartId(cart.getCartId());
-
-            // Update cart totals
-            updateCartTotals(cart.getCartId());
-
-            log.info("Cleared cart {}", cart.getCartId());
-            return getCartById(cart.getCartId()).orElse(cart);
+            Long cartId = cartOpt.get().cartId();
+            Cart cart = cartRepository.findByIdWithItems(cartId)
+                    .orElseThrow(() -> new IllegalArgumentException("Cart not found"));
+            // Clear the managed collection so orphan removal, response and cache agree.
+            cart.clearItems();
+            cartTotalsService.recalculate(cartId);
+            log.info("Cleared cart {}", cartId);
+            return convertToResponseDto(cart);
 
         } catch (Exception e) {
             log.error("Error clearing cart: {}", e.getMessage(), e);
@@ -590,6 +560,9 @@ public class CartServiceImpl implements CartService {
                 .cartType(cart.getCartType())
                 .currency(cart.getCurrency())
                 .subtotal(cart.getSubtotal())
+                .taxAmount(cart.getTaxAmount())
+                .shippingAmount(cart.getShippingAmount())
+                .discountAmount(cart.getDiscountAmount())
                 .totalAmount(cart.getTotalAmount())
                 .itemCount(cart.getItemCount())
                 .totalQuantity(cart.getTotalQuantity())
@@ -648,6 +621,9 @@ public class CartServiceImpl implements CartService {
                 .cartType(redisCart.getCartType())
                 .currency(redisCart.getCurrency())
                 .subtotal(redisCart.getSubtotal())
+                .taxAmount(redisCart.getTaxAmount())
+                .shippingAmount(redisCart.getShippingAmount())
+                .discountAmount(redisCart.getDiscountAmount())
                 .totalAmount(redisCart.getTotalAmount())
                 .itemCount(redisCart.getItemCount())
                 .totalQuantity(redisCart.getTotalQuantity())

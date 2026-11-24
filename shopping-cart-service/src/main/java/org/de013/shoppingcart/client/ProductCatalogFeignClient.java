@@ -1,6 +1,6 @@
 package org.de013.shoppingcart.client;
 
-import org.de013.common.dto.ApiResponse;
+import org.de013.common.dto.ApiResult;
 import org.de013.common.dto.ProductDetailDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +25,7 @@ public interface ProductCatalogFeignClient {
      * Get product information by ID
      */
     @GetMapping("/{productId}")
-    ApiResponse<ProductDetailDto> getProductById(@PathVariable("productId") String productId);
+    ApiResult<ProductDetailDto> getProductById(@PathVariable("productId") String productId);
 
     /**
      * Get multiple products by IDs

@@ -49,7 +49,3 @@ CREATE TABLE refunds (
 
 -- Add business constraints
 ALTER TABLE refunds ADD CONSTRAINT chk_refunds_amount_positive CHECK (amount > 0);
-
--- Create trigger to update updated_at timestamp
-CREATE TRIGGER update_refunds_updated_at BEFORE UPDATE ON refunds
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

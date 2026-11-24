@@ -1,5 +1,9 @@
 package org.de013.paymentservice.controller;
 
+import org.springframework.http.HttpStatus;
+
+import org.springframework.web.server.ResponseStatusException;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -9,6 +13,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.de013.common.dto.ApiResult;
 import org.springframework.validation.annotation.Validated;
 import org.de013.common.controller.BaseController;
 import org.de013.common.dto.PageResponse;
@@ -19,11 +24,14 @@ import org.de013.paymentservice.dto.payment.PaymentResponse;
 import org.de013.paymentservice.dto.payment.PaymentStatusResponse;
 import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
 import org.de013.paymentservice.entity.enums.PaymentStatus;
+import org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails;
 import org.de013.paymentservice.service.PaymentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -83,7 +91,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "422", description = "Payment method invalid or expired"),
             @ApiResponse(responseCode = "500", description = "Payment processing failed")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> processPayment(
+    public ResponseEntity<ApiResult<PaymentResponse>> processPayment(
             @Parameter(description = "Payment processing request", required = true)
             @Valid @RequestBody ProcessPaymentRequest request) {
         log.info("Processing payment request for order: {}", request.getOrderId());
@@ -101,9 +109,8 @@ public class PaymentController extends BaseController {
     }
 
     private String getCurrentUserKeycloakId() {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getDetails() instanceof org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails) {
-            org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails details = (org.de013.paymentservice.security.HeaderAuthenticationFilter.HeaderUserDetails) auth.getDetails();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof HeaderUserDetails details) {
             return details.getKeycloakId();
         }
         return null;
@@ -116,12 +123,20 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Payment not found"),
             @ApiResponse(responseCode = "400", description = "Payment cannot be confirmed")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> confirmPayment(
+    public ResponseEntity<ApiResult<PaymentResponse>> confirmPayment(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId,
-            @Parameter(description = "Payment method ID") @RequestParam String paymentMethodId) {
-        log.info("Confirming payment: {} with payment method: {}", paymentId, paymentMethodId);
+            @Parameter(description = "Payment method ID") @RequestParam String paymentMethodId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        var context = UserContextHolder.getCurrentUser();
+        if (context == null || context.getUserId() == null || context.getUserId().isBlank())
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        String actor = context.getUserId();
+        if (paymentMethodId == null || !paymentMethodId.matches("[A-Za-z0-9_]{1,255}")
+                || idempotencyKey != null && !idempotencyKey.matches("[A-Za-z0-9._:-]{1,128}"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid confirmation request");
+        log.info("Confirming payment: {}", paymentId);
 
-        PaymentResponse response = paymentService.confirmPayment(paymentId, paymentMethodId);
+        PaymentResponse response = paymentService.confirmPaymentForOwner(paymentId, paymentMethodId, actor, idempotencyKey);
         return success(response, PaymentConstants.PAYMENT_CONFIRMED);
     }
 
@@ -132,7 +147,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Payment not found"),
             @ApiResponse(responseCode = "400", description = "Payment cannot be canceled")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> cancelPayment(
+    public ResponseEntity<ApiResult<PaymentResponse>> cancelPayment(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId,
             @Parameter(description = "Cancellation reason") @RequestParam(required = false) String reason) {
         log.info("Canceling payment: {} with reason: {}", paymentId, reason);
@@ -148,7 +163,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "404", description = "Payment not found"),
             @ApiResponse(responseCode = "400", description = "Payment cannot be captured")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> capturePayment(
+    public ResponseEntity<ApiResult<PaymentResponse>> capturePayment(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId,
             @Parameter(description = "Amount to capture") @RequestParam(required = false) BigDecimal amount) {
         log.info("Capturing payment: {} with amount: {}", paymentId, amount);
@@ -165,7 +180,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully"),
             @ApiResponse(responseCode = "401", description = "Authentication required")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<PaymentResponse>>> getMyPayments(
+    public ResponseEntity<ApiResult<PageResponse<PaymentResponse>>> getMyPayments(
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         UserContext userContext = UserContextHolder.requireAuthenticated();
         log.debug("Getting payments for current user: {} with pagination: {}", userContext.getUserId(), pageable);
@@ -181,7 +196,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payment found"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> getPaymentById(
+    public ResponseEntity<ApiResult<PaymentResponse>> getPaymentById(
             @Parameter(description = "Payment ID") @PathVariable @Positive(message = "Payment ID must be positive") Long paymentId) {
         log.debug("Getting payment by ID: {}", paymentId);
 
@@ -196,7 +211,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payment found"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> getPaymentByNumber(
+    public ResponseEntity<ApiResult<PaymentResponse>> getPaymentByNumber(
             @Parameter(description = "Payment number") @PathVariable String paymentNumber) {
         log.debug("Getting payment by number: {}", paymentNumber);
 
@@ -210,7 +225,7 @@ public class PaymentController extends BaseController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getPaymentsByOrderId(
+    public ResponseEntity<ApiResult<List<PaymentResponse>>> getPaymentsByOrderId(
             @Parameter(description = "Order ID") @PathVariable @Positive(message = "Order ID must be positive") Long orderId) {
         log.debug("Getting payments for order: {}", orderId);
 
@@ -223,7 +238,7 @@ public class PaymentController extends BaseController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PageResponse<PaymentResponse>>> getPaymentsByUserId(
+    public ResponseEntity<ApiResult<PageResponse<PaymentResponse>>> getPaymentsByUserId(
             @Parameter(description = "User ID") @PathVariable String userId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         log.debug("Getting payments for user: {} with pagination: {}", userId, pageable);
@@ -238,7 +253,7 @@ public class PaymentController extends BaseController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payments retrieved successfully")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getPaymentsByUserIdAndStatus(
+    public ResponseEntity<ApiResult<List<PaymentResponse>>> getPaymentsByUserIdAndStatus(
             @Parameter(description = "User ID") @PathVariable String userId,
             @Parameter(description = "Payment status") @PathVariable PaymentStatus status) {
         log.debug("Getting payments for user: {} with status: {}", userId, status);
@@ -255,7 +270,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payment status retrieved"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentStatusResponse>> getPaymentStatus(
+    public ResponseEntity<ApiResult<PaymentStatusResponse>> getPaymentStatus(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
         log.debug("Getting payment status for: {}", paymentId);
 
@@ -269,7 +284,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payment status retrieved"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentStatusResponse>> getPaymentStatusByNumber(
+    public ResponseEntity<ApiResult<PaymentStatusResponse>> getPaymentStatusByNumber(
             @Parameter(description = "Payment number") @PathVariable String paymentNumber) {
         log.debug("Getting payment status for number: {}", paymentNumber);
 
@@ -283,7 +298,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payment status updated"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> updatePaymentStatus(
+    public ResponseEntity<ApiResult<PaymentResponse>> updatePaymentStatus(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId,
             @Parameter(description = "New payment status") @RequestParam PaymentStatus status,
             @Parameter(description = "Status change reason") @RequestParam(required = false) String reason) {
@@ -299,7 +314,7 @@ public class PaymentController extends BaseController {
             @ApiResponse(responseCode = "200", description = "Payment synced successfully"),
             @ApiResponse(responseCode = "404", description = "Payment not found")
     })
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentResponse>> syncPaymentStatusWithStripe(
+    public ResponseEntity<ApiResult<PaymentResponse>> syncPaymentStatusWithStripe(
             @Parameter(description = "Payment ID") @PathVariable Long paymentId) {
         log.info("Syncing payment with Stripe: {}", paymentId);
 
@@ -335,7 +350,7 @@ public class PaymentController extends BaseController {
 
     @GetMapping("/user/{userId}/successful")
     @Operation(summary = "Get successful payments by user", description = "Get all successful payments for a user")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getSuccessfulPaymentsByUserId(
+    public ResponseEntity<ApiResult<List<PaymentResponse>>> getSuccessfulPaymentsByUserId(
             @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting successful payments for user: {}", userId);
 
@@ -345,7 +360,7 @@ public class PaymentController extends BaseController {
 
     @GetMapping("/user/{userId}/failed")
     @Operation(summary = "Get failed payments by user", description = "Get all failed payments for a user")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getFailedPaymentsByUserId(
+    public ResponseEntity<ApiResult<List<PaymentResponse>>> getFailedPaymentsByUserId(
             @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting failed payments for user: {}", userId);
 
@@ -355,7 +370,7 @@ public class PaymentController extends BaseController {
 
     @GetMapping("/user/{userId}/pending")
     @Operation(summary = "Get pending payments by user", description = "Get all pending payments for a user")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<List<PaymentResponse>>> getPendingPaymentsByUserId(
+    public ResponseEntity<ApiResult<List<PaymentResponse>>> getPendingPaymentsByUserId(
             @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting pending payments for user: {}", userId);
 
@@ -367,7 +382,7 @@ public class PaymentController extends BaseController {
 
     @GetMapping("/user/{userId}/statistics")
     @Operation(summary = "Get payment statistics by user", description = "Get payment statistics for a user")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentService.PaymentStatistics>> getPaymentStatisticsByUserId(
+    public ResponseEntity<ApiResult<PaymentService.PaymentStatistics>> getPaymentStatisticsByUserId(
             @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting payment statistics for user: {}", userId);
 
@@ -377,7 +392,7 @@ public class PaymentController extends BaseController {
 
     @GetMapping("/statistics")
     @Operation(summary = "Get payment statistics by date range", description = "Get payment statistics for a date range")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<PaymentService.PaymentStatistics>> getPaymentStatisticsByDateRange(
+    public ResponseEntity<ApiResult<PaymentService.PaymentStatistics>> getPaymentStatisticsByDateRange(
             @Parameter(description = "Start date") @RequestParam LocalDateTime startDate,
             @Parameter(description = "End date") @RequestParam LocalDateTime endDate) {
         log.debug("Getting payment statistics for date range: {} to {}", startDate, endDate);
@@ -388,7 +403,7 @@ public class PaymentController extends BaseController {
 
     @GetMapping("/user/{userId}/total-amount")
     @Operation(summary = "Get total payment amount by user", description = "Get total successful payment amount for a user")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<BigDecimal>> getTotalPaymentAmountByUserId(
+    public ResponseEntity<ApiResult<BigDecimal>> getTotalPaymentAmountByUserId(
             @Parameter(description = "User ID") @PathVariable String userId) {
         log.debug("Getting total payment amount for user: {}", userId);
 
@@ -398,7 +413,7 @@ public class PaymentController extends BaseController {
 
     @GetMapping("/count/status/{status}")
     @Operation(summary = "Get payment count by status", description = "Get count of payments with specific status")
-    public ResponseEntity<org.de013.common.dto.ApiResponse<Long>> getPaymentCountByStatus(
+    public ResponseEntity<ApiResult<Long>> getPaymentCountByStatus(
             @Parameter(description = "Payment status") @PathVariable PaymentStatus status) {
         log.debug("Getting payment count for status: {}", status);
 

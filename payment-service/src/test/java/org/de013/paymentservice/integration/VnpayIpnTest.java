@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -38,24 +38,35 @@ import static org.mockito.Mockito.*;
  * the real VNPay sandbox account. Swapping real credentials (in .env) never
  * requires changing these tests.
  */
-@SpringBootTest
+@org.testcontainers.junit.jupiter.Testcontainers
+@SpringBootTest(properties = {"spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=validate", "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect"})
 @ActiveProfiles("test")
 class VnpayIpnTest {
+    @org.testcontainers.junit.jupiter.Container static final org.testcontainers.containers.PostgreSQLContainer<?> DB = new org.testcontainers.containers.PostgreSQLContainer<>("postgres:17-alpine");
+    @org.springframework.test.context.DynamicPropertySource static void database(org.springframework.test.context.DynamicPropertyRegistry p) {
+        p.add("spring.datasource.url", DB::getJdbcUrl);
+        p.add("spring.datasource.username", DB::getUsername);
+        p.add("spring.datasource.password", DB::getPassword);
+        p.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        p.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
+    }
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired private org.de013.paymentservice.service.VnpayIpnService ipnService;
 
     @Autowired
     private WebhookController webhookController;
     @Autowired
     private PaymentRepository paymentRepository;
-    @Autowired
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
     private ProcessedStripeEventRepository processedStripeEventRepository;
     @Autowired
     private PaymentGatewayConfig config;
 
-    @MockBean
+    @MockitoBean
     private OrderServiceClient orderServiceClient;
-    @MockBean
+    @MockitoBean
     private NotificationServiceClient notificationServiceClient;
-    @MockBean
+    @MockitoBean
     private UserServiceClient userServiceClient;
 
     private String secret;
@@ -70,12 +81,16 @@ class VnpayIpnTest {
         vndRate = vnpay.getVndRate();
         processedStripeEventRepository.deleteAll();
         paymentRepository.deleteAll();
+        jdbc.update("delete from payment_order_guard");
     }
 
     @Test
     void ipn_validSignatureAndSuccessCode_marksPaymentSucceededAndOrderPaid() {
         String txnRef = "PMT-IPN-001";
         seedPendingPayment(txnRef, new BigDecimal("10.00"));
+        var legacy = paymentRepository.findByPaymentNumber(txnRef).orElseThrow();
+        assertNull(legacy.getProviderExchangeRate());
+        assertNull(legacy.getProviderQuotedAt());
         Map<String, String> params = signedIpn(txnRef, toVnpAmount(new BigDecimal("10.00")), "00");
 
         ResponseEntity<Map<String, String>> resp = webhookController.handleVnpayIpn(params);
@@ -131,6 +146,120 @@ class VnpayIpnTest {
         verify(orderServiceClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
     }
 
+    @Test void eventFlushFailureRollsBackPaymentAndAllowsReplay() {
+        String ref = "PMT-IPN-ROLLBACK";
+        seedPendingPayment(ref, new BigDecimal("10.00"));
+        var callback = signedIpn(ref, toVnpAmount(new BigDecimal("10.00")), "00");
+        doThrow(new IllegalStateException("simulated event flush failure"))
+                .when(processedStripeEventRepository).flush();
+        var failure = assertThrows(org.springframework.dao.InvalidDataAccessApiUsageException.class, () -> ipnService.process(callback));
+        assertInstanceOf(IllegalStateException.class, failure.getCause());
+        assertEquals(PaymentStatus.PENDING, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+        assertFalse(processedStripeEventRepository.existsById("vnpay_" + ref));
+        verify(orderServiceClient, never()).markOrderAsPaid(anyLong(), anyLong(), anyString());
+        reset(processedStripeEventRepository);
+        assertEquals("00", ipnService.process(callback).get("RspCode"));
+        assertEquals(PaymentStatus.SUCCEEDED, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+        assertTrue(processedStripeEventRepository.existsById("vnpay_" + ref));
+    }
+
+    @Test void signedSuccessUnderHoldPreservesEvidenceAndSuppressesDispatch() {
+        String ref = "PMT-IPN-HOLD";
+        seedPendingPayment(ref, new BigDecimal("10.00"));
+        jdbc.update("insert into payment_order_guard (order_id, reconciliation_hold) values (1, true)");
+        var callback = signedIpn(ref, toVnpAmount(new BigDecimal("10.00")), "00");
+        assertEquals("00", webhookController.handleVnpayIpn(callback).getBody().get("RspCode"));
+        assertEquals(PaymentStatus.SUCCEEDED, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+        assertTrue(processedStripeEventRepository.existsById("vnpay_" + ref));
+        assertEquals("02", webhookController.handleVnpayIpn(callback).getBody().get("RspCode"));
+        assertEquals("02", webhookController.handleVnpayIpn(signedIpn(ref, toVnpAmount(new BigDecimal("10.00")), "01")).getBody().get("RspCode"));
+        assertEquals(PaymentStatus.SUCCEEDED, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+        verifyNoInteractions(orderServiceClient, notificationServiceClient, userServiceClient);
+    }
+
+    @Test void directUnsignedServiceCallCannotSettle() {
+        String ref = "PMT-IPN-DIRECT";
+        seedPendingPayment(ref, new BigDecimal("10.00"));
+        var callback = signedIpn(ref, toVnpAmount(new BigDecimal("10.00")), "00");
+        callback.put("vnp_SecureHash", "invalid");
+        assertEquals("97", ipnService.process(callback).get("RspCode"));
+        assertEquals(PaymentStatus.PENDING, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+        assertFalse(processedStripeEventRepository.existsById("vnpay_" + ref));
+    }
+
+    @Test void legacySnapshotCommitsHoldAndRetries() {
+        String ref = "PMT-LEGACY";
+        seedPendingPayment(ref, BigDecimal.TEN);
+        jdbc.update("update payments set provider_amount_vnd = null, provider_currency = null where payment_number = ?", ref);
+        var callback = signedIpn(ref, toVnpAmount(BigDecimal.TEN), "00");
+        for (int i = 0; i < 2; i++) {
+            assertEquals("99", ipnService.process(callback).get("RspCode"));
+            assertTrue(jdbc.queryForObject("select reconciliation_hold from payment_order_guard where order_id = 1", Boolean.class));
+        }
+        assertEquals(PaymentStatus.PENDING, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+        assertFalse(processedStripeEventRepository.existsById("vnpay_" + ref));
+        verifyNoInteractions(orderServiceClient, notificationServiceClient, userServiceClient);
+    }
+
+    @Test void validatesWireAndMerchantBeforeDuplicate() {
+        String ref = "PMT-WIRE";
+        seedPendingPayment(ref, BigDecimal.TEN);
+        long wire = toVnpAmount(BigDecimal.TEN);
+        assertEquals("00", ipnService.process(signedIpn(ref, wire, "00")).get("RspCode"));
+        for (String value : new String[]{Long.toString(wire - 1), Long.toString(wire + 1), "-1", "1.0", "999999999999999999999", ""}) {
+            var callback = signedIpn(ref, wire, "00");
+            callback.put("vnp_Amount", value);
+            assertEquals("04", ipnService.process(resign(callback)).get("RspCode"));
+        }
+        for (String merchant : new String[]{null, "", "wrong"}) {
+            var callback = signedIpn(ref, wire, "00");
+            if (merchant == null) callback.remove("vnp_TmnCode"); else callback.put("vnp_TmnCode", merchant);
+            assertEquals("97", ipnService.process(resign(callback)).get("RspCode"));
+        }
+    }
+
+    @Test void missingAndMalformedAmountsNeverSettle() {
+        String ref = "PMT-BAD-AMOUNT";
+        seedPendingPayment(ref, BigDecimal.TEN);
+        for (String value : new String[]{null, "", "+1", "-1", "1.0", "1 0", "999999999999999999999"}) {
+            var callback = signedIpn(ref, toVnpAmount(BigDecimal.TEN), "00");
+            if (value == null) callback.remove("vnp_Amount"); else callback.put("vnp_Amount", value);
+            assertEquals("04", ipnService.process(resign(callback)).get("RspCode"));
+            assertEquals(PaymentStatus.PENDING, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+            assertFalse(processedStripeEventRepository.existsById("vnpay_" + ref));
+        }
+        verifyNoInteractions(orderServiceClient, notificationServiceClient, userServiceClient);
+    }
+
+    @Test void responseAndTransactionStatusMatrixUnderNormalAndHeldGuard() {
+        int index = 0;
+        for (boolean held : new boolean[]{false, true}) for (String response : new String[]{"00", "01", null}) for (String status : new String[]{"00", "01", null}) {
+            processedStripeEventRepository.deleteAll(); paymentRepository.deleteAll(); jdbc.update("delete from payment_order_guard");
+            reset(orderServiceClient, notificationServiceClient, userServiceClient);
+            String ref = "PMT-MATRIX-" + index++;
+            seedPendingPayment(ref, BigDecimal.TEN);
+            if (held) jdbc.update("insert into payment_order_guard (order_id, reconciliation_hold) values (1, true)");
+            var callback = signedIpn(ref, toVnpAmount(BigDecimal.TEN), "00");
+            if (response == null) callback.remove("vnp_ResponseCode"); else callback.put("vnp_ResponseCode", response);
+            if (status == null) callback.remove("vnp_TransactionStatus"); else callback.put("vnp_TransactionStatus", status);
+            assertEquals("00", ipnService.process(resign(callback)).get("RspCode"));
+            boolean success = "00".equals(response) && "00".equals(status);
+            assertEquals(success ? PaymentStatus.SUCCEEDED : PaymentStatus.FAILED, paymentRepository.findByPaymentNumber(ref).orElseThrow().getStatus());
+            assertEquals(success, processedStripeEventRepository.existsById("vnpay_" + ref));
+            verify(orderServiceClient, times(success && !held ? 1 : 0)).markOrderAsPaid(anyLong(), anyLong(), anyString());
+            verify(notificationServiceClient, times(success && !held ? 1 : 0)).sendEmail(anyMap());
+            if (held) verifyNoInteractions(orderServiceClient, notificationServiceClient, userServiceClient);
+        }
+    }
+
+    private Map<String, String> resign(Map<String, String> callback) {
+        SortedMap<String, String> fields = new TreeMap<>(callback);
+        fields.remove("vnp_SecureHash");
+        fields.values().removeIf(v -> v == null || v.isEmpty());
+        callback.put("vnp_SecureHash", VnpayUtils.hmacSHA512(secret, VnpayUtils.buildHashData(fields)));
+        return callback;
+    }
+
     // ----- helpers -----
 
     private void seedPendingPayment(String txnRef, BigDecimal amountUsd) {
@@ -139,6 +268,8 @@ class VnpayIpnTest {
                 .orderId(1L)
                 .userId("user-1")
                 .amount(amountUsd)
+                .providerAmountVnd(Math.round(amountUsd.doubleValue() * vndRate))
+                .providerCurrency("VND")
                 .currency(Currency.USD)
                 .status(PaymentStatus.PENDING)
                 .method(PaymentMethodType.WALLET)

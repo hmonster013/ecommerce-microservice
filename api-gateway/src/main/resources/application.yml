@@ -6,13 +6,19 @@ spring:
     name: api-gateway
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
+  http:
+    codecs:
+      preferred-json-mapper: jackson2
   # Development profile - no need for multiple profiles
   profiles:
     active: default
+  output:
+    ansi:
+      enabled: ALWAYS
 
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([${spring.application.name:}]) %clr([%X{trace_id:-},%X{span_id:-}]){yellow} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [${spring.application.name:}] [%X{trace_id:-},%X{span_id:-}] ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
   level:
     root: INFO
@@ -35,3 +41,29 @@ management:
 app:
   security:
     permit-all-swagger-paths: ${PERMIT_ALL_SWAGGER_PATHS:true}
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v1/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    config-url: /v1/api-docs/swagger-config
+    disable-swagger-default-url: true
+    urls:
+      - url: /v1/api-docs
+        name: API Gateway
+      - url: /api/v1/user-service/v1/api-docs
+        name: User Service
+      - url: /api/v1/product-catalog-service/v1/api-docs
+        name: Product Catalog Service
+      - url: /api/v1/shopping-cart-service/v1/api-docs
+        name: Shopping Cart Service
+      - url: /api/v1/order-service/v1/api-docs
+        name: Order Service
+      - url: /api/v1/payment-service/v1/api-docs
+        name: Payment Service
+      - url: /api/v1/notification-service/v1/api-docs
+        name: Notification Service

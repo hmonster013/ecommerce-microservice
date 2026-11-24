@@ -22,12 +22,6 @@ CREATE TABLE inventory (
     CONSTRAINT chk_inventory_max_stock CHECK (max_stock_level IS NULL OR max_stock_level >= min_stock_level)
 );
 
--- Create trigger to update updated_at
-CREATE TRIGGER update_inventory_updated_at 
-    BEFORE UPDATE ON inventory 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
-
 -- Create function to automatically create inventory record when product is created
 CREATE OR REPLACE FUNCTION create_default_inventory()
 RETURNS TRIGGER AS $$

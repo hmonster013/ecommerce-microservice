@@ -32,6 +32,16 @@ import java.util.UUID;
 @RestControllerAdvice("org.de013.userservice")
 @Slf4j
 public class UserExceptionHandler {
+    @ExceptionHandler(ProfileSyncException.class)
+    public ResponseEntity<ErrorResponse> handleProfileSync(ProfileSyncException ex, HttpServletRequest request) {
+        String traceId = generateTraceId();
+        log.warn("Profile operation failed [{}]: code={}, status={}", traceId, ex.getCode(), ex.getStatus().value());
+        ErrorResponse response = ErrorResponse.of(ex.getStatus().value(), ex.getStatus().getReasonPhrase(),
+                ex.getCode(), "Profile operation could not be completed", request.getRequestURI(), request.getMethod(), traceId);
+        if (!ex.getFields().isEmpty()) response = ErrorResponse.withMetadata(ex.getStatus().value(),
+                ex.getCode(), "Profile validation failed", request.getRequestURI(), new HashMap<>(ex.getFields()), traceId);
+        return ResponseEntity.status(ex.getStatus()).body(response);
+    }
 
     /**
      * Handle validation errors from @Valid annotations
@@ -186,19 +196,19 @@ public class UserExceptionHandler {
     }
 
     /**
-     * Handle username already exists exceptions
+     * Handle profile conflict exceptions
      */
-    @ExceptionHandler(UsernameAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleUsernameAlreadyExistsException(
-            UsernameAlreadyExistsException ex, HttpServletRequest request) {
+    @ExceptionHandler(ProfileConflictException.class)
+    public ResponseEntity<ErrorResponse> handleProfileConflictException(
+            ProfileConflictException ex, HttpServletRequest request) {
 
         String traceId = generateTraceId();
-        log.warn("Username already exists [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
+        log.warn("Profile conflict [{}] for {}: {}", traceId, request.getRequestURI(), ex.getMessage());
 
         ErrorResponse response = ErrorResponse.of(
                 HttpStatus.CONFLICT.value(),
                 HttpStatus.CONFLICT.getReasonPhrase(),
-                "USERNAME_ALREADY_EXISTS",
+                "PROFILE_CONFLICT",
                 ex.getMessage(),
                 request.getRequestURI(),
                 request.getMethod(),

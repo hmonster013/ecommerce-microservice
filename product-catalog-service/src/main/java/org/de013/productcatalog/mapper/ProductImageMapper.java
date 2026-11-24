@@ -13,20 +13,20 @@ public class ProductImageMapper {
     public ProductImageDto toProductImageDto(ProductImage image) {
         if (image == null) return null;
 
-        return ProductImageDto.builder()
-                .id(image.getId())
-                .url(image.getUrl())
-                .altText(image.getAltText())
-                .imageType(image.getImageType().name())
-                .displayOrder(image.getDisplayOrder())
-                .isActive(image.getIsActive())
-                .title(image.getTitle())
-                .description(image.getDescription())
-                .fileSize(image.getFileSize())
-                .dimensions(image.getDimensions())
-                .fileFormat(image.getFileFormat())
-                .variantId(image.getVariant() != null ? image.getVariant().getId() : null)
-                .build();
+        return new ProductImageDto(
+                image.getId(),
+                image.getUrl(),
+                image.getAltText(),
+                image.getImageType().name(),
+                image.getDisplayOrder(),
+                image.getIsActive(),
+                image.getTitle(),
+                image.getDescription(),
+                image.getFileSize(),
+                image.getDimensions(),
+                image.getFileFormat(),
+                image.getVariant() != null ? image.getVariant().getId() : null
+        );
     }
 
     public List<ProductImageDto> toProductImageDtos(List<ProductImage> images) {

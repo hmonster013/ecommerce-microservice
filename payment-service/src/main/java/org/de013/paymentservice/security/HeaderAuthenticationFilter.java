@@ -63,7 +63,7 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.contains("/actuator/") ||
+        return path.equals("/internal") || path.startsWith("/internal/") || path.contains("/actuator/") ||
                 path.contains("/swagger-ui") ||
                 path.contains("/v1/api-docs");
     }

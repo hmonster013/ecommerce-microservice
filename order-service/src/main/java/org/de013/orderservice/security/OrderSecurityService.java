@@ -35,7 +35,7 @@ public class OrderSecurityService {
         // Check if user owns the order
         try {
             OrderResponse order = orderService.getOrderById(orderId);
-            boolean isOwner = order.getUserId().equals(userContext.getUserId());
+            boolean isOwner = order.userId().equals(userContext.getUserId());
             log.debug("User {} {} access order {} (owner: {})",
                     userContext.getUsername(),
                     isOwner ? "granted" : "denied",

@@ -22,6 +22,8 @@ public interface CategoryService {
     // Listing Operations
     PageResponse<CategoryResponseDto> getAllCategories(Pageable pageable);
 
+    PageResponse<CategoryResponseDto> getAllCategories(Boolean activeOnly, Pageable pageable);
+
     List<CategorySummaryDto> getAllActiveCategories();
 
     List<CategorySummaryDto> getAllActiveCategoriesOrdered();

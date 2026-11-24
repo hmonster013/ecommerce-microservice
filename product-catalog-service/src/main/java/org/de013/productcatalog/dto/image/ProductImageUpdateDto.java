@@ -7,63 +7,58 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.*;
 import org.de013.productcatalog.entity.enums.ImageType;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Product image update request")
-public class ProductImageUpdateDto {
+public record ProductImageUpdateDto(
 
     @Size(max = 500, message = "{image.url.too.long}")
     @Pattern(regexp = "^https?://.*\\.(jpg|jpeg|png|gif|webp)$",
             message = "{image.url.invalid.format}")
     @Schema(description = "Image URL", example = "https://example.com/images/iphone-15-pro-main.jpg")
-    private String url;
+    String url,
 
     @Size(max = 255, message = "{image.alt.text.too.long}")
     @Schema(description = "Alt text for accessibility", example = "iPhone 15 Pro front view")
-    private String altText;
+    String altText,
 
     @Schema(description = "Image type", example = "MAIN")
-    private ImageType imageType;
+    ImageType imageType,
 
     @Min(value = 0, message = "{field.non.negative.required}")
     @Schema(description = "Display order", example = "1")
-    private Integer displayOrder;
+    Integer displayOrder,
 
     @Schema(description = "Is active", example = "true")
-    private Boolean isActive;
+    Boolean isActive,
 
     @Size(max = 255, message = "{image.title.too.long}")
     @Schema(description = "Image title", example = "iPhone 15 Pro")
-    private String title;
+    String title,
 
     @Size(max = 2000, message = "{image.description.too.long}")
     @Schema(description = "Image description", example = "Front view of iPhone 15 Pro showing the premium design")
-    private String description;
+    String description,
 
     @Size(max = 100, message = "{image.file.size.too.long}")
     @Pattern(regexp = "^\\d+(\\.\\d+)?(KB|MB|GB)$", message = "{image.file.size.invalid.format}")
     @Schema(description = "File size", example = "2.5MB")
-    private String fileSize;
+    String fileSize,
 
     @Size(max = 50, message = "{image.dimensions.too.long}")
     @Pattern(regexp = "^\\d+x\\d+$", message = "{image.dimensions.invalid.format}")
     @Schema(description = "Image dimensions", example = "1920x1080")
-    private String dimensions;
+    String dimensions,
 
     @Size(max = 10, message = "{image.file.format.too.long}")
     @Pattern(regexp = "^(JPG|JPEG|PNG|GIF|WEBP)$", message = "{image.file.format.invalid}")
     @Schema(description = "File format", example = "JPG")
-    private String fileFormat;
+    String fileFormat,
 
     @Schema(description = "Variant ID (if image is variant-specific)", example = "5")
-    private Long variantId;
+    Long variantId
+) {
 
     // Validation methods
     @JsonIgnore

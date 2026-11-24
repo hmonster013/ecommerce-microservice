@@ -21,6 +21,12 @@ spec:
         ports:
         - containerPort: 8085
         env:
+        - name: MANAGEMENT_SERVER_PORT
+          value: "9010"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "health,prometheus"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+          value: "true"
         - name: SPRING_PROFILES_ACTIVE
           valueFrom:
             configMapKeyRef:
@@ -48,11 +54,13 @@ spec:
             secretKeyRef:
               name: ecommerce-secret
               key: SPRING_DATASOURCE_PASSWORD
-        - name: KAFKA_BOOTSTRAP_SERVERS
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
           valueFrom:
             configMapKeyRef:
               name: ecommerce-configmap
-              key: KAFKA_BOOTSTRAP_SERVERS
+              key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+        - name: PAYMENT_NOTIFICATIONS_EVENTS_ENABLED
+          value: "false"
         - name: RABBITMQ_HOST
           valueFrom:
             configMapKeyRef:
@@ -160,14 +168,14 @@ spec:
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
-            port: 8085
+            port: 9010
           initialDelaySeconds: 120
           periodSeconds: 10
           failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
-            port: 8085
+            port: 9010
           initialDelaySeconds: 90
           periodSeconds: 5
           failureThreshold: 5
@@ -181,6 +189,11 @@ spec:
     app: payment-service
   type: ClusterIP
   ports:
-    - protocol: TCP
+    - name: application
+      protocol: TCP
       port: 8085
       targetPort: 8085
+    - name: management
+      protocol: TCP
+      port: 9010
+      targetPort: 9010

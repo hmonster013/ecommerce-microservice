@@ -56,7 +56,7 @@ public class FeignRequestInterceptor implements RequestInterceptor {
         String correlationId = generateCorrelationId();
         template.header("X-Correlation-ID", correlationId);
 
-        log.debug("Added headers to Feign request: {}", template.headers());
+        log.debug("Prepared outbound payment service request with correlation context");
     }
 
     private String generateCorrelationId() {

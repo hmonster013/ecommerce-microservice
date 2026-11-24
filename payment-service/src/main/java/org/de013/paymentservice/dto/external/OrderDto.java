@@ -17,6 +17,8 @@ public class OrderDto {
     private MoneyDto totalAmount;
     private String currency;
     private String status;
+    private Boolean inventoryReady;
+    private Boolean paymentRetryEligible;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

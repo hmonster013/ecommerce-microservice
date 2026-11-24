@@ -30,6 +30,8 @@ public class PaymentGatewayConfig {
         private String apiVersion = "2023-10-16";
         private String successUrl;
         private String cancelUrl;
+        // Absolute frontend /checkout/result URL, supplied by Config Server/environment.
+        private String checkoutReturnUrl;
     }
 
     @Data

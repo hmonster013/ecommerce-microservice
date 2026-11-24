@@ -10,11 +10,15 @@ import org.de013.productcatalog.entity.Product;
 import org.de013.productcatalog.entity.ProductVariant;
 import org.de013.productcatalog.entity.VariantInventory;
 import org.de013.productcatalog.entity.enums.VariantType;
+import org.de013.productcatalog.exception.InsufficientStockException;
+import org.de013.productcatalog.exception.InvalidStockQuantityException;
 import org.de013.productcatalog.mapper.VariantInventoryMapper;
 import org.de013.productcatalog.repository.ProductRepository;
 import org.de013.productcatalog.repository.ProductVariantRepository;
 import org.de013.productcatalog.repository.VariantInventoryRepository;
 import org.de013.productcatalog.service.VariantInventoryService;
+import org.de013.productcatalog.service.support.InventoryCacheInvalidator;
+import org.de013.productcatalog.service.support.DurableReservationGuard;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -34,37 +38,39 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
     private final ProductVariantRepository variantRepository;
     private final ProductRepository productRepository;
     private final VariantInventoryMapper variantInventoryMapper;
+    private final InventoryCacheInvalidator cacheInvalidator;
+    private final DurableReservationGuard durableReservationGuard;
 
     @Override
     @Transactional
     public VariantInventoryDto createVariantInventory(VariantInventoryCreateDto createDto) {
-        log.info("Creating variant inventory for variant ID: {}", createDto.getVariantId());
+        log.info("Creating variant inventory for variant ID: {}", createDto.variantId());
 
         validateVariantInventoryData(createDto);
 
         // Find variant and product
-        ProductVariant variant = findVariantById(createDto.getVariantId());
+        ProductVariant variant = findVariantById(createDto.variantId());
         Product product = variant.getProduct();
 
         // Check if inventory already exists
-        if (variantInventoryRepository.findByVariantId(createDto.getVariantId()).isPresent()) {
-            throw new IllegalArgumentException("Inventory already exists for variant ID: " + createDto.getVariantId());
+        if (variantInventoryRepository.findByVariantId(createDto.variantId()).isPresent()) {
+            throw new IllegalArgumentException("Inventory already exists for variant ID: " + createDto.variantId());
         }
 
         // Create variant inventory
         VariantInventory variantInventory = VariantInventory.builder()
                 .variant(variant)
                 .product(product)
-                .quantity(createDto.getInitialQuantity() != null ? createDto.getInitialQuantity() : 0)
+                .quantity(createDto.initialQuantity())
                 .reservedQuantity(0)
-                .minStockLevel(createDto.getMinStockLevel())
-                .maxStockLevel(createDto.getMaxStockLevel())
-                .reorderPoint(createDto.getReorderPoint())
-                .reorderQuantity(createDto.getReorderQuantity())
-                .trackInventory(createDto.getTrackInventory())
-                .allowBackorder(createDto.getAllowBackorder())
-                .location(createDto.getLocation())
-                .sku(createDto.getSku())
+                .minStockLevel(createDto.minStockLevel())
+                .maxStockLevel(createDto.maxStockLevel())
+                .reorderPoint(createDto.reorderPoint())
+                .reorderQuantity(createDto.reorderQuantity())
+                .trackInventory(createDto.trackInventory())
+                .allowBackorder(createDto.allowBackorder())
+                .location(createDto.location())
+                .sku(createDto.sku())
                 .build();
 
         variantInventory = variantInventoryRepository.save(variantInventory);
@@ -75,41 +81,40 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "variantInventory", key = "#variantId")
     public VariantInventoryDto updateVariantInventory(Long variantId, VariantInventoryUpdateDto updateDto) {
         log.info("Updating variant inventory for variant ID: {}", variantId);
 
+        VariantInventory variantInventory = lockVariantInventoryByVariantId(variantId);
         validateVariantInventoryData(updateDto, variantId);
 
-        VariantInventory variantInventory = findVariantInventoryByVariantId(variantId);
-
         // Update fields if provided
-        if (updateDto.getMinStockLevel() != null) {
-            variantInventory.setMinStockLevel(updateDto.getMinStockLevel());
+        if (updateDto.minStockLevel() != null) {
+            variantInventory.setMinStockLevel(updateDto.minStockLevel());
         }
-        if (updateDto.getMaxStockLevel() != null) {
-            variantInventory.setMaxStockLevel(updateDto.getMaxStockLevel());
+        if (updateDto.maxStockLevel() != null) {
+            variantInventory.setMaxStockLevel(updateDto.maxStockLevel());
         }
-        if (updateDto.getReorderPoint() != null) {
-            variantInventory.setReorderPoint(updateDto.getReorderPoint());
+        if (updateDto.reorderPoint() != null) {
+            variantInventory.setReorderPoint(updateDto.reorderPoint());
         }
-        if (updateDto.getReorderQuantity() != null) {
-            variantInventory.setReorderQuantity(updateDto.getReorderQuantity());
+        if (updateDto.reorderQuantity() != null) {
+            variantInventory.setReorderQuantity(updateDto.reorderQuantity());
         }
-        if (updateDto.getTrackInventory() != null) {
-            variantInventory.setTrackInventory(updateDto.getTrackInventory());
+        if (updateDto.trackInventory() != null) {
+            variantInventory.setTrackInventory(updateDto.trackInventory());
         }
-        if (updateDto.getAllowBackorder() != null) {
-            variantInventory.setAllowBackorder(updateDto.getAllowBackorder());
+        if (updateDto.allowBackorder() != null) {
+            variantInventory.setAllowBackorder(updateDto.allowBackorder());
         }
-        if (updateDto.getLocation() != null) {
-            variantInventory.setLocation(updateDto.getLocation());
+        if (updateDto.location() != null) {
+            variantInventory.setLocation(updateDto.location());
         }
-        if (updateDto.getSku() != null) {
-            variantInventory.setSku(updateDto.getSku());
+        if (updateDto.sku() != null) {
+            variantInventory.setSku(updateDto.sku());
         }
 
         variantInventory = variantInventoryRepository.save(variantInventory);
+        cacheInvalidator.variantChanged(variantId);
         log.info("Variant inventory updated successfully for variant ID: {}", variantId);
 
         return variantInventoryMapper.toVariantInventoryDto(variantInventory);
@@ -117,12 +122,12 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "variantInventory", key = "#variantId")
     public void deleteVariantInventory(Long variantId) {
         log.info("Deleting variant inventory for variant ID: {}", variantId);
 
-        VariantInventory variantInventory = findVariantInventoryByVariantId(variantId);
+        VariantInventory variantInventory = lockVariantInventoryByVariantId(variantId);
         variantInventoryRepository.delete(variantInventory);
+        cacheInvalidator.variantChanged(variantId);
 
         log.info("Variant inventory deleted successfully for variant ID: {}", variantId);
     }
@@ -208,6 +213,17 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Variant inventory not found for variant ID: " + variantId));
     }
 
+    private VariantInventory lockVariantInventoryByVariantId(Long variantId) {
+        return variantInventoryRepository.findByVariantIdForUpdate(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Variant inventory not found for variant ID: " + variantId));
+    }
+
+    private void requirePositiveQuantity(Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new InvalidStockQuantityException("Quantity must be positive");
+        }
+    }
+
     private ProductVariant findVariantById(Long variantId) {
         return variantRepository.findById(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product variant not found with ID: " + variantId));
@@ -216,16 +232,16 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
     // Validation methods
     @Override
     public void validateVariantInventoryData(VariantInventoryCreateDto createDto) {
-        log.debug("Validating variant inventory data for variant ID: {}", createDto.getVariantId());
+        log.debug("Validating variant inventory data for variant ID: {}", createDto.variantId());
 
         // Check if variant exists
-        if (!variantRepository.existsById(createDto.getVariantId())) {
-            throw new ResourceNotFoundException("Product variant not found with ID: " + createDto.getVariantId());
+        if (!variantRepository.existsById(createDto.variantId())) {
+            throw new ResourceNotFoundException("Product variant not found with ID: " + createDto.variantId());
         }
 
         // Validate SKU uniqueness if provided
-        if (StringUtils.hasText(createDto.getSku()) && !isSkuUnique(createDto.getSku())) {
-            throw new IllegalArgumentException("SKU already exists: " + createDto.getSku());
+        if (StringUtils.hasText(createDto.sku()) && !isSkuUnique(createDto.sku())) {
+            throw new IllegalArgumentException("SKU already exists: " + createDto.sku());
         }
 
         // Validate stock levels
@@ -243,8 +259,8 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
         log.debug("Validating variant inventory update data for variant ID: {}", variantId);
 
         // Validate SKU uniqueness if provided
-        if (StringUtils.hasText(updateDto.getSku()) && !isSkuUnique(updateDto.getSku(), variantId)) {
-            throw new IllegalArgumentException("SKU already exists: " + updateDto.getSku());
+        if (StringUtils.hasText(updateDto.sku()) && !isSkuUnique(updateDto.sku(), variantId)) {
+            throw new IllegalArgumentException("SKU already exists: " + updateDto.sku());
         }
 
         // Validate stock levels
@@ -270,9 +286,9 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
 
     // Cache operations
     @Override
-    @CacheEvict(value = "variantInventory", key = "#variantId")
     public void clearVariantInventoryCache(Long variantId) {
         log.debug("Clearing variant inventory cache for variant ID: {}", variantId);
+        cacheInvalidator.variantChanged(variantId);
     }
 
     @Override
@@ -284,18 +300,21 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
     // Stock Management Operations
     @Override
     @Transactional
-    @CacheEvict(value = "variantInventory", key = "#variantId")
     public VariantInventoryDto addStock(Long variantId, Integer quantity) {
         log.info("Adding {} stock to variant ID: {}", quantity, variantId);
 
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be positive");
+        if (quantity == null || quantity <= 0) {
+            throw new InvalidStockQuantityException("Quantity must be positive");
         }
 
-        VariantInventory variantInventory = findVariantInventoryByVariantId(variantId);
+        VariantInventory variantInventory = lockVariantInventoryByVariantId(variantId);
+        if (quantity > Integer.MAX_VALUE - variantInventory.getQuantity()) {
+            throw new InvalidStockQuantityException("Stock quantity exceeds the supported maximum");
+        }
         variantInventory.addStock(quantity);
 
         variantInventory = variantInventoryRepository.save(variantInventory);
+        cacheInvalidator.variantChanged(variantId);
         log.info("Added {} stock to variant ID: {}, new quantity: {}", quantity, variantId, variantInventory.getQuantity());
 
         return variantInventoryMapper.toVariantInventoryDto(variantInventory);
@@ -303,18 +322,21 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "variantInventory", key = "#variantId")
     public VariantInventoryDto removeStock(Long variantId, Integer quantity) {
         log.info("Removing {} stock from variant ID: {}", quantity, variantId);
 
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be positive");
+        if (quantity == null || quantity <= 0) {
+            throw new InvalidStockQuantityException("Quantity must be positive");
         }
 
-        VariantInventory variantInventory = findVariantInventoryByVariantId(variantId);
+        VariantInventory variantInventory = lockVariantInventoryByVariantId(variantId);
+        if (quantity > variantInventory.getQuantity() - variantInventory.getReservedQuantity()) {
+            throw new InsufficientStockException("Cannot remove reserved stock");
+        }
         variantInventory.removeStock(quantity);
 
         variantInventory = variantInventoryRepository.save(variantInventory);
+        cacheInvalidator.variantChanged(variantId);
         log.info("Removed {} stock from variant ID: {}, new quantity: {}", quantity, variantId, variantInventory.getQuantity());
 
         return variantInventoryMapper.toVariantInventoryDto(variantInventory);
@@ -322,18 +344,21 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "variantInventory", key = "#variantId")
     public VariantInventoryDto setStock(Long variantId, Integer quantity) {
         log.info("Setting stock to {} for variant ID: {}", quantity, variantId);
 
-        if (quantity < 0) {
-            throw new IllegalArgumentException("Quantity cannot be negative");
+        if (quantity == null || quantity < 0) {
+            throw new InvalidStockQuantityException("Quantity must be non-negative");
         }
 
-        VariantInventory variantInventory = findVariantInventoryByVariantId(variantId);
+        VariantInventory variantInventory = lockVariantInventoryByVariantId(variantId);
+        if (quantity < variantInventory.getReservedQuantity()) {
+            throw new InsufficientStockException("Stock quantity cannot be less than reserved quantity");
+        }
         variantInventory.setQuantity(quantity);
 
         variantInventory = variantInventoryRepository.save(variantInventory);
+        cacheInvalidator.variantChanged(variantId);
         log.info("Set stock to {} for variant ID: {}", quantity, variantId);
 
         return variantInventoryMapper.toVariantInventoryDto(variantInventory);
@@ -345,6 +370,7 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
     public boolean reserveStock(Long variantId, Integer quantity) {
         log.info("Reserving {} stock for variant ID: {}", quantity, variantId);
 
+        requirePositiveQuantity(quantity);
         try {
             int updated = variantInventoryRepository.reserveStock(variantId, quantity);
             boolean success = updated > 0;
@@ -368,6 +394,8 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
     public boolean releaseReservedStock(Long variantId, Integer quantity) {
         log.info("Releasing {} reserved stock for variant ID: {}", quantity, variantId);
 
+        requirePositiveQuantity(quantity);
+        durableReservationGuard.rejectLegacyMutation(true, variantId);
         try {
             int updated = variantInventoryRepository.releaseReservedStock(variantId, quantity);
             boolean success = updated > 0;
@@ -391,6 +419,8 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
     public boolean fulfillOrder(Long variantId, Integer quantity) {
         log.info("Fulfilling order of {} for variant ID: {}", quantity, variantId);
 
+        requirePositiveQuantity(quantity);
+        durableReservationGuard.rejectLegacyMutation(true, variantId);
         try {
             int updated = variantInventoryRepository.fulfillOrder(variantId, quantity);
             boolean success = updated > 0;
@@ -483,13 +513,13 @@ public class VariantInventoryServiceImpl implements VariantInventoryService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "variantInventory", key = "#variantId")
     public void updateVariantLocation(Long variantId, String location) {
         log.info("Updating location to '{}' for variant ID: {}", location, variantId);
 
-        VariantInventory variantInventory = findVariantInventoryByVariantId(variantId);
+        VariantInventory variantInventory = lockVariantInventoryByVariantId(variantId);
         variantInventory.setLocation(location);
         variantInventoryRepository.save(variantInventory);
+        cacheInvalidator.variantChanged(variantId);
 
         log.info("Updated location for variant ID: {}", variantId);
     }

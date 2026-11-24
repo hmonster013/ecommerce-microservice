@@ -51,7 +51,3 @@ ALTER TABLE payment_methods ADD CONSTRAINT chk_payment_methods_expiry_year_valid
 
 -- Ensure only one default payment method per user
 CREATE UNIQUE INDEX idx_payment_methods_user_default ON payment_methods(user_id) WHERE is_default = TRUE AND is_active = TRUE;
-
--- Create trigger to update updated_at timestamp
-CREATE TRIGGER update_payment_methods_updated_at BEFORE UPDATE ON payment_methods
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

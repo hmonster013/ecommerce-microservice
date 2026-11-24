@@ -166,10 +166,7 @@ public class OrderValidationService {
         try {
             log.info("Updating order status: orderId={}, status={}, reason={}", orderId, status, reason);
 
-            OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
-            request.setStatus(status);
-            request.setReason(reason);
-            request.setUpdatedBy("PAYMENT_SERVICE");
+            OrderStatusUpdateRequest request = new OrderStatusUpdateRequest(status, reason, "PAYMENT_SERVICE");
 
             ResponseEntity<Void> response = orderServiceClient.updateOrderStatus(orderId, request);
 

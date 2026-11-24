@@ -9,10 +9,12 @@ import org.de013.productcatalog.dto.product.ProductSummaryDto;
 import org.de013.productcatalog.entity.Product;
 import org.de013.productcatalog.entity.ProductCategory;
 import org.de013.productcatalog.entity.ProductImage;
+import org.de013.productcatalog.entity.enums.ImageType;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -204,10 +206,16 @@ public class ProductMapper {
             return null;
         }
         return product.getImages().stream()
-                .filter(img -> "MAIN".equals(img.getImageType().name()) && img.getIsActive())
-                .findFirst()
+                .filter(img -> img.getImageType() == ImageType.MAIN && Boolean.TRUE.equals(img.getIsActive()))
+                .sorted(Comparator.comparing(ProductImage::getDisplayOrder, Comparator.nullsLast(Integer::compareTo)))
                 .map(ProductImage::getUrl)
-                .orElse(product.getImages().get(0).getUrl());
+                .findFirst()
+                .or(() -> product.getImages().stream()
+                        .filter(img -> Boolean.TRUE.equals(img.getIsActive()))
+                        .sorted(Comparator.comparing(ProductImage::getDisplayOrder, Comparator.nullsLast(Integer::compareTo)))
+                        .map(ProductImage::getUrl)
+                        .findFirst())
+                .orElse(null);
     }
 
     private String getPrimaryCategoryName(Product product) {
@@ -251,10 +259,16 @@ public class ProductMapper {
         }
 
         return product.getImages().stream()
-                .filter(img -> "MAIN".equals(img.getImageType().name()) && img.getIsActive())
-                .findFirst()
+                .filter(img -> img.getImageType() == ImageType.MAIN && Boolean.TRUE.equals(img.getIsActive()))
+                .sorted(Comparator.comparing(ProductImage::getDisplayOrder, Comparator.nullsLast(Integer::compareTo)))
                 .map(productImageMapper::toProductImageDto)
-                .orElse(productImageMapper.toProductImageDto(product.getImages().get(0)));
+                .findFirst()
+                .or(() -> product.getImages().stream()
+                        .filter(img -> Boolean.TRUE.equals(img.getIsActive()))
+                        .sorted(Comparator.comparing(ProductImage::getDisplayOrder, Comparator.nullsLast(Integer::compareTo)))
+                        .map(productImageMapper::toProductImageDto)
+                        .findFirst())
+                .orElse(null);
     }
 }
 

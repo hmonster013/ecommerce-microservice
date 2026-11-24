@@ -12,19 +12,31 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.de013.notificationservice.dto.*;
+import org.de013.notificationservice.dto.BothNotificationRequest;
+import org.de013.notificationservice.dto.BothNotificationResponse;
+import org.de013.notificationservice.dto.EmailNotificationRequest;
+import org.de013.notificationservice.dto.NotificationResponse;
+import org.de013.notificationservice.dto.SmsNotificationRequest;
 import org.de013.notificationservice.entity.Notification;
+import org.de013.notificationservice.entity.enums.NotificationStatus;
+import java.time.LocalDateTime;
+import org.de013.notificationservice.security.HeaderAuthenticationFilter.HeaderUserDetails;
 import org.de013.notificationservice.service.NotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 /**
  * Simple REST Controller for Notification operations
@@ -80,7 +92,7 @@ public class NotificationController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Email sent successfully",
+                    description = "Email submitted to provider",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = NotificationResponse.class)
@@ -93,27 +105,25 @@ public class NotificationController {
             @Valid @RequestBody EmailNotificationRequest request) {
 
         try {
-            log.info("Sending email to: {}, subject: {}", request.getTo(), request.getSubject());
+
 
             Notification notification = notificationService.sendEmail(
-                    request.getUserId(),
-                    request.getTo(),
-                    request.getSubject(),
-                    request.getMessage()
+                    request.userId(),
+                    request.to(),
+                    request.subject(),
+                    request.message()
             );
 
-            NotificationResponse response = NotificationResponse.success(
-                    "Email sent successfully",
-                    notification.getId(),
-                    notification.getStatus().toString()
-            );
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            boolean submitted = notification.getStatus() == NotificationStatus.SENT;
+            NotificationResponse response = new NotificationResponse(submitted,
+                    submitted ? "Email submitted to provider" : "Email submission failed",
+                    notification.getId(), notification.getStatus().toString(), LocalDateTime.now());
+            return ResponseEntity.status(submitted ? HttpStatus.CREATED : HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 
         } catch (Exception e) {
-            log.error("Error sending email: {}", e.getMessage(), e);
+            log.error("Error processing email notification");
             NotificationResponse response = NotificationResponse.error(
-                    "Failed to send email: " + e.getMessage()
+                    "Failed to process email notification"
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
@@ -127,7 +137,7 @@ public class NotificationController {
             summary = "Send SMS notification",
             description = """
                     Send an SMS notification to a user. This endpoint accepts SMS details and sends
-                    the notification via Twilio (or mock mode for development). The notification status is tracked in the database.
+                    the notification via a configured provider. The notification status is tracked in the database.
                     
                     **Required fields:**
                     - phoneNumber: Valid phone number (E.164 format recommended)
@@ -158,7 +168,7 @@ public class NotificationController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "SMS sent successfully",
+                    description = "SMS submitted to provider",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = NotificationResponse.class)
@@ -171,26 +181,24 @@ public class NotificationController {
             @Valid @RequestBody SmsNotificationRequest request) {
 
         try {
-            log.info("Sending SMS to: {}", request.getPhoneNumber());
+
 
             Notification notification = notificationService.sendSms(
-                    request.getUserId(),
-                    request.getPhoneNumber(),
-                    request.getMessage()
+                    request.userId(),
+                    request.phoneNumber(),
+                    request.message()
             );
 
-            NotificationResponse response = NotificationResponse.success(
-                    "SMS sent successfully",
-                    notification.getId(),
-                    notification.getStatus().toString()
-            );
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            boolean submitted = notification.getStatus() == NotificationStatus.SENT;
+            NotificationResponse response = new NotificationResponse(submitted,
+                    submitted ? "SMS submitted to provider" : "SMS submission failed",
+                    notification.getId(), notification.getStatus().toString(), LocalDateTime.now());
+            return ResponseEntity.status(submitted ? HttpStatus.CREATED : HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 
         } catch (Exception e) {
-            log.error("Error sending SMS: {}", e.getMessage(), e);
+            log.error("Error processing SMS notification");
             NotificationResponse response = NotificationResponse.error(
-                    "Failed to send SMS: " + e.getMessage()
+                    "Failed to process SMS notification"
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
@@ -239,7 +247,7 @@ public class NotificationController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Both notifications sent successfully",
+                    description = "Both notifications submitted to providers",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = BothNotificationResponse.class)
@@ -252,28 +260,28 @@ public class NotificationController {
             @Valid @RequestBody BothNotificationRequest request) {
 
         try {
-            log.info("Sending both email and SMS to user: {}", request.getUserId());
+
 
             List<Notification> notifications = notificationService.sendBoth(
-                    request.getUserId(),
-                    request.getEmail(),
-                    request.getPhoneNumber(),
-                    request.getSubject(),
-                    request.getMessage()
+                    request.userId(),
+                    request.email(),
+                    request.phoneNumber(),
+                    request.subject(),
+                    request.message()
             );
 
-            BothNotificationResponse response = BothNotificationResponse.success(
-                    "Both notifications sent successfully",
-                    notifications.get(0).getId(), notifications.get(0).getStatus().toString(),
-                    notifications.get(1).getId(), notifications.get(1).getStatus().toString()
-            );
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            Notification email = notifications.get(0);
+            Notification sms = notifications.get(1);
+            boolean submitted = email.getStatus() == NotificationStatus.SENT && sms.getStatus() == NotificationStatus.SENT;
+            BothNotificationResponse response = new BothNotificationResponse(submitted,
+                    submitted ? "Both notifications submitted to providers" : "Notification submission failed",
+                    email.getId(), sms.getId(), email.getStatus().toString(), sms.getStatus().toString(), LocalDateTime.now());
+            return ResponseEntity.status(submitted ? HttpStatus.CREATED : HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 
         } catch (Exception e) {
-            log.error("Error sending both notifications: {}", e.getMessage(), e);
+            log.error("Error processing both notifications notification");
             BothNotificationResponse response = BothNotificationResponse.error(
-                    "Failed to send notifications: " + e.getMessage()
+                    "Failed to process notifications"
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
@@ -332,25 +340,94 @@ public class NotificationController {
 
         log.debug("Getting notification with id={}", id);
 
+        if (getCurrentUserDetails() == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "message", "Access denied"));
+        }
         return notificationService.findById(id)
                 .map(notification -> {
+                    if (!isCurrentUserOrAdmin(notification.getUserId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).<Map<String, Object>>body(Map.of("success", false, "message", "Access denied"));
+                    }
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("id", notification.getId());
+                    data.put("userId", notification.getUserId());
+                    data.put("channel", notification.getChannel().toString());
+                    data.put("recipient", notification.getRecipient());
+                    data.put("subject", notification.getSubject() != null ? notification.getSubject() : "");
+                    data.put("content", notification.getContent());
+                    data.put("status", notification.getStatus().toString());
+                    data.put("createdAt", notification.getCreatedAt());
+                    data.put("sentAt", notification.getSentAt());
                     Map<String, Object> response = Map.of(
                             "success", true,
-                            "notification", Map.of(
-                                    "id", notification.getId(),
-                                    "userId", notification.getUserId(),
-                                    "channel", notification.getChannel().toString(),
-                                    "recipient", notification.getRecipient(),
-                                    "subject", notification.getSubject() != null ? notification.getSubject() : "",
-                                    "content", notification.getContent(),
-                                    "status", notification.getStatus().toString(),
-                                    "createdAt", notification.getCreatedAt(),
-                                    "sentAt", notification.getSentAt()
-                            )
+                            "notification", data
                     );
                     return ResponseEntity.ok(response);
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Helper methods for security & context
+     */
+    private HeaderUserDetails getCurrentUserDetails() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getDetails() instanceof HeaderUserDetails details && StringUtils.hasText(details.getKeycloakId())) {
+            return details;
+        }
+        return null;
+    }
+
+    private String getCurrentUserKeycloakId() {
+        HeaderUserDetails details = getCurrentUserDetails();
+        return details != null ? details.getKeycloakId() : null;
+    }
+
+    private boolean isCurrentUserOrAdmin(String targetUserId) {
+        HeaderUserDetails details = getCurrentUserDetails();
+        if (details == null) {
+            return false;
+        }
+        if (details.getKeycloakId().equals(targetUserId)) {
+            return true;
+        }
+        List<String> roles = details.getRoles();
+        return roles != null && (roles.contains("ROLE_ADMIN") || roles.contains("ADMIN") ||
+                roles.contains("ROLE_SUPPORT") || roles.contains("SUPPORT"));
+    }
+
+    /**
+     * Get notifications for currently authenticated user
+     */
+    @GetMapping("/me")
+    @Operation(summary = "Get current user notifications", description = "Retrieve paginated notifications for authenticated user")
+    public ResponseEntity<Map<String, Object>> getMyNotifications(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size) {
+        String currentUserId = getCurrentUserKeycloakId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "success", false,
+                    "message", "User context is missing"
+            ));
+        }
+        return getUserNotifications(currentUserId, page, size);
+    }
+
+    /**
+     * Get unread notification count for currently authenticated user
+     */
+    @GetMapping("/me/unread-count")
+    @Operation(summary = "Get current user unread notification count", description = "Retrieve unread notification count for authenticated user")
+    public ResponseEntity<Map<String, Object>> getMyUnreadCount() {
+        String currentUserId = getCurrentUserKeycloakId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "success", false,
+                    "message", "User context is missing"
+            ));
+        }
+        return getUnreadCount(currentUserId);
     }
 
     /**
@@ -390,6 +467,14 @@ public class NotificationController {
 
         log.debug("Getting notifications for user={}, page={}, size={}", userId, page, size);
 
+        if (!isCurrentUserOrAdmin(userId)) {
+            log.warn("Access denied: user {} attempted to access notifications for user {}", getCurrentUserKeycloakId(), userId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "success", false,
+                    "message", "Access denied"
+            ));
+        }
+
         try {
             // Limit page size to prevent abuse
             int limitedSize = Math.min(size, 100);
@@ -398,7 +483,7 @@ public class NotificationController {
 
             List<Map<String, Object>> notificationList = notifications.getContent().stream()
                     .map(notification -> {
-                        Map<String, Object> map = new java.util.HashMap<>();
+                        Map<String, Object> map = new HashMap<>();
                         map.put("id", notification.getId());
                         map.put("channel", notification.getChannel().toString());
                         map.put("recipient", notification.getRecipient());
@@ -411,14 +496,14 @@ public class NotificationController {
                     })
                     .toList();
 
-            Map<String, Object> response = Map.of(
-                    "success", true,
-                    "notifications", notificationList,
-                    "totalElements", notifications.getTotalElements(),
-                    "totalPages", notifications.getTotalPages(),
-                    "currentPage", page,
-                    "pageSize", limitedSize
-            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("notifications", notificationList);
+            response.put("totalElements", notifications.getTotalElements());
+            response.put("totalItems", notifications.getTotalElements());
+            response.put("totalPages", notifications.getTotalPages());
+            response.put("currentPage", page);
+            response.put("pageSize", limitedSize);
 
             return ResponseEntity.ok(response);
 
@@ -462,9 +547,31 @@ public class NotificationController {
             @Parameter(description = "Notification ID", example = "123", required = true)
             @PathVariable Long id) {
 
+        if (getCurrentUserDetails() == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "message", "Access denied"));
+        }
         log.info("Marking notification as read: id={}", id);
 
         try {
+            Optional<Notification> notificationOpt = notificationService.findById(id);
+            if (notificationOpt.isEmpty()) {
+                log.warn("Notification not found while marking as read: id={}", id);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                        "success", false,
+                        "message", "Notification not found: " + id
+                ));
+            }
+
+            Notification notification = notificationOpt.get();
+            if (!isCurrentUserOrAdmin(notification.getUserId())) {
+                log.warn("Access denied: user {} attempted to mark notification {} (owned by {}) as read",
+                        getCurrentUserKeycloakId(), id, notification.getUserId());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "success", false,
+                        "message", "Access denied"
+                ));
+            }
+
             notificationService.markAsRead(id);
             Map<String, Object> response = Map.of(
                     "success", true,
@@ -532,12 +639,20 @@ public class NotificationController {
 
         log.debug("Getting unread count for user={}", userId);
 
+        if (!isCurrentUserOrAdmin(userId)) {
+            log.warn("Access denied: user {} attempted to access unread count for user {}", getCurrentUserKeycloakId(), userId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "success", false,
+                    "message", "Access denied"
+            ));
+        }
+
         try {
             long unreadCount = notificationService.countUnreadByUserId(userId);
-            Map<String, Object> response = Map.of(
-                    "success", true,
-                    "unreadCount", unreadCount
-            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("unreadCount", unreadCount);
+            response.put("count", unreadCount);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {

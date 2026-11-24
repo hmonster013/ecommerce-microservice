@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Note: integration tests use Testcontainers, which start their own Postgres
-    # per service — no shared service container is needed here.
+    # per service; no shared service container is needed here.
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -27,17 +27,58 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Check native test prerequisites
+        run: |
+          docker info > /dev/null
+          pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+
+      # Artifact tests launch JARs from this and later reactor modules.
+      # Packaging prepares them; only verify establishes test results. Do not clean again.
+      - name: Prepare runtime artifacts
+        run: ./mvnw -B clean package -DskipTests
+
       - name: Build and Test with Maven
-        run: ./mvnw -B clean verify
+        run: ./mvnw -B verify -fae
         env:
           SPRING_PROFILES_ACTIVE: test
 
-      - name: Upload Surefire Test Reports
+      - name: Preserve full reactor test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reactor-test-reports
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
+
+      - name: Produce Kafka contract captures
+        run: |
+          mkdir -p "$RUNNER_TEMP/contracts"
+          ./mvnw -B -pl payment-service -am test \
+            -Dtest=PaymentOutboxRelayTest#brokerReceivesStablePayloadAndPublishedOnlyAfterAck,PaymentNotificationRelayTest#brokerReceivesStablePayloadAndPublishedOnlyAfterAck \
+            -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dpayment.contract.capture="$RUNNER_TEMP/contracts/payment.json" \
+            -Dnotification.contract.capture="$RUNNER_TEMP/contracts/notification.json"
+          test -s "$RUNNER_TEMP/contracts/payment.json"
+          test -s "$RUNNER_TEMP/contracts/notification.json"
+          sha256sum "$RUNNER_TEMP/contracts/"*.json > "$RUNNER_TEMP/contracts/before.sha256"
+      - name: Consume unchanged captures through real Kafka
+        run: |
+          ./mvnw -B -pl order-service,notification-service -am test \
+            -Dtest=PaymentKafkaTest#capturedPaymentRelayPayloadIsAcceptedAndReplayIsIdempotent,PaymentEmailKafkaIntegrationTest#producerCapturePassesUnchangedThroughKafka \
+            -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dpayment.contract.capture="$RUNNER_TEMP/contracts/payment.json" \
+            -Dnotification.contract.capture="$RUNNER_TEMP/contracts/notification.json"
+          sha256sum --check "$RUNNER_TEMP/contracts/before.sha256"
+
+      - name: Upload contract failure test reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: surefire-reports
-          path: '**/target/surefire-reports/'
+          name: contract-failure-test-reports
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
 
       - name: Upload Coverage Report (JaCoCo)
         uses: actions/upload-artifact@v4

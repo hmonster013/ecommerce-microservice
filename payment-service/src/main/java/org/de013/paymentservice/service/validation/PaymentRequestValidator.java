@@ -8,6 +8,7 @@ import org.de013.paymentservice.client.UserServiceClient;
 import org.de013.paymentservice.dto.external.OrderDto;
 import org.de013.paymentservice.dto.external.UserValidationResponse;
 import org.de013.paymentservice.dto.payment.ProcessPaymentRequest;
+import org.de013.paymentservice.entity.enums.Currency;
 import org.de013.paymentservice.exception.PaymentProcessingException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -49,19 +50,35 @@ public class PaymentRequestValidator {
         }
 
         // Validate with Order Service (amount-tampering protection + non-payable state)
-        validatePaymentAmount(request.getOrderId(), request.getAmount());
+        validatePaymentAmount(request.getOrderId(), request.getAmount(), request.getCurrency(), request.getUserId());
 
         // Validate with User Service (fail-closed: blocked / high-risk user)
         validateUserCanMakePayment(request.getUserId());
     }
 
     public void validatePaymentAmount(Long orderId, BigDecimal amount) {
-        log.info("Validating payment amount {} for order {}", amount, orderId);
+        validatePaymentAmount(orderId, amount, null);
+    }
+
+    public void validatePaymentAmount(Long orderId, BigDecimal amount, Currency currency) {
+        validatePaymentAmount(orderId, amount, currency, null);
+    }
+
+    public void validatePaymentAmount(Long orderId, BigDecimal amount, Currency currency, String userId) {
+        log.info("Validating payment amount {} (currency: {}) for order {}", amount, currency, orderId);
         try {
             ResponseEntity<OrderDto> response = orderServiceClient.getOrderById(orderId);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 OrderDto order = response.getBody();
 
+                if (userId != null && (!orderId.equals(order.getId()) || order.getUserId() == null
+                        || order.getUserId().isBlank() || !order.getUserId().equals(userId))) {
+                    throw new PaymentProcessingException("Order identity or owner does not match payment request");
+                }
+
+                if (Boolean.FALSE.equals(order.getInventoryReady())) {
+                    throw new ConflictException("Order inventory is not ready: " + orderId);
+                }
                 // Business rule validation: Do not allow payment for an order in a non-payable state
                 if ("PAID".equals(order.getStatus()) || "COMPLETED".equals(order.getStatus())) {
                     log.error("Order {} is already paid or completed. Status: {}", orderId, order.getStatus());
@@ -77,6 +94,18 @@ public class PaymentRequestValidator {
                     log.error("Payment amount mismatch: request amount={}, order total={}", amount, orderTotal);
                     throw new PaymentProcessingException("Payment amount mismatch. Required: " + orderTotal + ", Provided: " + amount);
                 }
+
+                // Currency validation
+                if (currency != null) {
+                    String orderCurrency = order.getTotalAmount() != null && order.getTotalAmount().getCurrency() != null
+                            ? order.getTotalAmount().getCurrency()
+                            : order.getCurrency();
+                    if (orderCurrency != null && !orderCurrency.equalsIgnoreCase(currency.name())) {
+                        log.error("Payment currency mismatch: request currency={}, order currency={}", currency, orderCurrency);
+                        throw new PaymentProcessingException("Payment currency mismatch. Order currency: " + orderCurrency + ", Request currency: " + currency);
+                    }
+                }
+
                 log.info("Payment amount matches order total: {}", orderTotal);
             } else {
                 throw new PaymentProcessingException("Failed to validate payment: Order not found: " + orderId);

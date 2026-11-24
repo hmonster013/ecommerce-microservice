@@ -210,4 +210,9 @@ public enum OrderStatus {
     public boolean isProblemState() {
         return this.sequence < 0 || this == ON_HOLD;
     }
+
+    public boolean isPaidState() {
+        return java.util.EnumSet.of(PAID, PROCESSING, PREPARING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED,
+                COMPLETED, PARTIALLY_SHIPPED, PARTIALLY_DELIVERED).contains(this);
+    }
 }

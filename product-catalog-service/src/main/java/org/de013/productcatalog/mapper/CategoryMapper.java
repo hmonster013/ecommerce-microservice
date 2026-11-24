@@ -15,17 +15,18 @@ public class CategoryMapper {
     public CategorySummaryDto toCategorySummaryDto(Category category) {
         if (category == null) return null;
 
-        return CategorySummaryDto.builder()
-                .id(category.getId())
-                .name(category.getName())
-                .slug(category.getSlug())
-                .level(category.getLevel())
-                .displayOrder(category.getDisplayOrder())
-                .isActive(category.getIsActive())
-                .parentId(category.getParent() != null ? category.getParent().getId() : null)
-                .parentName(category.getParent() != null ? category.getParent().getName() : null)
-                .hasChildren(category.hasChildren())
-                .build();
+        return new CategorySummaryDto(
+                category.getId(),
+                category.getName(),
+                category.getSlug(),
+                category.getLevel(),
+                category.getDisplayOrder(),
+                category.getIsActive(),
+                null,
+                category.getParent() != null ? category.getParent().getId() : null,
+                category.getParent() != null ? category.getParent().getName() : null,
+                category.hasChildren()
+        );
     }
 
     public CategoryResponseDto toCategoryResponseDto(Category category) {
@@ -99,12 +100,18 @@ public class CategoryMapper {
             return null;
         }
 
-        return CategorySummaryDto.builder()
-                .id(((Number) row[0]).longValue())
-                .name((String) row[1])
-                .slug((String) row[2])
-                .level(((Number) row[4]).intValue())
-                .build();
+        return new CategorySummaryDto(
+                ((Number) row[0]).longValue(),
+                (String) row[1],
+                (String) row[2],
+                ((Number) row[4]).intValue(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
     }
 }
 

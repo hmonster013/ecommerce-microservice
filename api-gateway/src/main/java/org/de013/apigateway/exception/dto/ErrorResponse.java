@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * Standard error response format for API Gateway
- * Compatible with ApiResponse format from common module
+ * Compatible with ApiResult format from common module
  */
 @Data
 @Builder

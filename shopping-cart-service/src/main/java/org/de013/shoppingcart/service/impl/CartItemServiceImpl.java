@@ -10,11 +10,10 @@ import org.de013.shoppingcart.dto.request.UpdateCartItemDto;
 import org.de013.shoppingcart.dto.response.CartItemResponseDto;
 import org.de013.shoppingcart.entity.Cart;
 import org.de013.shoppingcart.entity.CartItem;
-import org.de013.shoppingcart.entity.RedisCart;
 import org.de013.shoppingcart.repository.jpa.CartItemRepository;
 import org.de013.shoppingcart.repository.jpa.CartRepository;
-import org.de013.shoppingcart.repository.redis.RedisCartRepository;
 import org.de013.shoppingcart.service.CartItemService;
+import org.de013.shoppingcart.service.CartTotalsService;
 import org.de013.shoppingcart.service.ProductCatalogClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +36,7 @@ public class CartItemServiceImpl implements CartItemService {
 
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
-    private final RedisCartRepository redisCartRepository;
+    private final CartTotalsService cartTotalsService;
 
     private final ProductCatalogClient productCatalogClient;
 
@@ -49,7 +48,7 @@ public class CartItemServiceImpl implements CartItemService {
     @Override
     public CartItemResponseDto addItemToCart(Long cartId, AddToCartDto request) {
         try {
-            log.debug("Adding item {} to cart {}", request.getProductId(), cartId);
+            log.debug("Adding item {} to cart {}", request.productId(), cartId);
 
             // Get cart
             Optional<Cart> cartOpt = cartRepository.findByIdWithItems(cartId);
@@ -68,10 +67,10 @@ public class CartItemServiceImpl implements CartItemService {
 
             // Debug logging
             log.debug("Request details: productId={}, quantity={}, variantId={}",
-                    request.getProductId(), request.getQuantity(), request.getVariantId());
+                    request.productId(), request.quantity(), request.variantId());
 
             // Get product information
-            ProductDetailDto productInfo = productCatalogClient.getProductInfo(request.getProductId());
+            ProductDetailDto productInfo = productCatalogClient.getProductInfo(request.productId());
             if (productInfo == null) {
                 throw new RuntimeException("Product not found");
             }
@@ -81,13 +80,13 @@ public class CartItemServiceImpl implements CartItemService {
 
             // Check if item already exists
             Optional<CartItem> existingItem = cartItemRepository.findByCartIdAndProductIdAndVariantId(
-                    cartId, request.getProductId(), request.getVariantId());
+                    cartId, request.productId(), request.variantId());
 
             CartItem cartItem;
             if (existingItem.isPresent()) {
                 // Update existing item
                 cartItem = existingItem.get();
-                int newQuantity = cartItem.getQuantity() + request.getQuantity();
+                int newQuantity = cartItem.getQuantity() + request.quantity();
                 cartItem.updateQuantity(newQuantity);
             } else {
                 // Create new item
@@ -103,13 +102,13 @@ public class CartItemServiceImpl implements CartItemService {
             // Save item
             cartItem = cartItemRepository.save(cartItem);
 
-            // Update Redis
-            updateRedisCart(cartId);
+            // Persist cart totals and schedule the committed Redis snapshot
+            cartTotalsService.recalculate(cartId);
 
             // Analytics removed for basic functionality
 
             log.info("Added item {} to cart {}, quantity: {}",
-                    request.getProductId(), cartId, request.getQuantity());
+                    request.productId(), cartId, request.quantity());
 
             return convertToResponseDto(cartItem);
 
@@ -142,8 +141,8 @@ public class CartItemServiceImpl implements CartItemService {
             }
 
             // Update fields
-            if (request.getQuantity() != null) {
-                item.updateQuantity(request.getQuantity());
+            if (request.quantity() != null) {
+                item.updateQuantity(request.quantity());
             }
 
             // Note: Price updates from client are not allowed for security reasons
@@ -154,14 +153,14 @@ public class CartItemServiceImpl implements CartItemService {
                 refreshItemPrice(item);
             }
 
-            if (request.getSpecialInstructions() != null) {
-                item.setSpecialInstructions(request.getSpecialInstructions());
+            if (request.specialInstructions() != null) {
+                item.setSpecialInstructions(request.specialInstructions());
             }
 
-            if (request.getIsGift() != null) {
-                item.setIsGift(request.getIsGift());
-                item.setGiftMessage(request.getGiftMessage());
-                item.setGiftWrapType(request.getGiftWrapType());
+            if (request.isGift() != null) {
+                item.setIsGift(request.isGift());
+                item.setGiftMessage(request.giftMessage());
+                item.setGiftWrapType(request.giftWrapType());
             }
 
             // Basic validation - check required fields
@@ -172,8 +171,8 @@ public class CartItemServiceImpl implements CartItemService {
             // Save item
             item = cartItemRepository.save(item);
 
-            // Update Redis
-            updateRedisCart(item.getCart().getId());
+            // Persist cart totals and schedule the committed Redis snapshot
+            cartTotalsService.recalculate(item.getCart().getId());
 
             log.info("Updated cart item {}", itemId);
             return convertToResponseDto(item);
@@ -200,11 +199,11 @@ public class CartItemServiceImpl implements CartItemService {
             CartItem item = itemOpt.get();
 
             // Update gift options
-            if (giftOptions.getIsGift() != null) {
-                item.setIsGift(giftOptions.getIsGift());
+            if (giftOptions.isGift() != null) {
+                item.setIsGift(giftOptions.isGift());
 
                 // If disabling gift, clear all gift-related fields
-                if (Boolean.FALSE.equals(giftOptions.getIsGift())) {
+                if (Boolean.FALSE.equals(giftOptions.isGift())) {
                     item.setGiftMessage(null);
                     item.setGiftWrapType(null);
                     log.debug("Disabled gift mode for item {}, cleared gift fields", itemId);
@@ -212,13 +211,13 @@ public class CartItemServiceImpl implements CartItemService {
             }
 
             // Update gift message (only if gift is enabled)
-            if (giftOptions.getGiftMessage() != null && Boolean.TRUE.equals(item.getIsGift())) {
-                item.setGiftMessage(giftOptions.getGiftMessage());
+            if (giftOptions.giftMessage() != null && Boolean.TRUE.equals(item.getIsGift())) {
+                item.setGiftMessage(giftOptions.giftMessage());
             }
 
             // Update gift wrap type (only if gift is enabled)
-            if (giftOptions.getGiftWrapType() != null && Boolean.TRUE.equals(item.getIsGift())) {
-                item.setGiftWrapType(giftOptions.getGiftWrapType());
+            if (giftOptions.giftWrapType() != null && Boolean.TRUE.equals(item.getIsGift())) {
+                item.setGiftWrapType(giftOptions.giftWrapType());
             }
 
             // Validate gift requirements
@@ -231,8 +230,8 @@ public class CartItemServiceImpl implements CartItemService {
             // Save item
             item = cartItemRepository.save(item);
 
-            // Update Redis
-            updateRedisCart(item.getCart().getId());
+            // Persist cart totals and schedule the committed Redis snapshot
+            cartTotalsService.recalculate(item.getCart().getId());
 
             log.info("Updated gift options for cart item {}", itemId);
             return convertToResponseDto(item);
@@ -250,24 +249,18 @@ public class CartItemServiceImpl implements CartItemService {
      */
     @Override
     public boolean removeCartItem(Long itemId) {
-        try {
-            log.debug("Removing cart item: {}", itemId);
-
-            if (!cartItemRepository.existsById(itemId)) {
-                log.warn("Cart item {} not found", itemId);
-                return false;
-            }
-
-            cartItemRepository.deleteById(itemId);
-            log.info("Removed cart item: {}", itemId);
-            return true;
-
-        } catch (Exception e) {
-            log.error("Error removing cart item {}: {}", itemId, e.getMessage(), e);
+        Optional<CartItem> item = cartItemRepository.findById(itemId);
+        if (item.isEmpty()) {
             return false;
         }
+        CartItem cartItem = item.get();
+        Cart cart = cartItem.getCart();
+        cart.getCartItems().remove(cartItem);
+        cartItemRepository.delete(cartItem);
+        cartTotalsService.recalculate(cart.getId());
+        log.info("Removed cart item {} from cart {}", itemId, cart.getId());
+        return true;
     }
-
 
     // ==================== CART CALCULATIONS ====================
 
@@ -399,7 +392,7 @@ public class CartItemServiceImpl implements CartItemService {
 
         return CartItem.builder()
                 .cart(cart)
-                .productId(request.getProductId())
+                .productId(request.productId())
                 .productSku(productInfo.getSku())
                 .productName(productInfo.getName())
                 .productBrand(productInfo.getBrand())
@@ -407,41 +400,21 @@ public class CartItemServiceImpl implements CartItemService {
                 .productImageUrl(productInfo.getImageUrl())
                 .categoryId(productInfo.getCategoryId())
                 .categoryName(productInfo.getCategoryName())
-                .quantity(request.getQuantity())
+                .quantity(request.quantity())
                 .unitPrice(listUnitPrice)
                 .originalPrice(productInfo.getOriginalPrice())
                 .discountAmount(discountPerUnit)
                 .currency("USD")
-                .variantId(request.getVariantId())
-                .specialInstructions(request.getSpecialInstructions())
-                .isGift(request.getIsGift())
-                .giftMessage(request.getGiftMessage())
-                .giftWrapType(request.getGiftWrapType())
+                .variantId(request.variantId())
+                .specialInstructions(request.specialInstructions())
+                .isGift(request.isGift())
+                .giftMessage(request.giftMessage())
+                .giftWrapType(request.giftWrapType())
                 .addedAt(LocalDateTime.now())
                 .availabilityStatus("AVAILABLE")
                 .stockQuantity(productInfo.getStockQuantity())
                 .build();
     }
-
-    private void updateRedisCart(Long cartId) {
-        try {
-            Optional<RedisCart> redisCartOpt = redisCartRepository.findByCartId(cartId);
-            if (redisCartOpt.isPresent()) {
-                RedisCart redisCart = redisCartOpt.get();
-
-                // Recalculate totals
-                redisCart.setSubtotal(calculateCartSubtotal(cartId));
-                redisCart.setItemCount(getCartItemCount(cartId));
-                redisCart.setTotalQuantity(getCartTotalQuantity(cartId));
-                redisCart.updateCartTotals();
-
-                redisCartRepository.save(redisCart);
-            }
-        } catch (Exception e) {
-            log.error("Error updating Redis cart: {}", e.getMessage(), e);
-        }
-    }
-
 
     private CartItemResponseDto convertToResponseDto(CartItem item) {
         return CartItemResponseDto.builder()
